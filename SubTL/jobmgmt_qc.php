@@ -17,6 +17,27 @@ function formatDateTime($datetime, $format = 'd-m-Y H:i') {
     
     return $dateObj ? $dateObj->format($format) : '—';
 }
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
 
 function formatDateOnly($date, $format = 'd-m-Y') {
     if (empty($date) || 
@@ -485,6 +506,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Upload By</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -543,6 +565,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
+                            </td>
+                            <!-- TAT Column -->
+                            <?php
+                                $qc_done = in_array($row['qc_status'] ?? '', ['Completed', 'Done']);
+                                $end_d = $qc_done ? (($row['dispatch_date'] ?? null) ?: ($row['qc_date'] ?? null) ?: ($row['last_updated'] ?? null) ?: date('Y-m-d')) : null;
+                                $tat = getWorkingDaysWithoutSunday($row['job_date'] ?? '', $end_d);
+                                $bg = $qc_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                            ?>
+                            <td>
+                                <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                             </td>
                         </tr>
                         <?php endforeach; else: ?>

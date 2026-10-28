@@ -44,8 +44,11 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         }
     }
 
-    $stmt = $mysqli->prepare("UPDATE qc SET status = ?, last_updated = NOW() WHERE id = ?");
-    $stmt->bind_param("si", $new_status, $qc_id);
+    $update_query = ($new_status === 'Completed') 
+    ? "UPDATE qc SET status = ?, qc_date = NOW(), last_updated = NOW() WHERE id = ?"
+    : "UPDATE qc SET status = ?, last_updated = NOW() WHERE id = ?";
+        $stmt = $mysqli->prepare($update_query);
+        $stmt->bind_param("si", $new_status, $qc_id);
     
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'status' => $new_status]);
@@ -80,6 +83,28 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
         echo json_encode(['success' => false, 'message' => 'Invalid field update']);
     }
     exit;
+}
+
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
 }
 
 function h($s) {
@@ -568,6 +593,7 @@ require 'header.php';
                             <th>Upload By</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -694,6 +720,16 @@ require 'header.php';
                                             <option value="Client Priority" <?= (($row['priority'] ?? '') == 'Client Priority') ? 'selected' : '' ?>>Client Priority</option>
                                             <option value="Urgent" <?= (($row['priority'] ?? '') == 'Urgent') ? 'selected' : '' ?>>Urgent</option>
                                         </select>
+                                    </td>
+                                    <!-- TAT Column -->
+                                    <?php
+                                        $qc_done = in_array($row['status'] ?? '', ['Completed', 'Done']);
+                                        $end_d = $qc_done ? ($row['qc_date'] ?: $row['last_updated']) : null;
+                                        $tat = getWorkingDaysWithoutSunday($row['date_received'] ?? $row['created_at'], $end_d);
+                                        $bg = $qc_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>

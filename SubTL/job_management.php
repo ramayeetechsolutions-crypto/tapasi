@@ -35,6 +35,29 @@ function formatDateOnly($date, $format = 'd-m-Y') {
     return $dateObj ? $dateObj->format($format) : '—';
 }
 
+// Calculate days excluding Sundays
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
+
 require 'db.php';
 session_start();
 
@@ -545,6 +568,7 @@ table td:nth-child(26) {
                         <th>EQN</th>
                         <th>Images</th>
                         <th>Tables</th>
+                        <th>Process</th>
                         <th>CE</th>
                         <th>LE</th>
                         <th>PAG</th>
@@ -555,6 +579,13 @@ table td:nth-child(26) {
                         <th>Dispatch Date</th>
                         <th>Upload By</th>
                         <th>Path</th>
+                        <th>Client</th>
+                        <th>H</th>
+                        <th>CE</th>
+                        <th>LE</th>
+                        <th>TS</th>
+                        <th>QC</th>
+                        <th>Week</th>
                         <th>Final Status</th>
                     </tr>
                     </thead>
@@ -587,6 +618,9 @@ table td:nth-child(26) {
                             <td><?= h(pickVal($row['pag_eq'], $row['le_eq'], $row['ce_eq'])) ?></td>
                             <td><?= h(pickVal($row['images'], $row['le_images'], $row['ce_images'])) ?></td>
                             <td><?= h(pickVal($row['tables_count'], $row['le_tables'], $row['ce_tables'])) ?></td>
+
+                            <!-- Process Column -->
+                            <td><span class="badge bg-secondary"><?= h($row['process'] ?? '—') ?></span></td>
 
                             <!-- CE -->
                             <td>
@@ -676,6 +710,81 @@ table td:nth-child(26) {
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
+                            </td>
+
+                                                        <!-- 1. Client TAT (Red if > 5 days, green otherwise) -->
+                            <?php 
+                                $client_tat = getWorkingDaysWithoutSunday($row['job_date']);
+                                $client_badge = ($client_tat > 5) ? 'bg-danger' : 'bg-success';
+                            ?>
+                            <td>
+                                <span class="badge <?= $client_badge ?>"><?= $client_tat ?> Days</span>
+                            </td>
+
+                            <!-- 2. H (Editable Text Field) -->
+                            <td>
+                                <input type="text" class="form-control form-control-sm p-1 text-center" style="width: 70px; font-size: 11px;" value="<?= h($row['h'] ?? '') ?>" placeholder="H" onchange="updateJobField(<?= $row['job_id'] ?>, 'h', this.value)">
+                            </td>
+
+                            <!-- 3. CE TAT (Stops if CE Completed) -->
+                            <?php 
+                                $ce_is_done = isStageDone($row['ce_status']);
+                                $ce_end = $ce_is_done ? $row['ce_date'] : null;
+                                $ce_tat = getWorkingDaysWithoutSunday($row['job_date'], $ce_end);
+                            ?>
+                            <td>
+                                <span class="badge <?= $ce_is_done ? 'bg-success' : 'bg-warning text-dark' ?>">
+                                    <?= $ce_tat ?> <?= ($ce_tat == 1) ? 'Day' : 'Days' ?>
+                                </span>
+                            </td>
+
+                            <!-- 4. LE TAT (Stops if LE Completed) -->
+                            <?php 
+                                $le_is_done = isStageDone($row['le_status']);
+                                $le_end = $le_is_done ? ($row['le_moved_date'] ?: $row['le_date']) : null;
+                                $le_tat = getWorkingDaysWithoutSunday($row['job_date'], $le_end);
+                            ?>
+                            <td>
+                                <span class="badge <?= $le_is_done ? 'bg-success' : 'bg-warning text-dark' ?>">
+                                    <?= $le_tat ?> <?= ($le_tat == 1) ? 'Day' : 'Days' ?>
+                                </span>
+                            </td>
+
+                            <!-- 5. TS TAT (Stops if TS Completed) -->
+                            <?php 
+                                $pag_is_done = isStageDone($row['pag_status']);
+                                $pag_end = $pag_is_done ? $row['pag_date'] : null;
+                                $pag_tat = getWorkingDaysWithoutSunday($row['job_date'], $pag_end);
+                            ?>
+                            <td>
+                                <span class="badge <?= $pag_is_done ? 'bg-success' : 'bg-warning text-dark' ?>">
+                                    <?= $pag_tat ?> <?= ($pag_tat == 1) ? 'Day' : 'Days' ?>
+                                </span>
+                            </td>
+
+                            <!-- 6. QC TAT (Stops if QC Completed) -->
+                            <?php 
+                                $qc_is_done = isStageDone($row['qc_status']);
+                                $qc_end = $qc_is_done ? ($row['dispatch_date'] ?: $row['qc_date']) : null;
+                                $qc_tat = getWorkingDaysWithoutSunday($row['job_date'], $qc_end);
+                            ?>
+                            <td>
+                                <span class="badge <?= $qc_is_done ? 'bg-success' : 'bg-warning text-dark' ?>">
+                                    <?= $qc_tat ?> <?= ($qc_tat == 1) ? 'Day' : 'Days' ?>
+                                </span>
+                            </td>
+
+                            <!-- 7. Week Dropdown -->
+                            <td>
+                                <select class="form-select form-select-sm p-1" style="width: 80px; font-size: 11px;" onchange="updateJobField(<?= $row['job_id'] ?>, 'week', this.value)">
+                                    <option value="">Select</option>
+                                    <?php for($w=1; $w<=53; $w++): 
+                                        $w_val = "W".$w;
+                                        $sel = (isset($row['week']) && $row['week'] === $w_val) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?= $w_val ?>" <?= $sel ?>><?= $w_val ?></option>
+                                    <?php endfor; ?>
+                                </select>
                             </td>
 
                             <!-- Final Status -->
