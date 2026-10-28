@@ -1,4 +1,4 @@
-<br><br><br>
+﻿<br><br><br>
 <?php
 require 'db.php';
 ini_set('display_errors', 1);
@@ -132,7 +132,7 @@ $data = $mysqli->query($sql . " ORDER BY id DESC");
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .table { font-size: 12px; }
-        .table th { background-color: #2c3e50; color: white; white-space: nowrap; }
+        .table th { background-color: #707981 !important; color: white !important; white-space: nowrap; }
         /* Image-Style Buttons */
         .btn-edit-square { 
             background-color: #ffc107; color: black; border: none; 
@@ -208,7 +208,7 @@ $data = $mysqli->query($sql . " ORDER BY id DESC");
             <div class="card shadow-sm">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead>
+                        <thead style="background-color:#707981; color:#fff;">
                             <tr>
                                 <th>ID No</th><th>Member Name</th><th>Cabin</th><th>System No</th><th>OS</th><th>Processor</th><th>RAM</th><th>CPU</th><th>CPU No</th><th>Monitor</th><th>Monitor No</th><th>Keyboard</th><th>Keyboard No</th><th>Mouse</th><th>Mouse No</th><th>Remarks</th><th class="text-center">Actions</th>
                             </tr>

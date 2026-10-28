@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -750,6 +750,24 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
             .main-content {
                 padding: 10px 2%;
             }
+        }
+
+        /* Table header matching Dashboard/Master navbar grey */
+        .table thead th,
+        .table th,
+        table thead th,
+        table thead tr th,
+        .table-light th,
+        .table-dark th,
+        .table > :not(caption) > thead > * > *,
+        .table > thead > tr > th {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+            --bs-table-bg: #6c757d !important;
+            --bs-table-color: #ffffff !important;
+            border-color: #5a6268 !important;
+            font-weight: 600 !important;
+            vertical-align: middle !important;
         }
     </style>
 </head>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 if (
     isset($_GET['ajax']) &&
     $_GET['ajax'] === 'get_employee_details' &&
@@ -452,8 +452,8 @@ if (!empty($typesTemporary)) {
             margin: 0 auto;
         }
         .table th {
-            background-color: #2c3e50;
-            color: white;
+            background-color: #707981 !important;
+            color: white !important;
             border: none;
             font-size: 12px;
             white-space: nowrap;
@@ -694,7 +694,7 @@ if (!empty($typesTemporary)) {
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                                <thead style="background-color:#707981; color:#fff;">
                                     <tr>
                                         <th>S.No</th>
                                         <th>ID No.</th>
@@ -773,7 +773,7 @@ if (!empty($typesTemporary)) {
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                                <thead style="background-color:#707981; color:#fff;">
                                     <tr>
                                         <th>S.No</th>
                                         <th>ID No.</th>

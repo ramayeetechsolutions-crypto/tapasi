@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -409,8 +409,8 @@ function getAwardColor($award_name) {
             margin-bottom: 0;
         }
         .table-awards th {
-            background-color: #f8fafc;
-            color: #2c3e50;
+            background-color: #707981 !important;
+            color: white !important;
             font-weight: 600;
             font-size: 0.85rem;
             padding: 8px 10px;
@@ -751,7 +751,7 @@ function getAwardColor($award_name) {
 
                     <div class="table-responsive">
                         <table class="table table-awards table-hover mb-0">
-                            <thead>
+                            <thead style="background-color:#707981; color:#fff;">
                                 <tr>
                                     <th width="4%">#</th>
                                     <th width="8%">ID</th>
