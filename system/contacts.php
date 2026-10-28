@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -239,7 +239,7 @@ $totalContacts = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_contacts")->fet
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
         .main-content { padding: 20px; max-width: 1800px; margin: 0 auto; }
-        .table th { background-color: #2c3e50; color: white; font-size: 12px; }
+        .table th { background-color: #707981 !important; color: white !important; font-size: 12px; }
         .table td { font-size: 13px; }
     </style>
 </head>
@@ -303,7 +303,7 @@ $totalContacts = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_contacts")->fet
 
             <div class="card"><div class="table-responsive">
                 <table class="table table-hover align-middle">
-                    <thead>
+                    <thead style="background-color:#707981; color:#fff;">
                         <tr>
                             <th>S.No</th>
                             <th>Company</th>

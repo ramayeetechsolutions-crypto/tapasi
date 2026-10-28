@@ -1,4 +1,4 @@
-<br><br><br>
+﻿<br><br><br>
 <?php
 
 error_reporting(E_ALL);
@@ -76,7 +76,7 @@ require 'header.php';
             background: #f8f9fa; 
         }
         /* .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; } */
-        .card-header { background-color: #707981 !important; color: white; }
+        .card-header { background-color: #e9ecef !important; color: #212529 !important; }
         .btn-template { background: #20c997; border-color: #20c997; color: white; }
         .btn-template:hover { background: #199d7a; border-color: #199d7a; }
     </style>
@@ -98,8 +98,8 @@ require 'header.php';
 
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered" id="clientsTable">
-                        <!-- <thead class="table-dark"> -->
-                            <thead style="background-color: #707981 !important; color: white;">
+                        <!-- <thead class="table-light"> -->
+                            <thead style="background-color: #e9ecef !important; color: #212529 !important;">
                             <tr>
                                 <th>S.No</th>
                                 <th>Client Name</th>

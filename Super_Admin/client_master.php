@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -600,7 +600,7 @@ require 'header.php';
         }
         .table th {
             /* background-color: #2c3e50; */
-            background-color: #5e6b77 !important;
+            background-color: #e9ecef !important; color: #212529 !important;
             color: white;
             border: none;
             font-size: 0.80rem;

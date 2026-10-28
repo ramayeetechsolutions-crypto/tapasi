@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -39,6 +39,7 @@ $clientPages = ['nda_details.php', 'client_followup.php', 'client_rate_list.php'
 $servicePages = ['client_services.php', 'client_transactions.php'];
 $calcPages = ['math_charges.php', 'sales_calculation.php'];
 $myAccountPages = ['employee_regby_emp.php', 'employee.php'];
+$systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -446,6 +447,18 @@ $myAccountPages = ['employee_regby_emp.php', 'employee.php'];
                         <ul class="nav-dropdown">
                             <li><a href="employee_regby_emp.php"><i class="fas fa-user-edit"></i> Update Profile</a></li>
                             <li><a href="employee.php"><i class="fas fa-check-circle"></i> Verify Details</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- System -->
+                    <li>
+                        <a href="#" onclick="return false;"
+                            class="<?php echo (in_array($currentPage, $systemPages)) ? 'active' : ''; ?>">
+                            <i class="fas fa-tools"></i> System
+                        </a>
+                        <ul class="nav-dropdown">
+                            <li><a href="my_system_details.php"><i class="fas fa-desktop"></i> System Details</a></li>
+                            <li><a href="ticketmanagementexecutive.php"><i class="fas fa-headset"></i> Complaints</a></li>
                         </ul>
                     </li>
 

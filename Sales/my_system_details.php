@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -9,7 +9,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Check login
-if (!isset($_SESSION['uid'])) {
+if (!isset($_SESSION['salesname'])) {
     header("Location: ../index.php");
     exit;
 }
@@ -287,7 +287,7 @@ else
 
 <i class="fas fa-desktop fa-5x text-secondary mb-4"></i>
 
-<h2 class="text-warning">
+<h2 class="text-dark">
 
 No System Assigned
 

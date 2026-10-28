@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -372,8 +372,8 @@ $soldPersons = $mysqli->query("SELECT DISTINCT sold_person FROM tbl_scrap WHERE 
             margin: 0 auto;
         }
         .table th {
-            background-color: #2c3e50;
-            color: white;
+            background-color: #707981 !important;
+            color: white !important;
             border: none;
             font-size: 12px;
             white-space: nowrap;
@@ -600,7 +600,7 @@ $soldPersons = $mysqli->query("SELECT DISTINCT sold_person FROM tbl_scrap WHERE 
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <thead style="background-color:#707981; color:#fff;">
                             <tr>
                                 <th>S.No</th>
                                 <th>Date</th>

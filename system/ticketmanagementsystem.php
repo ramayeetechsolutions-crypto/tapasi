@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -223,7 +223,7 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { padding: 20px; max-width: 1900px; margin: 0 auto; }
-        .table th { background-color: #2c3e50; color: white; border: none; font-size: 11px; white-space: nowrap; padding: 8px 5px; }
+        .table th { background-color: #707981 !important; color: white !important; border: none; font-size: 11px; white-space: nowrap; padding: 8px 5px; }
         .table td { vertical-align: middle; font-size: 12px; padding: 8px 5px; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .stats-card { border-left: 4px solid; padding: 15px; margin-bottom: 15px; }
@@ -496,7 +496,7 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <thead style="background-color:#707981; color:#fff;">
                             <tr>
                                 <th>Date</th>
                                 <th>Created By</th>
