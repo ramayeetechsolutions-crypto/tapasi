@@ -1,0 +1,19 @@
+[11-Oct-2025 07:05:43 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 46
+[11-Oct-2025 07:12:23 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 46
+[11-Oct-2025 07:21:17 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 48
+[11-Oct-2025 07:21:17 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 101
+[11-Oct-2025 07:23:55 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 101
+[22-Oct-2025 06:30:56 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'employee_name' in 'field list' in /home/rtssoftware/public_html/tapasi/index.php:40
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/index.php(40): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/index.php on line 40
+[22-Oct-2025 06:32:06 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 115
+[22-Oct-2025 06:32:46 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 115
+[22-Oct-2025 06:34:14 UTC] PHP Warning:  Trying to access array offset on null in /home/rtssoftware/public_html/tapasi/index.php on line 115
+[18-Nov-2025 12:52:12 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.employee_login_logs' doesn't exist in /home/rtssoftware/public_html/tapasi/index.php:188
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/index.php(188): mysqli->prepare()
+#1 /home/rtssoftware/public_html/tapasi/index.php(71): recordLoginActivity()
+#2 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/index.php on line 188

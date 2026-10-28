@@ -1,0 +1,146 @@
+[18-Sep-2025 07:31:59 UTC] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'root'@'localhost' (using password: NO) in /home/rtssoftware/public_html/tapasi/Admin/db.php on line 7
+[19-Sep-2025 05:38:37 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 105
+[20-Sep-2025 12:05:26 UTC] PHP Fatal error:  Uncaught Error: Call to a member function bind_param() on bool in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:94
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 94
+[23-Sep-2025 05:54:59 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:237
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 237
+[23-Sep-2025 05:55:44 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:237
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 237
+[23-Sep-2025 06:06:29 UTC] PHP Parse error:  syntax error, unexpected 'elseif' (T_ELSEIF) in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 161
+[23-Sep-2025 06:18:21 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 145
+[23-Sep-2025 06:19:39 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:144
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(144): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 144
+[23-Sep-2025 06:20:44 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 298
+[23-Sep-2025 06:26:53 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 298
+[23-Sep-2025 06:27:00 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:144
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(144): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 144
+[23-Sep-2025 06:29:49 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 298
+[23-Sep-2025 06:29:51 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 298
+[23-Sep-2025 06:36:34 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[23-Sep-2025 06:39:34 UTC] PHP Warning:  Undefined variable $name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 376
+[23-Sep-2025 06:39:34 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1 in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:358
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(358): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 358
+[23-Sep-2025 06:41:23 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1 in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:358
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(358): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 358
+[23-Sep-2025 06:44:00 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1 in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:358
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(358): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 358
+[23-Sep-2025 06:44:05 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1 in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:358
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(358): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 358
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:45:33 UTC] PHP Warning:  Undefined variable $process_name in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 364
+[23-Sep-2025 06:46:11 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 1 in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:358
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(358): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 358
+[23-Sep-2025 06:47:36 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[23-Sep-2025 06:53:52 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/Admin/company_details.php:41
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/company_details.php(41): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/company_details.php on line 41
+[23-Sep-2025 07:01:55 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/Admin/company_details.php:42
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/company_details.php(42): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/company_details.php on line 42
+[24-Sep-2025 05:48:00 UTC] PHP Warning:  Undefined variable $mysqli in /home/rtssoftware/public_html/tapasi/Admin/team_allotment.php on line 30
+[24-Sep-2025 05:48:00 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/Admin/team_allotment.php:30
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/team_allotment.php on line 30
+[24-Sep-2025 06:00:31 UTC] PHP Fatal error:  Cannot use positional argument after argument unpacking in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 107
+[24-Sep-2025 06:02:03 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column '_ront__atter______id' in 'field list' in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php:100
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php(100): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 100
+[24-Sep-2025 06:04:05 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column '_ront__atter______id' in 'field list' in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php:89
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php(89): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 89
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined array key "employee_username" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 58
+[24-Sep-2025 06:22:07 UTC] PHP Warning:  Undefined array key "process_id" in /home/rtssoftware/public_html/tapasi/Admin/team_allotment_add.php on line 84
+[24-Sep-2025 08:21:10 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[24-Sep-2025 08:21:25 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[24-Sep-2025 08:21:31 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[24-Sep-2025 08:21:42 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[24-Sep-2025 08:21:57 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[24-Sep-2025 08:22:10 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[24-Sep-2025 09:23:49 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 05:50:18 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 05:55:27 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 06:08:13 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 06:20:42 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 08:23:49 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 08:25:33 UTC] PHP Warning:  Undefined variable $colCount in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 305
+[25-Sep-2025 08:28:23 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'parent_id' in 'field list' in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:300
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(300): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 300
+[25-Sep-2025 08:28:30 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'parent_id' in 'field list' in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php:300
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/Admin/employee_master.php(300): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 300
+[25-Sep-2025 08:35:56 UTC] PHP Parse error:  syntax error, unexpected token "<", expecting "elseif" or "else" or "endif" in /home/rtssoftware/public_html/tapasi/Admin/employee_master.php on line 287
+[02-Dec-2025 05:25:03 UTC] PHP Warning:  Undefined variable $currentPage in /home/rtssoftware/public_html/tapasi/Admin/header.php on line 717
+[02-Dec-2025 05:25:03 UTC] PHP Warning:  Undefined variable $currentPage in /home/rtssoftware/public_html/tapasi/Admin/header.php on line 758

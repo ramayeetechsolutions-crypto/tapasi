@@ -1,0 +1,197 @@
+2026-01-07 14:27:23 - POST request received: Array
+(
+    [action] => add
+    [currency_code] => EGP
+    [currency_name] => Egyptian pound
+    [currency_symbol] => a
+    [exchange_rate] => 1
+    [auto_update] => 1
+)
+
+2026-01-07 14:27:23 - Form data: Array
+(
+    [currency_code] => EGP
+    [currency_name] => Egyptian pound
+    [currency_symbol] => a
+    [exchange_rate] => 1
+    [auto_update] => 1
+    [action] => add
+)
+
+2026-01-07 14:27:23 - Currency added successfully: Array
+(
+    [id] => 6
+    [name] => Egyptian pound
+)
+
+2026-02-09 07:30:11 - POST request received: Array
+(
+    [action] => add
+    [currency_code] => GBP
+    [currency_name] => a
+    [currency_symbol] => a
+    [exchange_rate] => 1
+)
+
+2026-02-09 07:30:11 - Form data: Array
+(
+    [currency_code] => GBP
+    [currency_name] => a
+    [currency_symbol] => a
+    [exchange_rate] => 1
+    [auto_update] => 0
+    [action] => add
+)
+
+2026-02-09 07:30:11 - Currency code already exists: GBP
+2026-02-09 07:31:01 - POST request received: Array
+(
+    [action] => add
+    [currency_code] => INR
+    [currency_name] => Indian Rupees
+    [currency_symbol] => Rs.
+    [exchange_rate] => 1
+    [auto_update] => 1
+)
+
+2026-02-09 07:31:01 - Form data: Array
+(
+    [currency_code] => INR
+    [currency_name] => Indian Rupees
+    [currency_symbol] => Rs.
+    [exchange_rate] => 1
+    [auto_update] => 1
+    [action] => add
+)
+
+2026-02-09 07:31:01 - Currency code already exists: INR
+2026-04-01 08:06:44 - POST request received: Array
+(
+    [action] => add
+    [currency_code] => IQD
+    [currency_name] => Iraqi Dinar
+    [currency_symbol] => ع.د
+    [exchange_rate] => 1309
+)
+
+2026-04-01 08:06:44 - Form data: Array
+(
+    [currency_code] => IQD
+    [currency_name] => Iraqi Dinar
+    [currency_symbol] => ع.د
+    [exchange_rate] => 1309
+    [auto_update] => 0
+    [action] => add
+)
+
+2026-04-01 08:06:44 - Currency added successfully: Array
+(
+    [id] => 7
+    [name] => Iraqi Dinar
+)
+
+2026-04-01 08:09:05 - POST request received: Array
+(
+    [action] => add
+    [currency_code] => IDQ
+    [currency_name] => Iraqi Dinar
+    [currency_symbol] => ع.د
+    [exchange_rate] => 1309
+)
+
+2026-04-01 08:09:05 - Form data: Array
+(
+    [currency_code] => IDQ
+    [currency_name] => Iraqi Dinar
+    [currency_symbol] => ع.د
+    [exchange_rate] => 1309
+    [auto_update] => 0
+    [action] => add
+)
+
+2026-04-01 08:09:05 - Currency name already exists: Iraqi Dinar
+2026-04-01 08:11:05 - POST request received: Array
+(
+    [action] => add
+    [currency_code] => SGD
+    [currency_name] => Singapore Dollar
+    [currency_symbol] => S$
+    [exchange_rate] => 1.28
+)
+
+2026-04-01 08:11:05 - Form data: Array
+(
+    [currency_code] => SGD
+    [currency_name] => Singapore Dollar
+    [currency_symbol] => S$
+    [exchange_rate] => 1.28
+    [auto_update] => 0
+    [action] => add
+)
+
+2026-04-01 08:11:05 - Currency added successfully: Array
+(
+    [id] => 8
+    [name] => Singapore Dollar
+)
+
+2026-10-16 10:56:57 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 6
+)
+
+2026-10-16 10:57:05 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 4
+)
+
+2026-10-16 10:57:10 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 3
+)
+
+2026-10-16 10:57:16 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 6
+)
+
+2026-10-16 10:57:24 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 6
+)
+
+2026-10-16 10:57:29 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 6
+)
+
+2026-10-16 10:57:37 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 4
+)
+
+2026-10-17 13:25:52 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 4
+)
+
+2026-10-17 13:26:00 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 7
+)
+
+2026-10-17 13:26:19 - POST request received: Array
+(
+    [action] => delete
+    [currency_id] => 6
+)
+

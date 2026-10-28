@@ -1,0 +1,324 @@
+2026-01-24 18:13:23 - POST request received: Array
+(
+    [action] => add
+    [mail_subject] => test
+    [auto_id] => f
+    [date] => 2026-01-24
+)
+
+2026-01-24 18:13:23 - Form data: Array
+(
+    [mail_subject] => test
+    [date] => 2026-01-24
+    [auto_id] => f
+    [action] => add
+)
+
+2026-01-24 18:13:23 - Mail subject added successfully: Array
+(
+    [id] => 1
+    [subject] => test
+)
+
+2026-01-24 18:19:11 - POST request received: Array
+(
+    [action] => edit
+    [mail_id] => 1
+    [mail_subject] => test
+    [date] => 2026-01-24
+)
+
+2026-01-24 18:19:11 - Form data: Array
+(
+    [mail_subject] => test
+    [date] => 2026-01-24
+    [action] => edit
+)
+
+2026-01-24 19:29:09 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => 12
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 1000
+)
+
+2026-01-24 19:29:09 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 1000
+    [employee_id] => 12
+    [action] => add
+)
+
+2026-01-24 19:29:09 - Word count added successfully: Array
+(
+    [id] => 1
+    [count_value] => 1000
+)
+
+2026-01-24 19:36:11 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS013
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 1500
+)
+
+2026-01-24 19:36:11 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 1500
+    [employee_id] => TPS013
+    [action] => add
+)
+
+2026-01-24 19:36:11 - Word count added successfully: Array
+(
+    [id] => 2
+    [count_value] => 1500
+)
+
+2026-01-24 19:36:28 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS013
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 2000
+)
+
+2026-01-24 19:36:28 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 2000
+    [employee_id] => TPS013
+    [action] => add
+)
+
+2026-01-24 19:36:28 - Word count added successfully: Array
+(
+    [id] => 3
+    [count_value] => 2000
+)
+
+2026-01-24 19:36:51 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS013
+    [date] => 2026-01-25
+    [count_type] => word
+    [count_value] => 2000
+)
+
+2026-01-24 19:36:51 - Form data: Array
+(
+    [date] => 2026-01-25
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 2000
+    [employee_id] => TPS013
+    [action] => add
+)
+
+2026-01-24 19:36:51 - Word count added successfully: Array
+(
+    [id] => 4
+    [count_value] => 2000
+)
+
+2026-01-24 19:41:26 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS013
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 3000
+)
+
+2026-01-24 19:41:26 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 3000
+    [employee_id] => TPS013
+    [action] => add
+)
+
+2026-01-24 19:41:26 - Word count added successfully: Array
+(
+    [id] => 5
+    [count_value] => 3000
+)
+
+2026-01-24 19:42:19 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS013
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 200
+)
+
+2026-01-24 19:42:19 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 200
+    [employee_id] => TPS013
+    [action] => add
+)
+
+2026-01-24 19:42:19 - Word count added successfully: Array
+(
+    [id] => 6
+    [count_value] => 200
+)
+
+2026-01-24 19:56:19 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS013
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 300
+)
+
+2026-01-24 19:56:19 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 300
+    [employee_id] => TPS013
+    [count_id] => 0
+    [action] => add
+)
+
+2026-01-24 19:56:19 - Validation errors: Array
+(
+    [0] => An entry already exists for employee 'TPS013' on date 24-01-2026
+)
+
+2026-01-24 19:57:29 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS007
+    [date] => 2026-01-24
+    [count_type] => word
+    [count_value] => 300
+)
+
+2026-01-24 19:57:29 - Form data: Array
+(
+    [date] => 2026-01-24
+    [week_number] => W04
+    [count_type] => word
+    [count_value] => 300
+    [employee_id] => TPS007
+    [count_id] => 0
+    [action] => add
+)
+
+2026-01-24 19:57:29 - Word count added successfully: Array
+(
+    [id] => 7
+    [count_value] => 300
+)
+
+2026-01-28 09:22:46 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPS007
+    [date] => 2026-01-28
+    [count_type] => word
+    [count_value] => 2000
+)
+
+2026-01-28 09:22:46 - Form data: Array
+(
+    [date] => 2026-01-28
+    [week_number] => W05
+    [count_type] => word
+    [count_value] => 2000
+    [employee_id] => TPS007
+    [count_id] => 0
+    [action] => add
+)
+
+2026-01-28 09:22:46 - Word count added successfully: Array
+(
+    [id] => 8
+    [count_value] => 2000
+)
+
+2026-01-28 09:22:46 - Weekly target updated successfully
+2026-01-28 09:25:19 - POST request received: Array
+(
+    [action] => add
+    [employee_id] => TPSC15
+    [date] => 2026-01-28
+    [count_type] => word
+    [count_value] => 10000
+)
+
+2026-01-28 09:25:19 - Form data: Array
+(
+    [date] => 2026-01-28
+    [week_number] => W05
+    [count_type] => word
+    [count_value] => 10000
+    [employee_id] => TPSC15
+    [count_id] => 0
+    [action] => add
+)
+
+2026-01-28 09:25:19 - Word count added successfully: Array
+(
+    [id] => 9
+    [count_value] => 10000
+)
+
+2026-01-28 09:25:19 - Weekly target updated successfully
+2026-01-28 09:25:46 - POST request received: Array
+(
+    [action] => edit
+    [count_id] => 9
+    [employee_id] => TPSC15
+    [date] => 2026-01-28
+    [count_type] => word
+    [count_value] => 15000
+)
+
+2026-01-28 09:25:46 - Form data: Array
+(
+    [date] => 2026-01-28
+    [week_number] => W05
+    [count_type] => word
+    [count_value] => 15000
+    [employee_id] => TPSC15
+    [count_id] => 9
+    [action] => edit
+)
+
+2026-01-28 09:25:46 - Weekly target updated for edit (same date/employee)
+2026-01-31 17:01:56 - POST: Array
+(
+)
+
+Processing: ID=0, Field=, Value='', Flag=0
+2026-01-31 17:05:14 - POST: Array
+(
+)
+
+Processing: ID=0, Field=, Value='', Flag=0

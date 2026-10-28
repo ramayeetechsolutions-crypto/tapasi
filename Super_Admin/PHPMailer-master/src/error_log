@@ -1,0 +1,4 @@
+[04-Jul-2025 17:29:01 UTC] PHP Fatal error:  Uncaught Error: Interface "PHPMailer\PHPMailer\OAuthTokenProvider" not found in /home/ramayeesoftwares/public_html/vigneshgraphics.com/vigneshgraphics/superadmin/PHPMailer-master/src/OAuth.php:36
+Stack trace:
+#0 {main}
+  thrown in /home/ramayeesoftwares/public_html/vigneshgraphics.com/vigneshgraphics/superadmin/PHPMailer-master/src/OAuth.php on line 36

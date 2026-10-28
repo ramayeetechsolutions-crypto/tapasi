@@ -1,0 +1,765 @@
+[17-Nov-2025 07:47:14 UTC] PHP Warning:  require(db.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/language_master.php on line 2
+[17-Nov-2025 07:47:14 UTC] PHP Warning:  require(db.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/language_master.php on line 2
+[17-Nov-2025 07:47:14 UTC] PHP Fatal error:  Uncaught Error: Failed opening required 'db.php' (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/language_master.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/language_master.php on line 2
+[18-Nov-2025 12:29:48 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.mouse_id' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:124
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(124): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 124
+[18-Nov-2025 12:29:51 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.mouse_id' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:124
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(124): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 124
+[18-Nov-2025 12:29:57 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.mouse_id' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:124
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(124): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 124
+[18-Nov-2025 12:30:33 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.mouse_id' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:124
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(124): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 124
+[18-Nov-2025 12:36:00 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.mouse_id' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:126
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(126): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 126
+[18-Nov-2025 13:12:04 UTC] PHP Warning:  require_once(../config/database.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/systems.php on line 3
+[18-Nov-2025 13:12:04 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '../config/database.php' (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/systems.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 3
+[18-Nov-2025 13:12:06 UTC] PHP Warning:  require_once(../config/database.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/systems.php on line 3
+[18-Nov-2025 13:12:06 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '../config/database.php' (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/systems.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 3
+[18-Nov-2025 13:13:12 UTC] PHP Warning:  require_once(../config/database.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/systems.php on line 5
+[18-Nov-2025 13:13:12 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '../config/database.php' (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/systems.php:5
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 5
+[18-Nov-2025 13:59:26 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 13:59:26 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 13:59:26 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 13:59:38 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 13:59:38 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 13:59:38 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:01:46 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/systems.php on line 2
+[18-Nov-2025 14:01:46 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/systems.php on line 2
+[18-Nov-2025 14:01:46 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/systems.php on line 2
+[18-Nov-2025 14:03:21 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:21 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:21 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:27 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:27 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:27 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:37 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:37 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:03:37 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:05:40 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/ups.php:62
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  include(db_connect.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  include(): Failed opening 'db_connect.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/ups.php on line 2
+[18-Nov-2025 14:05:40 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:05:40 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/ups.php:62
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:10:37 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:10:37 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/ups.php:62
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:15:18 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:15:18 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/ups.php:62
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 62
+[18-Nov-2025 14:19:35 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/ups.php on line 66
+[18-Nov-2025 14:19:35 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/ups.php:66
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 66
+[18-Nov-2025 14:21:04 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 62
+[18-Nov-2025 14:21:04 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/wfh.php:62
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 62
+[18-Nov-2025 16:06:30 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.cpuid' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:183
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(183): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 183
+[18-Nov-2025 16:15:58 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.cpuid' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:213
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(213): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 213
+[18-Nov-2025 16:17:57 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.cpuid' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:208
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(208): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 208
+[18-Nov-2025 16:19:32 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 's.cpuid' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/systems.php:212
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(212): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 212
+[18-Nov-2025 17:22:12 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'w.system_id' in 'on clause' in /home/rtssoftware/public_html/tapasi/system/wfh.php:198
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(198): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 198
+[18-Nov-2025 17:25:59 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'wfhtype' in 'where clause' in /home/rtssoftware/public_html/tapasi/system/wfh.php:188
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(188): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 188
+[18-Nov-2025 17:35:35 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'idnumber' in 'order clause' in /home/rtssoftware/public_html/tapasi/system/wfh.php:187
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(187): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 187
+[18-Nov-2025 17:53:51 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/ups.php on line 66
+[18-Nov-2025 17:53:51 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/ups.php:66
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 66
+[18-Nov-2025 18:00:33 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'upsno' in 'order clause' in /home/rtssoftware/public_html/tapasi/system/ups.php:206
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(206): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 206
+[19-Nov-2025 08:54:48 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.employeemaster' doesn't exist in /home/rtssoftware/public_html/tapasi/system/awards.php:164
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(164): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 164
+[19-Nov-2025 09:03:38 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_employeemaster' doesn't exist in /home/rtssoftware/public_html/tapasi/system/awards.php:164
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(164): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 164
+[19-Nov-2025 09:03:41 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_employeemaster' doesn't exist in /home/rtssoftware/public_html/tapasi/system/awards.php:164
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(164): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 164
+[19-Nov-2025 09:06:13 UTC] PHP Warning:  include(dbconnection.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/awards.php on line 2
+[19-Nov-2025 09:06:13 UTC] PHP Warning:  include(dbconnection.php): Failed to open stream: No such file or directory in /home/rtssoftware/public_html/tapasi/system/awards.php on line 2
+[19-Nov-2025 09:06:13 UTC] PHP Warning:  include(): Failed opening 'dbconnection.php' for inclusion (include_path='.:/opt/alt/php84/usr/share/pear:/opt/alt/php84/usr/share/php:/usr/share/pear:/usr/share/php') in /home/rtssoftware/public_html/tapasi/system/awards.php on line 2
+[19-Nov-2025 09:06:13 UTC] PHP Warning:  Undefined variable $con in /home/rtssoftware/public_html/tapasi/system/awards.php on line 106
+[19-Nov-2025 09:06:13 UTC] PHP Fatal error:  Uncaught TypeError: mysqli_query(): Argument #1 ($mysql) must be of type mysqli, null given in /home/rtssoftware/public_html/tapasi/system/awards.php:106
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(106): mysqli_query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 106
+[19-Nov-2025 09:20:59 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_employeemaster' doesn't exist in /home/rtssoftware/public_html/tapasi/system/awards.php:164
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(164): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 164
+[19-Nov-2025 09:34:19 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_employeemaster' doesn't exist in /home/rtssoftware/public_html/tapasi/system/access_control.php:152
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/access_control.php(152): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/access_control.php on line 152
+[19-Nov-2025 11:59:58 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tb_systems' doesn't exist in /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php:161
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php(161): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php on line 161
+[19-Nov-2025 12:00:51 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'cabin' in 'field list' in /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php:161
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php(161): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php on line 161
+[19-Nov-2025 12:12:28 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'department' in 'field list' in /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php:161
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php(161): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ticketmanagement.php on line 161
+[20-Nov-2025 09:53:05 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/system/systems.php:63
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/systems.php(63): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/systems.php on line 63
+[20-Nov-2025 11:02:06 UTC] tbl_systems columns: id, system_no, old_system_no, team, ip_address, employee_name, employee_id, service_tag, installation_id, cabin_no, processor, ram, cpu_id, keyboard_id, mouse_id, remarks, os, status, created_at, created_ip, updated_at, updated_ip
+[20-Nov-2025 11:02:06 UTC] System data loaded for 3 employees
+[20-Nov-2025 11:02:10 UTC] tbl_systems columns: id, system_no, old_system_no, team, ip_address, employee_name, employee_id, service_tag, installation_id, cabin_no, processor, ram, cpu_id, keyboard_id, mouse_id, remarks, os, status, created_at, created_ip, updated_at, updated_ip
+[20-Nov-2025 11:02:10 UTC] System data loaded for 3 employees
+[20-Nov-2025 11:13:15 UTC] tbl_systems columns: id, system_no, old_system_no, team, ip_address, employee_name, employee_id, service_tag, installation_id, cabin_no, processor, ram, cpu_id, keyboard_id, mouse_id, remarks, os, status, created_at, created_ip, updated_at, updated_ip
+[20-Nov-2025 11:13:15 UTC] System data loaded for 3 employees
+[20-Nov-2025 11:22:06 UTC] System data loaded for 3 employees
+[20-Nov-2025 11:22:08 UTC] System data loaded for 3 employees
+[20-Nov-2025 11:31:32 UTC] System data loaded for 3 employees
+[20-Nov-2025 15:39:21 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:24 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:27 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:41 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:43 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:49 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:53 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:57 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:57 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 15:39:59 UTC] PHP Parse error:  syntax error, unexpected token "if" in /home/rtssoftware/public_html/tapasi/system/ticketmanagementsystem.php on line 5
+[20-Nov-2025 17:49:04 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 17:49:04 UTC] POST ACTION: edit
+[20-Nov-2025 17:49:04 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 1
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Julie
+    [department] => Image
+    [system_no] => 2
+    [cabin] => 2
+    [issues] => Monitor blur
+    [complaint_type] => Monitor
+    [severity] => High
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => Devmohan
+    [resolved_date] => 2025-11-21
+    [comments] => given a new monitor
+)
+
+[20-Nov-2025 17:49:04 UTC] Severity value: High
+[20-Nov-2025 17:49:04 UTC] Status value: Pending
+[20-Nov-2025 17:49:04 UTC] Complaint type value: Monitor
+[20-Nov-2025 17:49:04 UTC] UPDATE SUCCESS
+[20-Nov-2025 17:49:16 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 17:49:16 UTC] POST ACTION: edit
+[20-Nov-2025 17:49:16 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 1
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Julie
+    [department] => Image
+    [system_no] => 2
+    [cabin] => 2
+    [issues] => Monitor blur
+    [complaint_type] => Monitor
+    [severity] => High
+    [assigned_to] => Devmohan
+    [status] => Closed
+    [resolved_by] => Devmohan
+    [resolved_date] => 2025-11-21
+    [comments] => given a new monitor
+)
+
+[20-Nov-2025 17:49:16 UTC] Severity value: High
+[20-Nov-2025 17:49:16 UTC] Status value: Closed
+[20-Nov-2025 17:49:16 UTC] Complaint type value: Monitor
+[20-Nov-2025 17:49:16 UTC] UPDATE SUCCESS
+[20-Nov-2025 17:49:28 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 17:49:28 UTC] POST ACTION: edit
+[20-Nov-2025 17:49:28 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 1
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Julie
+    [department] => Image
+    [system_no] => 2
+    [cabin] => 2
+    [issues] => Monitor blur
+    [complaint_type] => Monitor
+    [severity] => High
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => Devmohan
+    [resolved_date] => 2025-11-21
+    [comments] => given a new monitor
+)
+
+[20-Nov-2025 17:49:28 UTC] Severity value: High
+[20-Nov-2025 17:49:28 UTC] Status value: Pending
+[20-Nov-2025 17:49:28 UTC] Complaint type value: Monitor
+[20-Nov-2025 17:49:28 UTC] UPDATE SUCCESS
+[20-Nov-2025 17:49:37 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 17:49:37 UTC] POST ACTION: edit
+[20-Nov-2025 17:49:37 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 1
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Julie
+    [department] => Image
+    [system_no] => 2
+    [cabin] => 2
+    [issues] => Monitor blur
+    [complaint_type] => Monitor
+    [severity] => Medium
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => Devmohan
+    [resolved_date] => 2025-11-21
+    [comments] => given a new monitor
+)
+
+[20-Nov-2025 17:49:37 UTC] Severity value: Medium
+[20-Nov-2025 17:49:37 UTC] Status value: Pending
+[20-Nov-2025 17:49:37 UTC] Complaint type value: Monitor
+[20-Nov-2025 17:49:37 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:00:52 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:00:52 UTC] POST ACTION: edit
+[20-Nov-2025 18:00:52 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 2
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Ragul
+    [department] => IT
+    [system_no] => 3
+    [cabin] => 3
+    [issues] => issue in keyboard not working
+    [complaint_type] => 
+    [severity] => Critical
+    [assigned_to] => Devmohan
+    [status] => Closed
+    [resolved_by] => 
+    [resolved_date] => 
+    [comments] => 
+)
+
+[20-Nov-2025 18:00:52 UTC] Severity value: Critical
+[20-Nov-2025 18:00:52 UTC] Status value: Closed
+[20-Nov-2025 18:00:52 UTC] Complaint type value: 
+[20-Nov-2025 18:00:52 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:01:03 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:01:03 UTC] POST ACTION: edit
+[20-Nov-2025 18:01:03 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 2
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Ragul
+    [department] => IT
+    [system_no] => 3
+    [cabin] => 3
+    [issues] => issue in keyboard not working
+    [complaint_type] => 
+    [severity] => High
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => 
+    [resolved_date] => 
+    [comments] => 
+)
+
+[20-Nov-2025 18:01:03 UTC] Severity value: High
+[20-Nov-2025 18:01:03 UTC] Status value: Pending
+[20-Nov-2025 18:01:03 UTC] Complaint type value: 
+[20-Nov-2025 18:01:03 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:07:22 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:07:22 UTC] POST ACTION: edit
+[20-Nov-2025 18:07:22 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 1
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Julie
+    [department] => Image
+    [system_no] => 2
+    [cabin] => 2
+    [issues] => Monitor blur
+    [complaint_type] => Monitor
+    [severity] => Medium
+    [assigned_to] => Devmohan
+    [status] => Closed
+    [resolved_by] => Devmohan
+    [resolved_date] => 2025-11-21
+    [comments] => given a new monitor
+)
+
+[20-Nov-2025 18:07:22 UTC] Severity value: Medium
+[20-Nov-2025 18:07:22 UTC] Status value: Closed
+[20-Nov-2025 18:07:22 UTC] Complaint type value: Monitor
+[20-Nov-2025 18:07:22 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:07:39 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:07:39 UTC] POST ACTION: edit
+[20-Nov-2025 18:07:39 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 2
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Ragul
+    [department] => IT
+    [system_no] => 3
+    [cabin] => 3
+    [issues] => issue in keyboard not working
+    [complaint_type] => 
+    [severity] => Critical
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => 
+    [resolved_date] => 
+    [comments] => 
+)
+
+[20-Nov-2025 18:07:39 UTC] Severity value: Critical
+[20-Nov-2025 18:07:39 UTC] Status value: Pending
+[20-Nov-2025 18:07:39 UTC] Complaint type value: 
+[20-Nov-2025 18:07:39 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:07:55 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:07:55 UTC] POST ACTION: edit
+[20-Nov-2025 18:07:55 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 3
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Ragul
+    [department] => IT
+    [system_no] => 3
+    [cabin] => 3
+    [issues] => not working
+    [complaint_type] => Mouse
+    [severity] => High
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => 
+    [resolved_date] => 
+    [comments] => 
+)
+
+[20-Nov-2025 18:07:55 UTC] Severity value: High
+[20-Nov-2025 18:07:55 UTC] Status value: Pending
+[20-Nov-2025 18:07:55 UTC] Complaint type value: Mouse
+[20-Nov-2025 18:07:55 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:08:21 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:08:21 UTC] POST ACTION: edit
+[20-Nov-2025 18:08:21 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 4
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Ragul
+    [department] => IT
+    [system_no] => 3
+    [cabin] => 3
+    [issues] => not working
+    [complaint_type] => CPU
+    [severity] => Medium
+    [assigned_to] => Devmohan
+    [status] => Pending
+    [resolved_by] => Devmohan
+    [resolved_date] => 2025-11-20
+    [comments] => 
+)
+
+[20-Nov-2025 18:08:21 UTC] Severity value: Medium
+[20-Nov-2025 18:08:21 UTC] Status value: Pending
+[20-Nov-2025 18:08:21 UTC] Complaint type value: CPU
+[20-Nov-2025 18:08:21 UTC] UPDATE SUCCESS
+[20-Nov-2025 18:08:41 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 18:08:41 UTC] POST ACTION: edit
+[20-Nov-2025 18:08:41 UTC] POST DATA: Array
+(
+    [action] => edit
+    [id] => 5
+    [complaint_date] => 2025-11-20
+    [created_by] => A. Julie
+    [department] => Image
+    [system_no] => 2
+    [cabin] => 2
+    [issues] => issur
+    [complaint_type] => Mouse
+    [severity] => Low
+    [assigned_to] => Devmohan
+    [status] => Closed
+    [resolved_by] => 
+    [resolved_date] => 2025-11-22
+    [comments] => 
+)
+
+[20-Nov-2025 18:08:41 UTC] Severity value: Low
+[20-Nov-2025 18:08:41 UTC] Status value: Closed
+[20-Nov-2025 18:08:41 UTC] Complaint type value: Mouse
+[20-Nov-2025 18:08:41 UTC] UPDATE SUCCESS
+[20-Nov-2025 23:47:46 UTC] === FORM SUBMISSION DEBUG ===
+[20-Nov-2025 23:47:46 UTC] POST ACTION: delete
+[20-Nov-2025 23:47:46 UTC] POST DATA: Array
+(
+    [action] => delete
+    [id] => 2
+)
+
+[21-Nov-2025 00:09:43 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'warranty_years' in 'field list' in /home/rtssoftware/public_html/tapasi/system/ups.php:288
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(288): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 288
+[21-Nov-2025 00:24:53 UTC] PHP Parse error:  syntax error, unexpected end of file in /home/rtssoftware/public_html/tapasi/system/awards.php on line 537
+[21-Nov-2025 00:27:27 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'employee_id' in 'field list' in /home/rtssoftware/public_html/tapasi/system/awards.php:61
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(61): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 61
+[21-Nov-2025 00:30:59 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'employee_id' in 'field list' in /home/rtssoftware/public_html/tapasi/system/awards.php:61
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(61): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 61
+[21-Nov-2025 00:31:05 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'employee_id' in 'field list' in /home/rtssoftware/public_html/tapasi/system/awards.php:61
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(61): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 61
+[21-Nov-2025 01:09:07 UTC] PHP Fatal error:  Cannot redeclare function h() (previously declared in /home/rtssoftware/public_html/tapasi/system/wfh.php:12) in /home/rtssoftware/public_html/tapasi/system/header.php on line 7
+[21-Nov-2025 01:10:26 UTC] PHP Fatal error:  Cannot redeclare function h() (previously declared in /home/rtssoftware/public_html/tapasi/system/wfh.php:12) in /home/rtssoftware/public_html/tapasi/system/header.php on line 7
+[21-Nov-2025 01:12:26 UTC] PHP Fatal error:  Cannot redeclare function h() (previously declared in /home/rtssoftware/public_html/tapasi/system/wfh.php:12) in /home/rtssoftware/public_html/tapasi/system/header.php on line 7
+[21-Nov-2025 01:30:10 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Column count doesn't match value count at row 1 in /home/rtssoftware/public_html/tapasi/system/awards.php:61
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/awards.php(61): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/awards.php on line 61
+[21-Nov-2025 01:41:35 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'team' in 'field list' in /home/rtssoftware/public_html/tapasi/system/wfh.php:35
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(35): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 35
+[21-Nov-2025 01:41:44 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'team' in 'field list' in /home/rtssoftware/public_html/tapasi/system/wfh.php:35
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(35): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 35
+[21-Nov-2025 01:44:06 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'team' in 'field list' in /home/rtssoftware/public_html/tapasi/system/wfh.php:35
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(35): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 35
+[21-Nov-2025 01:46:32 UTC] PHP Parse error:  syntax error, unexpected token "const" in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 33
+[21-Nov-2025 01:46:39 UTC] PHP Parse error:  syntax error, unexpected token "const" in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 33
+[21-Nov-2025 04:26:47 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/header.php:32
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/header.php(77): getBatteryWarrantyNotifications()
+#1 /home/rtssoftware/public_html/tapasi/system/dashboard.php(7): include('/home/rtssoftwa...')
+#2 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/header.php on line 32
+[21-Nov-2025 04:26:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/header.php:32
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/header.php(77): getBatteryWarrantyNotifications()
+#1 /home/rtssoftware/public_html/tapasi/system/dashboard.php(7): include('/home/rtssoftwa...')
+#2 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/header.php on line 32
+[21-Nov-2025 04:28:18 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/header.php:32
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/header.php(77): getBatteryWarrantyNotifications()
+#1 /home/rtssoftware/public_html/tapasi/system/dashboard.php(7): include('/home/rtssoftwa...')
+#2 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/header.php on line 32
+[21-Nov-2025 04:30:08 UTC] PHP Warning:  Undefined variable $mysqli in /home/rtssoftware/public_html/tapasi/system/header.php on line 26
+[21-Nov-2025 04:30:08 UTC] PHP Warning:  Undefined variable $mysqli in /home/rtssoftware/public_html/tapasi/system/header.php on line 26
+[21-Nov-2025 04:30:08 UTC] PHP Warning:  Undefined variable $mysqli in /home/rtssoftware/public_html/tapasi/system/header.php on line 32
+[21-Nov-2025 04:30:08 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/header.php:32
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/header.php(77): getBatteryWarrantyNotifications()
+#1 /home/rtssoftware/public_html/tapasi/system/dashboard.php(7): include('/home/rtssoftwa...')
+#2 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/header.php on line 32
+[21-Nov-2025 05:11:33 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/system/ups.php:151
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(151): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 151
+[21-Nov-2025 05:24:15 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/system/ups.php:168
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(168): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 168
+[21-Nov-2025 05:25:10 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/system/ups.php:168
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(168): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 168
+[21-Nov-2025 05:25:44 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/system/ups.php:168
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(168): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 168
+[21-Nov-2025 05:29:43 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'team' in 'field list' in /home/rtssoftware/public_html/tapasi/system/wfh.php:35
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(35): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 35
+[21-Nov-2025 05:36:26 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'team' in 'field list' in /home/rtssoftware/public_html/tapasi/system/wfh.php:13
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(13): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 13
+[21-Nov-2025 05:40:48 UTC] PHP Warning:  Undefined variable $mysqli in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 74
+[21-Nov-2025 05:40:48 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/wfh.php:74
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 74
+[21-Nov-2025 05:43:41 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'team' in 'field list' in /home/rtssoftware/public_html/tapasi/system/wfh.php:18
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(18): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 18
+[21-Nov-2025 05:57:54 UTC] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/rtssoftware/public_html/tapasi/system/header.php on line 4
+[21-Nov-2025 05:57:54 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/wfh.php:60) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[21-Nov-2025 05:57:54 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/wfh.php:60) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[21-Nov-2025 05:57:54 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/wfh.php:60) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[21-Nov-2025 05:57:54 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/wfh.php:60) in /home/rtssoftware/public_html/tapasi/system/header.php on line 14
+[21-Nov-2025 05:58:37 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'employee_username' in 'where clause' in /home/rtssoftware/public_html/tapasi/system/wfh.php:33
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(33): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 33
+[21-Nov-2025 05:58:54 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'employee_username' in 'where clause' in /home/rtssoftware/public_html/tapasi/system/wfh.php:33
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/wfh.php(33): mysqli->prepare()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/wfh.php on line 33
+[21-Nov-2025 06:14:14 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/rtssoftware/public_html/tapasi/system/ups.php:168
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups.php(168): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups.php on line 168
+[21-Nov-2025 08:12:24 UTC] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/rtssoftware/public_html/tapasi/system/header.php on line 4
+[21-Nov-2025 08:12:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/dashboard.php:1) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[21-Nov-2025 08:12:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/dashboard.php:1) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[21-Nov-2025 08:12:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/dashboard.php:1) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[21-Nov-2025 08:12:24 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/dashboard.php:1) in /home/rtssoftware/public_html/tapasi/system/header.php on line 14
+[21-Nov-2025 08:18:50 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home/rtssoftware/public_html/tapasi/system/dashboard.php:438
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/dashboard.php(438): mysqli->__construct()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 438
+[21-Nov-2025 08:20:13 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home/rtssoftware/public_html/tapasi/system/dashboard.php:439
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/dashboard.php(439): mysqli->__construct()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 439
+[21-Nov-2025 08:20:46 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home/rtssoftware/public_html/tapasi/system/dashboard.php:441
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/dashboard.php(441): mysqli->__construct()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 441
+[21-Nov-2025 08:23:03 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/header.php:23) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[21-Nov-2025 08:23:03 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/header.php:23) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[21-Nov-2025 08:23:03 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/header.php:23) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[21-Nov-2025 08:31:12 UTC] PHP Warning:  Undefined variable $conn in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 31
+[21-Nov-2025 08:31:12 UTC] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home/rtssoftware/public_html/tapasi/system/dashboard.php:31
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 31
+[22-Nov-2025 02:27:33 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of variables must match the number of parameters in the prepared statement in /home/rtssoftware/public_html/tapasi/system/switch_tm.php:34
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/switch_tm.php(34): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 34
+[22-Nov-2025 02:28:53 UTC] PHP Warning:  Undefined variable $mysqli in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 27
+[22-Nov-2025 02:28:53 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/rtssoftware/public_html/tapasi/system/switch_tm.php:27
+Stack trace:
+#0 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 27
+[22-Nov-2025 02:29:18 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of variables must match the number of parameters in the prepared statement in /home/rtssoftware/public_html/tapasi/system/switch_tm.php:37
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/switch_tm.php(37): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 37
+[22-Nov-2025 02:29:50 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of variables must match the number of parameters in the prepared statement in /home/rtssoftware/public_html/tapasi/system/switch_tm.php:37
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/switch_tm.php(37): mysqli_stmt->bind_param()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 37
+[22-Nov-2025 02:31:15 UTC] PHP Warning:  session_regenerate_id(): Session ID cannot be regenerated when there is no active session in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 44
+[22-Nov-2025 02:32:19 UTC] PHP Warning:  session_regenerate_id(): Session ID cannot be regenerated when there is no active session in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 44
+[22-Nov-2025 02:35:18 UTC] PHP Warning:  session_regenerate_id(): Session ID cannot be regenerated when there is no active session in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 44
+[22-Nov-2025 02:38:06 UTC] PHP Warning:  session_regenerate_id(): Session ID cannot be regenerated when there is no active session in /home/rtssoftware/public_html/tapasi/system/switch_tm.php on line 44
+[22-Nov-2025 09:57:18 UTC] PHP Fatal error:  Allowed memory size of 134217728 bytes exhausted (tried to allocate 12288 bytes) in /home/rtssoftware/public_html/tapasi/system/header.php on line 673
+[22-Nov-2025 10:12:05 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 10:14:50 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 10:15:25 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 10:16:17 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 10:16:20 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 10:17:37 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 11:18:25 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[22-Nov-2025 11:19:39 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[23-Nov-2025 11:20:11 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[23-Nov-2025 11:20:46 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[23-Nov-2025 13:32:31 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[16-Dec-2025 07:52:20 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[16-Dec-2025 08:11:17 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[16-Dec-2025 08:14:26 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[16-Dec-2025 08:38:39 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[16-Dec-2025 08:39:28 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Dec-2025 07:34:37 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Dec-2025 08:21:15 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Dec-2025 09:15:09 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Dec-2025 11:38:09 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Dec-2025 15:54:13 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[24-Dec-2025 05:23:26 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[24-Dec-2025 05:40:48 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[24-Dec-2025 06:52:14 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_ups_details' doesn't exist in /home/rtssoftware/public_html/tapasi/system/ups_inventory.php:93
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups_inventory.php(93): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups_inventory.php on line 93
+[24-Dec-2025 06:52:21 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_ups_details' doesn't exist in /home/rtssoftware/public_html/tapasi/system/ups_inventory.php:93
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups_inventory.php(93): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups_inventory.php on line 93
+[24-Dec-2025 06:56:55 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'rtssoftware_tapasi_erp.tbl_ups_details' doesn't exist in /home/rtssoftware/public_html/tapasi/system/ups_inventory.php:125
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/ups_inventory.php(125): mysqli->query()
+#1 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/ups_inventory.php on line 125
+[25-Dec-2025 18:37:58 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[13-Jan-2026 07:37:56 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: YES) in /home/rtssoftware/public_html/tapasi/system/db.php:7
+Stack trace:
+#0 /home/rtssoftware/public_html/tapasi/system/db.php(7): mysqli->__construct()
+#1 /home/rtssoftware/public_html/tapasi/system/dashboard.php(3): require('/home/rtssoftwa...')
+#2 {main}
+  thrown in /home/rtssoftware/public_html/tapasi/system/db.php on line 7
+[13-Jan-2026 07:39:00 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[13-Jan-2026 13:59:57 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[13-Jan-2026 14:44:01 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Jan-2026 19:17:02 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[18-Jan-2026 19:31:21 UTC] PHP Deprecated:  fputcsv(): the $escape parameter must be provided as its default value will change in /home/rtssoftware/public_html/tapasi/system/ups.php on line 22
+[18-Jan-2026 19:31:21 UTC] PHP Deprecated:  fputcsv(): the $escape parameter must be provided as its default value will change in /home/rtssoftware/public_html/tapasi/system/ups.php on line 51
+[18-Jan-2026 19:31:23 UTC] PHP Deprecated:  fputcsv(): the $escape parameter must be provided as its default value will change in /home/rtssoftware/public_html/tapasi/system/ups.php on line 22
+[18-Jan-2026 19:31:23 UTC] PHP Deprecated:  fputcsv(): the $escape parameter must be provided as its default value will change in /home/rtssoftware/public_html/tapasi/system/ups.php on line 51
+[18-Jan-2026 19:32:04 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[18-Jan-2026 19:32:04 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[18-Jan-2026 19:32:04 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[18-Jan-2026 19:32:22 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[18-Jan-2026 19:32:22 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[18-Jan-2026 19:32:22 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[18-Jan-2026 19:34:29 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[18-Jan-2026 19:34:29 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[18-Jan-2026 19:34:29 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[01-Feb-2026 12:22:43 UTC] PHP Warning:  Undefined variable $battery_count in /home/rtssoftware/public_html/tapasi/system/dashboard.php on line 644
+[01-Feb-2026 12:25:22 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[01-Feb-2026 12:25:22 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[01-Feb-2026 12:25:22 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[01-Feb-2026 12:25:37 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[01-Feb-2026 12:25:37 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[01-Feb-2026 12:25:37 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[01-Feb-2026 12:25:50 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[01-Feb-2026 12:25:50 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[01-Feb-2026 12:25:50 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[01-Feb-2026 12:25:52 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[01-Feb-2026 12:25:52 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[01-Feb-2026 12:25:52 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
+[01-Feb-2026 12:26:11 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 8
+[01-Feb-2026 12:26:11 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 9
+[01-Feb-2026 12:26:11 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/rtssoftware/public_html/tapasi/system/ups.php:550) in /home/rtssoftware/public_html/tapasi/system/header.php on line 10
