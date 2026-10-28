@@ -36,6 +36,8 @@ $check_columns = [
     'table_start_time' => "TIME NULL DEFAULT NULL",
     'table_end_time' => "TIME NULL DEFAULT NULL",
     'assigned_to_table' => "VARCHAR(100) NULL DEFAULT NULL",
+    'remarks' => "VARCHAR(255) NULL DEFAULT NULL",
+    'note' => "VARCHAR(255) NULL DEFAULT NULL",
     'path' => "VARCHAR(255) NULL DEFAULT NULL",
     'priority' => "VARCHAR(50) NULL DEFAULT NULL"
 ];
@@ -143,7 +145,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'path', 'priority'];
+    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'remarks', 'note', 'path', 'priority'];
     if (in_array($field, $allowed_fields)) {
         if ($val === '') {
             $stmt = $mysqli->prepare("UPDATE pag SET $field = NULL, last_updated = NOW() WHERE id = ?");
@@ -576,6 +578,7 @@ require 'header.php';
                             <th>EQN</th>
                             <th>Pages</th>
                             <th>Images</th>
+                            <th>Remarks</th>
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
@@ -585,6 +588,7 @@ require 'header.php';
                             <th style="min-width: 300px;">TS</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
+                            <th>NOTE</th>
                             <th>Path</th>
                             <th>Priority</th>
                         </tr>
@@ -617,6 +621,20 @@ require 'header.php';
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)"></td>
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['pages'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'pages', this.value)"></td>
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['images'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)"></td>
+                                    
+                                    <!-- Remarks Dropdown -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
+                                            <option value="">Select</option>
+                                            <?php 
+                                            $remarks_options = ['Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
+                                            foreach($remarks_options as $opt) {
+                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
+                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </td>
                                     <!-- Tables (Count, Status Dropdown, Assign TM & Times) -->
                                 <td class="assignment-cell" style="padding: 8px; vertical-align: top; min-width: 130px;">
                                     <!-- Count Input -->
@@ -756,6 +774,11 @@ require 'header.php';
                                     <td class="fw-bold"><?= intval($row['rtat'] ?? 0) ?></td>
                                     <td class="fw-bold"><?= intval($row['atat'] ?? 0) ?></td>
                                     
+                                    <!-- NOTE (Editable Text Field) -->
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm p-1" style="min-width: 150px; font-size: 11px;" placeholder="Enter Note" value="<?= h($row['note'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'note', this.value)">
+                                    </td>
+
                                     <!-- Path (Text Field) -->
                                     <td>
                                         <input type="text" class="form-control form-control-sm p-1" style="min-width: 150px; font-size: 11px;" placeholder="Enter Path" value="<?= h($row['path'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'path', this.value)">
