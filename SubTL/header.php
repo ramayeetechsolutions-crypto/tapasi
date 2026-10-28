@@ -651,7 +651,7 @@ if ($result && $row = $result->fetch_assoc()) {
                         <a href="#"><i class="fas fa-layer-group"></i> AP</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="#">
+                                <a href="ap_assign.php">
                                     <i class="fas fa-user-plus"></i> AP Assign
                                 </a>
                             </li>
