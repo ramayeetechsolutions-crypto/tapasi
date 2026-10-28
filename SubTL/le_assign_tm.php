@@ -38,6 +38,27 @@ if ($check_status) {
     }
 }
 // --------------------------------------------------------------
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
@@ -969,6 +990,7 @@ require 'header.php';
                             <th>LE-QC Assignment</th>
                             <th>Status</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1256,6 +1278,16 @@ require 'header.php';
                                             <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
                                             <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
                                         </select>
+                                    </td>
+                                    <!-- TAT Column -->
+                                    <?php
+                                        $le_done = in_array($row['status'] ?? '', ['Completed', 'Done', 'LE & LE-QC Done']);
+                                        $end_d = $le_done ? ($row['le_date'] ?: $row['last_updated']) : null;
+                                        $tat = getWorkingDaysWithoutSunday($row['job_date'] ?? $row['date'], $end_d);
+                                        $bg = $le_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
