@@ -38,6 +38,7 @@ $masterPages = ['client_master.php', 'services_master.php', 'math_category_maste
 $clientPages = ['nda_details.php', 'client_followup.php', 'client_rate_list.php', 'inactive_clients.php'];
 $servicePages = ['client_services.php', 'client_transactions.php'];
 $calcPages = ['math_charges.php', 'sales_calculation.php'];
+$myAccountPages = ['employee_regby_emp.php', 'employee.php'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -433,6 +434,18 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
                             <li><a href="services_master.php"><i class="fas fa-cogs"></i> Services Master</a></li>
                             <li><a href="math_category_master.php"><i class="fas fa-layer-group"></i> Math Category Master</a></li>
                             <li><a  href="publisher_master.php"><i class="fas fa-file-invoice"></i> Data Collection</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- My Account -->
+                    <li>
+                        <a href="#" onclick="return false;"
+                            class="<?php echo (in_array($currentPage, $myAccountPages)) ? 'active' : ''; ?>">
+                            <i class="fas fa-user-circle"></i> My Account
+                        </a>
+                        <ul class="nav-dropdown">
+                            <li><a href="employee_regby_emp.php"><i class="fas fa-user-edit"></i> Update Profile</a></li>
+                            <li><a href="employee.php"><i class="fas fa-check-circle"></i> Verify Details</a></li>
                         </ul>
                     </li>
 
