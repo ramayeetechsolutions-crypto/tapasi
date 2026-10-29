@@ -127,8 +127,9 @@ $where = [$team_condition];
 $params = [$user_employee_name];
 $types  = 's';
 
-// Ensure we only show relevant LE processes (Matches LE Assign logic exactly)
-$where[] = "(REPLACE(jm.job_name, ' ', '') = 'CE+PAG' OR REPLACE(jm.job_name, ' ', '') = 'CE+TS' OR REPLACE(jm.job_name, ' ', '') = 'LE')";
+// Ensure we only show LE jobs that have been Moved by TL
+$where[] = "le.status_button = 'Moved'";
+$where[] = "(REPLACE(jm.job_name, ' ', '') IN ('CE+PAG', 'CE+TS', 'LE', 'CE'))";
 
 // Search query filter
 if ($q) {

@@ -146,8 +146,26 @@ $processStageMap = [
     'CE+PAG+QC+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
 ];
 
-// WHERE conditions - MODIFIED: Add condition to fetch jobs assigned to current user
-$where = ["j.assigned_to = ?"]; // Only show jobs assigned to current user
+// Get all team members under this reporting manager to keep their jobs visible
+$team_users = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE reporting_manager = ?");
+if ($stmt_team) {
+    $stmt_team->bind_param("s", $user_employee_name);
+    $stmt_team->execute();
+    $res_team = $stmt_team->get_result();
+    while ($row_team = $res_team->fetch_assoc()) {
+        $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+    }
+    $stmt_team->close();
+}
+
+$team_condition = "j.assigned_to = ?";
+if (!empty($team_users)) {
+    $team_list = implode(',', $team_users);
+    $team_condition = "(j.assigned_to = ? OR j.assigned_to IN ($team_list) OR le.assigned_to_le IN ($team_list) OR ce.assigned_to_content IN ($team_list))";
+}
+
+$where = [$team_condition];
 $params = [$user_employee_name];
 $types  = 's';
 
@@ -231,7 +249,7 @@ $sql = "SELECT
     ce.eq as ce_eq, ce.ref as ce_ref, ce.images as ce_images, ce.tables_count as ce_tables,
     ce.ce_date, ce.done_by AS ce_done_by, ce.status AS ce_status,
     le.le_date, le.done_by AS le_done_by, le.status AS le_status,
-    le.last_updated AS le_moved_date, le.assigned_to_le, le.assigned_to_le_qc,
+    le.last_updated AS le_moved_date, le.assigned_to_le, le.assigned_to_le_qc, le.status_button AS le_status_button,
     le.eq AS le_eq, le.images AS le_images, le.tables_count AS le_tables,
     pag.pag_date, pag.done_by AS pag_done_by, pag.status AS pag_status,
     qc.qc_date, qc.done_by AS qc_done_by, qc.status AS qc_status, qc.assigned_to_qc,
@@ -299,10 +317,16 @@ if ($results->num_rows > 0) {
             $status_field = strtolower($stage) . '_status';
             $stage_status = $row[$status_field] ?? 'Need to Assign';
             
-            if (!isStageDone($stage_status)) {
+            // For CE process, LE stage is ONLY considered completed if status_button is 'Moved'
+            $stage_is_done = isStageDone($stage_status);
+            if ($stage === 'LE' && $normalized_process === 'CE' && ($row['le_status_button'] ?? '') !== 'Moved') {
+                $stage_is_done = false;
+            }
+            
+            if (!$stage_is_done) {
                 $all_completed = false;
                 
-                if ($stage_status === 'In Progress') {
+                if ($stage_status === 'In Progress' || isStageDone($stage_status)) {
                     $has_in_progress = true;
                 } elseif ($stage_status === 'Need to Assign') {
                     $has_need_to_assign = true;
@@ -608,7 +632,10 @@ table td:nth-child(26) {
                                 }
                         ?>
                         <tr>
-                            <td><?= (isStageDone($row['le_status']) && !empty($row['le_moved_date'])) ? formatDateOnly(substr($row['le_moved_date'],0,10),'d-m-Y') : '—' ?></td>
+                            <?php 
+$le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' || ($row['le_status_button'] ?? '') === 'Moved'));
+?>
+<td><?= ($le_is_done_flag && !empty($row['le_moved_date'])) ? formatDateOnly(substr($row['le_moved_date'],0,10),'d-m-Y') : '—' ?></td>
                             <td><?= !empty($row['ce_date']) ? formatDateOnly(substr($row['ce_date'],0,10),'d-m-Y') : '—' ?></td>
                             <td><?= formatDateTime($row['job_date'], 'd-m-Y') ?></td>
                             <td><?=h($row['team_client_name'] ?: $row['client_name'])?></td>
@@ -634,12 +661,16 @@ table td:nth-child(26) {
                             <!-- LE -->
                             <td>
                             <?php if (in_array('LE', $required_stages)):
-                                $le_st = $row['le_status'] ?? 'Need to Assign'; ?>
+                                $le_st = $row['le_status'] ?? 'Need to Assign'; 
+                                $le_completed_now = (isStageDone($le_st) && ($row['process'] !== 'CE' || ($row['le_status_button'] ?? '') === 'Moved'));
+                            ?>
                                 <div class="fw-bold"><?= h(nameOf(($row['assigned_to_le'] ?: $row['le_done_by']), $emp_map) ?: '—') ?></div>
                                 <?php if (!empty($row['assigned_to_le_qc'])): ?>
                                     <div class="small text-muted">LE-QC: <?= h(nameOf($row['assigned_to_le_qc'], $emp_map)) ?></div>
                                 <?php endif; ?>
-                                <span class="badge mt-1 <?= isStageDone($le_st) ? 'bg-success' : ($le_st === 'In Progress' ? 'bg-warning' : 'bg-secondary') ?>"><?= h($le_st) ?></span>
+                                <span class="badge mt-1 <?= $le_completed_now ? 'bg-success' : ($le_st === 'In Progress' || isStageDone($le_st) ? 'bg-warning' : 'bg-secondary') ?>">
+                                    <?= $le_completed_now ? 'Completed' : ($le_st === 'Need to Assign' ? 'Need to Assign' : 'In Progress') ?>
+                                </span>
                             <?php else: ?>—<?php endif; ?>
                             </td>
 
