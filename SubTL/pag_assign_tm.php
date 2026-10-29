@@ -7,6 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+date_default_timezone_set('Asia/Kolkata');
 
 require 'db.php';
 
@@ -382,6 +383,16 @@ require 'header.php';
         .table tbody td { padding: 0.6rem 0.4rem; font-size: 0.75rem; color: #334155; vertical-align: middle; border-bottom: 1px solid #e2e8f0; }
         .table tbody tr:hover { background-color: #f8fafc; }
         .table tbody tr.assigned { background-color: #f0fdf4; }
+        /* Purple Highlight for Overdue TS (past 2 PM) and CE+TS (past 4 PM) */
+        .table tbody tr.row-purple,
+        .table tbody tr.row-purple > td {
+            background-color: #f3e8ff !important;
+        }
+        .table tbody tr.row-purple:hover,
+        .table tbody tr.row-purple:hover > td {
+            background-color: #e9d5ff !important;
+        }
+
         .status-badge { display: inline-block; padding: 0.2rem 0.4rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 500; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-progress { background: #dbeafe; color: #1e40af; }
@@ -626,8 +637,34 @@ require 'header.php';
                                 
                                 $word_stat = $row['word_status'] ?? 'Need to Assign';
                                 $pag_stat = $row['pag_status_col'] ?? 'Need to Assign';
+
+                                // Check if file reached 2 PM for TS or 4 PM for CE+TS
+                                $proc_clean = strtoupper(str_replace(' ', '', $row['process_name'] ?? ''));
+                                $is_ce_ts = (strpos($proc_clean, 'CE+TS') !== false || strpos($proc_clean, 'CE+PAG') !== false);
+                                $is_ts = (!$is_ce_ts && (strpos($proc_clean, 'TS') !== false || strpos($proc_clean, 'PAG') !== false));
+
+                                $job_entry_date = !empty($row['created_at']) ? substr($row['created_at'], 0, 10) : ($row['job_date_received'] ?? date('Y-m-d'));
+                                $current_date = date('Y-m-d');
+                                $current_time = date('H:i:s');
+
+                                $is_purple = false;
+                                if ($is_ce_ts) {
+                                    // CE+TS file: after 4 PM (16:00)
+                                    if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '16:00:00')) {
+                                        $is_purple = true;
+                                    }
+                                } elseif ($is_ts) {
+                                    // TS file: after 2 PM (14:00)
+                                    if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '14:00:00')) {
+                                        $is_purple = true;
+                                    }
+                                }
+
+                                if ($is_purple) {
+                                    $row_class .= ' row-purple';
+                                }
                             ?>
-                                <tr class="<?= $row_class ?>" id="row-<?= $row['id'] ?>">
+                                <tr class="<?= trim($row_class) ?>" id="row-<?= $row['id'] ?>" data-process="<?= h($proc_clean) ?>" data-date="<?= h($job_entry_date) ?>">
                                     <!-- LE Moved Date -->
                                     <td><?= (in_array($row['le_status'], ['Completed', 'Done', 'LE & LE-QC Done', 'LE-QC Done', 'LE Done'])) ? formatDate(substr($row['le_moved_date'], 0, 10)) : '—' ?></td>
                                     <!-- CE Moved Date -->
@@ -995,6 +1032,40 @@ require 'header.php';
         }
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+    // Check and highlight purple rows based on local system time (2 PM for TS, 4 PM for CE+TS)
+    function updatePurpleRows() {
+        const now = new Date();
+        const curHours = now.getHours();
+        const curMinutes = now.getMinutes();
+        const curTime = (curHours < 10 ? '0' : '') + curHours + ':' + (curMinutes < 10 ? '0' : '') + curMinutes;
+        const curDate = now.toISOString().slice(0, 10);
+        
+        document.querySelectorAll('tbody tr[data-process]').forEach(function(row) {
+            const proc = (row.getAttribute('data-process') || '').toUpperCase();
+            const jobDate = row.getAttribute('data-date') || curDate;
+            const isCeTs = proc.indexOf('CE+TS') !== -1 || proc.indexOf('CE+PAG') !== -1;
+            const isTs = !isCeTs && (proc.indexOf('TS') !== -1 || proc.indexOf('PAG') !== -1);
+            
+            let shouldPurple = false;
+            if (isCeTs) {
+                if (jobDate < curDate || (jobDate === curDate && curTime >= '16:00')) {
+                    shouldPurple = true;
+                }
+            } else if (isTs) {
+                if (jobDate < curDate || (jobDate === curDate && curTime >= '14:00')) {
+                    shouldPurple = true;
+                }
+            }
+            
+            if (shouldPurple) {
+                row.classList.add('row-purple');
+            }
+        });
+    }
+    updatePurpleRows();
+    setInterval(updatePurpleRows, 30000);
+
+</script>
 </body>
 </html>
