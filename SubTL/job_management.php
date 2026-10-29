@@ -130,20 +130,28 @@ $dir  = strtoupper($dir)==='ASC' ? 'ASC' : 'DESC';
 $valid_sorts = ['job_id','j.job_date','client_name','journal_issue','process','qc.dispatch_date'];
 if (!in_array($sort, $valid_sorts)) $sort = 'j.job_date';
 
-// Process stage mapping
+// Process stage mapping (Includes both PAG and TS processes)
 $processStageMap = [
     'CE' => ['CE', 'LE'],
     'PAG' => ['PAG', 'QC'],
+    'TS' => ['PAG', 'QC'],
     'CE+PAG' => ['CE', 'LE', 'PAG', 'QC'],
+    'CE+TS' => ['CE', 'LE', 'PAG', 'QC'],
     'CE+PAG+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
+    'CE+TS+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
     'CE+XML' => ['CE', 'LE', 'XML'],
     'PAG+XML' => ['PAG', 'QC', 'XML'],
+    'TS+XML' => ['PAG', 'QC', 'XML'],
     'XML' => ['XML'],
     'QC' => ['QC'],
     'PAG+QC' => ['PAG', 'QC'],
+    'TS+QC' => ['PAG', 'QC'],
     'CE+PAG+QC' => ['CE', 'LE', 'PAG', 'QC'],
+    'CE+TS+QC' => ['CE', 'LE', 'PAG', 'QC'],
     'PAG+QC+XML' => ['PAG', 'QC', 'XML'],
+    'TS+QC+XML' => ['PAG', 'QC', 'XML'],
     'CE+PAG+QC+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
+    'CE+TS+QC+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
 ];
 
 // Get all team members under this reporting manager to keep their jobs visible
@@ -245,16 +253,16 @@ $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 // Main query - updated to include dispatch_date from jobs and data from job_uploads
 $sql = "SELECT 
     j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal_issue, j.article,
-    jm.job_name AS process, qc.dispatch_date, j.file_path as jfile_path, j.assigned_to, j.assigned_ce,
+    jm.job_name AS process, qc.dispatch_date, j.file_path as jfile_path, j.assigned_to, j.assigned_ce, j.assigned_pag,
     ce.eq as ce_eq, ce.ref as ce_ref, ce.images as ce_images, ce.tables_count as ce_tables,
-    ce.ce_date, ce.done_by AS ce_done_by, ce.status AS ce_status,
+    ce.ce_date, ce.done_by AS ce_done_by, ce.status AS ce_status, ce.assigned_to_content,
     le.le_date, le.done_by AS le_done_by, le.status AS le_status,
     le.last_updated AS le_moved_date, le.assigned_to_le, le.assigned_to_le_qc, le.status_button AS le_status_button,
     le.eq AS le_eq, le.images AS le_images, le.tables_count AS le_tables,
-    pag.pag_date, pag.done_by AS pag_done_by, pag.status AS pag_status,
-    qc.qc_date, qc.done_by AS qc_done_by, qc.status AS qc_status, qc.assigned_to_qc,
+    pag.pag_date, pag.done_by AS pag_done_by, pag.status AS pag_status, pag.assigned_to_pag,
+    qc.qc_date, qc.done_by AS qc_done_by, qc.status AS qc_status, qc.assigned_to_qc, qc.upload_by AS qc_upload_by,
     pag.eq AS pag_eq, pag.pages, pag.images, pag.tables_count, j.due_date, qc.rtat, qc.atat,
-    ju.upload_date, ju.upload_by, ju.file_path 
+    ju.upload_date, COALESCE(qc.upload_by, ju.upload_by) AS upload_by, ju.file_path 
 
 FROM jobs j
 JOIN client_master c ON j.client_id=c.client_id
@@ -297,6 +305,21 @@ $status_counts = [
     'In Progress' => 0,
     'Completed' => 0,
     'Total' => 0
+];
+
+// CE Team & PAG (TS) Team Specific Counts
+$ce_counts = [
+    'received' => 0,
+    'assigned' => 0,
+    'completed' => 0,
+    'pending' => 0
+];
+
+$pag_counts = [
+    'received' => 0,
+    'completed' => 0,
+    'pages' => 0,
+    'pending' => 0
 ];
 
 $all_jobs = [];
@@ -347,6 +370,41 @@ if ($results->num_rows > 0) {
         
         $status_counts[$final_status]++;
         $status_counts['Total']++;
+
+        // --- 1. CE Team Counts Calculation ---
+        $is_ce_job = in_array('CE', $required_stages) || (strpos($normalized_process, 'CE') !== false);
+        if ($is_ce_job) {
+            $ce_counts['received']++;
+            $ce_is_done = isStageDone($row['ce_status'] ?? '');
+            
+            $ce_emp = !empty($row['assigned_to_content']) ? $row['assigned_to_content'] : (!empty($row['assigned_ce']) ? $row['assigned_ce'] : ($row['ce_done_by'] ?? ''));
+            if (!empty($ce_emp) || ($row['ce_status'] ?? '') !== 'Need to Assign') {
+                $ce_counts['assigned']++;
+            }
+            
+            if ($ce_is_done) {
+                $ce_counts['completed']++;
+            } else {
+                $ce_counts['pending']++;
+            }
+        }
+
+        // --- 2. PAG (TS) Team Counts Calculation ---
+        $is_pag_job = in_array('PAG', $required_stages) || (strpos($normalized_process, 'PAG') !== false) || (strpos($normalized_process, 'TS') !== false);
+        if ($is_pag_job) {
+            $pag_counts['received']++;
+            $pag_is_done = isStageDone($row['pag_status'] ?? '');
+            
+            if ($pag_is_done) {
+                $pag_counts['completed']++;
+            } else {
+                $pag_counts['pending']++;
+            }
+            
+            // Sum of Pages
+            $pages_num = intval(preg_replace('/[^0-9]/', '', (string)($row['pages'] ?? 0)));
+            $pag_counts['pages'] += $pages_num;
+        }
         
         // Store for table display
         $row['final_status'] = $final_status;
@@ -438,10 +496,16 @@ table td:nth-child(26) {
     text-align: center;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
-.card-total { background: linear-gradient(45deg, #667eea, #764ba2); }
-.card-completed { background: linear-gradient(45deg, #11998e, #38ef7d); }
-.card-progress { background: linear-gradient(45deg, #ff8c00, #ff2d00); }
-.card-pending { background: linear-gradient(45deg, #f46b45, #eea849); }
+/* 8 Unique Gradient Colors for Summary Cards */
+.card-ce-received  { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+.card-ce-assigned  { background: linear-gradient(135deg, #ea580c, #f97316); }
+.card-ce-completed { background: linear-gradient(135deg, #059669, #10b981); }
+.card-ce-pending   { background: linear-gradient(135deg, #e11d48, #f43f5e); }
+
+.card-ts-received  { background: linear-gradient(135deg, #0284c7, #06b6d4); }
+.card-ts-completed { background: linear-gradient(135deg, #0d9488, #14b8a6); }
+.card-ts-pages     { background: linear-gradient(135deg, #9333ea, #c026d3); }
+.card-ts-pending   { background: linear-gradient(135deg, #d97706, #f59e0b); }
 
 .dashboard-card .count {
     font-size: 2rem;
@@ -473,36 +537,70 @@ table td:nth-child(26) {
 
 <div class="container-fluid">
     <!-- <div class="d-flex justify-content-between align-items-center mb-4"> -->
-        <h2>My Assigned Jobs</h2>
+        <h2>Input & Output</h2>
         <!-- <div class="team-leader-badge"> -->
             <!-- <i class="fas fa-user-tie me-1"></i> <?= h($user_employee_name) ?> -->
         </div>
     </div>
 
-    <!-- Dashboard Cards -->
-    <div class="row mb-4">
+    <!-- CE Team Summary Cards -->
+    <div class="d-flex align-items-center mb-2">
+        <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-file-signature me-2"></i>CE Team Summary</h6>
+    </div>
+    <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="dashboard-card card-total">
-                <div class="count"><?= $status_counts['Total'] ?></div>
-                <div class="label">Total Jobs</div>
+            <div class="dashboard-card card-ce-received">
+                <div class="count"><?= $ce_counts['received'] ?></div>
+                <div class="label">CE Received Files</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="dashboard-card card-completed">
-                <div class="count"><?= $status_counts['Completed'] ?></div>
-                <div class="label">Completed</div>
+            <div class="dashboard-card card-ce-assigned">
+                <div class="count"><?= $ce_counts['assigned'] ?></div>
+                <div class="label">CE Assigned</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="dashboard-card card-progress">
-                <div class="count"><?= $status_counts['In Progress'] ?></div>
-                <div class="label">In Progress</div>
+            <div class="dashboard-card card-ce-completed">
+                <div class="count"><?= $ce_counts['completed'] ?></div>
+                <div class="label">CE Completed</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="dashboard-card card-pending">
-                <div class="count"><?= $status_counts['Need to Assign'] ?></div>
-                <div class="label">Need to Assign</div>
+            <div class="dashboard-card card-ce-pending">
+                <div class="count"><?= $ce_counts['pending'] ?></div>
+                <div class="label">CE Pending</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAG (TS) Team Summary Cards -->
+    <div class="d-flex align-items-center mb-2">
+        <h6 class="fw-bold mb-0 text-success"><i class="fas fa-file-invoice me-2"></i>PAG (TS) Team Summary</h6>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="dashboard-card card-ts-received">
+                <div class="count"><?= $pag_counts['received'] ?></div>
+                <div class="label">TS Received Files</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card card-ts-completed">
+                <div class="count"><?= $pag_counts['completed'] ?></div>
+                <div class="label">TS Completed</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card card-ts-pages">
+                <div class="count"><?= number_format($pag_counts['pages']) ?></div>
+                <div class="label">TS Pages</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="dashboard-card card-ts-pending">
+                <div class="count"><?= $pag_counts['pending'] ?></div>
+                <div class="label">TS Pending</div>
             </div>
         </div>
     </div>
@@ -595,7 +693,7 @@ table td:nth-child(26) {
                         <th>Process</th>
                         <th>CE</th>
                         <th>LE</th>
-                        <th>PAG</th>
+                        <th>TS</th>
                         <th>QC</th>
                         <th>Due Date</th>
                         <th>R-TAT</th>
@@ -652,8 +750,10 @@ $le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' 
                             <!-- CE -->
                             <td>
                             <?php if (in_array('CE', $required_stages)):
-                                $ce_st = $row['ce_status'] ?? 'Need to Assign'; ?>
-                                <div class="fw-bold"><?= h(nameOf(($row['ce_done_by'] ?: $row['assigned_ce']), $emp_map) ?: '—') ?></div>
+                                $ce_st = $row['ce_status'] ?? 'Need to Assign'; 
+                                $ce_emp = !empty($row['assigned_to_content']) ? $row['assigned_to_content'] : (!empty($row['assigned_ce']) ? $row['assigned_ce'] : ($row['ce_done_by'] ?? ''));
+                            ?>
+                                <div class="fw-bold"><?= h(nameOf($ce_emp, $emp_map) ?: '—') ?></div>
                                 <span class="badge mt-1 <?= isStageDone($ce_st) ? 'bg-success' : ($ce_st === 'In Progress' ? 'bg-warning' : 'bg-secondary') ?>"><?= h($ce_st) ?></span>
                             <?php else: ?>—<?php endif; ?>
                             </td>
@@ -677,8 +777,10 @@ $le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' 
                             <!-- PAG -->
                             <td>
                             <?php if (in_array('PAG', $required_stages)):
-                                $pag_st = $row['pag_status'] ?? 'Need to Assign'; ?>
-                                <div class="fw-bold"><?= h(nameOf($row['pag_done_by'], $emp_map) ?: '—') ?></div>
+                                $pag_st = $row['pag_status'] ?? 'Need to Assign'; 
+                                $pag_emp = !empty($row['assigned_to_pag']) ? $row['assigned_to_pag'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_done_by'] ?? ''));
+                            ?>
+                                <div class="fw-bold"><?= h(nameOf($pag_emp, $emp_map) ?: '—') ?></div>
                                 <span class="badge mt-1 <?= isStageDone($pag_st) ? 'bg-success' : ($pag_st === 'In Progress' ? 'bg-warning' : 'bg-secondary') ?>"><?= h($pag_st) ?></span>
                             <?php else: ?>—<?php endif; ?>
                             </td>
@@ -730,7 +832,17 @@ $le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' 
                                 <?php endif; ?>
                             </td>
 
-                            <td><?= h($row['upload_by'] ?? '—') ?></td>
+                            <td>
+                                <?php 
+                                    $up_user = trim((string)($row['upload_by'] ?? ''));
+                                    if (!empty($up_user) && $up_user !== '—') {
+                                        $up_name = $emp_map[$up_user] ?? '';
+                                        echo h($up_name ? $up_name . ' (' . $up_user . ')' : $up_user);
+                                    } else {
+                                        echo '—';
+                                    }
+                                ?>
+                            </td>
                             
                             <!-- Path -->
                             <td>
