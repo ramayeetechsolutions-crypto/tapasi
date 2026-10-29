@@ -835,8 +835,15 @@ if ($row = $result->fetch_assoc()) {
     <ul class="nav-dropdown">
         <li><a href="jobs.php"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
         <li><a href="job_management.php"><i class="fas fa-cogs"></i> Job Process</a></li>
+        <?php if ($team == 2): ?>
+        <li><a href="../SubTL/job_management.php"><i class="fas fa-chart-pie"></i> Input & Output</a></li>
+        <li><a href="../SubTL/tm_queries.php"><i class="fas fa-question-circle"></i> Queries</a></li>
+        <?php endif; ?>
     </ul>
 </li>
+<?php if ($team == 2): ?>
+    <?php include __DIR__ . '/../uq_process_nav.php'; ?>
+<?php endif; ?>
 <?php if (($tl==3) and ($team==3)): ?>
 <li>
 <a href="#"><i class="fas fa-cogs"></i> XML Jobs</a>

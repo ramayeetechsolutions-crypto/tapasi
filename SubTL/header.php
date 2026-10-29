@@ -427,8 +427,16 @@ if ($result && $row = $result->fetch_assoc()) {
             <nav class="main-nav" id="mainNav">
                 <ul class="nav-menu">
                     <!-- Dashboard -->
+                    <?php
+                    $dash_url = "dashboard_exec.php";
+                    if (($_SESSION["role_name"] ?? '') === 'TL') {
+                        $dash_url = "../Team_Lead/dashboard_tl.php";
+                    } elseif (($_SESSION["role_name"] ?? '') === 'TM') {
+                        $dash_url = "../Executive/dashboard_exec.php";
+                    }
+                    ?>
                     <li>
-                        <a href="dashboard_exec.php" class="<?php echo ($currentPage == 'dashboard_exec.php') ? 'active' : ''; ?>">
+                        <a href="<?= $dash_url ?>" class="<?php echo ($currentPage == 'dashboard_exec.php' || $currentPage == 'dashboard_tl.php') ? 'active' : ''; ?>">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>
                     </li>
@@ -531,171 +539,8 @@ if ($result && $row = $result->fetch_assoc()) {
                     </li>
                     
                     
-                    <!-- CE Section -->
-                    <li>
-                        <a href="#"><i class="fas fa-chart-bar"></i> CE</a>
-                        <ul class="nav-dropdown">
-                            <li>
-                                <a href="mail_subject_master.php">
-                                    <i class="fas fa-envelope"></i> Job Entry
-                                </a>
-                            </li>
-                            <li>
-                                <a href="jobs.php">
-                                    <i class="fas fa-tasks"></i> Manage Jobs
-                                </a>
-                            </li>
-                            <?php if ($show_faq): ?>
-                            <!-- <li>
-                                <a href="fqa.php" class="<?= $currentPage === 'fqa.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-clipboard-check"></i> FQA Check
-                                </a>
-                            </li> -->
-                            <?php endif; ?>
-                            <li>
-                                <a href="ce_assign_tm.php">
-                                    <i class="fas fa-user-plus"></i> CE Assign
-                                </a>
-                            </li>
-                            <li>
-                                <a href="jobmgmt_ce.php">
-                                    <i class="fas fa-file-alt"></i> CE Report
-                                </a>
-                            </li>
-                            <li>
-                                <a href="ce_meeting.php" class="<?= $currentPage === 'ce_meeting.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-handshake"></i> CE Meeting
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    
-                    <!-- LE Section -->
-                    <li>
-                        <a href="#"><i class="fas fa-chart-line"></i> LE</a>
-                        <ul class="nav-dropdown">
-                            <li>
-                                <a href="alljobs.php?job=CE" class="<?= $currentPage === 'alljobs.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-upload"></i> LE Assign-CE
-                                </a>
-                            </li>
-                            <li>
-                                <a href="le_assign_tm.php">
-                                    <i class="fas fa-user-plus"></i> LE Assign-TS
-                                </a>
-                            </li>
-                            <li>
-                                <a href="jobmgmt_le.php">
-                                    <i class="fas fa-file-alt"></i> LE Report
-                                </a>
-                            </li>
-                            <!-- ADDED LE MEETING LINK HERE -->
-                            <li>
-                                <a href="le_meeting.php" class="<?= $currentPage === 'le_meeting.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-handshake"></i> LE Meeting
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    
-                    
-                    <!-- PAG & QC Section (Conditional) -->
-                    
-                    <li>
-                        <a href="#"><i class="fas fa-chart-pie"></i> TS</a>
-                        <ul class="nav-dropdown">
-                            <!-- Puthusa add panna Job Entry and Manage Jobs -->
-                            <li>
-                                <a href="mail_subject_master.php">
-                                    <i class="fas fa-envelope"></i> Job Entry
-                                </a>
-                            </li>
-                            <li>
-                                <a href="jobs.php">
-                                    <i class="fas fa-tasks"></i> Manage Jobs
-                                </a>
-                            </li>
-                            <!-- Palaya TS Assign and Report -->
-                            <li>
-                                <a href="pag_assign_tm.php">
-                                    <i class="fas fa-user-plus"></i> TS Assign
-                                </a>
-                            </li>
-                            <li>
-                                <a href="jobmgmt_pag.php">
-                                    <i class="fas fa-file-alt"></i> TS Report
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    
-                    <li>
-                        <a href="#"><i class="fas fa-check-double"></i> QC</a>
-                        <ul class="nav-dropdown">
-                            <li>
-                                <a href="qc_assign_tm.php">
-                                    <i class="fas fa-user-plus"></i> QC Assign
-                                   
-                                </a>
-                            </li>
-                            <li>
-                                <a href="qc_crx_assign_tm.php">
-                                    <i class="fas fa-user-check"></i> QC_CRX Assign
-                                </a>
-                            </li>
-                            <li>
-                                <a href="jobmgmt_qc.php">
-                                    <i class="fas fa-file-alt"></i> QC Report
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-
-                    <!-- AP Section -->
-                    <li>
-                        <a href="#"><i class="fas fa-layer-group"></i> AP</a>
-                        <ul class="nav-dropdown">
-                            <li>
-                                <a href="ap_assign.php">
-                                    <i class="fas fa-user-plus"></i> AP Assign
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#">
-                                    <i class="fas fa-file-alt"></i> AP Report
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    
-                    <!-- WK Section -->
-                    <li>
-                        <a href="#"><i class="fas fa-book"></i> WK</a>
-                        <ul class="nav-dropdown">
-                            <li>
-                                <a href="wk_ts_assign.php" class="<?= $currentPage === 'wk_ts_assign.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-user-plus"></i> WK TS Assign
-                                </a>
-                            </li>
-                             <li>
-                                <a href="wk_cs_assign.php" class="<?= $currentPage === 'wk_cs_assign.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-user-plus"></i> WK CS Assign
-                                </a>
-                            </li>
-                             <li>
-                                <a href="wk_le_assign.php" class="<?= $currentPage === 'wk_le_assign.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-user-plus"></i> WK LE Assign
-                                </a>
-                            </li>
-                            <li>
-                                <a href="wk_report.php" class="<?= $currentPage === 'wk_report.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-file-alt"></i> WK Report
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    
-                </ul>
+                    <?php include __DIR__ . '/../uq_process_nav.php'; ?>
+                    </ul>
             </nav>
             
             <!-- Right Side - User Menu and Logo -->
@@ -703,7 +548,7 @@ if ($result && $row = $result->fetch_assoc()) {
                 <ul class="nav-menu">
                     <li>
                         <a href="#">
-                                <i class="fas fa-user"></i> TL- <?php echo $_SESSION["username"]?>
+                                <i class="fas fa-user"></i> <?= (($_SESSION["role_name"] ?? "") === "TM" ? "TM- " : "TL- ") . htmlspecialchars($_SESSION["username"]) ?>
 
                         </a>
                         <ul class="nav-dropdown">
