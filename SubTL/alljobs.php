@@ -324,11 +324,12 @@ $le_tm_filter = isset($_GET['le_tm']) ? trim($_GET['le_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'le.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
 
-// Build the query for LE records where CE is completed
-// Only show jobs where CE is completed (assigned_ce is NOT NULL)
+// Build the query for LE records where CE is completed and Moved
+// Only show jobs where CE is completed and TL marked Moved in Remarks
 $where_conditions = [
     "(le.status IS NULL OR (le.status != 'Completed' AND le.status != 'Done'))", 
     "(ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')", 
+    "ce.remarks = 'Moved'", 
     "REPLACE(jm.job_name, ' ', '') = 'CE'" // Shows only CE process jobs
 ];
 
@@ -405,7 +406,7 @@ $stmt->close();
 $status_query = "SELECT DISTINCT status FROM le WHERE status != 'Completed' AND status != 'Done' ORDER BY status";
 $status_result = $mysqli->query($status_query);
 
-// Get count statistics - Only for CE completed jobs
+// Get count statistics - Only for CE completed and Moved jobs
 $stats_query = "SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN le.status IS NULL OR le.status = '' OR le.status = 'Pending' OR le.status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
@@ -417,6 +418,7 @@ $stats_query = "SELECT
                 LEFT JOIN ce ON ce.job_id = j.job_id
                 WHERE (le.status IS NULL OR (le.status != 'Completed' AND le.status != 'Done'))
                 AND (ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')
+                AND ce.remarks = 'Moved'
                 AND REPLACE(jm.job_name, ' ', '') = 'CE'";
 $stats_result = $mysqli->query($stats_query);
 $stats = $stats_result->fetch_assoc();
