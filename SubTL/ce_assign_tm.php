@@ -1235,8 +1235,12 @@ require 'header.php';
                                     <!-- 13. FQA Assignment -->
                                     <td class="assignment-cell">
                                         <?php 
-                                            $fqa_user = $row['assigned_to'] ?? '';
-                                            $fqa_done = ($row['status'] === 'Completed');
+                                            $raw_fqa_user = $row['assigned_to'] ?? '';
+                                            // Check if it's the default TL name from job entry (Not a real assigned TM)
+                                            $is_tl_default = ($raw_fqa_user === $current_user_name || $raw_fqa_user === $reporting_manager || $raw_fqa_user === 'T.G. Bragadeeshwaran' || $raw_fqa_user === $current_username);
+                                            
+                                            $fqa_user = $is_tl_default ? '' : $raw_fqa_user;
+                                            $fqa_done = ($row['status'] === 'Completed' && !empty($fqa_user));
                                             $fqa_inprogress = (!$fqa_done && !empty($fqa_user));
 
                                             $fqa_curr_status = 'Need to Assign';

@@ -322,9 +322,8 @@ $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'le.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
 
 // Build the query for LE records where CE is completed and Moved
-// Only show jobs where CE is completed and TL marked Moved in Remarks
+// Keep row on LE Assign page even if completed, until Status is selected as 'Moved'
 $where_conditions = [
-    "(le.status IS NULL OR (le.status != 'Completed' AND le.status != 'Done'))", 
     "(le.status_button IS NULL OR le.status_button != 'Moved')",
     "(ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')", 
     "ce.remarks = 'Moved'", 
@@ -414,14 +413,13 @@ $status_result = $mysqli->query($status_query);
 $stats_query = "SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN le.status IS NULL OR le.status = '' OR le.status = 'Pending' OR le.status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN le.status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN le.status = 'In Progress' OR le.status = 'LE Done' OR le.status = 'LE-QC Done' OR le.status = 'Completed' THEN 1 ELSE 0 END) as in_progress,
                     SUM(CASE WHEN le.assigned_to_le IS NOT NULL AND le.assigned_to_le != '' THEN 1 ELSE 0 END) as assigned
                 FROM le 
                 JOIN jobs j ON le.job_id = j.job_id
                 LEFT JOIN job_master jm ON j.process_id = jm.job_id
                 LEFT JOIN ce ON ce.job_id = j.job_id
-                WHERE (le.status IS NULL OR (le.status != 'Completed' AND le.status != 'Done'))
-                AND (le.status_button IS NULL OR le.status_button != 'Moved')
+                WHERE (le.status_button IS NULL OR le.status_button != 'Moved')
                 AND (ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')
                 AND ce.remarks = 'Moved'
                 AND (REPLACE(jm.job_name, ' ', '') = 'CE+PAG' OR REPLACE(jm.job_name, ' ', '') = 'CE+TS')";
@@ -1437,7 +1435,22 @@ require 'header.php';
             .then(response => response.json())
             .then(data => {
                 hideLoading();
-                if (data.success) { showNotification('success', 'Time updated successfully!'); } 
+                if (data.success) { 
+                    if (field === 'status_button' && value === 'Moved') {
+                        showNotification('success', 'Job moved to LE Report & TS Assign successfully!');
+                        const rowEl = document.getElementById('row-' + leId);
+                        if (rowEl) {
+                            rowEl.style.transition = 'all 0.4s ease';
+                            rowEl.style.opacity = '0';
+                            setTimeout(() => { 
+                                rowEl.remove(); 
+                                window.location.reload(); 
+                            }, 400);
+                        }
+                    } else {
+                        showNotification('success', 'Updated successfully!'); 
+                    }
+                } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
             }).catch(error => { hideLoading(); console.error('Error:', error); });
         }
