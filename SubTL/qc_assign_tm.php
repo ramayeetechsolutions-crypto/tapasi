@@ -85,6 +85,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     exit;
 }
 
+if (!function_exists('getWorkingDaysWithoutSunday')) {
 function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
     if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
         return 0;
@@ -111,10 +112,13 @@ function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
 }
 
+}
+if (!function_exists('formatDate')) {
 function formatDate($date, $format = 'd-m-Y') {
     if (!$date) return '';
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
     return $dateObj ? $dateObj->format($format) : $date;
+}
 }
 
 // Get current user info
@@ -133,6 +137,15 @@ if ($current_user_id) {
         $stmt->bind_result($current_user_name, $reporting_manager);
         $stmt->fetch();
         $stmt->close();
+    }
+}
+
+// Employee map for name display
+$emp_map = [];
+$emp_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master");
+if ($emp_res) {
+    while ($e = $emp_res->fetch_assoc()) {
+        $emp_map[$e['employee_username']] = $e['employee_name'];
     }
 }
 
@@ -298,11 +311,21 @@ $qc_query = "SELECT qc.*,
                     c.team_client_name,
                     c.client_id,
                     p.job_name as process_name,
+                    j.assigned_ce,
+                    j.assigned_le,
+                    j.assigned_pag,
                     ce.ce_date as ce_moved_date,
                     ce.status as ce_status,
+                    ce.done_by as ce_table_done_by,
+                    ce.assigned_to_content as ce_assigned_to,
                     le.status as le_status,
                     le.last_updated as le_moved_date,
+                    le.done_by as le_table_done_by,
+                    le.assigned_to_le as le_assigned_to,
+                    le.assigned_to_le_qc as le_qc_assigned_to,
                     pag.created_at as pag_received_date,
+                    pag.done_by as pag_table_done_by,
+                    pag.assigned_to_pag as pag_assigned_to,
                     pag.eq, pag.pages, pag.images, pag.tables_count, pag.status as pag_status,
                     qc.rtat, qc.atat,
                     (SELECT upload_by FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as job_upload_by,
@@ -621,9 +644,56 @@ require 'header.php';
                                     <td><?= h($row['tables_count'] ?? '0') ?></td>
                                     
                                     <!-- Other Statuses -->
-                                    <td><span class="badge bg-secondary"><?= h($row['ce_status'] ?? 'Pending') ?></span></td>
-                                    <td><span class="badge bg-secondary"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
-                                    <td><span class="badge bg-info"><?= h($row['pag_status'] ?? 'Pending') ?></span></td>
+                                    <?php 
+                                        $ce_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']);
+                                        $ce_cls = $ce_done ? 'bg-success' : 'bg-secondary';
+                                        $ce_emp = !empty($row['ce_assigned_to']) ? $row['ce_assigned_to'] : (!empty($row['assigned_ce']) ? $row['assigned_ce'] : ($row['ce_done_by'] ?? ''));
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $ce_cls ?>"><?= h($row['ce_status'] ?? 'Pending') ?></span>
+                                        <?php if (!empty($ce_emp)): 
+                                            $ce_name = $emp_map[$ce_emp] ?? '';
+                                            $ce_display = $ce_name ? h($ce_name) . " (" . h($ce_emp) . ")" : h($ce_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $ce_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+
+                                    <?php 
+                                        $le_done = in_array($row['le_status'] ?? '', ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done']);
+                                        $le_cls = $le_done ? 'bg-success' : 'bg-secondary';
+                                        $le_emp = !empty($row['le_qc_assigned_to']) ? $row['le_qc_assigned_to'] : (!empty($row['le_assigned_to']) ? $row['le_assigned_to'] : (!empty($row['assigned_le']) ? $row['assigned_le'] : ($row['le_done_by'] ?? '')));
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $le_cls ?>"><?= h($row['le_status'] ?? 'Pending') ?></span>
+                                        <?php if (!empty($le_emp)): 
+                                            $le_name = $emp_map[$le_emp] ?? '';
+                                            $le_display = $le_name ? h($le_name) . " (" . h($le_emp) . ")" : h($le_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $le_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+
+                                    <?php 
+                                        $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']);
+                                        $pag_cls = $pag_done ? 'bg-success' : 'bg-info';
+                                        $pag_emp = !empty($row['pag_assigned_to']) ? $row['pag_assigned_to'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_done_by'] ?? ''));
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $pag_cls ?>"><?= h($row['pag_status'] ?? 'Pending') ?></span>
+                                        <?php if (!empty($pag_emp)): 
+                                            $pag_name = $emp_map[$pag_emp] ?? '';
+                                            $pag_display = $pag_name ? h($pag_name) . " (" . h($pag_emp) . ")" : h($pag_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $pag_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     
                                     <!-- QC Assignment Column -->
                                     <?php 
@@ -672,8 +742,8 @@ require 'header.php';
                                         </select>
                                         
                                         <div class="d-flex gap-1 mt-2">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="QC Start" value="<?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_start_time', t, this);">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="QC End" value="<?= !empty($row['qc_end_time']) ? date('H:i', strtotime($row['qc_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_end_time', t, this);">
+                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_start_time', t, this);">
+                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_end_time']) ? date('H:i', strtotime($row['qc_end_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_end_time', t, this);">
                                         </div>
                                     </td>
                                     

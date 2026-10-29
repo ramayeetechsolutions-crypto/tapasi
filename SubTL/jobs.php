@@ -335,6 +335,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt7->bind_param("isssss", $new_job_id, $job_date, $client_name, $journal, $article, $process_name);
                     $stmt7->execute();
                     $stmt7->close();
+
+                    // QC_CRX
+                    $stmt_crx = $mysqli->prepare("
+                        INSERT INTO qc_crx 
+                        (job_id, date, client, journal_issue, article, process, status, created_at, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, 'Need to Assign', NOW(), NOW())
+                    ");
+                    if ($stmt_crx) {
+                        $stmt_crx->bind_param("isssss", $new_job_id, $job_date, $client_name, $journal, $article, $process_name);
+                        $stmt_crx->execute();
+                        $stmt_crx->close();
+                    }
                 }
             } else {
                 $errors[] = "Failed to insert article '{$article}': " . $stmt->error;

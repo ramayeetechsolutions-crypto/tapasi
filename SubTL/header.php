@@ -639,6 +639,11 @@ if ($result && $row = $result->fetch_assoc()) {
                                 </a>
                             </li>
                             <li>
+                                <a href="qc_crx_assign_tm.php">
+                                    <i class="fas fa-user-check"></i> QC_CRX Assign
+                                </a>
+                            </li>
+                            <li>
                                 <a href="jobmgmt_qc.php">
                                     <i class="fas fa-file-alt"></i> QC Report
                                 </a>
