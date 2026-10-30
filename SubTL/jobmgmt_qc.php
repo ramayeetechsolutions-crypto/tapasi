@@ -121,6 +121,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -141,7 +142,8 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = ?");
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = ? ORDER BY employee_name ASC");
 if ($stmt_team) {
     $stmt_team->bind_param("s", $user_employee_name);
     $stmt_team->execute();
@@ -149,6 +151,7 @@ if ($stmt_team) {
     while ($row_team = $res_team->fetch_assoc()) {
         if (!empty($row_team['employee_username'])) {
             $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+            $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
         }
         if (!empty($row_team['employee_name'])) {
             $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_name']) . "'";
@@ -238,6 +241,18 @@ if ($to_date) {
     $where[] = "j.job_date <= ?";
     $params[] = $to_date;
     $types .= "s";
+}
+
+// Employee filter (QC Assign / CRX Assign / Uploaded By)
+if ($filter_emp) {
+    $where[] = "(qc.assigned_to_qc = ? OR qc_crx.assigned_to_qc = ? OR qc_crx.pag_crx_assigned_to = ? OR qc.upload_by = ? OR qc_crx.upload_by = ? OR j.assigned_to = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "ssssss";
 }
 
 // Build WHERE SQL
@@ -503,6 +518,18 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="PAG+QC" <?=$filter_process==='PAG+QC'?'selected':''?>>TS+QC</option>
                         <option value="CE+PAG+QC" <?=$filter_process==='CE+PAG+QC'?'selected':''?>>CE+TS+QC</option>
                         <option value="PAG+QC+XML" <?=$filter_process==='PAG+QC+XML'?'selected':''?>>TS+QC+XML</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 

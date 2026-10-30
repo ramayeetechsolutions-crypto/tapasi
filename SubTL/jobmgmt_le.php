@@ -87,6 +87,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -106,12 +107,14 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE reporting_manager = ?");
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = ? ORDER BY employee_name ASC");
 $stmt_team->bind_param("s", $user_employee_name);
 $stmt_team->execute();
 $res_team = $stmt_team->get_result();
 while ($row_team = $res_team->fetch_assoc()) {
     $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+    $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
 }
 $stmt_team->close();
 
@@ -163,6 +166,17 @@ if ($to_date) {
     $where[] = "j.job_date <= ?";
     $params[] = $to_date;
     $types .= "s";
+}
+
+// Employee filter (LE / LE-QC / Content / Img)
+if ($filter_emp) {
+    $where[] = "(le.assigned_to_le = ? OR le.assigned_to_le_qc = ? OR ce.assigned_to_content = ? OR ce.assigned_to_img = ? OR j.assigned_to = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "sssss";
 }
 
 // Build WHERE SQL
@@ -476,7 +490,17 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="process" <?=$sort==='process'?'selected':''?>>Process</option>
                     </select>
                 </div>
-                
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <!-- <div class="col-md-1">
                     <label class="form-label small mb-1">Order</label>
                     <select name="dir" class="form-select form-select-sm">

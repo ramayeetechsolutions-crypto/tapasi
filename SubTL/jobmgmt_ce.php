@@ -72,6 +72,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -91,12 +92,14 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE reporting_manager = ?");
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = ? ORDER BY employee_name ASC");
 $stmt_team->bind_param("s", $user_employee_name);
 $stmt_team->execute();
 $res_team = $stmt_team->get_result();
 while ($row_team = $res_team->fetch_assoc()) {
     $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+    $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
 }
 $stmt_team->close();
 
@@ -173,6 +176,15 @@ if ($to_date) {
     $where[] = "j.job_date <= ?";
     $params[] = $to_date;
     $types .= "s";
+}
+
+// Employee filter (Checks Content, Img/Ref, or assigned_to)
+if ($filter_emp) {
+    $where[] = "(ce.assigned_to_content = ? OR ce.assigned_to_img = ? OR j.assigned_to = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "sss";
 }
 
 // Build WHERE SQL
@@ -457,8 +469,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             $displayed_clients = [];
                             while ($cli = $clients_result->fetch_assoc()): 
                                 $display_name = !empty($cli['team_client_name']) ? $cli['team_client_name'] : $cli['client_name'];
-                                
-                                // Oru thadava mattum print aaga check pandrom
                                 if (!in_array($display_name, $displayed_clients)):
                                     $displayed_clients[] = $display_name;
                             ?>
@@ -482,18 +492,30 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="CE+XML" <?=$filter_process==='CE+XML'?'selected':''?>>CE+XML</option>
                     </select>
                 </div>
-                
+
                 <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-1">
                     <label class="form-label small mb-1">From Date</label>
                     <input type="date" name="from_date" value="<?= h($from_date) ?>" class="form-control form-control-sm">
                 </div>
                 
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label class="form-label small mb-1">To Date</label>
                     <input type="date" name="to_date" value="<?= h($to_date) ?>" class="form-control form-control-sm">
                 </div>
                 
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label class="form-label small mb-1">Sort By</label>
                     <select name="sort" class="form-select form-select-sm">
                         <option value="j.job_date" <?=$sort==='j.job_date'?'selected':''?>>Date</option>
@@ -503,22 +525,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     </select>
                 </div>
                 
-                <!-- <div class="col-md-1">
-                    <label class="form-label small mb-1">Order</label>
-                    <select name="dir" class="form-select form-select-sm">
-                        <option value="DESC" <?=$dir==='DESC'?'selected':''?>>Desc</option>
-                        <option value="ASC" <?=$dir==='ASC'?'selected':''?>>Asc</option>
-                    </select>
-                </div> -->
-                
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label class="form-label small mb-1 d-block">&nbsp;</label>
-                    <button class="btn btn-primary btn-sm" type="submit">
-                        <i class="fas fa-search"></i> Filter
-                    </button>
-                    <a href="job_management.php" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-times"></i> Clear
-                    </a>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-primary btn-sm" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <a href="jobmgmt_ce.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>

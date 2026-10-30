@@ -259,16 +259,31 @@ require 'header.php';
 
                         // Buckets
                         $ce = $pag = $others = [];
+                        $pag_found = false;
+
                         if ($processes) {
                             while ($row = $processes->fetch_assoc()) {
                                 $name = $row['process_name'];
                                 if ($name === "CE" || str_ends_with($name, "-CE") || $name === "LE" || $name === "Sub TL") {
                                     $ce[] = $row;
                                 } elseif ($name === "PAG" || str_ends_with($name, "-PAG") || $name === "QC" || $name === "TAB/IMG" || $name === "PRE-PAG" || $name === "AP" || $name === "AP_CRX" || $name === "CE-REF") {
+                                    if ($name === "PAG") {
+                                        $pag_found = true;
+                                    }
                                     $pag[] = $row;
                                 } else {
                                     $others[] = $row;
                                 }
+                            }
+                        }
+
+                        // Oruvelai DB-la 'PAG' active record illainaalum, inga fallback aagi 'PAG' switch add aagidum
+                        if (!$pag_found) {
+                            $check_pag_db = $mysqli->query("SELECT process_id, process_name FROM process_master WHERE process_name='PAG' LIMIT 1");
+                            if ($check_pag_db && $pag_row = $check_pag_db->fetch_assoc()) {
+                                $pag[] = $pag_row;
+                            } else {
+                                $pag[] = ['process_id' => 'PAG', 'process_name' => 'PAG'];
                             }
                         }
 
