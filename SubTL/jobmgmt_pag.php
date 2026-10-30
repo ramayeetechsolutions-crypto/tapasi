@@ -87,6 +87,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -103,6 +104,19 @@ $processStageMap = [
     'PAG+XML' => ['PAG'],
     'CE+PAG+XML' => ['PAG'],
 ];
+
+// Get unique team members under this reporting manager
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = ? ORDER BY employee_name ASC");
+if ($stmt_team) {
+    $stmt_team->bind_param("s", $user_employee_name);
+    $stmt_team->execute();
+    $res_team = $stmt_team->get_result();
+    while ($row_team = $res_team->fetch_assoc()) {
+        $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
+    }
+    $stmt_team->close();
+}
 
 // WHERE conditions - Show jobs assigned to current user
 $where = ["j.assigned_to = ?"];
@@ -170,6 +184,15 @@ if ($to_date) {
     $where[] = "j.job_date <= ?";
     $params[] = $to_date;
     $types .= "s";
+}
+
+// Employee filter (PAG / Word Img)
+if ($filter_emp) {
+    $where[] = "(pag.assigned_to_pag = ? OR pag.assigned_to_img = ? OR j.assigned_pag = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "sss";
 }
 
 // Build WHERE SQL
@@ -438,6 +461,18 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     </select>
                 </div>
                 
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <div class="col-md-2">
                     <label class="form-label small mb-1">From Date</label>
                     <input type="date" name="from_date" value="<?= h($from_date) ?>" class="form-control form-control-sm">
