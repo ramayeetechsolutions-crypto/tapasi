@@ -131,27 +131,13 @@ if (!empty($types)) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Mail Subject</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .main-content { padding: 20px; max-width: 1400px; margin: 0 auto; }
-        .mail-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; }
-        .disabled-btn { cursor: not-allowed !important; opacity: 0.6; }
-        .table-grey th {
-        background-color: #5e6b77 !important; /* This is the exact grey from your image */
-        color: #ffffff !important;           /* Keeps text white */
-        border-bottom: none !important;
-    }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
+<?php require 'header.php'; ?>
+<style>
+    body { background-color: #f8f9fa; }
+    .main-content { padding: 20px; max-width: 1400px; margin: 0 auto; }
+    .mail-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; }
+    .disabled-btn { cursor: not-allowed !important; opacity: 0.6; }
+</style>
     
     <div class="main-content">
         <?php if (!empty($_GET['msg'])): ?>

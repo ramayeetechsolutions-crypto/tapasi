@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Start session only if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -740,6 +740,8 @@ $currentPage = basename($_SERVER['PHP_SELF']); // e.g., job_master.php
             vertical-align: middle !important;
         }
     </style>
+    <!-- Tapasi Global Typography & Font Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 </head>
 <body>
     <header>

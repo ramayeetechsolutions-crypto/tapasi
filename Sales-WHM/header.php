@@ -370,6 +370,8 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
             }
         }
     </style>
+    <!-- Tapasi Global Typography & Font Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 </head>
 
 <body>
