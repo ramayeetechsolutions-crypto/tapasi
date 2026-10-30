@@ -1,0 +1,206 @@
+/**
+ * =========================================================================
+ * TAPASI ERP - GLOBAL FONT & TYPOGRAPHY CONFIGURATION
+ * =========================================================================
+ * To change fonts or sizes across ALL pages in the application,
+ * simply change the numbers / values below in this file.
+ * =========================================================================
+ */
+
+:root {
+    /* 1. Global Font Family (Applied to all pages) */
+    --erp-font-family: Arial, Helvetica, sans-serif;
+
+    /* 2. Headings (Page titles, card headers, h1-h6) */
+    --erp-heading-font-size: 16px;
+
+    /* 3. Table Column Headers (<th> and thead) - matched to 0.85rem across all tables */
+    --erp-table-header-font-size: 0.85rem;
+
+    /* 4. Table Body Text (<td> cells, rates, dates, table text) */
+    --erp-table-text-size: 10px;
+
+    /* 5. General Controls (Inputs, selects, buttons, badges) */
+    --erp-general-text-size: 11px;
+}
+
+/* =========================================================================
+   TYPOGRAPHY RULES
+   ========================================================================= */
+
+/* Global font application across text elements */
+body,
+button,
+input,
+select,
+textarea,
+table,
+th,
+td,
+p,
+h1, h2, h3, h4, h5, h6,
+span:not([class*="fa-"]):not([class*="bi-"]),
+a,
+label {
+    font-family: var(--erp-font-family) !important;
+}
+
+/* =========================================================================
+   1. PAGE & SECTION HEADINGS (Page Titles, Card Headers, h1 - h6)
+   Must be BOLD and BLACK (#000000)
+   ========================================================================= */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.page-title,
+.card-title,
+.section-title,
+h1.text-secondary, h2.text-secondary, h3.text-secondary, h4.text-secondary, h5.text-secondary, h6.text-secondary,
+h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.text-muted {
+    font-family: var(--erp-font-family) !important;
+    font-size: var(--erp-heading-font-size) !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+}
+
+/* Card banners with dark backgrounds retain white text */
+.card-header.text-white,
+.card-header.text-white *,
+.card-header[style*="background"],
+.card-header[style*="background"] *,
+.card-header.bg-dark,
+.card-header.bg-dark *,
+.card-header.bg-secondary,
+.card-header.bg-secondary *,
+.card-header.bg-primary,
+.card-header.bg-primary * {
+    color: #ffffff !important;
+}
+
+/* =========================================================================
+   2. TABLE COLUMN HEADERS (<th>, <thead>)
+   Table headers in all pages (OT approvals, reports, masters, grey/dark tables)
+   Must be BOLD, WHITE (#ffffff), UPPERCASE, and 0.85rem size
+   ========================================================================= */
+table th,
+.table th,
+.table thead th,
+thead tr th,
+th,
+th.text-white,
+thead.bg-light,
+.table thead.bg-light,
+thead.bg-light th,
+.table thead.bg-light th,
+thead.table-light,
+.table thead.table-light,
+thead.table-light th,
+.table thead.table-light th,
+thead.table-dark th,
+table.table-dark th,
+.table-dark th,
+thead.table-grey th,
+table.table-grey th,
+.table-grey th,
+#jobsTable thead.table-grey th {
+    font-family: var(--erp-font-family) !important;
+    font-size: var(--erp-table-header-font-size) !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    background-color: #707981 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    vertical-align: middle;
+}
+
+/* Table-dark headers keep their darker background but match size and font */
+thead.table-dark th,
+.table-dark th {
+    background-color: #2b3035 !important;
+}
+
+/* Checkbox column header centering & sizing */
+th.select-checkbox,
+.table th.select-checkbox {
+    text-align: center;
+    width: 35px;
+}
+
+/* =========================================================================
+   3. TABLE BODY CELLS (<td>, <tbody>)
+   ========================================================================= */
+table td,
+.table td,
+.table tbody td,
+.details-table td,
+.field-name,
+.field-value,
+tbody tr td,
+td {
+    font-family: var(--erp-font-family) !important;
+    font-size: var(--erp-table-text-size) !important;
+}
+
+/* Table rate/data inputs and selects */
+table td input,
+table td select,
+.table td input,
+.table td select,
+.table td span {
+    font-size: var(--erp-table-text-size) !important;
+}
+
+/* Badges inside tables - ensure line-height and padding fit cleanly */
+.table td .badge {
+    font-size: var(--erp-table-text-size) !important;
+    padding: 0.35em 0.65em;
+    font-weight: 600;
+}
+
+/* Field names in 2-column detail tables (like employee verify details) */
+.field-name {
+    font-weight: 700 !important;
+    color: #000000 !important;
+    background-color: #f8f9fa;
+}
+
+/* =========================================================================
+   4. STAT / KPI LABELS & TABS
+   ========================================================================= */
+.stat-card .stat-label,
+.kpi-label {
+    font-family: var(--erp-font-family) !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+}
+
+.status-filter .nav-link {
+    font-family: var(--erp-font-family) !important;
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+.status-filter .nav-link.active {
+    color: #0d6efd !important;
+    font-weight: 700 !important;
+}
+
+/* =========================================================================
+   5. GENERAL CONTROLS, BUTTONS & INPUTS
+   ========================================================================= */
+.form-control,
+.form-select,
+.btn,
+.form-label,
+.badge,
+.input-group-text {
+    font-family: var(--erp-font-family) !important;
+    font-size: var(--erp-general-text-size) !important;
+}
+
+/* =========================================================================
+   6. PROTECT ICON FONTS (FontAwesome & Bootstrap Icons)
+   ========================================================================= */
+.fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands,
+[class^="fa-"], [class*=" fa-"],
+.bi, [class^="bi-"], [class*=" bi-"] {
+    font-family: "Font Awesome 6 Free", "FontAwesome", "bootstrap-icons" !important;
+}

@@ -645,7 +645,7 @@ $stmt->close();
                 <table class="details-table">
                     <tr>
                         <td class="field-name">Employee ID</td>
-                        <td class="field-value"><?= h($employee_data['employee_id']) ?></td>
+                        <td class="field-value"><?= h($employee_data['employee_username']) ?></td>
                     </tr>
                     <tr>
                         <td class="field-name">Name</td>
