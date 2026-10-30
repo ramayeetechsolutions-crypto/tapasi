@@ -33,6 +33,57 @@ $workflows =[
     'html'=>'HTML', 'new_html'=>'New HTML', 'direct_html'=>'Direct HTML', 'xml_html'=>'XML+HTML', 'image'=>'Image', 'math'=>'Math'
 ];
 
+// Config for Services that support With/Without Instruction split
+$split_services = [
+    'ce_ts'       => 'CE+TS',
+    'ce_ts_xml'   => 'CE+TS+XML',
+    'ce'          => 'CE',
+    'ts'          => 'TS',
+    'pdf_to_xml'  => 'PDF to XML',
+    'html'        => 'HTML',
+    'direct_html' => 'Direct HTML',
+    'xml_html'    => 'XML+HTML'
+];
+
+$single_services = [
+    'workflow_all'=> 'All',
+    'pmc'         => 'PMC',
+    'pubmed'      => 'PUBMED',
+    'clockss'     => 'CLOCKSS',
+    'scielo'      => 'SCIELO',
+    'crossref'    => 'Crossref',
+    'doaj'        => 'DOAJ',
+    'bibilat'     => 'BIBILAT',
+    'medes'       => 'MEDES',
+    'new_html'    => 'New HTML',
+    'image'       => 'Image',
+    'math'        => 'Math'
+];
+
+// Helper to decode a split field stored as JSON or legacy plain string
+function parse_split_rate($val) {
+    if (empty($val)) return ['with' => '', 'without' => ''];
+    if (is_string($val)) {
+        $decoded = json_decode($val, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return [
+                'with'    => trim((string)($decoded['with'] ?? '')),
+                'without' => trim((string)($decoded['without'] ?? ''))
+            ];
+        }
+        return ['with' => trim($val), 'without' => ''];
+    }
+    return ['with' => '', 'without' => ''];
+}
+
+// Helper to encode with/without rate back to JSON
+function encode_split_rate($with, $without) {
+    $with = trim((string)$with);
+    $without = trim((string)$without);
+    if ($with === '' && $without === '') return '';
+    return json_encode(['with' => $with, 'without' => $without], JSON_UNESCAPED_SLASHES);
+}
+
 // ---------------------------------------------------------
 // EXCEL IMPORT HANDLER
 // ---------------------------------------------------------
@@ -89,13 +140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         }
                     }
 
-                    // Safely parse NDA Status & Revision Status to only Yes/No to prevent 'Data truncated' error
-                    $nda_raw = strtolower(trim($r[4] ?? 'No'));
-                    $nda_status = ($nda_raw === 'yes' || $nda_raw === 'signed' || $nda_raw === '1' || $nda_raw === 'true') ? 'Yes' : 'No';
-                    
-                    $rev_raw = strtolower(trim($r[5] ?? 'No'));
-                    $revision_status = ($rev_raw === 'yes' || $rev_raw === 'signed' || $rev_raw === '1' || $rev_raw === 'true') ? 'Yes' : 'No';
-
+                    $nda_status = $mysqli->real_escape_string(trim($r[4] ?? 'No'));
+                    $revision_status = $mysqli->real_escape_string(trim($r[5] ?? 'No'));
                     $signed_date_raw = $r[6] ?? '';
                     
                     // Workflow Fields (Shifted index +1 due to S.No)
@@ -125,7 +171,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                     // Process Date
                     $signed_date = NULL;
-                    $signed_year = 0; // Capture year for duplicate check
                     if (!empty($signed_date_raw)) {
                         if (is_numeric($signed_date_raw)) {
                             $unix = ($signed_date_raw - 25569) * 86400;
@@ -134,46 +179,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $ts_val = strtotime($signed_date_raw);
                             if ($ts_val !== false) $signed_date = date('Y-m-d', $ts_val);
                         }
-                        if ($signed_date) {
-                            $signed_year = date('Y', strtotime($signed_date));
-                        }
                     }
                     $sql_date = $signed_date ? "'" . $mysqli->real_escape_string($signed_date) . "'" : "NULL";
 
-                    // Check for existing record to prevent duplicates (Same Client + Same Signed Year)
-                    $existing_nda_id = 0;
-                    if ($signed_year > 0) {
-                        $check_nda = $mysqli->query("SELECT id FROM nda_details WHERE client_id = $client_id AND YEAR(signed_date) = $signed_year LIMIT 1");
-                        if ($check_nda && $check_nda->num_rows > 0) {
-                            $existing_nda_id = $check_nda->fetch_assoc()['id'];
-                        }
-                    }
-
-                    if ($existing_nda_id > 0) {
-                        // UPDATE existing record instead of creating duplicate
-                        $sql = "UPDATE nda_details SET 
-                                nda_status = '$nda_status', revision_amount_status = '$revision_status', signed_date = $sql_date,
-                                workflow_all = '$workflow_all', ce_ts = '$ce_ts', ce_ts_xml = '$ce_ts_xml', ce = '$ce', ts = '$ts', pmc = '$pmc', pubmed = '$pubmed', clockss = '$clockss', scielo = '$scielo', crossref = '$crossref', doaj = '$doaj', bibilat = '$bibilat', medes = '$medes', pdf_to_xml = '$pdf_to_xml', html = '$html', new_html = '$new_html', direct_html = '$direct_html', xml_html = '$xml_html', image = '$image', math = '$math', remarks = '$remarks',
-                                updated_at = NOW()
-                                WHERE id = $existing_nda_id";
-                    } else {
-                        // INSERT new record
-                        $sql = "INSERT INTO nda_details (
-                                client_id, nda_status, revision_amount_status, signed_date, 
-                                workflow_all, ce_ts, ce_ts_xml, ce, ts, pmc, pubmed, clockss, scielo, crossref, doaj, bibilat, medes, pdf_to_xml, html, new_html, direct_html, xml_html, image, math, remarks,
-                                created_at, updated_at
-                            ) VALUES (
-                                $client_id, '$nda_status', '$revision_status', $sql_date, 
-                                '$workflow_all', '$ce_ts', '$ce_ts_xml', '$ce', '$ts', '$pmc', '$pubmed', '$clockss', '$scielo', '$crossref', '$doaj', '$bibilat', '$medes', '$pdf_to_xml', '$html', '$new_html', '$direct_html', '$xml_html', '$image', '$math', '$remarks',
-                                NOW(), NOW()
-                            )";
-                    }
+                    // Always insert new NDA record (allow multiple NDAs per client)
+                    $sql = "INSERT INTO nda_details (
+                            client_id, nda_status, revision_amount_status, signed_date, 
+                            workflow_all, ce_ts, ce_ts_xml, ce, ts, pmc, pubmed, clockss, scielo, crossref, doaj, bibilat, medes, pdf_to_xml, html, new_html, direct_html, xml_html, image, math, remarks,
+                            created_at, updated_at
+                        ) VALUES (
+                            $client_id, '$nda_status', '$revision_status', $sql_date, 
+                            '$workflow_all', '$ce_ts', '$ce_ts_xml', '$ce', '$ts', '$pmc', '$pubmed', '$clockss', '$scielo', '$crossref', '$doaj', '$bibilat', '$medes', '$pdf_to_xml', '$html', '$new_html', '$direct_html', '$xml_html', '$image', '$math', '$remarks',
+                            NOW(), NOW()
+                        )";
                     
                     if ($mysqli->query($sql)) { 
                         $count_added++; 
                     } else { 
                         $count_skipped++; 
-                        $errors[] = "Row " . ($k + 1) . ": Database error - " . $mysqli->error; 
+                        $errors[] = "Row " . ($k + 1) . ": Insert error - " . $mysqli->error; 
                     }
                     
                 } catch (Exception $e) {
@@ -240,12 +264,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
         $sql_date = empty($signed_date) ? "NULL" : "'" . $mysqli->real_escape_string(date('Y-m-d', strtotime($signed_date))) . "'";
         $remarks = $mysqli->real_escape_string($_POST['remarks'] ?? '');
 
-        // Workflow fields
+        // Workflow fields - Process split with/without or fallback to direct value
         $workflow_all = $mysqli->real_escape_string($_POST['workflow_all'] ?? '');
-        $ce_ts = $mysqli->real_escape_string($_POST['ce_ts'] ?? '');
-        $ce_ts_xml = $mysqli->real_escape_string($_POST['ce_ts_xml'] ?? '');
-        $ce = $mysqli->real_escape_string($_POST['ce'] ?? '');
-        $ts = $mysqli->real_escape_string($_POST['ts'] ?? '');
+        
+        // Helper to extract split rate from POST
+        $get_split = function($field) use ($mysqli) {
+            $with_rate = trim($_POST[$field . '_with'] ?? '');
+            $without_rate = trim($_POST[$field . '_without'] ?? '');
+
+            if ($with_rate !== '' || $without_rate !== '') {
+                return $mysqli->real_escape_string(encode_split_rate($with_rate, $without_rate));
+            } elseif (isset($_POST[$field])) {
+                // Legacy fallback
+                return $mysqli->real_escape_string($_POST[$field]);
+            }
+            return '';
+        };
+
+        $ce_ts       = $get_split('ce_ts');
+        $ce_ts_xml   = $get_split('ce_ts_xml');
+        $ce          = $get_split('ce');
+        $ts          = $get_split('ts');
+        $pdf_to_xml  = $get_split('pdf_to_xml');
+        $html        = $get_split('html');
+        $direct_html = $get_split('direct_html');
+        $xml_html    = $get_split('xml_html');
+
+        // Single-rate fields
         $pmc = $mysqli->real_escape_string($_POST['pmc'] ?? '');
         $pubmed = $mysqli->real_escape_string($_POST['pubmed'] ?? '');
         $clockss = $mysqli->real_escape_string($_POST['clockss'] ?? '');
@@ -254,11 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
         $doaj = $mysqli->real_escape_string($_POST['doaj'] ?? '');
         $bibilat = $mysqli->real_escape_string($_POST['bibilat'] ?? '');
         $medes = $mysqli->real_escape_string($_POST['medes'] ?? '');
-        $pdf_to_xml = $mysqli->real_escape_string($_POST['pdf_to_xml'] ?? '');
-        $html = $mysqli->real_escape_string($_POST['html'] ?? '');
         $new_html = $mysqli->real_escape_string($_POST['new_html'] ?? '');
-        $direct_html = $mysqli->real_escape_string($_POST['direct_html'] ?? '');
-        $xml_html = $mysqli->real_escape_string($_POST['xml_html'] ?? '');
         $image = $mysqli->real_escape_string($_POST['image'] ?? '');
         $math = $mysqli->real_escape_string($_POST['math'] ?? '');
 
@@ -540,11 +581,14 @@ try {
 
 require 'header.php'; 
 ?>
+
 <style>
-    .table thead th {
+    /* Uniform black header for both header rows (main + With / W/o) */
+    .table thead.table-dark th {
         background-color: #6c757d !important;
-        color: white !important;
-        border-bottom: none !important;
+        color: #fff !important;
+        border-color: #868e96 !important;
+        vertical-align: middle;
     }
 </style>
 
@@ -629,7 +673,7 @@ require 'header.php';
         <a href="nda_details.php" class="btn btn-secondary btn-sm shadow-sm mb-2">
             <i class="fas fa-arrow-left me-1"></i> Back to List
         </a>
-        <div class="card-header <?= $isAdd ? 'bg-primary' : 'bg-dark' ?> text-white">
+        <div class="card-header bg-secondary text-white">
             <h6 class="mb-0"><?= $title ?></h6> 
         </div>
         <div class="card-body p-4">
@@ -701,14 +745,50 @@ require 'header.php';
                 </div>
 
                 <!-- Workflow Fields -->
-                <h6 class="border-bottom pb-2 text-success fw-bold"><i class="fas fa-tasks me-2"></i>Workflow / Services Configuration</h6>
-                <div class="row g-2">
-                    <?php foreach($workflows as $field => $label): ?>
-                    <div class="col-md-2 col-sm-3 col-4 mb-2">
-                        <label class="form-label small text-secondary mb-1"><?= $label ?></label>
-                        <input type="text" name="<?= $field ?>" class="form-control form-control-sm" value="<?= h($editClient[$field] ?? '') ?>">
+                <h6 class="border-bottom pb-2 text-primary fw-bold"><i class="fas fa-tasks me-2"></i>Workflow / Services Configuration</h6>
+
+                <!-- 1. Split Service Cards (Always open / active inputs) -->
+                <div class="row g-3 mb-4">
+                    <?php foreach($split_services as $sf => $slabel): 
+                        $parsed = parse_split_rate($editClient[$sf] ?? '');
+                    ?>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-none border service-card" style="border-color: #dee2e6;">
+                            <div class="card-header bg-white py-2 border-bottom">
+                                <span class="fw-bold small text-dark"><?= $slabel ?></span>
+                            </div>
+                            <div class="card-body p-2 bg-light">
+                                <!-- With Instruction Option -->
+                                <div class="d-flex align-items-center gap-2 p-1 px-2 rounded mb-2 border bg-white" style="border-color: #dee2e6 !important;">
+                                    <span class="small fw-semibold text-primary" style="font-size: 0.75rem; min-width: 120px;">
+                                        With Instruction
+                                    </span>
+                                    <input type="text" name="<?= $sf ?>_with" class="form-control form-control-sm text-end" placeholder="Rate" value="<?= h($parsed['with']) ?>" style="font-size: 0.75rem;">
+                                </div>
+                                <!-- Without Instruction Option -->
+                                <div class="d-flex align-items-center gap-2 p-1 px-2 rounded border bg-white" style="border-color: #dee2e6 !important;">
+                                    <span class="small fw-semibold text-secondary" style="font-size: 0.75rem; min-width: 120px;">
+                                        Without Instruction
+                                    </span>
+                                    <input type="text" name="<?= $sf ?>_without" class="form-control form-control-sm text-end" placeholder="Rate" value="<?= h($parsed['without']) ?>" style="font-size: 0.75rem;">
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <?php endforeach; ?>
+                </div>
+
+                <!-- 2. Single-rate Services Flat Grid -->
+                <div class="card border-0 bg-light p-3 rounded">
+                    <h6 class="fw-bold small text-muted mb-2"><i class="fas fa-layer-group me-1"></i>Single-Rate Services (no With/Without split)</h6>
+                    <div class="row g-2">
+                        <?php foreach($single_services as $sf => $slabel): ?>
+                        <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                            <label class="form-label small text-secondary mb-1" style="font-size: 0.72rem;"><?= $slabel ?></label>
+                            <input type="text" name="<?= $sf ?>" class="form-control form-control-sm" placeholder="Rate" value="<?= h($editClient[$sf] ?? '') ?>">
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
@@ -804,41 +884,68 @@ require 'header.php';
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.75rem;">
-                    <thead>
+                    <thead class="table-dark">
                         <tr>
-                            <th class="py-2 text-center border-end">S.No</th>
-                            <th class="py-2 border-end">Client Name</th>
-                            <th class="py-2 text-center border-end">Country</th>
-                            <th class="py-2 text-center border-end" title="Client Status">Status</th>
-                            <th class="py-2 text-center border-end" title="NDA Status">NDA</th>
-                            <th class="py-2 text-center border-end" title="Revision Amount Applicable">Rev.Amt</th>
-                            <th class="py-2 text-center border-end">Signed Date</th>
-                            <th class="py-2 text-center border-end">Year</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle">S.No</th>
+                            <th rowspan="2" class="py-2 border-end align-middle">Client Name</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle">Country</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Client Status">Status</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="NDA Status">NDA</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Revision Amount Applicable">Rev.Amt</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle">Signed Date</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle">Year</th>
                             
-                            <!-- Workflow Headers -->
-                            <th class="py-2 text-center border-end" title="All">All</th>
-                            <th class="py-2 text-center border-end" title="CE+TS">CE+TS</th>
-                            <th class="py-2 text-center border-end" title="CE+TS+XML">CE+TS+XML</th>
-                            <th class="py-2 text-center border-end" title="CE">CE</th>
-                            <th class="py-2 text-center border-end" title="TS">TS</th>
-                            <th class="py-2 text-center border-end" title="PMC">PMC</th>
-                            <th class="py-2 text-center border-end" title="PUBMED">PUBMED</th>
-                            <th class="py-2 text-center border-end" title="CLOCKSS">CLOCKSS</th>
-                            <th class="py-2 text-center border-end" title="SCIELO">SCIELO</th>
-                            <th class="py-2 text-center border-end" title="Crossref">Crossref</th>
-                            <th class="py-2 text-center border-end" title="DOAJ">DOAJ</th>
-                            <th class="py-2 text-center border-end" title="BIBILAT">BIBILAT</th>
-                            <th class="py-2 text-center border-end" title="MEDES">MEDES</th>
-                            <th class="py-2 text-center border-end" title="PDF to XML">PDF to XML</th>
-                            <th class="py-2 text-center border-end" title="HTML">HTML</th>
-                            <th class="py-2 text-center border-end" title="New HTML">New HTML</th>
-                            <th class="py-2 text-center border-end" title="Direct HTML">Direct HTML</th>
-                            <th class="py-2 text-center border-end" title="XML+HTML">XML+HTML</th>
-                            <th class="py-2 text-center border-end" title="Image">Image</th>
-                            <th class="py-2 text-center border-end" title="Math">Math</th>
-                            <th class="py-2 text-center border-end" title="Remarks">Remarks</th>
+                            <!-- Workflow Headers (Split & Single) -->
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="All">All</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="CE+TS">CE+TS</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="CE+TS+XML">CE+TS+XML</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="CE">CE</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="TS">TS</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="PMC">PMC</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="PUBMED">PUBMED</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="CLOCKSS">CLOCKSS</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="SCIELO">SCIELO</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Crossref">Crossref</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="DOAJ">DOAJ</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="BIBILAT">BIBILAT</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="MEDES">MEDES</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="PDF to XML">PDF to XML</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="HTML">HTML</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="New HTML">New HTML</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="Direct HTML">Direct HTML</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="XML+HTML">XML+HTML</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Image">Image</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Math">Math</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Remarks">Remarks</th>
 
-                            <th class="py-2 text-center">Actions</th>
+                            <th rowspan="2" class="py-2 text-center align-middle">Actions</th>
+                        </tr>
+                        <!-- Row 2: Sub-headers for Split Columns using exact table-dark header style -->
+                        <tr style="font-size: 0.68rem;">
+                            <!-- CE+TS -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- CE+TS+XML -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- CE -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- TS -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- PDF to XML -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- HTML -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- Direct HTML -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <!-- XML+HTML -->
+                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
+                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
@@ -846,6 +953,15 @@ require 'header.php';
                             $i = 0; 
                             while ($row = $clients->fetch_assoc()): 
                                 $i++; 
+                                // Parse split values
+                                $p_cets     = parse_split_rate($row['ce_ts'] ?? '');
+                                $p_cetsxml  = parse_split_rate($row['ce_ts_xml'] ?? '');
+                                $p_ce       = parse_split_rate($row['ce'] ?? '');
+                                $p_ts       = parse_split_rate($row['ts'] ?? '');
+                                $p_pdfxml   = parse_split_rate($row['pdf_to_xml'] ?? '');
+                                $p_html     = parse_split_rate($row['html'] ?? '');
+                                $p_dhtml    = parse_split_rate($row['direct_html'] ?? '');
+                                $p_xmlhtml  = parse_split_rate($row['xml_html'] ?? '');
                         ?>
                         <tr>
                             <td class="text-center text-muted border-end"><?= $i ?></td>
@@ -867,10 +983,24 @@ require 'header.php';
                             
                             <!-- Workflows -->
                             <td class="text-center border-end"><?= h($row['workflow_all'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['ce_ts'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['ce_ts_xml'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['ce'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['ts'] ?? '') ?></td>
+
+                            <!-- CE+TS (Split) -->
+                            <td class="text-center border-end"><?= h($p_cets['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_cets['without']) ?></td>
+
+                            <!-- CE+TS+XML (Split) -->
+                            <td class="text-center border-end"><?= h($p_cetsxml['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_cetsxml['without']) ?></td>
+
+                            <!-- CE (Split) -->
+                            <td class="text-center border-end"><?= h($p_ce['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_ce['without']) ?></td>
+
+                            <!-- TS (Split) -->
+                            <td class="text-center border-end"><?= h($p_ts['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_ts['without']) ?></td>
+
+                            <!-- Single Services -->
                             <td class="text-center border-end"><?= h($row['pmc'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['pubmed'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['clockss'] ?? '') ?></td>
@@ -879,11 +1009,27 @@ require 'header.php';
                             <td class="text-center border-end"><?= h($row['doaj'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['bibilat'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['medes'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['pdf_to_xml'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['html'] ?? '') ?></td>
+
+                            <!-- PDF to XML (Split) -->
+                            <td class="text-center border-end"><?= h($p_pdfxml['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_pdfxml['without']) ?></td>
+
+                            <!-- HTML (Split) -->
+                            <td class="text-center border-end"><?= h($p_html['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_html['without']) ?></td>
+
+                            <!-- New HTML (Single) -->
                             <td class="text-center border-end"><?= h($row['new_html'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['direct_html'] ?? '') ?></td>
-                            <td class="text-center border-end"><?= h($row['xml_html'] ?? '') ?></td>
+
+                            <!-- Direct HTML (Split) -->
+                            <td class="text-center border-end"><?= h($p_dhtml['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_dhtml['without']) ?></td>
+
+                            <!-- XML+HTML (Split) -->
+                            <td class="text-center border-end"><?= h($p_xmlhtml['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_xmlhtml['without']) ?></td>
+
+                            <!-- Image, Math -->
                             <td class="text-center border-end"><?= h($row['image'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['math'] ?? '') ?></td>
                             
