@@ -91,6 +91,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <i class="fas fa-file-alt"></i> TS Report
             </a>
         </li>
+        <li>
+            <a href="<?= $subtl_prefix ?>ts_meeting.php" class="<?= $currentPage === 'ts_meeting.php' ? 'active' : '' ?>">
+                <i class="fas fa-handshake"></i> TS Meeting
+            </a>
+        </li>
     </ul>
 </li>
 
@@ -111,6 +116,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <li>
             <a href="<?= $subtl_prefix ?>jobmgmt_qc.php">
                 <i class="fas fa-file-alt"></i> QC Report
+            </a>
+        </li>
+        <li>
+            <a href="<?= $subtl_prefix ?>qc_meeting.php" class="<?= $currentPage === 'qc_meeting.php' ? 'active' : '' ?>">
+                <i class="fas fa-handshake"></i> QC Meeting
             </a>
         </li>
     </ul>
