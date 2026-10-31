@@ -44,14 +44,19 @@ function formatDate($d) {
 function getWeekDates($week_number, $year = null) {
     if ($year === null) $year = date('Y');
     
-    $first_day_of_year = date('Y-m-d', strtotime($year . '-01-01'));
-    $day_of_week = date('w', strtotime($first_day_of_year));
+    // Financial / Operational year starts from April 1
+    $april_first = strtotime($year . '-04-01');
+    $day_of_week = date('N', $april_first); // 1 (Mon) to 7 (Sun)
     
-    // Adjust for weeks starting on Monday (ISO week)
-    $first_monday = strtotime($first_day_of_year . ' +' . ((8 - $day_of_week) % 7) . ' days');
+    // First Monday on or after April 1
+    if ($day_of_week == 1) {
+        $first_monday = $april_first;
+    } else {
+        $first_monday = strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+    }
     
     $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
-    $week_end = strtotime('+4 days', $week_start); // Monday to Friday (5 days)
+    $week_end = strtotime('+5 days', $week_start); // Monday to Saturday (e.g. 26 Oct to 31 Oct)
     
     return [
         'from_date' => date('Y-m-d', $week_start),
@@ -79,14 +84,26 @@ if ($current_user_role == 3) {
     $selected_tl_id = $current_user_id;
 }
 
-// Get TMs for the selected TL
+// Get TMs for the selected TL (Only UQ Team Members)
 $tms = [];
 if ($current_user_role > 0) {
-    $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username 
-                             FROM employee_master 
-                             WHERE reporting_manager = ? AND status = 'Active' 
-                             ORDER BY employee_name");
-    $stmt->bind_param("s", $current_user_name);
+    $query = "SELECT DISTINCT em.employee_id, em.employee_name, em.employee_username 
+              FROM employee_master em
+              LEFT JOIN team_master tm_tbl ON em.team_id = tm_tbl.team_id
+              WHERE (
+                  tm_tbl.team_name LIKE '%UQ%'
+                  OR em.team_id LIKE '%UQ%'
+                  OR em.process LIKE '%UQ%'
+                  OR EXISTS (
+                      SELECT 1 FROM process_master pm 
+                      WHERE FIND_IN_SET(pm.process_id, em.process) 
+                      AND pm.process_name LIKE '%UQ%'
+                  )
+              ) 
+              AND em.status = 'Active' 
+              ORDER BY em.employee_username ASC";
+              
+    $stmt = $mysqli->prepare($query);
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
@@ -142,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                (from_date <= ? AND to_date >= ?) OR
                                                (from_date >= ? AND to_date <= ?)
                                            )");
-            $check_stmt->bind_param("issssss", $tm_id, $to_date, $from_date, $from_date, $to_date, $from_date, $to_date);
+            $check_stmt->bind_param("sssssss", $tm_id, $to_date, $from_date, $from_date, $to_date, $from_date, $to_date);
             $check_stmt->execute();
             $check_stmt->store_result();
             
@@ -268,10 +285,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                  $week_dates['from_date'], $week_dates['to_date'], $target_id);
                 
                 if ($stmt->execute()) {
-                    $success_message = "Target updated successfully!";
+                    $success_message = "Weekly Target updated successfully!";
                 }
                 $stmt->close();
             }
+        }
+    } elseif ($action === 'save_revisions') {
+        $tm_ids = $_POST['tm_id_rev'] ?? [];
+        $rev_months = $_POST['rev_month'] ?? [];
+        $current_targets = $_POST['current_target'] ?? [];
+        $revision_targets = $_POST['revision_target'] ?? [];
+        $success_count = 0;
+        
+        for ($i = 0; $i < count($tm_ids); $i++) {
+            $tm = $tm_ids[$i];
+            $rm = $rev_months[$i] ?? '';
+            $ct = !empty($current_targets[$i]) ? (int)$current_targets[$i] : 0;
+            $rt = !empty($revision_targets[$i]) ? (int)$revision_targets[$i] : 0;
+            
+            // Only process if month is selected
+            if (!empty($rm)) {
+                $check = $mysqli->prepare("SELECT id FROM weekly_targets WHERE tm_id = ? AND revision_month = ?");
+                $check->bind_param("ss", $tm, $rm);
+                $check->execute();
+                $res = $check->get_result();
+                
+                if ($res->num_rows > 0) {
+                    $row = $res->fetch_assoc();
+                    $upd = $mysqli->prepare("UPDATE weekly_targets SET target_limit = ?, revision_target = ? WHERE id = ?");
+                    $upd->bind_param("iii", $ct, $rt, $row['id']);
+                    if($upd->execute()) $success_count++;
+                    $upd->close();
+                } else {
+                    // Fix for strict mode: replaced '0000-00-00' with CURDATE() and added 'status'
+                        $ins = $mysqli->prepare("INSERT INTO weekly_targets (tl_id, tm_id, revision_month, target_limit, revision_target, week_number, year, assigned_by, assigned_date, from_date, to_date, status) VALUES (?, ?, ?, ?, ?, 0, 0, ?, NOW(), CURDATE(), CURDATE(), 'Active')");
+                        $ins->bind_param("issiii", $selected_tl_id, $tm, $rm, $ct, $rt, $current_user_id);
+                        if($ins->execute()) $success_count++;
+                        $ins->close();
+                }
+                $check->close();
+            }
+        }
+        if ($success_count > 0) {
+            $success_message = "$success_count Target Revisions saved successfully!";
         }
     }
 }
@@ -298,7 +354,7 @@ FROM weekly_targets wt
 LEFT JOIN employee_master tl ON wt.tl_id = tl.employee_id
 LEFT JOIN employee_master tm ON wt.tm_id = tm.employee_username
 LEFT JOIN employee_master ass ON wt.assigned_by = ass.employee_id
-WHERE 1=1";
+WHERE wt.week_number > 0";
 
 $params = [];
 $types = '';
@@ -313,6 +369,13 @@ if ($selected_tl_id > 0) {
         $params[] = $selected_tl_id;
         $types .= 'i';
     }
+}
+
+// Apply Team Member filter if specified
+if (isset($_GET['tm_filter']) && $_GET['tm_filter'] !== '') {
+    $target_query .= " AND wt.tm_id = ?";
+    $params[] = $_GET['tm_filter'];
+    $types .= 's';
 }
 
 // Apply week filter if specified
@@ -363,6 +426,7 @@ foreach ($targets as &$target) {
         $target['achieved_percentage'] = 0;
     }
 }
+unset($target); // FIX: Breaks the reference to prevent overwriting the array in the next loop
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -381,6 +445,7 @@ foreach ($targets as &$target) {
             padding: 20px;
             max-width: 1400px;
             margin: 0 auto;
+            margin-top: 80px; /* Added this line to push the content down below the header */
         }
         .table th {
             background-color: #2c3e50;
@@ -442,13 +507,7 @@ foreach ($targets as &$target) {
     
     <div class="main-content">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-bullseye me-2"></i>Employee Target
-</h4>
-            <div class="text-muted">
-                <i class="fas fa-user-shield me-1"></i>
-                <?= h($_SESSION['employee_name'] ?? 'User') ?> 
-                (<?= h($current_user_role == 2 ? 'Team Leader' : ($current_user_role == 3 ? 'Manager' : 'Admin')) ?>)
-            </div>
+            <h4><i class="fas fa-bullseye me-2"></i>Employee Target</h4>
         </div>
 
         <?php if(isset($success_message)): ?>
@@ -473,24 +532,40 @@ foreach ($targets as &$target) {
         <div class="filter-section">
             <form method="get" class="row g-3 align-items-center">
                 <?php if($current_user_role == 3): ?>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="tl_id" class="form-label">Select Team Leader</label>
                     <select name="tl_id" id="tl_id" class="form-select" onchange="this.form.submit()">
                         <option value="">All Team Leaders</option>
                         <?php foreach($tls as $tl): ?>
-                        <option value="<?= h($tl['employee_id']) ?>" 
-                                <?= $selected_tl_id == $tl['employee_id'] ? 'selected' : '' ?>>
+                        <option value="<?= h($tl['employee_username']) ?>" 
+                                <?= $selected_tl_id == $tl['employee_username'] ? 'selected' : '' ?>>
                             <?= h($tl['employee_name']) ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <?php endif; ?>
-                
+
                 <div class="col-md-3">
+                    <label for="tm_filter" class="form-label">Team Member</label>
+                    <select name="tm_filter" id="tm_filter" class="form-select">
+                        <option value="">All UQ Members</option>
+                        <?php foreach($tms as $tm): ?>
+                        <option value="<?= h($tm['employee_username']) ?>" <?= (isset($_GET['tm_filter']) && $_GET['tm_filter'] == $tm['employee_username']) ? 'selected' : '' ?>>
+                            <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
                     <label for="week_filter" class="form-label">Week</label>
-                    <input type="text" name="week_filter" id="week_filter" class="form-control" 
-                           placeholder="W1, W2, etc." value="<?= h($_GET['week_filter'] ?? '') ?>">
+                    <select name="week_filter" id="week_filter" class="form-select">
+                        <option value="">All Weeks</option>
+                        <?php for($w=1; $w<=53; $w++): ?>
+                            <option value="W<?= $w ?>" <?= (isset($_GET['week_filter']) && $_GET['week_filter'] == 'W'.$w) ? 'selected' : '' ?>>W<?= str_pad($w, 2, '0', STR_PAD_LEFT) ?></option>
+                        <?php endfor; ?>
+                    </select>
                 </div>
                 
                 <div class="col-md-2">
@@ -504,18 +579,18 @@ foreach ($targets as &$target) {
                     </select>
                 </div>
                 
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-1"></i> Filter
-                    </button>
-                </div>
-                
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <a href="target_assignment.php" class="btn btn-secondary w-100">
-                        <i class="fas fa-times me-1"></i> Clear
-                    </a>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <div class="w-100">
+                        <label class="form-label d-block">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-50">
+                                <i class="fas fa-filter me-1"></i> Filter
+                            </button>
+                            <a href="target_assignment.php" class="btn btn-secondary w-50">
+                                <i class="fas fa-times me-1"></i> Clear
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -559,13 +634,17 @@ foreach ($targets as &$target) {
                             <div class="mb-3">
                                 <label for="week_input" class="form-label">Week <span class="text-danger">*</span></label>
                                 <div class="week-input-container">
-                                    <input type="text" class="form-control" id="week_input" name="week_input" 
-                                           required placeholder="W01, W02, etc." >
+                                    <select class="form-select" id="week_input" name="week_input" required>
+                                        <option value="">Select Week</option>
+                                        <?php for($w=1; $w<=53; $w++): ?>
+                                            <option value="W<?= $w ?>">W<?= str_pad($w, 2, "0", STR_PAD_LEFT) ?></option>
+                                        <?php endfor; ?>
+                                    </select>
                                     <input type="number" class="form-control" id="year" name="year" 
                                            value="<?= date('Y') ?>" min="2023" max="2030" style="width: 100px;">
                                 </div>
                                 <div class="form-text">
-                                    <i class="fas fa-info-circle me-1"></i> Enter week number (W1 to W53)
+                                    <i class="fas fa-info-circle me-1"></i> Select week number
                                 </div>
                             </div>
                             
@@ -738,6 +817,82 @@ foreach ($targets as &$target) {
                 </div>
             </div>
         </div>
+
+        <!-- Target Revision Section (NEW ROW) -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <form method="post">
+                    <input type="hidden" name="action" value="save_revisions">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Target Revision</h5>
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Save Revisions</button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th width="200">Month with year</th>
+                                            <th>Team Member</th>
+                                            <th width="200">Current Target</th>
+                                            <th width="200">Target Revision</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php 
+                                            // Fetch saved revisions from DB to show them in input fields
+                                            $revisions = [];
+                                            $rev_res = $mysqli->query("SELECT tm_id, revision_month, target_limit, revision_target FROM weekly_targets WHERE week_number = 0 ORDER BY id ASC");
+                                            if ($rev_res && $rev_res->num_rows > 0) {
+                                                while($row = $rev_res->fetch_assoc()) {
+                                                    $revisions[$row['tm_id']] = $row;
+                                                }
+                                            }
+                                        ?>
+                                        <?php if(!empty($tms)): ?>
+                                            <?php foreach($tms as $tm): 
+                                                $tm_un = $tm['employee_username'];
+                                                $saved_month = isset($revisions[$tm_un]) ? $revisions[$tm_un]['revision_month'] : '';
+                                                $saved_ct = isset($revisions[$tm_un]) ? $revisions[$tm_un]['target_limit'] : '';
+                                                $saved_rt = isset($revisions[$tm_un]) ? $revisions[$tm_un]['revision_target'] : '';
+                                            ?>
+                                            <tr>
+                                                <td class="fw-bold">
+                                                    <?= h($tm['employee_username']) ?>
+                                                    <input type="hidden" name="tm_id_rev[]" value="<?= h($tm['employee_username']) ?>">
+                                                </td>
+                                                <td>
+                                                    <input type="month" class="form-control form-control-sm" name="rev_month[]" value="<?= h($saved_month) ?>">
+                                                </td>
+                                                <td>
+                                                    <div class="fw-semibold"><?= h($tm['employee_name']) ?></div>
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm" name="current_target[]" placeholder="Enter Target" min="0" value="<?= h($saved_ct) ?>">
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm" name="revision_target[]" placeholder="Enter Revision" min="0" value="<?= h($saved_rt) ?>">
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="5" class="text-center py-4 text-muted">
+                                                    No team members found
+                                                </td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <!-- Progress Update Modal -->
@@ -810,8 +965,12 @@ foreach ($targets as &$target) {
                         <div class="mb-3">
                             <label for="edit_week_input" class="form-label">Week</label>
                             <div class="week-input-container">
-                                <input type="text" class="form-control" id="edit_week_input" name="week_input" 
-                                       required pattern="W\d+" title="Format: W1, W2, etc.">
+                                <select class="form-select" id="edit_week_input" name="week_input" required>
+                                    <option value="">Select Week</option>
+                                    <?php for($w=1; $w<=53; $w++): ?>
+                                        <option value="W<?= $w ?>">W<?= str_pad($w, 2, "0", STR_PAD_LEFT) ?></option>
+                                    <?php endfor; ?>
+                                </select>
                                 <input type="number" class="form-control" id="edit_year" name="year" 
                                        min="2023" max="2030" style="width: 100px;">
                             </div>
@@ -849,22 +1008,23 @@ foreach ($targets as &$target) {
                     const year = parseInt(yearInput.value);
                     
                     if (weekNumber >= 1 && weekNumber <= 53) {
-                        // Calculate week dates (Monday to Friday)
-                        const firstDayOfYear = new Date(year, 0, 1);
-                        const dayOfWeek = firstDayOfYear.getDay();
+                        // Operational year starts from April 1
+                        const aprilFirst = new Date(year, 3, 1); // Month 3 is April
+                        const dayOfWeek = aprilFirst.getDay(); // 0 is Sunday, 1 is Monday
                         
-                        // Adjust to first Monday (ISO week)
-                        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                        firstDayOfYear.setDate(firstDayOfYear.getDate() + diffToMonday);
+                        // Find first Monday on or after April 1
+                        const diffToMonday = (dayOfWeek === 1) ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
+                        const firstMonday = new Date(aprilFirst);
+                        firstMonday.setDate(firstMonday.getDate() + diffToMonday);
                         
-                        const weekStart = new Date(firstDayOfYear);
+                        const weekStart = new Date(firstMonday);
                         weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
                         
                         const weekEnd = new Date(weekStart);
-                        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday (5 days)
+                        weekEnd.setDate(weekEnd.getDate() + 5); // Monday to Saturday (e.g. 26 Oct to 31 Oct)
                         
                         const formatDate = (date) => {
-                            return date.toLocaleDateString('en-IN', {
+                            return date.toLocaleDateString('en-GB', {
                                 day: '2-digit',
                                 month: 'short',
                                 year: 'numeric'
@@ -963,23 +1123,24 @@ foreach ($targets as &$target) {
             const editYearInput = document.getElementById('edit_year');
             const editWeekDatesDiv = document.getElementById('editWeekDates');
             
-            // Calculate and display week dates
+            // Calculate and display week dates (April Year Base)
             const weekMatch = weekInput.match(/W(\d+)/i);
             if (weekMatch) {
                 const weekNumber = parseInt(weekMatch[1]);
-                const firstDayOfYear = new Date(year, 0, 1);
-                const dayOfWeek = firstDayOfYear.getDay();
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                firstDayOfYear.setDate(firstDayOfYear.getDate() + diffToMonday);
+                const aprilFirst = new Date(year, 3, 1);
+                const dayOfWeek = aprilFirst.getDay();
+                const diffToMonday = (dayOfWeek === 1) ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
+                const firstMonday = new Date(aprilFirst);
+                firstMonday.setDate(firstMonday.getDate() + diffToMonday);
                 
-                const weekStart = new Date(firstDayOfYear);
+                const weekStart = new Date(firstMonday);
                 weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
                 
                 const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekEnd.getDate() + 4);
+                weekEnd.setDate(weekEnd.getDate() + 5);
                 
                 const formatDate = (date) => {
-                    return date.toLocaleDateString('en-IN', {
+                    return date.toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric'

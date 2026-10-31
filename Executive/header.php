@@ -501,41 +501,25 @@ if ($result && $row = $result->fetch_assoc()) {
                             </li>
                         </ul>
                     </li>  
-                    <!-- Jobs Dropdown -->
+                    <!-- Jobs Dropdown (UQ Team Only - other teams show till Reports) -->
+                    <?php if (($user_team_id ?? 0) == 2): ?>
                     <li>
                         <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
                         <ul class="nav-dropdown">
-                            <?php if ($show_faq): ?>
-                            <!-- <li>
-                                <a href="final_job.php" class="<?= $currentPage === 'final_job.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-chart-line"></i> Job Progress (FQA)
-                                </a>
-                            </li> -->
-                            <?php endif; ?>
-                            
-                            <?php if ($show_pag): ?>
                             <li>
-                                <a href="alljobs_qc.php" class="<?= $currentPage === 'alljobs_qc.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-clipboard-check"></i> QC Check
-                                </a>
-                            </li>
-                            <?php endif;?>
-
-                            <li>
-                                <a href="<?= (($user_team_id ?? 0) == 2) ? '../SubTL/' : '' ?>job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>">
+                                <a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>">
                                     <i class="fas fa-chart-pie"></i> Input & Output
                                 </a>
                             </li>
                             <li>
-                                <a href="<?= (($user_team_id ?? 0) == 2) ? '../SubTL/' : '' ?>tm_queries.php">
+                                <a href="tm_queries.php">
                                     <i class="fas fa-question-circle"></i> Queries
                                 </a>
                             </li>
                         </ul>
                     </li>
-                    
-                    
-                    <?php if (($user_team_id ?? 0) == 2): include __DIR__ . '/../uq_process_nav.php'; endif; ?>
+                    <?php include __DIR__ . '/../uq_executive_nav.php'; ?>
+                    <?php endif; ?>
                     </ul>
             </nav>
             

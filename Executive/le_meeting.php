@@ -48,14 +48,44 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_weekly_data') {
     exit;
 }
 
-// --- FILTERS & DYNAMIC WEEKS LOGIC ---
+// --- APRIL-BASED OPERATIONAL WEEK DATE CALCULATOR ---
+function getOpWeekDates($week_number, $year = null) {
+    if ($year === null) $year = date('Y');
+    $april_first = strtotime($year . '-04-01');
+    $day_of_week = date('N', $april_first);
+    $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+    $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
+    $week_end = strtotime('+5 days', $week_start); // Monday to Saturday
+    return [
+        'from_date' => date('Y-m-d', $week_start),
+        'to_date' => date('Y-m-d', $week_end)
+    ];
+}
+
+function getCurrentOpWeek($year = null) {
+    if ($year === null) $year = date('Y');
+    $now = time();
+    $april_first = strtotime($year . '-04-01');
+    if ($now < $april_first) {
+        $year = $year - 1;
+        $april_first = strtotime($year . '-04-01');
+    }
+    $day_of_week = date('N', $april_first);
+    $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+    $diff_weeks = floor(($now - $first_monday) / (7 * 86400)) + 1;
+    return max(1, min(53, (int)$diff_weeks));
+}
+
+// --- FILTERS & DYNAMIC WEEKS / MONTH LOGIC ---
 $current_user = $_SESSION['username'] ?? '';
 
 // Get Filters
+$filter_mode = $_GET['filter_mode'] ?? 'week'; // 'week' or 'month'
 $filter_tm = $_GET['filter_tm'] ?? '';
-$filter_process = $_GET['filter_process'] ?? '';
-$filter_week = $_GET['filter_week'] ?? date('W'); // Default to Current Week
-$filter_year = date('Y'); // Auto fetch current year for exact data filtering
+$filter_process = $_GET['filter_process'] ?? []; // Array for multi-select checkboxes
+$filter_week = $_GET['filter_week'] ?? getCurrentOpWeek();
+$filter_month = (int)($_GET['filter_month'] ?? date('n'));
+$filter_year = date('Y');
 
 // Calculate 4 Dynamic Weeks for Columns
 $w1 = (int)$filter_week;
@@ -63,39 +93,48 @@ $w2 = $w1 - 1 > 0 ? $w1 - 1 : 52 + ($w1 - 1);
 $w3 = $w2 - 1 > 0 ? $w2 - 1 : 52 + ($w2 - 1);
 $w4 = $w3 - 1 > 0 ? $w3 - 1 : 52 + ($w3 - 1);
 
-// 1. Get the logged-in user's employee_name (Reporting Manager)
+// Dates for Week 1 (Operational Week Range)
+$w1_dates = getOpWeekDates($w1, $filter_year);
+$w1_from = $w1_dates['from_date'];
+$w1_to = $w1_dates['to_date'];
+
+// 1. Get the logged-in user's employee_name / Reporting Manager (Login-wise dynamic)
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 if ($stmt_user) {
     $stmt_user->bind_param("s", $current_user);
     $stmt_user->execute();
-    $stmt_user->bind_result($user_employee_name);
+    $stmt_user->bind_result($logged_in_name, $user_reporting_manager);
     $stmt_user->fetch();
     $stmt_user->close();
 }
+// If user has a reporting manager, use that; if user is TL/Admin with empty RM, use their own name
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
-// Prepare Queries for Target, Production, and Errors (Filtered by Week AND Year)
-$target_sql = "SELECT SUM(target_limit) as total_target FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
-$stmt_target = $mysqli->prepare($target_sql);
-
-// Fallback query to get the latest target if current week has no target assigned
+// Fallback query for target
 $target_fallback_sql = "SELECT target_limit FROM weekly_targets WHERE tm_id = ? ORDER BY id DESC LIMIT 1";
 $stmt_target_fallback = $mysqli->prepare($target_fallback_sql);
 
-// Fetching production exactly matching LE Report logic
-$prod_sql = "
-    SELECT SUM(COALESCE(NULLIF(l.word_count, 0), NULLIF(c.word_count, 0), NULLIF(j.word_count, 0), 0)) as total_prod 
-    FROM jobs j 
-    LEFT JOIN le l ON j.job_id = l.job_id 
-    LEFT JOIN ce c ON j.job_id = c.job_id
-    WHERE (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_to = ?)
-    AND WEEK(j.job_date, 1) = ? AND YEAR(j.job_date) = ?
-";
-$stmt_prod = $mysqli->prepare($prod_sql);
+// Target Query
+if ($filter_mode === 'month') {
+    $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND year = ?";
+    $stmt_target = $mysqli->prepare($target_sql);
+} else {
+    $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
+    $stmt_target = $mysqli->prepare($target_sql);
+}
 
-$error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND WEEK(date, 1) = ? AND YEAR(date) = ?";
-$stmt_error = $mysqli->prepare($error_sql);
+// Error Query
+if ($filter_mode === 'month') {
+    $error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND MONTH(date) = ? AND YEAR(date) = ?";
+    $stmt_error = $mysqli->prepare($error_sql);
+} else {
+    $error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND DATE(date) BETWEEN ? AND ?";
+    $stmt_error = $mysqli->prepare($error_sql);
+}
 
 // 2. Fetch all team members under this TL with Filters & Ascending Order
 $team_data = [];
@@ -108,9 +147,13 @@ if (!empty($user_employee_name)) {
     if (!empty($filter_tm)) {
         $tm_sql .= " AND employee_username = '" . $mysqli->real_escape_string($filter_tm) . "'";
     }
-    // Apply Process Filter
-    if (!empty($filter_process)) {
-        $tm_sql .= " AND FIND_IN_SET('" . $mysqli->real_escape_string($filter_process) . "', process)";
+    // Apply Process Filter (Multiple Checkboxes)
+    if (!empty($filter_process) && is_array($filter_process)) {
+        $process_conditions = [];
+        foreach ($filter_process as $p_id) {
+            $process_conditions[] = "FIND_IN_SET('" . $mysqli->real_escape_string($p_id) . "', process)";
+        }
+        $tm_sql .= " AND (" . implode(" OR ", $process_conditions) . ")";
     }
     
     // ASCENDING ORDER BY ID
@@ -150,45 +193,91 @@ if (!empty($user_employee_name)) {
                 $exp_str = $diff->y . ' Y ' . $diff->m . ' M';
             }
             
-            // Get Target for selected week
+            // Get Target & Leave
             $target = 0;
+            $leave_count = 0;
             if ($stmt_target) {
-                $stmt_target->bind_param("sii", $emp_username, $w1, $filter_year); 
+                if ($filter_mode === 'month') {
+                    $stmt_target->bind_param("si", $emp_username, $filter_year);
+                } else {
+                    $stmt_target->bind_param("sii", $emp_username, $w1, $filter_year);
+                }
                 $stmt_target->execute();
                 $res_target = $stmt_target->get_result()->fetch_assoc();
                 $target = $res_target['total_target'] ?? 0;
+                $leave_count = (int)($res_target['total_leave'] ?? 0);
                 
-                // Fallback if no target assigned for the current week
+                // Fallback target
                 if ($target == 0 && isset($stmt_target_fallback)) {
                     $stmt_target_fallback->bind_param("s", $emp_username);
                     $stmt_target_fallback->execute();
                     $res_fallback = $stmt_target_fallback->get_result()->fetch_assoc();
-                    $target = $res_fallback['target_limit'] ?? 0;
+                    $base_target = $res_fallback['target_limit'] ?? 0;
+                    $target = ($filter_mode === 'month') ? ($base_target * 4) : $base_target;
                 }
             }
             
-            // Get Production for selected week
+            // Check if member needs WC-ExRef calculation
+            $wc_exref_members = ['T. Priyadharshini', 'S. Kiruthika Singaravel', 'B. Arulmozhi', 'S. Abinaya'];
+            $use_wc_exref = in_array(trim($emp_name), $wc_exref_members);
+
+            // Dynamic Production Column Selection
+            $column_to_sum = $use_wc_exref 
+                ? "COALESCE(NULLIF(CAST(l.wc_exref AS UNSIGNED), 0), NULLIF(l.word_count, 0), NULLIF(j.word_count, 0), 0)"
+                : "COALESCE(NULLIF(l.word_count, 0), NULLIF(c.word_count, 0), NULLIF(j.word_count, 0), 0)";
+
             $production = 0;
-            if ($stmt_prod) {
-                $stmt_prod->bind_param("sssii", $emp_username, $emp_username, $emp_username, $w1, $filter_year); 
-                $stmt_prod->execute();
-                $res_prod = $stmt_prod->get_result()->fetch_assoc();
-                $production = $res_prod['total_prod'] ?? 0;
+            if ($filter_mode === 'month') {
+                $dyn_prod_sql = "
+                    SELECT SUM($column_to_sum) as total_prod 
+                    FROM jobs j 
+                    LEFT JOIN le l ON j.job_id = l.job_id 
+                    LEFT JOIN ce c ON j.job_id = c.job_id
+                    WHERE (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_to = ?)
+                    AND MONTH(j.job_date) = ? AND YEAR(j.job_date) = ?
+                ";
+                $stmt_p = $mysqli->prepare($dyn_prod_sql);
+                if ($stmt_p) {
+                    $stmt_p->bind_param("sssii", $emp_username, $emp_username, $emp_username, $filter_month, $filter_year);
+                    $stmt_p->execute();
+                    $production = $stmt_p->get_result()->fetch_assoc()['total_prod'] ?? 0;
+                    $stmt_p->close();
+                }
+            } else {
+                $dyn_prod_sql = "
+                    SELECT SUM($column_to_sum) as total_prod 
+                    FROM jobs j 
+                    LEFT JOIN le l ON j.job_id = l.job_id 
+                    LEFT JOIN ce c ON j.job_id = c.job_id
+                    WHERE (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_to = ?)
+                    AND DATE(j.job_date) BETWEEN ? AND ?
+                ";
+                $stmt_p = $mysqli->prepare($dyn_prod_sql);
+                if ($stmt_p) {
+                    $stmt_p->bind_param("sssss", $emp_username, $emp_username, $emp_username, $w1_from, $w1_to);
+                    $stmt_p->execute();
+                    $production = $stmt_p->get_result()->fetch_assoc()['total_prod'] ?? 0;
+                    $stmt_p->close();
+                }
             }
             
-            // Get Errors for selected week
+            // Get Errors
             $errors = 0;
             if ($stmt_error) {
-                $stmt_error->bind_param("sii", $emp_name, $w1, $filter_year); 
+                if ($filter_mode === 'month') {
+                    $stmt_error->bind_param("sii", $emp_name, $filter_month, $filter_year);
+                } else {
+                    $stmt_error->bind_param("sss", $emp_name, $w1_from, $w1_to);
+                }
                 $stmt_error->execute();
                 $res_error = $stmt_error->get_result()->fetch_assoc();
                 $errors = $res_error['error_count'] ?? 0;
             }
 
-            // Calculations
+            // Calculations based on Exact Given Formulas
             $production_points = $target > 0 ? round($production / ($target / 100), 2) : 0;
             $errors_points = $errors * 2;
-            $prod_pct = $production_points; 
+            $prod_pct = $production_points; // Production % = (Production Points / Target) * Target = Prod Points %
 
             $accuracy = 100;
             if ($production_points > 0) {
@@ -198,8 +287,8 @@ if (!empty($user_employee_name)) {
                 $accuracy = 0;
             }
 
-            $net_production = $production - ($errors_points / 100);
-            $net_prod_pct = $target > 0 ? round($net_production / ($target / 100), 2) : 0;
+            // Net Production % = Production Points - Errors Points
+            $net_prod_pct = $target > 0 ? round($production_points - $errors_points, 2) : 0;
             $net_prod_decimal = $net_prod_pct / 100;
             
             $team_data[] = [
@@ -216,7 +305,7 @@ if (!empty($user_employee_name)) {
                 'accuracy' => $accuracy,
                 'net_prod_pct' => $net_prod_pct,
                 'net_prod_decimal' => $net_prod_decimal,
-                'leave' => 0 // Default value for Leave
+                'leave' => $leave_count
             ];
         }
         $stmt_tm->close();
@@ -356,7 +445,32 @@ function h($s) {
 <?php
         // Fetch values for Dropdowns
         $tm_filter_qry = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = '$user_employee_name' AND status = 'Active' ORDER BY employee_name ASC");
-        $proc_filter_qry = $mysqli->query("SELECT process_id, process_name FROM process_master ORDER BY process_name ASC");
+        
+        // Exact 17 processes from screenshot (CE & PAG Processes)
+        $required_processes = [
+            'CE', 'LE', 'Front Matter-CE', 'Content-CE', 'Equation-CE', 'Table-CE', 
+            'Image-CE', 'Reference-CE', 'FQA-CE', 'Sub TL', 
+            'QC', 'AP', 'TAB/IMG', 'PRE-PAG', 'AP_CRX', 'CE-REF', 'PAG'
+        ];
+        
+        $proc_db_res = $mysqli->query("SELECT process_id, process_name FROM process_master");
+        $process_db_map = [];
+        if ($proc_db_res) {
+            while ($p_row = $proc_db_res->fetch_assoc()) {
+                $process_db_map[strtoupper(trim($p_row['process_name']))] = $p_row['process_id'];
+            }
+        }
+
+        // Build list guaranteeing PAG is always included
+        $process_filter_list = [];
+        foreach ($required_processes as $p_name) {
+            $upper = strtoupper($p_name);
+            $p_id = $process_db_map[$upper] ?? $p_name;
+            $process_filter_list[] = [
+                'id' => $p_id,
+                'name' => $p_name
+            ];
+        }
     ?>
     <!-- FILTER FORM -->
     <div class="card mb-3 shadow-sm border-0">
@@ -373,14 +487,54 @@ function h($s) {
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold mb-1">Process</label>
-                    <select name="filter_process" class="form-select form-select-sm">
-                        <option value="">All Processes</option>
-                        <?php if($proc_filter_qry) while($p = $proc_filter_qry->fetch_assoc()): ?>
-                            <option value="<?= h($p['process_id']) ?>" <?= $filter_process == $p['process_id'] ? 'selected' : '' ?>><?= h($p['process_name']) ?></option>
-                        <?php endwhile; ?>
+                    <div style="position: relative;">
+                        <button class="btn w-100 bg-white shadow-none" type="button" id="processBtn" onclick="toggleProcessMenu(event)" style="border: 1px solid #dee2e6; font-size: 0.875rem; padding: 0.25rem 0.5rem; text-align: left; display: flex; justify-content: space-between; align-items: center;">
+                            Select Processes <i class="fas fa-chevron-down mt-1" style="font-size:0.7rem; color:#6c757d;"></i>
+                        </button>
+                        
+                        <div id="processMenu" class="shadow-sm border bg-white" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; max-height: 250px; overflow-y: auto; padding: 10px; border-radius: 4px; margin-top: 2px;">
+                            <?php foreach($process_filter_list as $p): ?>
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox" name="filter_process[]" value="<?= h($p['id']) ?>" id="proc_<?= h($p['id']) ?>" <?= (is_array($filter_process) && (in_array((string)$p['id'], $filter_process) || in_array($p['name'], $filter_process))) ? 'checked' : '' ?>>
+                                    <label class="form-check-label w-100" for="proc_<?= h($p['id']) ?>" style="cursor: pointer; font-size: 0.85rem;">
+                                        <?= h($p['name']) ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function toggleProcessMenu(e) {
+                        e.preventDefault();
+                        var menu = document.getElementById('processMenu');
+                        if(menu.style.display === 'none' || menu.style.display === '') {
+                            menu.style.display = 'block';
+                        } else {
+                            menu.style.display = 'none';
+                        }
+                    }
+                    document.addEventListener('click', function(e) {
+                        var menu = document.getElementById('processMenu');
+                        var btn = document.getElementById('processBtn');
+                        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+                            menu.style.display = 'none';
+                        }
+                    });
+                </script>
+
+                <!-- Report View: Weekly or Monthly -->
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">Report View</label>
+                    <select name="filter_mode" id="filterModeSelect" class="form-select form-select-sm" onchange="toggleFilterType()">
+                        <option value="week" <?= $filter_mode === 'week' ? 'selected' : '' ?>>Weekly Base</option>
+                        <option value="month" <?= $filter_mode === 'month' ? 'selected' : '' ?>>Monthly Base</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+
+                <!-- Week Dropdown -->
+                <div class="col-md-2" id="weekFilterDiv" style="<?= $filter_mode === 'month' ? 'display:none;' : '' ?>">
                     <label class="form-label small fw-bold mb-1">Week</label>
                     <select name="filter_week" class="form-select form-select-sm">
                         <?php for($i=1; $i<=53; $i++): ?>
@@ -388,13 +542,39 @@ function h($s) {
                         <?php endfor; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+
+                <!-- Month Dropdown -->
+                <div class="col-md-2" id="monthFilterDiv" style="<?= $filter_mode === 'month' ? '' : 'display:none;' ?>">
+                    <label class="form-label small fw-bold mb-1">Month</label>
+                    <select name="filter_month" class="form-select form-select-sm">
+                        <?php for($m=1; $m<=12; $m++): 
+                            $m_name = date('F', mktime(0, 0, 0, $m, 1));
+                        ?>
+                            <option value="<?= $m ?>" <?= $filter_month == $m ? 'selected' : '' ?>><?= $m_name ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
                     <button type="submit" class="btn btn-primary btn-sm me-1"><i class="fas fa-filter"></i> Filter</button>
                     <a href="le_meeting.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Clear</a>
                 </div>
             </form>
         </div>
     </div>
+
+    <script>
+    function toggleFilterType() {
+        var mode = document.getElementById('filterModeSelect').value;
+        if (mode === 'month') {
+            document.getElementById('weekFilterDiv').style.display = 'none';
+            document.getElementById('monthFilterDiv').style.display = 'block';
+        } else {
+            document.getElementById('weekFilterDiv').style.display = 'block';
+            document.getElementById('monthFilterDiv').style.display = 'none';
+        }
+    }
+    </script>
     
     <!-- WEEKLY REPORT TABLE -->
     <h5 class="section-title"><i class="fas fa-table text-primary"></i> Weekly Report Data</h5>
