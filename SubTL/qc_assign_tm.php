@@ -149,25 +149,27 @@ if ($emp_res) {
     }
 }
 
-// Get all employees under the same reporting manager with TM role
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
 $tms = [];
-if ($reporting_manager) {
-    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
-                 OR (em.employee_name LIKE '%Manjuparkavi%' AND em.status = 'Active')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($tm_query);
-    if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($tm = $result->fetch_assoc()) {
-            $tms[] = $tm;
-        }
-        $stmt->close();
+$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_tms = $mysqli->query($tm_query);
+if ($res_tms) {
+    while ($tm = $res_tms->fetch_assoc()) {
+        $tms[] = $tm;
     }
 }
 

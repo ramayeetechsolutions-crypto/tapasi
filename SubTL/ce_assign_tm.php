@@ -54,26 +54,27 @@ if ($current_user_id) {
     }
 }
 
-// Get all employees under the same reporting manager with TM role
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
 $tms = [];
-if ($reporting_manager) {
-    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE em.reporting_manager = ? 
-                 AND em.status = 'Active' 
-                 AND ur.role_name IN ('TM', 'TL', 'Admin')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($tm_query);
-    if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($tm = $result->fetch_assoc()) {
-            $tms[] = $tm;
-        }
-        $stmt->close();
+$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_tms = $mysqli->query($tm_query);
+if ($res_tms) {
+    while ($tm = $res_tms->fetch_assoc()) {
+        $tms[] = $tm;
     }
 }
 
@@ -148,19 +149,24 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $val = trim($_POST['value']);
     
     // Allowed fields for security
-    $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
-    if (in_array($field, $allowed_fields)) {
-        $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
-        $stmt->bind_param("si", $val, $ce_id);
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true]);
+        $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
+        if (in_array($field, $allowed_fields)) {
+            if ($val === '') {
+                $stmt = $mysqli->prepare("UPDATE ce SET $field = NULL, last_updated = NOW() WHERE id = ?");
+                $stmt->bind_param("i", $ce_id);
+            } else {
+                $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
+                $stmt->bind_param("si", $val, $ce_id);
+            }
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => $mysqli->error]);
+            }
         } else {
-            echo json_encode(['success' => false, 'message' => $mysqli->error]);
+            echo json_encode(['success' => false, 'message' => 'Invalid field update']);
         }
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid field update']);
-    }
-    exit;
+        exit;
 }
 
 // Handle AJAX quick assignment
@@ -1423,7 +1429,6 @@ require 'header.php';
                 }
             }
 
-            showLoading();
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1431,18 +1436,14 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
                     setTimeout(() => { window.location.reload(); }, 500);
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             }).catch(error => { 
-                hideLoading(); 
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
             });
         }
 
@@ -1457,7 +1458,7 @@ require 'header.php';
                 const currentTime = currentHour + ':' + currentMinute;
 
                 // Compare selected time with current time (Forces ONLY current time)
-                if (value !== currentTime) {   // <---- INDHA LINE-A IPPADI MAATHUNGA
+                if (value !== currentTime) {
                     if (element) {
                         element.value = currentTime; 
                         value = currentTime;
@@ -1468,7 +1469,6 @@ require 'header.php';
             }
             // --- BACKDATE PREVENTION LOGIC END ---
 
-            showLoading();
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1476,7 +1476,6 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) { 
                     if (field === 'remarks' && value === 'Moved') {
                         showNotification('success', 'Job moved to LE Assign successfully!');
@@ -1494,7 +1493,7 @@ require 'header.php';
                     }
                 } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+            }).catch(error => { console.error('Error:', error); });
         }
         
         // Quick assign function
