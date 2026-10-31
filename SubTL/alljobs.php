@@ -89,26 +89,27 @@ if ($current_user_id) {
     }
 }
 
-// Get all employees under the same reporting manager (for assignment dropdown)
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
 $les = [];
-if ($reporting_manager) {
-    $le_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE em.reporting_manager = ? 
-                 AND em.status = 'Active' 
-                 AND ur.role_name IN ('TM', 'TL', 'Admin')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($le_query);
-    if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($le = $result->fetch_assoc()) {
-            $les[] = $le;
-        }
-        $stmt->close();
+$le_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_les = $mysqli->query($le_query);
+if ($res_les) {
+    while ($le = $res_les->fetch_assoc()) {
+        $les[] = $le;
     }
 }
 
@@ -352,9 +353,11 @@ if (!empty($status_filter)) {
 }
 
 if (!empty($le_tm_filter)) {
-    $where_conditions[] = "le.assigned_to_le = ?";
-    $params[] = $le_tm_filter;
-    $types .= 's';
+    $where_conditions[] = "(le.assigned_to_le = ? OR le.assigned_to_le_qc = ? OR j.assigned_le = ? OR ce.assigned_to_content = ? OR ce.assigned_to_img = ? OR j.assigned_ce = ? OR j.assigned_to = ?)";
+    for ($k = 0; $k < 7; $k++) {
+        $params[] = $le_tm_filter;
+    }
+    $types .= 'sssssss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -875,6 +878,7 @@ require 'header.php';
         <!-- Filter Section -->
         <div class="filter-section">
             <form method="get" class="row g-2 align-items-end">
+                <input type="hidden" name="job" value="CE">
                 <div class="col-md-4">
                     <label class="form-label small">Search</label>
                     <input type="text" name="search" class="form-control form-control-sm" 
@@ -927,7 +931,7 @@ require 'header.php';
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
-                    <a href="le_assign_tm.php" class="btn btn-outline-secondary btn-sm">
+                    <a href="alljobs.php?job=CE" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-undo me-1"></i> Reset
                     </a>
                 </div>
@@ -1357,14 +1361,13 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500); // reload to revert the dropdown change
+                            setTimeout(() => { window.location.reload(); }, 1500);
                             return; 
                         }
                     }
                 }
             }
 
-            showLoading();
             fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1372,18 +1375,14 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
                     setTimeout(() => { window.location.reload(); }, 500);
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             }).catch(error => { 
-                hideLoading(); 
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
             });
         }
 
@@ -1400,7 +1399,6 @@ require 'header.php';
                 }
             }
 
-            showLoading();
             fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1408,7 +1406,6 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) { 
                     if (field === 'status_button' && value === 'Moved') {
                         showNotification('success', 'Job moved to LE Report & Input/Output successfully!');
@@ -1426,7 +1423,7 @@ require 'header.php';
                     }
                 } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+            }).catch(error => { console.error('Error:', error); });
         }
         
         // Quick assign function
@@ -1441,28 +1438,27 @@ require 'header.php';
             
             selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
-            showLoading();
             
-            fetch('le_assign_tm.php', {
+            // Post directly to alljobs.php (Correct Handler)
+            fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'ajax=quick_assign&le_id=' + leId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 selectElement.disabled = false;
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${leName} successfully!`);
                     document.getElementById('row-' + leId).classList.add('assigned');
-                    setTimeout(() => { window.location.reload(); }, 800);
+                    setTimeout(() => { window.location.reload(); }, 600);
                 } else {
                     showNotification('danger', 'Error: ' + data.message);
                     selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
-                hideLoading(); selectElement.disabled = false;
+                selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 selectElement.value = selectElement.getAttribute('data-previous') || '';
             });
