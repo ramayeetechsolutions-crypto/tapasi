@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = $stmt->get_result();
         
         if ($row = $res->fetch_assoc()) {
-            $assigned_to = $row['reporting_manager']; // Assign to current user
+            $assigned_to = !empty($row['reporting_manager']) ? $row['reporting_manager'] : $row['employee_name']; // Assign to current user / TL
         }
         $stmt->close();
         

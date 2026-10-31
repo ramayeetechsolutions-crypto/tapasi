@@ -17,6 +17,27 @@ function formatDateTime($datetime, $format = 'd-m-Y H:i') {
     
     return $dateObj ? $dateObj->format($format) : '—';
 }
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
 
 function formatDateOnly($date, $format = 'd-m-Y') {
     if (empty($date) || 
@@ -47,15 +68,19 @@ if (!$current_user) {
     exit;
 }
 
-// First, get the logged-in user's employee_name
+// First, get the logged-in user's employee_name and reporting manager
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 $stmt_user->bind_param("s", $current_user);
 $stmt_user->execute();
-$stmt_user->bind_result($user_employee_name);
+$stmt_user->bind_result($logged_in_name, $user_reporting_manager);
 $stmt_user->fetch();
 $stmt_user->close();
+
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
 if (!$user_employee_name) {
     echo "<div class='alert alert-warning'>User profile not found. Please contact administrator.</div>";
@@ -66,6 +91,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -85,12 +111,14 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE reporting_manager = ?");
-$stmt_team->bind_param("s", $user_employee_name);
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active' ORDER BY employee_name ASC");
+$stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
 $stmt_team->execute();
 $res_team = $stmt_team->get_result();
 while ($row_team = $res_team->fetch_assoc()) {
     $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+    $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
 }
 $stmt_team->close();
 
@@ -106,8 +134,9 @@ $where = [$team_condition];
 $params = [$user_employee_name];
 $types  = 's';
 
-// Ensure we only show relevant LE processes (Matches LE Assign logic exactly)
-$where[] = "(REPLACE(jm.job_name, ' ', '') = 'CE+PAG' OR REPLACE(jm.job_name, ' ', '') = 'CE+TS' OR REPLACE(jm.job_name, ' ', '') = 'LE')";
+// Ensure we only show LE jobs that have been Moved by TL
+$where[] = "le.status_button = 'Moved'";
+$where[] = "(REPLACE(jm.job_name, ' ', '') IN ('CE+PAG', 'CE+TS', 'LE', 'CE'))";
 
 // Search query filter
 if ($q) {
@@ -141,6 +170,17 @@ if ($to_date) {
     $where[] = "j.job_date <= ?";
     $params[] = $to_date;
     $types .= "s";
+}
+
+// Employee filter (LE / LE-QC / Content / Img)
+if ($filter_emp) {
+    $where[] = "(le.assigned_to_le = ? OR le.assigned_to_le_qc = ? OR ce.assigned_to_content = ? OR ce.assigned_to_img = ? OR j.assigned_to = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "sssss";
 }
 
 // Build WHERE SQL
@@ -454,7 +494,17 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="process" <?=$sort==='process'?'selected':''?>>Process</option>
                     </select>
                 </div>
-                
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <!-- <div class="col-md-1">
                     <label class="form-label small mb-1">Order</label>
                     <select name="dir" class="form-select form-select-sm">
@@ -508,6 +558,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>LE-QC End</th>
                             <th>Status</th>
                             <th>Priority</th>
+<th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -557,6 +608,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     —
                                 <?php endif; ?>
                             </td>
+                            <!-- TAT Column -->
+                                <?php
+                                    $le_done = in_array($row['le_status'] ?? '', ['Completed', 'Done', 'LE & LE-QC Done']);
+                                    $end_d = $le_done ? ($row['le_date'] ?: $row['last_updated']) : null;
+                                    $tat = getWorkingDaysWithoutSunday($row['job_date'], $end_d);
+                                    $bg = $le_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                                ?>
+                                <td>
+                                    <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
+                                </td>
                         </tr>
                         <?php endforeach; else: ?>
                         <tr><td colspan="20" class="text-center">No jobs found assigned to you.</td></tr>

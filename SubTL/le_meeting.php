@@ -311,9 +311,9 @@ if (!empty($user_employee_name)) {
         $stmt_tm->close();
     }
 }
-if($stmt_target) $stmt_target->close();
-if($stmt_prod) $stmt_prod->close();
-if($stmt_error) $stmt_error->close();
+if(isset($stmt_target) && $stmt_target) $stmt_target->close();
+if(isset($stmt_prod) && $stmt_prod) $stmt_prod->close();
+if(isset($stmt_error) && $stmt_error) $stmt_error->close();
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);

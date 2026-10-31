@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = $stmt->get_result();
         
         if ($row = $res->fetch_assoc()) {
-            $assigned_to = $row['reporting_manager']; // Assign to current user
+            $assigned_to = !empty($row['reporting_manager']) ? $row['reporting_manager'] : $row['employee_name']; // Assign to current user / TL
         }
         $stmt->close();
         
@@ -335,6 +335,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt7->bind_param("isssss", $new_job_id, $job_date, $client_name, $journal, $article, $process_name);
                     $stmt7->execute();
                     $stmt7->close();
+
+                    // --- AUTO-CREATE QC_CRX TABLE IF NOT EXISTS ---
+$mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `job_id` int DEFAULT NULL,
+  `date` date DEFAULT NULL,
+  `client` varchar(255) DEFAULT NULL,
+  `journal_issue` varchar(255) DEFAULT NULL,
+  `article` varchar(255) DEFAULT NULL,
+  `process` varchar(100) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'Need to Assign',
+  `assigned_to_qc` varchar(50) DEFAULT NULL,
+  `qc_start_time` time DEFAULT NULL,
+  `qc_end_time` time DEFAULT NULL,
+  `qc_date` datetime DEFAULT NULL,
+  `rtat` int DEFAULT 0,
+  `atat` int DEFAULT 0,
+  `path` varchar(500) DEFAULT NULL,
+  `priority` varchar(50) DEFAULT NULL,
+  `dispatch_date` date DEFAULT NULL,
+  `upload_by` varchar(50) DEFAULT NULL,
+  `done_by` varchar(50) DEFAULT NULL,
+  `qc_crx_stage` varchar(50) DEFAULT NULL,
+  `pag_crx_stage` varchar(50) DEFAULT NULL,
+  `pag_crx_assigned_to` varchar(50) DEFAULT NULL,
+  `pag_crx_start_time` time DEFAULT NULL,
+  `pag_crx_end_time` time DEFAULT NULL,
+  `img_tab_stage` varchar(50) DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `last_updated` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_job_id` (`job_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                    // QC_CRX
+                    $stmt_crx = $mysqli->prepare("
+                        INSERT INTO qc_crx 
+                        (job_id, date, client, journal_issue, article, process, status, created_at, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, 'Need to Assign', NOW(), NOW())
+                    ");
+                    if ($stmt_crx) {
+                        $stmt_crx->bind_param("isssss", $new_job_id, $job_date, $client_name, $journal, $article, $process_name);
+                        $stmt_crx->execute();
+                        $stmt_crx->close();
+                    }
                 }
             } else {
                 $errors[] = "Failed to insert article '{$article}': " . $stmt->error;

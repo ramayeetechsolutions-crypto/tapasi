@@ -17,6 +17,27 @@ function formatDateTime($datetime, $format = 'd-m-Y H:i') {
     
     return $dateObj ? $dateObj->format($format) : '—';
 }
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
 
 function formatDateOnly($date, $format = 'd-m-Y') {
     if (empty($date) || 
@@ -47,15 +68,19 @@ if (!$current_user) {
     exit;
 }
 
-// First, get the logged-in user's employee_name
+// First, get the logged-in user's employee_name and reporting manager
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 $stmt_user->bind_param("s", $current_user);
 $stmt_user->execute();
-$stmt_user->bind_result($user_employee_name);
+$stmt_user->bind_result($logged_in_name, $user_reporting_manager);
 $stmt_user->fetch();
 $stmt_user->close();
+
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
 if (!$user_employee_name) {
     echo "<div class='alert alert-warning'>User profile not found. Please contact administrator.</div>";
@@ -66,6 +91,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -82,6 +108,19 @@ $processStageMap = [
     'PAG+XML' => ['PAG'],
     'CE+PAG+XML' => ['PAG'],
 ];
+
+// Get unique team members under this reporting manager
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active' ORDER BY employee_name ASC");
+if ($stmt_team) {
+    $stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
+    $stmt_team->execute();
+    $res_team = $stmt_team->get_result();
+    while ($row_team = $res_team->fetch_assoc()) {
+        $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
+    }
+    $stmt_team->close();
+}
 
 // WHERE conditions - Show jobs assigned to current user
 $where = ["j.assigned_to = ?"];
@@ -149,6 +188,15 @@ if ($to_date) {
     $where[] = "j.job_date <= ?";
     $params[] = $to_date;
     $types .= "s";
+}
+
+// Employee filter (PAG / Word Img)
+if ($filter_emp) {
+    $where[] = "(pag.assigned_to_pag = ? OR pag.assigned_to_img = ? OR j.assigned_pag = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "sss";
 }
 
 // Build WHERE SQL
@@ -418,6 +466,18 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                 </div>
                 
                 <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
                     <label class="form-label small mb-1">From Date</label>
                     <input type="date" name="from_date" value="<?= h($from_date) ?>" class="form-control form-control-sm">
                 </div>
@@ -489,6 +549,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>A-TAT</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -541,6 +602,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
+                            </td>
+                            <!-- TAT Column -->
+                            <?php
+                                $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']);
+                                $end_d = $pag_done ? (($row['pag_date'] ?? null) ?: ($row['last_updated'] ?? null) ?: date('Y-m-d')) : null;
+                                $tat = getWorkingDaysWithoutSunday($row['job_date'] ?? '', $end_d);
+                                $bg = $pag_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                            ?>
+                            <td>
+                                <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                             </td>
                         </tr>
                         <?php endforeach; else: ?>

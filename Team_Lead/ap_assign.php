@@ -153,28 +153,31 @@ sort($mail_subjects_list);
 // User Info & Team Members
 $current_user_id = $_SESSION['uid'] ?? 0;
 $reporting_manager = '';
+$current_user_name = '';
 if ($current_user_id) {
-    $stmt = $mysqli->prepare("SELECT reporting_manager FROM employee_master WHERE employee_id = ?");
+    $stmt = $mysqli->prepare("SELECT employee_name, reporting_manager FROM employee_master WHERE employee_id = ?");
     if ($stmt) {
         $stmt->bind_param("i", $current_user_id);
         $stmt->execute();
-        $stmt->bind_result($reporting_manager);
+        $stmt->bind_result($current_user_name, $reporting_manager);
         $stmt->fetch();
         $stmt->close();
     }
 }
 
+$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
+
 $tms = [];
-if ($reporting_manager) {
+if ($effective_manager) {
     $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name 
                  FROM employee_master em 
                  JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE em.reporting_manager = ? 
+                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ?) 
                  AND em.status = 'Active' 
                  ORDER BY em.employee_name";
     $stmt = $mysqli->prepare($tm_query);
     if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
+        $stmt->bind_param("ss", $effective_manager, $current_user_name);
         $stmt->execute();
         $res = $stmt->get_result();
         while ($tm = $res->fetch_assoc()) {

@@ -524,6 +524,8 @@ if ($current_user_name) {
                                     <option value="Monitor" <?= (($editTicket['complaint_type'] ?? '') === 'Monitor') ? 'selected' : '' ?>>Monitor</option>
                                     <option value="CPU" <?= (($editTicket['complaint_type'] ?? '') === 'CPU') ? 'selected' : '' ?>>CPU</option>
                                     <option value="UPS" <?= (($editTicket['complaint_type'] ?? '') === 'UPS') ? 'selected' : '' ?>>UPS</option>
+                                    <option value="Battery Issue" <?= (($editTicket['complaint_type'] ?? '') === 'Battery Issue') ? 'selected' : '' ?>>Battery Issue</option>
+                                    <option value="Charger" <?= (($editTicket['complaint_type'] ?? '') === 'Charger') ? 'selected' : '' ?>>Charger</option>
                                     <option value="Software" <?= (($editTicket['complaint_type'] ?? '') === 'Software') ? 'selected' : '' ?>>Software</option>
                                     <option value="LAN" <?= (($editTicket['complaint_type'] ?? '') === 'LAN') ? 'selected' : '' ?>>LAN</option>
                                     <option value="Printer" <?= (($editTicket['complaint_type'] ?? '') === 'Printer') ? 'selected' : '' ?>>Printer</option>
