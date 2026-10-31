@@ -18,9 +18,10 @@ if (!isset($_SESSION['teamname'])) {
 // Detect current page for menu highlighting
 $currentPage = basename($_SERVER['PHP_SELF']);
 $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
-$employee_id = $_SESSION['uid']; // set at login
-//echo "SELECT process FROM employee_master WHERE employee_id = '$employee_id'";
-//die;
+$employee_id = $_SESSION['uid'] ?? 0; // set at login
+
+require_once 'db.php'; // Ensure db connection is available
+
 // Step 1: Fetch employee process IDs
 $sql = "SELECT * FROM employee_master WHERE employee_id = ?";
 $stmt = $mysqli->prepare($sql);
@@ -836,9 +837,7 @@ if ($row = $result->fetch_assoc()) {
 <li>
     <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
     <ul class="nav-dropdown">
-        <li><a href="jobs.php"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
-        <li><a href="job_management.php"><i class="fas fa-cogs"></i> Job Process</a></li>
-        <li><a href="job_management.php"><i class="fas fa-chart-pie"></i> Input & Output</a></li>
+        <li><a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>"><i class="fas fa-chart-pie"></i> Input & Output</a></li>
         <li><a href="tm_queries.php"><i class="fas fa-question-circle"></i> Queries</a></li>
     </ul>
 </li>

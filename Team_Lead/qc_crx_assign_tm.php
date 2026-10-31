@@ -196,19 +196,22 @@ if ($emp_res) {
     }
 }
 
+// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
+$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
+
 // Get all employees under the same reporting manager with TM role
 $tms = [];
-if ($reporting_manager) {
+if ($effective_manager) {
     $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
                  FROM employee_master em 
                  LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
+                 WHERE ((em.reporting_manager = ? OR em.reporting_manager = ?) AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
                  OR (em.employee_name LIKE '%Manjuparkavi%' AND em.status = 'Active')
                  ORDER BY em.employee_name";
     
     $stmt = $mysqli->prepare($tm_query);
     if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
+        $stmt->bind_param("ss", $effective_manager, $current_user_name);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($tm = $result->fetch_assoc()) {
@@ -509,7 +512,7 @@ require 'header.php';
                         QC_CRX Assign
                     </h4>
                     <!-- <p class="mb-0 text-muted small">
-                        Assign QC tasks to team members under <?= h($reporting_manager) ?>. 
+                        Assign QC tasks to team members under <?= h($effective_manager) ?>. 
                         <em>(Jobs appear here ONLY after the PAG phase is 100% completed)</em>
                     </p> -->
                 </div>
@@ -940,7 +943,7 @@ require 'header.php';
                             <i class="fas fa-list me-1"></i> Showing <?= $qc_result->num_rows ?> ready job(s)
                         </small>
                         <small class="text-muted">
-                            Reporting Manager: <strong><?= h($reporting_manager) ?></strong>
+                            Reporting Manager: <strong><?= h($effective_manager) ?></strong>
                         </small>
                     </div>
                 </div>
