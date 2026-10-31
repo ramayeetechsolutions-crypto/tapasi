@@ -456,7 +456,32 @@ if($stmt_error) $stmt_error->close();
 <?php
         // Fetch values for Dropdowns
         $tm_filter_qry = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = '$user_employee_name' AND status = 'Active' ORDER BY employee_name ASC");
-        $proc_filter_qry = $mysqli->query("SELECT process_id, process_name FROM process_master ORDER BY process_name ASC");
+        
+        // Exact 17 processes from screenshot (CE & PAG Processes)
+        $required_processes = [
+            'CE', 'LE', 'Front Matter-CE', 'Content-CE', 'Equation-CE', 'Table-CE', 
+            'Image-CE', 'Reference-CE', 'FQA-CE', 'Sub TL', 
+            'QC', 'AP', 'TAB/IMG', 'PRE-PAG', 'AP_CRX', 'CE-REF', 'PAG'
+        ];
+        
+        $proc_db_res = $mysqli->query("SELECT process_id, process_name FROM process_master");
+        $process_db_map = [];
+        if ($proc_db_res) {
+            while ($p_row = $proc_db_res->fetch_assoc()) {
+                $process_db_map[strtoupper(trim($p_row['process_name']))] = $p_row['process_id'];
+            }
+        }
+
+        // Build list guaranteeing PAG is always included
+        $process_filter_list = [];
+        foreach ($required_processes as $p_name) {
+            $upper = strtoupper($p_name);
+            $p_id = $process_db_map[$upper] ?? $p_name;
+            $process_filter_list[] = [
+                'id' => $p_id,
+                'name' => $p_name
+            ];
+        }
     ?>
     <!-- FILTER FORM -->
     <div class="card mb-3 shadow-sm border-0">
@@ -478,15 +503,15 @@ if($stmt_error) $stmt_error->close();
                             Select Processes <i class="fas fa-chevron-down mt-1" style="font-size:0.7rem; color:#6c757d;"></i>
                         </button>
                         
-                        <div id="processMenu" class="shadow-sm border bg-white" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; max-height: 200px; overflow-y: auto; padding: 10px; border-radius: 4px; margin-top: 2px;">
-                            <?php if($proc_filter_qry) while($p = $proc_filter_qry->fetch_assoc()): ?>
+                        <div id="processMenu" class="shadow-sm border bg-white" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; max-height: 250px; overflow-y: auto; padding: 10px; border-radius: 4px; margin-top: 2px;">
+                            <?php foreach($process_filter_list as $p): ?>
                                 <div class="form-check mb-1">
-                                    <input class="form-check-input" type="checkbox" name="filter_process[]" value="<?= h($p['process_id']) ?>" id="proc_<?= h($p['process_id']) ?>" <?= (is_array($filter_process) && in_array($p['process_id'], $filter_process)) ? 'checked' : '' ?>>
-                                    <label class="form-check-label w-100" for="proc_<?= h($p['process_id']) ?>" style="cursor: pointer; font-size: 0.85rem;">
-                                        <?= h($p['process_name']) ?>
+                                    <input class="form-check-input" type="checkbox" name="filter_process[]" value="<?= h($p['id']) ?>" id="proc_<?= h($p['id']) ?>" <?= (is_array($filter_process) && (in_array((string)$p['id'], $filter_process) || in_array($p['name'], $filter_process))) ? 'checked' : '' ?>>
+                                    <label class="form-check-label w-100" for="proc_<?= h($p['id']) ?>" style="cursor: pointer; font-size: 0.85rem;">
+                                        <?= h($p['name']) ?>
                                     </label>
                                 </div>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
