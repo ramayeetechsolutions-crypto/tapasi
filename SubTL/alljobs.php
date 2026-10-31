@@ -552,13 +552,13 @@ require 'header.php';
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 0.8rem 0.5rem;
+            padding: 5px 3px !important; font-size: 0.72rem !important; letter-spacing: 0; text-align: center;
             border: 1px solid #5a6268 !important;
             white-space: nowrap;
         }
         
         .table tbody td {
-            padding: 0.6rem 0.4rem;
+            padding: 3px 2px !important; font-size: 0.72rem !important; text-align: center;
             font-size: 0.75rem;
             color: #334155;
             vertical-align: middle;
@@ -721,10 +721,7 @@ require 'header.php';
             padding: 0.25rem 0.5rem;
         }
         
-        .assignment-cell {
-            min-width: 350px; /* Increased width to make the column bigger */
-            padding: 0.6rem !important; /* Added a little padding for a neat look */
-        }
+        .assignment-cell { min-width: 115px !important; max-width: 125px !important; width: 120px !important; padding: 2px 3px !important; }
         
         .loading-overlay {
             position: fixed;
@@ -793,7 +790,7 @@ require 'header.php';
     <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 
     <div class="page-header">
-        <div class="container-fluid px-4">
+        <div class="container-fluid px-2">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h4 class="mb-1" style="font-weight: 700; color: #1e293b;">
@@ -818,7 +815,7 @@ require 'header.php';
         </div>
     </div>
 
-    <div class="container-fluid px-4">
+    <div class="container-fluid px-2">
         <?php if (!empty($_GET['msg'])): ?>
             <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show">
                 <i class="fas <?= ($_GET['type'] ?? 'info') === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?> me-2"></i>
@@ -940,12 +937,12 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover" style="min-width: 1400px;">
+                <table class="table table-hover" style="width: 100%; margin-bottom: 0;">
                     <thead>
                         <tr>
                             <th>S.No</th>
-                            <th>CE Completed Date</th>
-                            <th>Received Date</th>
+                            <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">CE c date</th>
+                            <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">R.date</th>
                             <th>Client</th>
                             <th>Issue</th>
                             <th>Articles</th>
@@ -992,9 +989,9 @@ require 'header.php';
                                     <td>
                                         <span class="fw-500" style="color: #10b981;"><?= !empty($row['ce_date']) ? date('d-m-Y', strtotime($row['ce_date'])) : '—' ?></span>
                                     </td>
-                                    <td>
-                                        <span class="fw-500 text-muted"><?= formatDate($row['job_date'] ?? '') ?></span>
-                                    </td>
+                                   <td style="width:60px; max-width:60px; white-space:nowrap;">
+    <span class="fw-500 text-muted" style="font-size:0.68rem;"><?= formatDate($row['job_date'] ?? '', 'd-m-y') ?></span>
+</td>
                                     <td>
                                         <span class="fw-500"><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : ($row['client_name'] ?? $row['client'] ?? 'N/A')) ?></span>
                                     </td>
@@ -1010,17 +1007,17 @@ require 'header.php';
                                     </td>
                                     <!-- EQ (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
                                     </td>
 
                                     <!-- Images (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
                                     </td>
 
                                     <!-- Tables (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary"><?= h($row['process'] ?? 'N/A') ?></span>
@@ -1060,12 +1057,12 @@ require 'header.php';
                                          <?php 
                                          $word_count = (!empty($row['word_count']) && (int)$row['word_count'] > 0) ? (int)$row['word_count'] : ((!empty($row['job_word_count']) && (int)$row['job_word_count'] > 0) ? (int)$row['job_word_count'] : 0);
                                          ?>
-                                         <input type="number" class="form-control form-control-sm p-1 text-center fw-bold text-primary" style="width: 70px; font-size:13px; border: 1px solid #667eea;" value="<?= h($word_count) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'word_count', this.value)">
+                                         <input type="number" class="form-control form-control-sm p-1 text-center fw-bold text-primary mx-auto d-block" style="width: 52px; font-size: 10px; height: 20px; padding: 1px 2px; border: 1px solid #667eea;" value="<?= h($word_count) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'word_count', this.value)">
                                     </td>
 
                                     <!-- WC-ExRef -->
                                     <td>
-                                        <input type="text" class="form-control form-control-sm p-1 text-center" style="width: 70px; font-size:12px;" value="<?= h($row['wc_exref'] ?? '') ?>" placeholder="ExRef" onchange="updateInlineField(<?= $row['id'] ?>, 'wc_exref', this.value)">
+                                        <input type="text" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 52px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h($row['wc_exref'] ?? '') ?>" placeholder="ExRef" onchange="updateInlineField(<?= $row['id'] ?>, 'wc_exref', this.value)">
                                     </td>
 
                                     <!-- REF Status -->
@@ -1141,7 +1138,7 @@ require 'header.php';
                                         ?>
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
-                                                    style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
+                                                    style="font-size: 10px; width: 100%; height: 21px; border-color: #ccc; background-color: #f9f9f9;" 
                                                     onchange="updateStatus(<?= $row['id'] ?>, 'le', this.value)">
                                                 <option value="Need to Assign" <?= ($le_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($le_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
@@ -1172,8 +1169,8 @@ require 'header.php';
                                         </select>
                                         <!-- LE Time Inputs -->
                                         <div class="d-flex gap-1 mt-2">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="LE Start" value="<?= !empty($row['le_start_time']) ? date('H:i', strtotime($row['le_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_start_time', t, this);">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="LE End" value="<?= !empty($row['le_end_time']) ? date('H:i', strtotime($row['le_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_end_time', t, this);">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size: 9px; width: 50%; height: 20px; padding: 1px 2px; cursor: pointer;" title="LE Start" value="<?= !empty($row['le_start_time']) ? date('H:i', strtotime($row['le_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_start_time', t, this);">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size: 9px; width: 50%; height: 20px; padding: 1px 2px; cursor: pointer;" title="LE End" value="<?= !empty($row['le_end_time']) ? date('H:i', strtotime($row['le_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_end_time', t, this);">
                                         </div>
                                     </td>
 
@@ -1196,7 +1193,7 @@ require 'header.php';
                                         ?>
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
-                                                    style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
+                                                    style="font-size: 10px; width: 100%; height: 21px; border-color: #ccc; background-color: #f9f9f9;" 
                                                     onchange="updateStatus(<?= $row['id'] ?>, 'le_qc', this.value)">
                                                 <option value="Need to Assign" <?= ($leqc_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($leqc_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
@@ -1227,8 +1224,8 @@ require 'header.php';
                                         </select>
                                         <!-- LE-QC Time Inputs -->
                                         <div class="d-flex gap-1 mt-2">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="LE QC Start" value="<?= !empty($row['le_qc_start_time']) ? date('H:i', strtotime($row['le_qc_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_qc_start_time', t, this);">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="LE QC End" value="<?= !empty($row['le_qc_end_time']) ? date('H:i', strtotime($row['le_qc_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_qc_end_time', t, this);">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size: 9px; width: 50%; height: 20px; padding: 1px 2px; cursor: pointer;" title="LE QC Start" value="<?= !empty($row['le_qc_start_time']) ? date('H:i', strtotime($row['le_qc_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_qc_start_time', t, this);">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size: 9px; width: 50%; height: 20px; padding: 1px 2px; cursor: pointer;" title="LE QC End" value="<?= !empty($row['le_qc_end_time']) ? date('H:i', strtotime($row['le_qc_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'le_qc_end_time', t, this);">
                                         </div>
                                     </td>
                                 
@@ -1236,7 +1233,7 @@ require 'header.php';
                                     <!-- Status Button Column -->
                                     <td>
                                         <?php $sb_val = $row['status_button'] ?? ''; ?>
-                                        <select class="form-select form-select-sm p-1 <?= $sb_val === 'Moved' ? 'bg-success text-white' : '' ?>" style="font-size: 11px; width: 140px;" onchange="updateInlineField(<?= $row['id'] ?>, 'status_button', this.value); this.className='form-select form-select-sm p-1 ' + (this.value==='Moved'?'bg-success text-white':'');">
+                                        <select class="form-select form-select-sm p-1 <?= $sb_val === 'Moved' ? 'bg-success text-white' : '' ?>" style="font-size: 10px; width: 95px; height: 22px; padding: 0 2px;" onchange="updateInlineField(<?= $row['id'] ?>, 'status_button', this.value); this.className='form-select form-select-sm p-1 ' + (this.value==='Moved'?'bg-success text-white':'');">
                                             <option value="">Select</option>
                                             <?php 
                                             $sb_options = ['Yet to move', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk rename', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Chk Updated Instruction', 'Moved'];
@@ -1250,7 +1247,7 @@ require 'header.php';
 
                                     <!-- Priority Column -->
                                     <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
+                                        <select class="form-select form-select-sm p-1" style="font-size: 10px; width: 85px; height: 22px; padding: 0 2px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
                                             <option value="">Select Priority</option>
                                             <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
                                             <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
