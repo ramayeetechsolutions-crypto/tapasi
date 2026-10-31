@@ -62,7 +62,11 @@ h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.te
     color: #000000 !important;
 }
 
-/* Card banners with dark backgrounds retain white text */
+/* Card banners, modal headers, and grey/dark layout cards retain white text for headers */
+h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.text-white,
+.card-title.text-white, .page-title.text-white, .section-title.text-white,
+.text-white h1, .text-white h2, .text-white h3, .text-white h4, .text-white h5, .text-white h6,
+.text-white .card-title, .text-white .page-title, .text-white .section-title,
 .card-header.text-white,
 .card-header.text-white *,
 .card-header[style*="background"],
@@ -72,7 +76,64 @@ h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.te
 .card-header.bg-secondary,
 .card-header.bg-secondary *,
 .card-header.bg-primary,
-.card-header.bg-primary * {
+.card-header.bg-primary *,
+/* All Card Headers with grey / dark layouts across all modules */
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]),
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h1,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h2,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h3,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h4,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h5,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h6,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) .card-title,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) i,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) p,
+.card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) span:not(.badge):not(.text-dark):not(.text-danger):not(.text-success):not(.text-warning):not(.text-info),
+/* Folder and specialized headers */
+.folder-header,
+.folder-header *,
+.ap-header,
+.ap-header *,
+.form-card-header,
+.form-card-header *,
+.modal-header.text-white,
+.modal-header.text-white *,
+.modal-header[style*="background"],
+.modal-header[style*="background"] *,
+.modal-header.bg-dark,
+.modal-header.bg-dark *,
+.modal-header.bg-secondary,
+.modal-header.bg-secondary *,
+/* Grey Page Header Banners across all dashboards */
+.page-title-container,
+.page-title-container *,
+.page-title-container h1,
+.page-title-container h2,
+.page-title-container h3,
+.page-title-container h4,
+.page-title-container h5,
+.page-title-container h6,
+.page-title-container i,
+/* Grey / Dark layout card headers & titles */
+.weekly-target-card .card-title,
+.weekly-target-card h1, .weekly-target-card h2, .weekly-target-card h3,
+.weekly-target-card h4, .weekly-target-card h5, .weekly-target-card h6,
+.filter-card .card-title,
+.filter-card h1, .filter-card h2, .filter-card h3,
+.filter-card h4, .filter-card h5, .filter-card h6,
+.card.bg-dark .card-title, .card.bg-secondary .card-title,
+.card.bg-dark h1, .card.bg-dark h2, .card.bg-dark h3, .card.bg-dark h4, .card.bg-dark h5, .card.bg-dark h6,
+.card.bg-secondary h1, .card.bg-secondary h2, .card.bg-secondary h3, .card.bg-secondary h4, .card.bg-secondary h5, .card.bg-secondary h6,
+.card.text-white .card-title,
+.card.text-white h1, .card.text-white h2, .card.text-white h3, .card.text-white h4, .card.text-white h5, .card.text-white h6,
+.card[style*="#5e6b77"] .card-title,
+.card[style*="#5e6b77"] h1, .card[style*="#5e6b77"] h2, .card[style*="#5e6b77"] h3, .card[style*="#5e6b77"] h4, .card[style*="#5e6b77"] h5, .card[style*="#5e6b77"] h6,
+.card[style*="5e6b77"] .card-title,
+.card[style*="5e6b77"] h1, .card[style*="5e6b77"] h2, .card[style*="5e6b77"] h3, .card[style*="5e6b77"] h4, .card[style*="5e6b77"] h5, .card[style*="5e6b77"] h6,
+[style*="#5e6b77"] .card-title,
+[style*="#5e6b77"] h1, [style*="#5e6b77"] h2, [style*="#5e6b77"] h3, [style*="#5e6b77"] h4, [style*="#5e6b77"] h5, [style*="#5e6b77"] h6,
+[style*="#707981"] .card-title,
+[style*="#707981"] h1, [style*="#707981"] h2, [style*="#707981"] h3, [style*="#707981"] h4, [style*="#707981"] h5, [style*="#707981"] h6 {
     color: #ffffff !important;
 }
 
@@ -203,4 +264,10 @@ table td select,
 [class^="fa-"], [class*=" fa-"],
 .bi, [class^="bi-"], [class*=" bi-"] {
     font-family: "Font Awesome 6 Free", "FontAwesome", "bootstrap-icons" !important;
+}
+
+/* Preserve badge text readability inside card headers */
+.card-header .badge.bg-light,
+.card-header .badge.bg-light * {
+    color: #212529 !important;
 }
