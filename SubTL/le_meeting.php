@@ -98,17 +98,21 @@ $w1_dates = getOpWeekDates($w1, $filter_year);
 $w1_from = $w1_dates['from_date'];
 $w1_to = $w1_dates['to_date'];
 
-// 1. Get the logged-in user's employee_name (Reporting Manager)
+// 1. Get the logged-in user's employee_name / Reporting Manager (Login-wise dynamic)
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 if ($stmt_user) {
     $stmt_user->bind_param("s", $current_user);
     $stmt_user->execute();
-    $stmt_user->bind_result($user_employee_name);
+    $stmt_user->bind_result($logged_in_name, $user_reporting_manager);
     $stmt_user->fetch();
     $stmt_user->close();
 }
+// If user has a reporting manager, use that; if user is TL/Admin with empty RM, use their own name
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
 // Fallback query for target
 $target_fallback_sql = "SELECT target_limit FROM weekly_targets WHERE tm_id = ? ORDER BY id DESC LIMIT 1";

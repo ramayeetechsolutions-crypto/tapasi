@@ -44,14 +44,19 @@ function formatDate($d) {
 function getWeekDates($week_number, $year = null) {
     if ($year === null) $year = date('Y');
     
-    $first_day_of_year = date('Y-m-d', strtotime($year . '-01-01'));
-    $day_of_week = date('w', strtotime($first_day_of_year));
+    // Financial / Operational year starts from April 1
+    $april_first = strtotime($year . '-04-01');
+    $day_of_week = date('N', $april_first); // 1 (Mon) to 7 (Sun)
     
-    // Adjust for weeks starting on Monday (ISO week)
-    $first_monday = strtotime($first_day_of_year . ' +' . ((8 - $day_of_week) % 7) . ' days');
+    // First Monday on or after April 1
+    if ($day_of_week == 1) {
+        $first_monday = $april_first;
+    } else {
+        $first_monday = strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+    }
     
     $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
-    $week_end = strtotime('+4 days', $week_start); // Monday to Friday (5 days)
+    $week_end = strtotime('+5 days', $week_start); // Monday to Saturday (e.g. 26 Oct to 31 Oct)
     
     return [
         'from_date' => date('Y-m-d', $week_start),
@@ -1003,22 +1008,23 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
                     const year = parseInt(yearInput.value);
                     
                     if (weekNumber >= 1 && weekNumber <= 53) {
-                        // Calculate week dates (Monday to Friday)
-                        const firstDayOfYear = new Date(year, 0, 1);
-                        const dayOfWeek = firstDayOfYear.getDay();
+                        // Operational year starts from April 1
+                        const aprilFirst = new Date(year, 3, 1); // Month 3 is April
+                        const dayOfWeek = aprilFirst.getDay(); // 0 is Sunday, 1 is Monday
                         
-                        // Adjust to first Monday (ISO week)
-                        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                        firstDayOfYear.setDate(firstDayOfYear.getDate() + diffToMonday);
+                        // Find first Monday on or after April 1
+                        const diffToMonday = (dayOfWeek === 1) ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
+                        const firstMonday = new Date(aprilFirst);
+                        firstMonday.setDate(firstMonday.getDate() + diffToMonday);
                         
-                        const weekStart = new Date(firstDayOfYear);
+                        const weekStart = new Date(firstMonday);
                         weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
                         
                         const weekEnd = new Date(weekStart);
-                        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday (5 days)
+                        weekEnd.setDate(weekEnd.getDate() + 5); // Monday to Saturday (e.g. 26 Oct to 31 Oct)
                         
                         const formatDate = (date) => {
-                            return date.toLocaleDateString('en-IN', {
+                            return date.toLocaleDateString('en-GB', {
                                 day: '2-digit',
                                 month: 'short',
                                 year: 'numeric'
@@ -1117,23 +1123,24 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
             const editYearInput = document.getElementById('edit_year');
             const editWeekDatesDiv = document.getElementById('editWeekDates');
             
-            // Calculate and display week dates
+            // Calculate and display week dates (April Year Base)
             const weekMatch = weekInput.match(/W(\d+)/i);
             if (weekMatch) {
                 const weekNumber = parseInt(weekMatch[1]);
-                const firstDayOfYear = new Date(year, 0, 1);
-                const dayOfWeek = firstDayOfYear.getDay();
-                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                firstDayOfYear.setDate(firstDayOfYear.getDate() + diffToMonday);
+                const aprilFirst = new Date(year, 3, 1);
+                const dayOfWeek = aprilFirst.getDay();
+                const diffToMonday = (dayOfWeek === 1) ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
+                const firstMonday = new Date(aprilFirst);
+                firstMonday.setDate(firstMonday.getDate() + diffToMonday);
                 
-                const weekStart = new Date(firstDayOfYear);
+                const weekStart = new Date(firstMonday);
                 weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
                 
                 const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekEnd.getDate() + 4);
+                weekEnd.setDate(weekEnd.getDate() + 5);
                 
                 const formatDate = (date) => {
-                    return date.toLocaleDateString('en-IN', {
+                    return date.toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric'
