@@ -193,16 +193,24 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $current_status = $ce_row['status'];
         $get_ce->close();
 
+        // SubTL Logics Integration: Stamp assignment time and set done_by
+        $current_datetime = date('Y-m-d H:i:s');
+        $employee_username = $_SESSION['username'] ?? null;
+        
+        if (!$employee_username) { 
+            throw new Exception('User session not found. Please log in.'); 
+        }
+
         // Target field in CE table
         // Note: For CE table, FQA assignee is stored in assigned_to (since assigned_fqa column does not exist)
         if ($type == 'content') {
-            $update_ce = "UPDATE ce SET assigned_to_content = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET assigned_to_content = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, ce_date = ?, done_by = ?, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
-            $stmt->bind_param("si", $assigned_to, $ce_id);
+            $stmt->bind_param("sssi", $assigned_to, $current_datetime, $employee_username, $ce_id);
         } elseif ($type == 'images') {
-            $update_ce = "UPDATE ce SET assigned_to_img = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET assigned_to_img = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, ce_date = ?, done_by = ?, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
-            $stmt->bind_param("si", $assigned_to, $ce_id);
+            $stmt->bind_param("sssi", $assigned_to, $current_datetime, $employee_username, $ce_id);
         } elseif ($type == 'fqa') {
             $update_ce = "UPDATE ce SET last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);

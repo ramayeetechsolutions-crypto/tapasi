@@ -212,6 +212,8 @@ if (!empty($allowed_process_ids)) {
     $clean_ids = array_map('intval', $allowed_process_ids);
     $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
 }
+// FIX: Show everything EXCEPT standalone 'CE'
+$where[] = "jm.job_name != 'CE'";
 
 // Search query filter
 if ($q) {
