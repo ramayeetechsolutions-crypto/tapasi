@@ -381,6 +381,25 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
                         $stmt_crx->close();
                     }
                 }
+                // --- ADD THIS NEW BLOCK FOR AP PROCESS ---
+                if (strpos(strtoupper($process_name), 'AP') !== false) {
+                    // Ensure job_id column exists in ap_assign table
+                    $check_job_id = $mysqli->query("SHOW COLUMNS FROM ap_assign LIKE 'job_id'");
+                    if ($check_job_id && $check_job_id->num_rows == 0) {
+                        $mysqli->query("ALTER TABLE ap_assign ADD COLUMN job_id INT NULL DEFAULT NULL AFTER id");
+                    }
+                    
+                    $stmt_ap = $mysqli->prepare("
+                        INSERT INTO ap_assign 
+                        (job_id, date, client, mail_subject, process, articles, process_status, supplements_status, status, created_at, last_updated) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'Need to Assign', 'Need to Assign', 'In Process', NOW(), NOW())
+                    ");
+                    if ($stmt_ap) {
+                        $stmt_ap->bind_param("isssss", $new_job_id, $job_date, $client_name, $mail_subject, $process_name, $article);
+                        $stmt_ap->execute();
+                        $stmt_ap->close();
+                    }
+                }
             } else {
                 $errors[] = "Failed to insert article '{$article}': " . $stmt->error;
             }
