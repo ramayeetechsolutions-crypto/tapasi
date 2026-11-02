@@ -155,7 +155,8 @@ if (!empty($allowed_process_ids)) {
     $clean_ids = array_map('intval', $allowed_process_ids);
     $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
 }
-
+// FIX: Show jobs that have 'PAG' or 'TS' in their process name
+$where[] = "(jm.job_name LIKE '%PAG%' OR jm.job_name LIKE '%TS%')";
 // Search query filter
 if ($q) {
     $where[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ?)";
