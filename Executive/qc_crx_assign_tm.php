@@ -132,6 +132,41 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     exit;
 }
 
+// --- START: Move to QC Report AJAX ---
+if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_to_report') {
+    header('Content-Type: application/json');
+    $qc_id = (int)$_POST['qc_id'];
+    $job_id = isset($_POST['job_id']) ? (int)$_POST['job_id'] : 0;
+    $stmt = $mysqli->prepare("UPDATE qc_crx SET qc_crx_stage = 'Moved', last_updated = NOW() WHERE id = ?");
+    $stmt->bind_param("i", $qc_id);
+    if ($stmt->execute()) {
+        $stmt->close();
+        if ($job_id > 0) {
+            $mysqli->query("UPDATE qc SET qc_crx_stage = 'Moved', last_updated = NOW() WHERE job_id = $job_id");
+        }
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $mysqli->error]);
+    }
+    exit;
+}
+
+// Helper to style CRX (Orange) vs Complete (Green) dropdowns
+if (!function_exists('getStageSelectStyle')) {
+    function getStageSelectStyle($val) {
+        $val = trim((string)$val);
+        if ($val === '') return '';
+        $u = strtoupper($val);
+        if (strpos($u, 'COMPLETE') !== false || strpos($u, 'COMPELETE') !== false) {
+            return 'background-color: #198754 !important; color: #ffffff !important; font-weight: 600;';
+        }
+        if (strpos($u, 'CRX') !== false) {
+            return 'background-color: #fd7e14 !important; color: #ffffff !important; font-weight: 600;';
+        }
+        return '';
+    }
+}
+
 if (!function_exists('getWorkingDaysWithoutSunday')) {
 function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
     if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
@@ -311,8 +346,7 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 // 2. Process must involve PAG or LE or TS
 // 3. THE CRITICAL CONDITION: PAG phase OR LE phase must be 'Completed'
 $where_conditions = [
-    "qc.status != 'Completed'", 
-    "qc.status != 'Done'",
+    "(qc.status IN ('Completed', 'Done') OR EXISTS (SELECT 1 FROM qc q_chk WHERE q_chk.job_id = qc.job_id AND q_chk.status IN ('Completed', 'Done')))",
     "(qc.qc_crx_stage IS NULL OR qc.qc_crx_stage != 'Moved')",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'CE+TS', 'CE+TS+XML', 'TS', 'TS+XML', 'LE', 'CE+LE', 'CE+LE+XML', 'CE+PAG+LE')",
     "(
@@ -378,6 +412,7 @@ $qc_query = "SELECT qc.*,
                     pag.done_by as pag_table_done_by,
                     pag.assigned_to_pag as pag_assigned_to,
                     pag.eq, pag.pages, pag.images, pag.tables_count, pag.status as pag_status,
+                    q_orig.assigned_to_qc as orig_qc_tm, q_orig.status as orig_qc_status,
                     qc.rtat, qc.atat,
                     (SELECT upload_by FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as job_upload_by,
                     (SELECT upload_date FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as upload_date,
@@ -389,7 +424,8 @@ $qc_query = "SELECT qc.*,
              LEFT JOIN ce ON j.job_id = ce.job_id
              LEFT JOIN le ON j.job_id = le.job_id
              LEFT JOIN pag ON j.job_id = pag.job_id
-             WHERE $where_sql
+              LEFT JOIN qc q_orig ON qc.job_id = q_orig.job_id
+              WHERE $where_sql
              ORDER BY $sort $dir";
 
 $stmt = $mysqli->prepare($qc_query);
@@ -659,7 +695,7 @@ require 'header.php';
                             <th>CE Status</th>
                             <th>LE Status</th>
                             <th>PAG</th>
-                            <th style="min-width: 250px;">QC</th>
+                            <th>QC</th>
                             <th>Due Date</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
@@ -670,6 +706,7 @@ require 'header.php';
                             <th>IMG_TAB_Stage</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th style="min-width: 80px; text-align: center;">Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -749,56 +786,22 @@ require 'header.php';
                                         <?php endif; ?>
                                     </td>
                                     
-                                    <!-- QC Assignment Column -->
+                                    <!-- QC Column (Static Badge & TM from QC Assign) -->
                                     <?php 
-                                        $qc_done = in_array($qc_stat, ['Completed']);
-                                        $qc_inprogress = (!$qc_done && !empty($row['assigned_to_qc']));
-                                        $qc_curr_status = 'Need to Assign';
-                                        $qc_badge_cls = 'pending';
-                                        
-                                        if ($qc_done) { 
-                                            $qc_curr_status = 'Completed'; 
-                                            $qc_badge_cls = 'completed'; 
-                                        } elseif ($qc_inprogress) { 
-                                            $qc_curr_status = 'In Progress'; 
-                                            $qc_badge_cls = 'in-progress'; 
-                                        }
+                                        $qc_emp = !empty($row['assigned_to_qc']) ? $row['assigned_to_qc'] : ($row['orig_qc_tm'] ?? '');
+                                        $qc_display_status = in_array($row['status'] ?? '', ['Completed', 'Done']) ? $row['status'] : (!empty($row['orig_qc_status']) ? $row['orig_qc_status'] : 'Completed');
+                                        $qc_badge_cls = in_array($qc_display_status, ['Completed', 'Done']) ? 'bg-success' : 'bg-info';
                                     ?>
-                                    <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
-                                        <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 100%; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, this.value)">
-                                                <option value="Need to Assign" <?= ($qc_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
-                                                <option value="In Progress" <?= ($qc_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
-                                                <option value="Completed" <?= ($qc_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
-                                            </select>
-                                        </div>
-
-                                        <?php if (!empty($row['assigned_to_qc'])): ?>
-                                            <div class="tm-badge <?= $qc_badge_cls ?> mb-1" title="Assigned for QC">
-                                                <i class="fas fa-search"></i> <?= h($row['assigned_to_qc']) ?>
+                                    <td>
+                                        <span class="badge <?= $qc_badge_cls ?>"><?= h($qc_display_status) ?></span>
+                                        <?php if (!empty($qc_emp)): 
+                                            $qc_name = $emp_map[$qc_emp] ?? '';
+                                            $qc_display = $qc_name ? h($qc_name) . " (" . h($qc_emp) . ")" : h($qc_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $qc_display ?>
                                             </div>
-                                            <small class="text-dark d-block mb-1" style="font-weight: 600;">
-                                                <?php 
-                                                $found_name = '';
-                                                foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_qc']) { $found_name = $tm['employee_name']; break; } }
-                                                echo h($found_name ?: $row['assigned_to_qc']);
-                                                ?>
-                                            </small>
                                         <?php endif; ?>
-
-                                        <select class="assign-select mt-1 qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, this)">
-                                            <option value=""><?= !empty($row['assigned_to_qc']) ? 'Change QC TM' : 'Assign LE-QC' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
-                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_qc'] == $tm['employee_username']) ? 'selected' : '' ?>>
-                                                    <?= h($tm['employee_name']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        
-                                        <div class="d-flex gap-1 mt-2">
-                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_start_time', t, this);">
-                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_end_time']) ? date('H:i', strtotime($row['qc_end_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_end_time', t, this);">
-                                        </div>
                                     </td>
                                     
                                     <!-- Tail Columns -->
@@ -825,8 +828,8 @@ require 'header.php';
                                     
                                     <!-- QC_CRX_Stage Column -->
                                     <td>
-                                        <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px;" 
-                                                onchange="updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value); if(this.value === 'Moved') { setTimeout(() => window.location.reload(), 500); }">
+                                        <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px; <?= getStageSelectStyle($row['qc_crx_stage'] ?? '') ?>" 
+                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value); if(this.value === 'Moved') { setTimeout(() => window.location.reload(), 500); }">
                                             <option value="">Select</option>
                                             <option value="QC_CRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_CRX') ? 'selected' : '' ?>>QC_CRX</option>
                                             <option value="QC_Complete" <?= (($row['qc_crx_stage'] ?? '') == 'QC_Complete') ? 'selected' : '' ?>>QC_Complete</option>
@@ -840,8 +843,8 @@ require 'header.php';
                                     <td style="min-width: 180px; vertical-align: top; padding: 6px;">
                                         <div class="space-y-1">
                                             <!-- Stage Dropdown -->
-                                            <select class="form-select form-select-sm p-0 px-1 mb-1" style="font-size: 11px; width: 100%; height: 22px;" 
-                                                    onchange="updateInlineField(<?= $row['id'] ?>, 'pag_crx_stage', this.value)">
+                                            <select class="form-select form-select-sm p-0 px-1 mb-1" style="font-size: 11px; width: 100%; height: 22px; <?= getStageSelectStyle($row['pag_crx_stage'] ?? '') ?>" 
+                                                    onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'pag_crx_stage', this.value)">
                                                 <option value="">Select Stage</option>
                                                 <option value="PAG_CRX" <?= (($row['pag_crx_stage'] ?? '') == 'PAG_CRX') ? 'selected' : '' ?>>PAG_CRX</option>
                                                 <option value="PAG_CRX_Compelete" <?= (($row['pag_crx_stage'] ?? '') == 'PAG_CRX_Compelete') ? 'selected' : '' ?>>PAG_CRX_Compelete</option>
@@ -876,8 +879,8 @@ require 'header.php';
 
                                     <!-- IMG_TAB_Stage Column -->
                                     <td>
-                                        <select class="form-select form-select-sm p-1" style="min-width: 120px; font-size: 11px;" 
-                                                onchange="updateInlineField(<?= $row['id'] ?>, 'img_tab_stage', this.value)">
+                                        <select class="form-select form-select-sm p-1" style="min-width: 120px; font-size: 11px; <?= getStageSelectStyle($row['img_tab_stage'] ?? '') ?>" 
+                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'img_tab_stage', this.value)">
                                             <option value="">Select</option>
                                             <option value="IMG_CRX" <?= (($row['img_tab_stage'] ?? '') == 'IMG_CRX') ? 'selected' : '' ?>>IMG_CRX</option>
                                             <option value="IMG_COMPLETE" <?= (($row['img_tab_stage'] ?? '') == 'IMG_COMPLETE') ? 'selected' : '' ?>>IMG_COMPLETE</option>
@@ -892,7 +895,7 @@ require 'header.php';
                                         $path_class = '';
                                         if (strtoupper($path_val) === 'CRX') {
                                             $path_class = 'bg-warning text-dark'; // ORANGE
-                                        } elseif ($qc_curr_status === 'Completed' && !empty($path_val)) {
+                                        } elseif (in_array($row['status'] ?? '', ['Completed', 'Done']) && !empty($path_val)) {
                                             $path_class = 'bg-success text-white'; // GREEN
                                         }
                                     ?>
@@ -908,6 +911,16 @@ require 'header.php';
                                             <option value="Urgent" <?= (($row['priority'] ?? '') == 'Urgent') ? 'selected' : '' ?>>Urgent</option>
                                         </select>
                                     </td>
+                                    <!-- Status Column with Move Button -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <button type="button" class="btn btn-sm btn-success move-btn-<?= $row['id'] ?>"
+                                                style="font-size: 11px; padding: 3px 10px; font-weight: 600; border-radius: 4px;"
+                                                onclick="moveToReport(<?= $row['id'] ?>, <?= $row['job_id'] ?>)"
+                                                title="Move to QC Report">
+                                            <i class="fas fa-paper-plane me-1"></i> Move
+                                        </button>
+                                    </td>
+
                                     <!-- TAT Column -->
                                     <?php
                                         $qc_done = in_array($row['status'] ?? '', ['Completed', 'Done']);
@@ -922,7 +935,7 @@ require 'header.php';
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="20" class="empty-state">
+                                <td colspan="26" class="empty-state">
                                     <i class="fas fa-check-circle"></i>
                                     <h6>No Pending QC Assignments</h6>
                                     <p class="text-muted small">All jobs have been assigned, or there are no jobs that have completed the PAG phase yet.</p>
@@ -970,6 +983,60 @@ require 'header.php';
             setTimeout(() => { notification.remove(); }, 5000);
         }
         
+        // Stage Dynamic Color Application
+        function applyStageColor(element) {
+            if (!element) return;
+            const val = (element.value || '').toUpperCase();
+            if (val.includes('COMPLETE') || val.includes('COMPELETE')) {
+                element.style.setProperty('background-color', '#198754', 'important');
+                element.style.setProperty('color', '#ffffff', 'important');
+                element.style.setProperty('font-weight', '600', 'important');
+            } else if (val.includes('CRX')) {
+                element.style.setProperty('background-color', '#fd7e14', 'important');
+                element.style.setProperty('color', '#ffffff', 'important');
+                element.style.setProperty('font-weight', '600', 'important');
+            } else {
+                element.style.removeProperty('background-color');
+                element.style.removeProperty('color');
+                element.style.removeProperty('font-weight');
+            }
+        }
+
+        // Move to QC Report
+        function moveToReport(qcId, jobId) {
+            if (!confirm('Are you sure you want to move this job to QC Report?')) {
+                return;
+            }
+            showLoading();
+            fetch('?', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'ajax=move_to_report&qc_id=' + qcId + '&job_id=' + jobId
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    showNotification('success', 'Moved to QC Report successfully!');
+                    const rowElem = document.getElementById('row-' + qcId);
+                    if (rowElem) {
+                        rowElem.style.transition = 'all 0.5s';
+                        rowElem.style.opacity = '0';
+                        setTimeout(() => { rowElem.remove(); }, 500);
+                    } else {
+                        setTimeout(() => window.location.reload(), 500);
+                    }
+                } else {
+                    showNotification('danger', 'Error moving to report: ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('danger', 'Error processing request');
+            });
+        }
+
         // Show loading overlay
         function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
         function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }

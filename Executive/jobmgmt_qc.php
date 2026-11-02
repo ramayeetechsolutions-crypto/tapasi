@@ -702,8 +702,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 // QC Completed = QC row. CRX columns must show dash.
                                 // Only show CRX data when QC is NOT Completed AND QC_CRX stage IS Moved.
                                 $qc_completed = in_array(($row['qc_status'] ?? ''), ['Completed', 'Done']);
-                                $is_crx_moved = !$qc_completed && (($row['qc_crx_stage'] ?? '') === 'Moved');
-                                $up_by = $is_crx_moved ? ($row['crx_upload_by'] ?? '') : ($row['qc_upload_by'] ?? '');
+                                $is_crx_moved = (($row['qc_crx_stage'] ?? '') === 'Moved');
+                                $up_by = !empty($row['crx_upload_by']) ? $row['crx_upload_by'] : ($row['qc_upload_by'] ?? '');
                             ?>
                             <td>
                                 <?php echo !empty($up_by) ? h($emp_map[$up_by] ?? $up_by) : '—'; ?>

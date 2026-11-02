@@ -30,7 +30,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $new_status = trim($_POST['status']);
 
     // Fetch current times
-    $get_stat = $mysqli->prepare("SELECT qc_start_time, qc_end_time FROM qc WHERE id = ?");
+    $get_stat = $mysqli->prepare("SELECT job_id, assigned_to_qc, qc_start_time, qc_end_time FROM qc WHERE id = ?");
     $get_stat->bind_param("i", $qc_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
@@ -48,6 +48,23 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $stmt->bind_param("si", $new_status, $qc_id);
     
     if ($stmt->execute()) {
+        
+        // When completed, sync to qc_crx so it appears in QC-CRX Assign page
+        if ($new_status === 'Completed' && !empty($curr_data['job_id'])) {
+            $jid = (int)$curr_data['job_id'];
+            $chk_crx = $mysqli->query("SELECT id FROM qc_crx WHERE job_id = $jid");
+            if ($chk_crx && $chk_crx->num_rows > 0) {
+                $stmt_crx = $mysqli->prepare("UPDATE qc_crx SET status = 'Completed', assigned_to_qc = ?, qc_start_time = ?, qc_end_time = ?, qc_date = NOW(), last_updated = NOW() WHERE job_id = ?");
+                $stmt_crx->bind_param("sssi", $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time'], $jid);
+                $stmt_crx->execute();
+                $stmt_crx->close();
+            } else {
+                $stmt_crx = $mysqli->prepare("INSERT INTO qc_crx (job_id, status, assigned_to_qc, qc_start_time, qc_end_time, qc_date, created_at, last_updated) VALUES (?, 'Completed', ?, ?, ?, NOW(), NOW(), NOW())");
+                $stmt_crx->bind_param("isss", $jid, $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time']);
+                $stmt_crx->execute();
+                $stmt_crx->close();
+            }
+        }
         echo json_encode(['success' => true, 'status' => $new_status]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -84,6 +101,21 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
+}
+
+// Green badge for completed-type statuses, otherwise the given default badge class
+if (!function_exists('simpleStatusBadge')) {
+    function simpleStatusBadge($status, $default = 'Pending', $defaultClass = 'bg-secondary') {
+        $st = trim((string)$status);
+        if ($st === '') $st = $default;
+        $done = ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done', 'W-Complete', 'ID_Complete'];
+        foreach ($done as $d) {
+            if (strcasecmp($st, $d) === 0) {
+                return '<span class="badge" style="background-color: #28a745; color: white;">' . h($st) . '</span>';
+            }
+        }
+        return '<span class="badge ' . $defaultClass . '">' . h($st) . '</span>';
+    }
 }
 
 function formatDate($date, $format = 'd-m-Y') {
@@ -598,9 +630,9 @@ require 'header.php';
                                     <td><?= h($row['tables_count'] ?? '0') ?></td>
                                     
                                     <!-- Other Statuses -->
-                                    <td><span class="badge bg-secondary"><?= h($row['ce_status'] ?? 'Pending') ?></span></td>
-                                    <td><span class="badge bg-secondary"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
-                                    <td><span class="badge bg-info"><?= h($row['pag_status'] ?? 'Pending') ?></span></td>
+                                    <td><?= simpleStatusBadge($row['ce_status'] ?? '', 'Pending', 'bg-secondary') ?></td>
+                                    <td><?= simpleStatusBadge($row['le_status'] ?? '', 'Pending', 'bg-secondary') ?></td>
+                                    <td><?= simpleStatusBadge($row['pag_status'] ?? '', 'Pending', 'bg-info') ?></td>
                                     
                                     <!-- QC Assignment Column -->
                                     <?php 
