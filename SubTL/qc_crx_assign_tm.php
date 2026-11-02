@@ -53,7 +53,8 @@ $check_columns = [
     'pag_crx_assigned_to' => "VARCHAR(100) NULL DEFAULT NULL",
     'pag_crx_start_time' => "TIME NULL DEFAULT NULL",
     'pag_crx_end_time' => "TIME NULL DEFAULT NULL",
-    'img_tab_stage' => "VARCHAR(100) NULL DEFAULT NULL"
+    'img_tab_stage' => "VARCHAR(100) NULL DEFAULT NULL",
+    'is_moved' => "TINYINT(1) DEFAULT 0"
 ];
 foreach ($check_columns as $col => $definition) {
     $check = $mysqli->query("SHOW COLUMNS FROM qc_crx LIKE '$col'");
@@ -61,6 +62,8 @@ foreach ($check_columns as $col => $definition) {
         $mysqli->query("ALTER TABLE qc_crx ADD COLUMN $col $definition");
     }
 }
+// Auto-migrate old 'Moved' data to the new is_moved column
+$mysqli->query("UPDATE qc_crx SET is_moved = 1, qc_crx_stage = NULL WHERE qc_crx_stage = 'Moved'");
 
 // --- AUTO SYNC JOBS FROM JOBS TABLE INTO QC_CRX ---
 $mysqli->query("INSERT IGNORE INTO qc_crx (job_id, date, client, journal_issue, article, process, status, created_at, last_updated)
@@ -137,13 +140,10 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_to_report') {
     header('Content-Type: application/json');
     $qc_id = (int)$_POST['qc_id'];
     $job_id = isset($_POST['job_id']) ? (int)$_POST['job_id'] : 0;
-    $stmt = $mysqli->prepare("UPDATE qc_crx SET qc_crx_stage = 'Moved', last_updated = NOW() WHERE id = ?");
+    $stmt = $mysqli->prepare("UPDATE qc_crx SET is_moved = 1, last_updated = NOW() WHERE id = ?");
     $stmt->bind_param("i", $qc_id);
     if ($stmt->execute()) {
         $stmt->close();
-        if ($job_id > 0) {
-            $mysqli->query("UPDATE qc SET qc_crx_stage = 'Moved', last_updated = NOW() WHERE job_id = $job_id");
-        }
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -347,7 +347,7 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 // 3. THE CRITICAL CONDITION: PAG phase OR LE phase must be 'Completed'
 $where_conditions = [
     "(qc.status IN ('Completed', 'Done') OR EXISTS (SELECT 1 FROM qc q_chk WHERE q_chk.job_id = qc.job_id AND q_chk.status IN ('Completed', 'Done')))",
-    "(qc.qc_crx_stage IS NULL OR qc.qc_crx_stage != 'Moved')",
+    "(qc.is_moved = 0 OR qc.is_moved IS NULL)",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'CE+TS', 'CE+TS+XML', 'TS', 'TS+XML', 'LE', 'CE+LE', 'CE+LE+XML', 'CE+PAG+LE')",
     "(
         EXISTS (SELECT 1 FROM pag WHERE pag.job_id = qc.job_id AND (pag.status = 'Completed' OR pag.status = 'Done'))
@@ -829,13 +829,12 @@ require 'header.php';
                                     <!-- QC_CRX_Stage Column -->
                                     <td>
                                         <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px; <?= getStageSelectStyle($row['qc_crx_stage'] ?? '') ?>" 
-                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value); if(this.value === 'Moved') { setTimeout(() => window.location.reload(), 500); }">
+                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value);">
                                             <option value="">Select</option>
                                             <option value="QC_CRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_CRX') ? 'selected' : '' ?>>QC_CRX</option>
                                             <option value="QC_Complete" <?= (($row['qc_crx_stage'] ?? '') == 'QC_Complete') ? 'selected' : '' ?>>QC_Complete</option>
                                             <option value="QC_RECRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_RECRX') ? 'selected' : '' ?>>QC_RECRX</option>
                                             <option value="QC_RECRX_COMPLETE" <?= (($row['qc_crx_stage'] ?? '') == 'QC_RECRX_COMPLETE') ? 'selected' : '' ?>>QC_RECRX_COMPLETE</option>
-                                            <option value="Moved" <?= (($row['qc_crx_stage'] ?? '') == 'Moved') ? 'selected' : '' ?>>Moved</option>
                                         </select>
                                     </td>
 

@@ -1,5 +1,5 @@
 <?php
-require 'db.php';
+require '../db.php';
 session_start();
 
 $pageTitle = "Dashboard";
