@@ -674,9 +674,9 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
                                 <tr>
                                     <td class="fw-bold"><?= $serial_number ?></td>
                                     <td><?= h($r['employee_username']) ?></td>
-                                    <td><?= h($r['employee_name']) ?></td>
-                                    <td><?= formatDate($r['date_of_birth']) ?></td>
-                                    <td><?= formatDate($r['joining_date']) ?></td>
+                                    <td style="white-space: nowrap;"><?= h($r['employee_name']) ?></td>
+                                    <td style="white-space: nowrap;"><?= formatDate($r['date_of_birth']) ?></td>
+                                    <td style="white-space: nowrap;"><?= formatDate($r['joining_date']) ?></td>
                                     <td><?= h($r['team_name'] ?: '—') ?></td>
                                     <td><?= h($r['designation_name'] ?: '—') ?></td>
                                     <td><?= h($process_name) ?: '—' ?></td>

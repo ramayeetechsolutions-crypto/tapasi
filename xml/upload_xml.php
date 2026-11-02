@@ -253,6 +253,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_client_month_excel')
         'direct_html' => 'Direct HTML',
         'jats' => 'JATS',
         'clockss' => 'Clockss',
+        'scielo' => 'Scielo',
         'ebsco' => 'EBSCO',
         'pubmed' => 'PubMed',
         'biblat' => 'Biblat',
@@ -968,9 +969,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <div class="container-fluid mt-4 px-4 pb-5">
         <div class="card mb-4">
-            <div class="card-header py-3">
-            <h5 class="mb-0 fw-bold" style="color: #0f172a;"><i class="bi bi-send-check-fill text-success me-2"></i> Upload Status</h5>
-        </div>
+            <div class="card-header py-3" style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                <h5 class="mb-0 fw-bold" style="color: #0f172a !important;">
+                    <i class="bi bi-send-check-fill me-2" style="color: #000000 !important;"></i> Upload Status
+                </h5>
+            </div>
         
         <div class="card-body p-4">
             <!-- NEW MULTI-FILTER BAR -->
