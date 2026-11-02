@@ -61,6 +61,21 @@ session_start();
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES); }
 
+// Returns the badge class: green for completed-type statuses, otherwise info
+function simpleStatusBadge($status, $default = 'Pending') {
+    $st = trim((string)$status);
+    if ($st === '') $st = $default;
+    $done = ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done', 'W-Complete', 'ID_Complete'];
+    $isDone = false;
+    foreach ($done as $d) {
+        if (strcasecmp($st, $d) === 0) { $isDone = true; break; }
+    }
+    if ($isDone) {
+        return '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . h($st) . '</span>';
+    }
+    return '<span class="badge bg-info">' . h($st) . '</span>';
+}
+
 $current_user = $_SESSION['username'] ?? '';
 $uid = $_SESSION['uid'] ?? '';
 if (!$current_user) {
@@ -580,8 +595,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h($row['tables_count'] ?? '0') ?></td>
                             <td><span class="badge bg-secondary"><?= h($row['process']) ?></span></td>
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
-                            <td><span class="badge bg-info"><?= h($row['qc_status'] ?? 'Pending') ?></span></td>
-                            <td><span class="badge bg-info"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
+                            <td><?= simpleStatusBadge($row['qc_status'] ?? '', 'Pending') ?></td>
+                            <td><?= simpleStatusBadge($row['le_status'] ?? '', 'Pending') ?></td>
                             
                             <!-- Word Process & Times -->
                             <td><?= getStatusBadge($row['word_status'] ?? 'Need to Assign', $row['assigned_to_img'] ?? '', $emp_map) ?></td>
