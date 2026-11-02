@@ -54,29 +54,27 @@ if ($current_user_id) {
     }
 }
 
-// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
-$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
-
-// Get all employees under the same reporting manager with TM role
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
 $tms = [];
-if ($effective_manager) {
-    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ?) 
-                 AND em.status = 'Active' 
-                 AND ur.role_name IN ('TM', 'TL', 'Admin')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($tm_query);
-    if ($stmt) {
-        $stmt->bind_param("ss", $effective_manager, $current_user_name);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($tm = $result->fetch_assoc()) {
-            $tms[] = $tm;
-        }
-        $stmt->close();
+$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_tms = $mysqli->query($tm_query);
+if ($res_tms) {
+    while ($tm = $res_tms->fetch_assoc()) {
+        $tms[] = $tm;
     }
 }
 
@@ -148,22 +146,27 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     header('Content-Type: application/json');
     $ce_id = (int)$_POST['ce_id'];
     $field = $_POST['field'];
-    $val = $_POST['value'];
+    $val = trim($_POST['value']);
     
     // Allowed fields for security
-    $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
-    if (in_array($field, $allowed_fields)) {
-        $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
-        $stmt->bind_param("si", $val, $ce_id);
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true]);
+        $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
+        if (in_array($field, $allowed_fields)) {
+            if ($val === '') {
+                $stmt = $mysqli->prepare("UPDATE ce SET $field = NULL, last_updated = NOW() WHERE id = ?");
+                $stmt->bind_param("i", $ce_id);
+            } else {
+                $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
+                $stmt->bind_param("si", $val, $ce_id);
+            }
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true]);
+            } else {
+                echo json_encode(['success' => false, 'message' => $mysqli->error]);
+            }
         } else {
-            echo json_encode(['success' => false, 'message' => $mysqli->error]);
+            echo json_encode(['success' => false, 'message' => 'Invalid field update']);
         }
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid field update']);
-    }
-    exit;
+        exit;
 }
 
 // Handle AJAX quick assignment
@@ -353,8 +356,11 @@ $images_tm_filter = isset($_GET['images_tm']) ? trim($_GET['images_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'ce.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
 
-// Build the query for CE records with status not completed
-$where_conditions = ["ce.status != 'Completed'", "ce.status != 'Done'"];
+// Build the query: Show Pending jobs OR recent jobs that are not yet 'Moved'
+$where_conditions = [
+    "TRIM(COALESCE(ce.remarks, '')) != 'Moved'",
+    "(ce.status NOT IN ('Completed', 'Done') OR DATE(COALESCE(j.job_date, ce.created_at)) >= '2026-10-01')"
+];
 $params = [];
 $types = '';
 
@@ -419,11 +425,11 @@ $ce_result = $stmt->get_result();
 $stmt->close();
 
 // Get unique statuses for filter dropdown
-$status_query = "SELECT DISTINCT status FROM ce WHERE status != 'Completed' AND status != 'Done' ORDER BY status";
+$status_query = "SELECT DISTINCT status FROM ce WHERE TRIM(COALESCE(remarks, '')) != 'Moved' ORDER BY status";
 $status_result = $mysqli->query($status_query);
 
 // Get unique clients for search dropdown
-$clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE ce.status != 'Completed' AND ce.status != 'Done' ORDER BY c.team_client_name ASC";
+$clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
 $clients_result = $mysqli->query($clients_query);
 
 // Get count statistics
@@ -434,7 +440,7 @@ $stats_query = "SELECT
                     SUM(CASE WHEN assigned_to_content IS NOT NULL THEN 1 ELSE 0 END) as content_assigned,
                     SUM(CASE WHEN assigned_to_img IS NOT NULL THEN 1 ELSE 0 END) as images_assigned
                 FROM ce 
-                WHERE status != 'Completed' AND status != 'Done'";
+                WHERE TRIM(COALESCE(remarks, '')) != 'Moved'";
 $stats_result = $mysqli->query($stats_query);
 $stats = $stats_result->fetch_assoc();
 
@@ -1102,7 +1108,7 @@ require 'header.php';
                                         <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
                                             <option value="">Select</option>
                                             <?php 
-                                            $remarks_options = ['Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM'];
+                                            $remarks_options = ['Moved', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
                                             foreach($remarks_options as $opt) {
                                                 $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
                                                 echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
@@ -1235,8 +1241,12 @@ require 'header.php';
                                     <!-- 13. FQA Assignment -->
                                     <td class="assignment-cell">
                                         <?php 
-                                            $fqa_user = $row['assigned_to'] ?? '';
-                                            $fqa_done = ($row['status'] === 'Completed');
+                                            $raw_fqa_user = $row['assigned_to'] ?? '';
+                                            // Check if it's the default TL name from job entry (Not a real assigned TM)
+                                            $is_tl_default = ($raw_fqa_user === $current_user_name || $raw_fqa_user === $reporting_manager || $raw_fqa_user === 'T.G. Bragadeeshwaran' || $raw_fqa_user === $current_username);
+                                            
+                                            $fqa_user = $is_tl_default ? '' : $raw_fqa_user;
+                                            $fqa_done = ($row['status'] === 'Completed' && !empty($fqa_user));
                                             $fqa_inprogress = (!$fqa_done && !empty($fqa_user));
 
                                             $fqa_curr_status = 'Need to Assign';
@@ -1261,14 +1271,14 @@ require 'header.php';
                                             </select>
                                         </div>
 
-                                        <!-- <?php if (!empty($fqa_user)): ?>
+                                        <?php if (!empty($fqa_user)): ?>
                                             <div class="tm-badge <?= $fqa_badge_cls ?> mb-1" title="FQA TM">
                                                 <i class="fas fa-search"></i> <?= h($fqa_user) ?>
                                             </div>
                                             <small class="text-muted d-block mb-1">
                                                 <?php foreach ($tms as $tm) { if ($tm['employee_username'] == $fqa_user) { echo h($tm['employee_name']); break; } } ?>
                                             </small>
-                                        <?php endif; ?> -->
+                                        <?php endif; ?>
                                         
                                         <select class="assign-select mt-1 fqa-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'fqa', this)">
                                             <option value=""><?= !empty($fqa_user) ? 'Change FQA TM' : 'Assign FQA' ?></option>
@@ -1419,7 +1429,6 @@ require 'header.php';
                 }
             }
 
-            showLoading();
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1427,18 +1436,14 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
                     setTimeout(() => { window.location.reload(); }, 500);
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             }).catch(error => { 
-                hideLoading(); 
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
             });
         }
 
@@ -1453,7 +1458,7 @@ require 'header.php';
                 const currentTime = currentHour + ':' + currentMinute;
 
                 // Compare selected time with current time (Forces ONLY current time)
-                if (value !== currentTime) {   // <---- INDHA LINE-A IPPADI MAATHUNGA
+                if (value !== currentTime) {
                     if (element) {
                         element.value = currentTime; 
                         value = currentTime;
@@ -1464,7 +1469,6 @@ require 'header.php';
             }
             // --- BACKDATE PREVENTION LOGIC END ---
 
-            showLoading();
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1472,10 +1476,24 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
-                if (data.success) { showNotification('success', 'Value updated successfully!'); } 
+                if (data.success) { 
+                    if (field === 'remarks' && value === 'Moved') {
+                        showNotification('success', 'Job moved to LE Assign successfully!');
+                        const rowEl = document.getElementById('row-' + ceId);
+                        if (rowEl) {
+                            rowEl.style.transition = 'all 0.4s ease';
+                            rowEl.style.opacity = '0';
+                            setTimeout(() => { 
+                                rowEl.remove(); 
+                                window.location.reload(); 
+                            }, 400);
+                        }
+                    } else {
+                        showNotification('success', 'Value updated successfully!'); 
+                    }
+                } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+            }).catch(error => { console.error('Error:', error); });
         }
         
         // Quick assign function

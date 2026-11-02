@@ -151,7 +151,11 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         $main_status = 'Completed'; // Move to TS Report
     }
     
-    $stmt = $mysqli->prepare("UPDATE pag SET $col = ?, status = ?, last_updated = NOW() WHERE id = ?");
+    if ($main_status === 'Completed') {
+        $stmt = $mysqli->prepare("UPDATE pag SET $col = ?, status = ?, pag_date = CURDATE(), last_updated = NOW() WHERE id = ?");
+    } else {
+        $stmt = $mysqli->prepare("UPDATE pag SET $col = ?, status = ?, last_updated = NOW() WHERE id = ?");
+    }
     $stmt->bind_param("ssi", $new_status, $main_status, $pag_id);
     
     if ($stmt->execute()) {

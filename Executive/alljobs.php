@@ -38,6 +38,27 @@ if ($check_status) {
     }
 }
 // --------------------------------------------------------------
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
@@ -68,29 +89,27 @@ if ($current_user_id) {
     }
 }
 
-// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
-$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
-
-// Get all employees under the same reporting manager (for assignment dropdown)
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
 $les = [];
-if ($effective_manager) {
-    $le_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ?) 
-                 AND em.status = 'Active' 
-                 AND ur.role_name IN ('TM', 'TL', 'Admin')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($le_query);
-    if ($stmt) {
-        $stmt->bind_param("ss", $effective_manager, $current_user_name);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($le = $result->fetch_assoc()) {
-            $les[] = $le;
-        }
-        $stmt->close();
+$le_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_les = $mysqli->query($le_query);
+if ($res_les) {
+    while ($le = $res_les->fetch_assoc()) {
+        $les[] = $le;
     }
 }
 
@@ -141,8 +160,11 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         }
     }
 
-    $stmt = $mysqli->prepare("UPDATE le SET status = ?, last_updated = NOW() WHERE id = ?");
-    $stmt->bind_param("si", $db_status, $le_id);
+    $update_query = ($db_status === 'Completed') 
+    ? "UPDATE le SET status = ?, le_date = CURDATE(), last_updated = NOW() WHERE id = ?"
+    : "UPDATE le SET status = ?, last_updated = NOW() WHERE id = ?";
+        $stmt = $mysqli->prepare($update_query);
+        $stmt->bind_param("si", $db_status, $le_id);
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'status' => $db_status]);
     } else {
@@ -303,11 +325,12 @@ $le_tm_filter = isset($_GET['le_tm']) ? trim($_GET['le_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'le.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
 
-// Build the query for LE records where CE is completed
-// Only show jobs where CE is completed (assigned_ce is NOT NULL)
+// Build the query for LE records where CE is completed and Moved
+// Keep row on LE Assign CE page even if completed, until Status is selected as 'Moved'
 $where_conditions = [
-    "(le.status IS NULL OR (le.status != 'Completed' AND le.status != 'Done'))", 
+    "(le.status_button IS NULL OR le.status_button != 'Moved')", 
     "(ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')", 
+    "ce.remarks = 'Moved'", 
     "REPLACE(jm.job_name, ' ', '') = 'CE'" // Shows only CE process jobs
 ];
 
@@ -330,9 +353,11 @@ if (!empty($status_filter)) {
 }
 
 if (!empty($le_tm_filter)) {
-    $where_conditions[] = "le.assigned_to_le = ?";
-    $params[] = $le_tm_filter;
-    $types .= 's';
+    $where_conditions[] = "(le.assigned_to_le = ? OR le.assigned_to_le_qc = ? OR j.assigned_le = ? OR ce.assigned_to_content = ? OR ce.assigned_to_img = ? OR j.assigned_ce = ? OR j.assigned_to = ?)";
+    for ($k = 0; $k < 7; $k++) {
+        $params[] = $le_tm_filter;
+    }
+    $types .= 'sssssss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -384,18 +409,19 @@ $stmt->close();
 $status_query = "SELECT DISTINCT status FROM le WHERE status != 'Completed' AND status != 'Done' ORDER BY status";
 $status_result = $mysqli->query($status_query);
 
-// Get count statistics - Only for CE completed jobs
+// Get count statistics - Only for CE completed and Moved jobs
 $stats_query = "SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN le.status IS NULL OR le.status = '' OR le.status = 'Pending' OR le.status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN le.status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN le.status = 'In Progress' OR le.status = 'LE Done' OR le.status = 'LE-QC Done' OR le.status = 'Completed' THEN 1 ELSE 0 END) as in_progress,
                     SUM(CASE WHEN le.assigned_to_le IS NOT NULL AND le.assigned_to_le != '' THEN 1 ELSE 0 END) as assigned
                 FROM le 
                 JOIN jobs j ON le.job_id = j.job_id
                 LEFT JOIN job_master jm ON j.process_id = jm.job_id
                 LEFT JOIN ce ON ce.job_id = j.job_id
-                WHERE (le.status IS NULL OR (le.status != 'Completed' AND le.status != 'Done'))
+                WHERE (le.status_button IS NULL OR le.status_button != 'Moved')
                 AND (ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')
+                AND ce.remarks = 'Moved'
                 AND REPLACE(jm.job_name, ' ', '') = 'CE'";
 $stats_result = $mysqli->query($stats_query);
 $stats = $stats_result->fetch_assoc();
@@ -852,6 +878,7 @@ require 'header.php';
         <!-- Filter Section -->
         <div class="filter-section">
             <form method="get" class="row g-2 align-items-end">
+                <input type="hidden" name="job" value="CE">
                 <div class="col-md-4">
                     <label class="form-label small">Search</label>
                     <input type="text" name="search" class="form-control form-control-sm" 
@@ -904,7 +931,7 @@ require 'header.php';
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
-                    <a href="le_assign_tm.php" class="btn btn-outline-secondary btn-sm">
+                    <a href="alljobs.php?job=CE" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-undo me-1"></i> Reset
                     </a>
                 </div>
@@ -918,8 +945,8 @@ require 'header.php';
                     <thead>
                         <tr>
                             <th>S.No</th>
-                            <th>CE Completed Date</th>
-                            <th>Received Date</th>
+                            <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">CE c date</th>
+                            <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">R.date</th>
                             <th>Client</th>
                             <th>Issue</th>
                             <th>Articles</th>
@@ -938,6 +965,7 @@ require 'header.php';
                             <th>LE-QC Assignment</th>
                             <th>Status</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -965,9 +993,9 @@ require 'header.php';
                                     <td>
                                         <span class="fw-500" style="color: #10b981;"><?= !empty($row['ce_date']) ? date('d-m-Y', strtotime($row['ce_date'])) : '—' ?></span>
                                     </td>
-                                    <td>
-                                        <span class="fw-500 text-muted"><?= formatDate($row['job_date'] ?? '') ?></span>
-                                    </td>
+                                   <td style="width:60px; max-width:60px; white-space:nowrap;">
+    <span class="fw-500 text-muted" style="font-size:0.68rem;"><?= formatDate($row['job_date'] ?? '', 'd-m-y') ?></span>
+</td>
                                     <td>
                                         <span class="fw-500"><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : ($row['client_name'] ?? $row['client'] ?? 'N/A')) ?></span>
                                     </td>
@@ -983,17 +1011,17 @@ require 'header.php';
                                     </td>
                                     <!-- EQ (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
                                     </td>
 
                                     <!-- Images (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
                                     </td>
 
                                     <!-- Tables (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary"><?= h($row['process'] ?? 'N/A') ?></span>
@@ -1033,12 +1061,12 @@ require 'header.php';
                                          <?php 
                                          $word_count = (!empty($row['word_count']) && (int)$row['word_count'] > 0) ? (int)$row['word_count'] : ((!empty($row['job_word_count']) && (int)$row['job_word_count'] > 0) ? (int)$row['job_word_count'] : 0);
                                          ?>
-                                         <input type="number" class="form-control form-control-sm p-1 text-center fw-bold text-primary" style="width: 52px; font-size: 10px; height: 20px; padding: 1px 2px; border: 1px solid #667eea;" value="<?= h($word_count) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'word_count', this.value)">
+                                         <input type="number" class="form-control form-control-sm p-1 text-center fw-bold text-primary mx-auto d-block" style="width: 52px; font-size: 10px; height: 20px; padding: 1px 2px; border: 1px solid #667eea;" value="<?= h($word_count) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'word_count', this.value)">
                                     </td>
 
                                     <!-- WC-ExRef -->
                                     <td>
-                                        <input type="text" class="form-control form-control-sm p-1 text-center" style="width: 52px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h($row['wc_exref'] ?? '') ?>" placeholder="ExRef" onchange="updateInlineField(<?= $row['id'] ?>, 'wc_exref', this.value)">
+                                        <input type="text" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 52px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h($row['wc_exref'] ?? '') ?>" placeholder="ExRef" onchange="updateInlineField(<?= $row['id'] ?>, 'wc_exref', this.value)">
                                     </td>
 
                                     <!-- REF Status -->
@@ -1229,6 +1257,16 @@ require 'header.php';
                                             <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
                                         </select>
                                     </td>
+                                    <!-- TAT Column -->
+                                    <?php
+                                        $le_done = in_array($row['status'] ?? '', ['Completed', 'Done', 'LE & LE-QC Done']);
+                                        $end_d = $le_done ? ($row['le_date'] ?: $row['last_updated']) : null;
+                                        $tat = getWorkingDaysWithoutSunday($row['job_date'] ?? $row['date'], $end_d);
+                                        $bg = $le_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
+                                    </td>
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
@@ -1323,33 +1361,28 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500); // reload to revert the dropdown change
+                            setTimeout(() => { window.location.reload(); }, 1500);
                             return; 
                         }
                     }
                 }
             }
 
-            showLoading();
-            fetch('le_assign_tm.php', {
+            fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'ajax=update_status&le_id=' + leId + '&type=' + encodeURIComponent(type) + '&status=' + encodeURIComponent(newStatus)
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
                     setTimeout(() => { window.location.reload(); }, 500);
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             }).catch(error => { 
-                hideLoading(); 
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
             });
         }
 
@@ -1366,18 +1399,31 @@ require 'header.php';
                 }
             }
 
-            showLoading();
-            fetch('le_assign_tm.php', {
+            fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'ajax=inline_edit&le_id=' + leId + '&field=' + encodeURIComponent(field) + '&value=' + encodeURIComponent(value)
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
-                if (data.success) { showNotification('success', 'Time updated successfully!'); } 
+                if (data.success) { 
+                    if (field === 'status_button' && value === 'Moved') {
+                        showNotification('success', 'Job moved to LE Report & Input/Output successfully!');
+                        const rowEl = document.getElementById('row-' + leId);
+                        if (rowEl) {
+                            rowEl.style.transition = 'all 0.4s ease';
+                            rowEl.style.opacity = '0';
+                            setTimeout(() => { 
+                                rowEl.remove(); 
+                                window.location.reload(); 
+                            }, 400);
+                        }
+                    } else {
+                        showNotification('success', 'Updated successfully!'); 
+                    }
+                } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+            }).catch(error => { console.error('Error:', error); });
         }
         
         // Quick assign function
@@ -1392,28 +1438,27 @@ require 'header.php';
             
             selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
-            showLoading();
             
-            fetch('le_assign_tm.php', {
+            // Post directly to alljobs.php (Correct Handler)
+            fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'ajax=quick_assign&le_id=' + leId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 selectElement.disabled = false;
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${leName} successfully!`);
                     document.getElementById('row-' + leId).classList.add('assigned');
-                    setTimeout(() => { window.location.reload(); }, 800);
+                    setTimeout(() => { window.location.reload(); }, 600);
                 } else {
                     showNotification('danger', 'Error: ' + data.message);
                     selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
-                hideLoading(); selectElement.disabled = false;
+                selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 selectElement.value = selectElement.getAttribute('data-previous') || '';
             });

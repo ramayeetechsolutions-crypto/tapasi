@@ -100,7 +100,7 @@ if ($effective_manager) {
     $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
                  FROM employee_master em 
                  LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ?) 
+                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ? OR em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.employee_name LIKE '%Bragadeeshwaran%' OR em.team_id = 2) 
                  AND em.status = 'Active' 
                  AND (ur.role_name IN ('TM', 'TL', 'Admin', 'SubTL', 'Sub TL') OR em.employee_username = 'TPS032')
                  ORDER BY em.employee_name";
@@ -153,7 +153,11 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         $main_status = 'Completed'; // Move to TS Report
     }
     
-    $stmt = $mysqli->prepare("UPDATE pag SET $col = ?, status = ?, last_updated = NOW() WHERE id = ?");
+    if ($main_status === 'Completed') {
+        $stmt = $mysqli->prepare("UPDATE pag SET $col = ?, status = ?, pag_date = CURDATE(), last_updated = NOW() WHERE id = ?");
+    } else {
+        $stmt = $mysqli->prepare("UPDATE pag SET $col = ?, status = ?, last_updated = NOW() WHERE id = ?");
+    }
     $stmt->bind_param("ssi", $new_status, $main_status, $pag_id);
     
     if ($stmt->execute()) {
