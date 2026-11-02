@@ -270,13 +270,45 @@ $teams_result = $mysqli->query($teams_sql);
         <!-- Filter Form -->
         <div class="filter-box">
             <form method="get" class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Start Date</label>
                     <input type="date" name="start_date" class="form-control" value="<?= h($start_date) ?>">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">End Date</label>
                     <input type="date" name="end_date" class="form-control" value="<?= h($end_date) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Select Week</label>
+                    <select id="week_selector" class="form-select">
+                        <option value="">Custom Date</option>
+                        <?php
+                        $current_month = date('n');
+                        $year = date('Y');
+                        
+                        // Financial year logic: If month is Jan, Feb, or Mar, use previous year's April
+                        if ($current_month < 4) {
+                            $year--; 
+                        }
+                        
+                        // Start from the First Monday of April
+                        $dto = new DateTime("first monday of april $year");
+                        
+                        for ($w = 1; $w <= 52; $w++) {
+                            $w_start = $dto->format('Y-m-d');
+                            
+                            // End date is Saturday (+5 days from Monday)
+                            $end_dto = clone $dto;
+                            $end_dto->modify('+5 days'); 
+                            $w_end = $end_dto->format('Y-m-d');
+                            
+                            echo "<option value='{$w_start}|{$w_end}'>Week {$w} ({$w_start})</option>";
+                            
+                            // Move to next week's Monday
+                            $dto->modify('+1 week');
+                        }
+                        ?>
+                    </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Employee</label>
@@ -537,6 +569,15 @@ $teams_result = $mysqli->query($teams_sql);
                     var newEndDate = new Date(startDate);
                     newEndDate.setDate(newEndDate.getDate() + 30);
                     $('input[name="end_date"]').val(newEndDate.toISOString().split('T')[0]);
+                }
+            });
+            // NEW: Auto-fill Start and End dates when a Week is selected
+            $('#week_selector').change(function() {
+                var val = $(this).val();
+                if (val) {
+                    var dates = val.split('|'); // Split the value to get Start (Monday) and End date (Saturday)
+                    $('input[name="start_date"]').val(dates[0]);
+                    $('input[name="end_date"]').val(dates[1]);
                 }
             });
         });
