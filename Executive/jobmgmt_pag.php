@@ -107,56 +107,49 @@ $processStageMap = [
     'CE+PAG' => ['PAG'],
     'PAG+XML' => ['PAG'],
     'CE+PAG+XML' => ['PAG'],
+    'TS' => ['PAG'],
+    'CE+TS' => ['PAG'],
+    'TS+XML' => ['PAG'],
+    'CE+TS+XML' => ['PAG'],
 ];
 
-// Get unique team members under this reporting manager
+// Get unique team members under this reporting manager to keep their jobs visible
+$team_users = [];
 $unique_team_members = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active' ORDER BY employee_name ASC");
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ? OR reporting_manager LIKE '%Bragadeeshwaran%' OR employee_name LIKE '%Bragadeeshwaran%' OR team_id = 2) AND status = 'Active' ORDER BY employee_name ASC");
 if ($stmt_team) {
     $stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
     $stmt_team->execute();
     $res_team = $stmt_team->get_result();
     while ($row_team = $res_team->fetch_assoc()) {
+        $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
         $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
     }
     $stmt_team->close();
 }
 
-// WHERE conditions - Show jobs assigned to current user
-$where = ["j.assigned_to = ?"];
-$params = [$user_employee_name];
-$types  = 's';
-
-// Fetch employee processes (based on logged in user)
-$emp_sql = "
-    SELECT e.process, e.process1, pm.process_name
-    FROM employee_master e
-    LEFT JOIN process_master pm ON pm.process_id IN (e.process, e.process1)
-    WHERE e.employee_username = ?
-";
-$stmt = $mysqli->prepare($emp_sql);
-$stmt->bind_param("s", $current_user);
-$stmt->execute();
-$res = $stmt->get_result();
-
-$allowed_process_ids = [];
-while ($row = $res->fetch_assoc()) {
-    $pname = strtoupper($row['process_name']??'');
-
-    // Only include processes that have PAG
-    if (strpos($pname, 'PAG') !== false) {
-        $allowed_process_ids = array_merge($allowed_process_ids, [2,4,5]); // Adjust these IDs based on your PAG process IDs
-    }
+if (!empty($current_user) && !in_array("'" . $mysqli->real_escape_string($current_user) . "'", $team_users)) {
+    $team_users[] = "'" . $mysqli->real_escape_string($current_user) . "'";
+}
+if (!empty($current_user) && !isset($unique_team_members[$current_user])) {
+    $unique_team_members[$current_user] = $logged_in_name;
 }
 
-// Remove duplicates and apply process filter
-$allowed_process_ids = array_unique($allowed_process_ids);
-if (!empty($allowed_process_ids)) {
-    $clean_ids = array_map('intval', $allowed_process_ids);
-    $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
+$team_condition = "j.assigned_to = ?";
+if (!empty($team_users)) {
+    $team_list = implode(',', $team_users);
+    $team_condition = "(j.assigned_to = ? OR j.assigned_to = ? OR j.assigned_to LIKE '%Bragadeeshwaran%' OR pag.assigned_to_pag IN ($team_list) OR pag.assigned_to_img IN ($team_list) OR j.assigned_to IN ($team_list) OR j.assigned_pag IN ($team_list))";
 }
 // FIX: Show jobs that have 'PAG' or 'TS' in their process name
 $where[] = "(jm.job_name LIKE '%PAG%' OR jm.job_name LIKE '%TS%')";
+
+// WHERE conditions - Show jobs for the team
+$where = [$team_condition];
+$params = [$user_employee_name, $logged_in_name];
+$types  = 'ss';
+
+// Always restrict TS Report to only TS / PAG processes
+$where[] = "jm.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'TS', 'TS+XML', 'CE+TS', 'CE+TS+XML')";
 
 // Search query filter
 if ($q) {
@@ -175,9 +168,19 @@ if ($filter_client) {
 
 // Process filter
 if ($filter_process) {
-    $where[] = "jm.job_name = ?";
-    $params[] = $filter_process;
-    $types .= "s";
+    if ($filter_process === 'TS' || $filter_process === 'PAG') {
+        $where[] = "jm.job_name IN ('TS', 'PAG')";
+    } elseif ($filter_process === 'CE+TS' || $filter_process === 'CE+PAG') {
+        $where[] = "jm.job_name IN ('CE+TS', 'CE+PAG')";
+    } elseif ($filter_process === 'TS+XML' || $filter_process === 'PAG+XML') {
+        $where[] = "jm.job_name IN ('TS+XML', 'PAG+XML')";
+    } elseif ($filter_process === 'CE+TS+XML' || $filter_process === 'CE+PAG+XML') {
+        $where[] = "jm.job_name IN ('CE+TS+XML', 'CE+PAG+XML')";
+    } else {
+        $where[] = "jm.job_name = ?";
+        $params[] = $filter_process;
+        $types .= "s";
+    }
 }
 
 // Date range filters
@@ -273,8 +276,14 @@ if ($results->num_rows > 0) {
         $required_stages = $processStageMap[$normalized_process] ?? ['PAG']; // Default to PAG
         
         // Determine final status based on PAG only
-        $pag_status = $row['pag_status'] ?? 'Need to Assign';
-        $final_status = $pag_status;
+        $pag_status = trim($row['pag_status'] ?? '');
+        if (empty($pag_status) || $pag_status === 'Need to Assign') {
+            $final_status = 'Need to Assign';
+        } elseif (in_array($pag_status, ['Completed', 'Done'])) {
+            $final_status = 'Completed';
+        } else {
+            $final_status = 'In Progress';
+        }
         
         $status_counts[$final_status]++;
         $status_counts['Total']++;
@@ -460,10 +469,10 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     <label class="form-label small mb-1">Process</label>
                     <select name="process" class="form-select form-select-sm">
                         <option value="">All Processes</option>
-                        <option value="PAG" <?=$filter_process==='PAG'?'selected':''?>>TS</option>
-                        <option value="CE+PAG" <?=$filter_process==='CE+PAG'?'selected':''?>>CE+TS</option>
-                        <option value="PAG+XML" <?=$filter_process==='PAG+XML'?'selected':''?>>TS+XML</option>
-                        <option value="CE+PAG+XML" <?=$filter_process==='CE+PAG+XML'?'selected':''?>>CE+TS+XML</option>
+                        <option value="TS" <?=$filter_process==='TS'||$filter_process==='PAG'?'selected':''?>>TS</option>
+                        <option value="CE+TS" <?=$filter_process==='CE+TS'||$filter_process==='CE+PAG'?'selected':''?>>CE+TS</option>
+                        <option value="TS+XML" <?=$filter_process==='TS+XML'||$filter_process==='PAG+XML'?'selected':''?>>TS+XML</option>
+                        <option value="CE+TS+XML" <?=$filter_process==='CE+TS+XML'||$filter_process==='CE+PAG+XML'?'selected':''?>>CE+TS+XML</option>
                     </select>
                 </div>
                 
@@ -512,7 +521,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     <button class="btn btn-primary btn-sm" type="submit">
                         <i class="fas fa-search"></i> Filter
                     </button>
-                    <a href="job_management.php" class="btn btn-outline-secondary btn-sm">
+                    <a href="jobmgmt_pag.php" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-times"></i> Clear
                     </a>
                 </div>
