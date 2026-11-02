@@ -136,8 +136,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a href="#">
-                <i class="fas fa-file-alt"></i> AP Report
+            <a class="nav-link" href="jobmgmt_ap.php">
+                <i class="fa fa-bar-chart"></i> AP Report
             </a>
         </li>
     </ul>

@@ -498,9 +498,6 @@ require 'header.php';
                     </h4>
                 </div>
                 <div>
-                    <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addJobModal">
-                        <i class="fas fa-plus me-1"></i> Add AP Job
-                    </button>
                     <a href="jobs.php" class="btn btn-outline-secondary btn-sm me-2">
                         <i class="fas fa-arrow-left me-1"></i> Back to Jobs
                     </a>
@@ -611,7 +608,7 @@ require 'header.php';
                 <table class="table table-hover table-bordered mb-0" style="min-width: 2250px;">
                     <thead>
                         <tr>
-                            <th>Date</th>
+                            <th style="white-space: nowrap;">Received Date</th>
                             <th>Client</th>
                             <th>Mail Subject</th>
                             <th>Process</th>
@@ -634,49 +631,30 @@ require 'header.php';
                         <?php if ($ap_result && $ap_result->num_rows > 0): ?>
                             <?php while ($row = $ap_result->fetch_assoc()): ?>
                                 <tr id="row-<?= $row['id'] ?>">
-                                    <!-- 1. Date (Editable) -->
-                                    <td>
-                                        <input type="date" class="form-control form-control-sm editable-input" 
-                                               value="<?= h($row['date'] ?? '') ?>" 
-                                               onchange="updateField(<?= $row['id'] ?>, 'date', this.value)">
+                                    <!-- 1. Received Date (Read-Only, Single Line) -->
+                                    <td class="align-middle text-center" style="white-space: nowrap;">
+                                        <?= !empty($row['date']) ? date('d-m-Y', strtotime($row['date'])) : '—' ?>
                                     </td>
 
-                                    <!-- 2. Client (Dropdown from Client Master) -->
-                                    <td>
-                                        <select class="form-select form-select-sm editable-input" style="width: 150px;"
-                                                onchange="updateField(<?= $row['id'] ?>, 'client', this.value)">
-                                            <option value="">Select Client</option>
-                                            <?php 
-                                            $c_found = false;
-                                            foreach ($clients_list as $cl): 
-                                                $sel = (($row['client'] ?? '') === $cl);
-                                                if ($sel) $c_found = true;
-                                            ?>
-                                                <option value="<?= h($cl) ?>" <?= $sel ? 'selected' : '' ?>><?= h($cl) ?></option>
-                                            <?php endforeach; ?>
-                                            <?php if (!$c_found && !empty($row['client'])): ?>
-                                                <option value="<?= h($row['client']) ?>" selected><?= h($row['client']) ?></option>
-                                            <?php endif; ?>
-                                        </select>
+                                    <!-- 2. Client (Read-Only, Team Client Name) -->
+                                    <td class="align-middle">
+                                        <?php
+                                            $db_client = $row['client'] ?? '';
+                                            $display_client = $db_client;
+                                            if(!empty($db_client)) {
+                                                $q_client = $mysqli->query("SELECT team_client_name, client_name FROM client_master WHERE client_name = '".$mysqli->real_escape_string($db_client)."' LIMIT 1");
+                                                if($q_client && $q_client->num_rows > 0) {
+                                                    $c_data = $q_client->fetch_assoc();
+                                                    $display_client = !empty(trim($c_data['team_client_name'])) ? trim($c_data['team_client_name']) : trim($c_data['client_name']);
+                                                }
+                                            }
+                                        ?>
+                                        <span class="fw-semibold text-dark"><?= h($display_client) ?></span>
                                     </td>
 
-                                    <!-- 3. Mail Subject (Dropdown from Mail Subject Master / CE Job Entry) -->
-                                    <td>
-                                        <select class="form-select form-select-sm editable-input" style="width: 170px;"
-                                                onchange="updateField(<?= $row['id'] ?>, 'mail_subject', this.value)">
-                                            <option value="">Select Subject</option>
-                                            <?php 
-                                            $m_found = false;
-                                            foreach ($mail_subjects_list as $ms): 
-                                                $sel = (($row['mail_subject'] ?? '') === $ms);
-                                                if ($sel) $m_found = true;
-                                            ?>
-                                                <option value="<?= h($ms) ?>" <?= $sel ? 'selected' : '' ?>><?= h($ms) ?></option>
-                                            <?php endforeach; ?>
-                                            <?php if (!$m_found && !empty($row['mail_subject'])): ?>
-                                                <option value="<?= h($row['mail_subject']) ?>" selected><?= h($row['mail_subject']) ?></option>
-                                            <?php endif; ?>
-                                        </select>
+                                    <!-- 3. Mail Subject (Read-Only) -->
+                                    <td class="align-middle">
+                                        <?= h($row['mail_subject'] ?? '—') ?>
                                     </td>
 
                                     <!-- 4. Process (Hardcoded Dropdown) -->
@@ -892,96 +870,6 @@ require 'header.php';
                         <?php endif; ?>
                     </tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal to Add New AP Job Entry -->
-    <div class="modal fade" id="addJobModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <form method="post" action="ap_assign.php">
-                    <input type="hidden" name="action" value="add_job">
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold" style="color: #1e293b;">
-                            <i class="fas fa-plus-circle text-primary me-2"></i>Add New AP Job Entry
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Date <span class="text-danger">*</span></label>
-                            <input type="date" name="date" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Client <span class="text-danger">*</span></label>
-                            <select name="client" class="form-select form-select-sm" required>
-                                <option value="">Select Client</option>
-                                <?php foreach ($clients_list as $cl): ?>
-                                    <option value="<?= h($cl) ?>"><?= h($cl) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Mail Subject <span class="text-danger">*</span></label>
-                            <select name="mail_subject" class="form-select form-select-sm" required>
-                                <option value="">Select Mail Subject</option>
-                                <?php foreach ($mail_subjects_list as $ms): ?>
-                                    <option value="<?= h($ms) ?>"><?= h($ms) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Process</label>
-                            <select name="process" class="form-select form-select-sm">
-                                <option value="">Select Process</option>
-                                <?php foreach ($PROCESS_OPTIONS as $p): ?>
-                                    <option value="<?= h($p) ?>"><?= h($p) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Articles</label>
-                            <input type="text" name="articles" class="form-control form-control-sm" placeholder="e.g. 5">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Supplements</label>
-                            <select name="supplements" class="form-select form-select-sm">
-                                <option value="">Select Supplement</option>
-                                <?php foreach ($SUPPLEMENTS_OPTIONS as $s): ?>
-                                    <option value="<?= h($s) ?>"><?= h($s) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Dispatch Date</label>
-                            <input type="date" name="dispatch_date" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Remarks</label>
-                            <select name="remarks" class="form-select form-select-sm">
-                                <option value="">Select Remarks</option>
-                                <?php foreach ($REMARKS_OPTIONS as $o): ?>
-                                    <option value="<?= h($o) ?>"><?= h($o) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold">Note</label>
-                            <input type="text" name="note" class="form-control form-control-sm" placeholder="Any special notes">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold">Folder / File Path</label>
-                            <input type="text" name="path" class="form-control form-control-sm" placeholder="Enter server or folder path">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm px-3">
-                            <i class="fas fa-save me-1"></i> Save AP Job
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
