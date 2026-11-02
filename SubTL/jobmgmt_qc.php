@@ -279,7 +279,7 @@ $sql = "SELECT
     pag.status as pag_status, pag.created_at as pag_received_date, pag.done_by as pag_done_by, pag.assigned_to_pag as pag_assigned_to,
     pag.eq, pag.pages, pag.images, pag.tables_count,
     
-    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by,
+    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.is_moved, qc_crx.is_moved,
     
     ju.upload_date, ju.file_path 
 FROM jobs j
@@ -615,6 +615,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>IMG_TAB_Stage</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th>Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -700,21 +701,19 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- Dispatch & Upload -->
                             <td><?= !empty($row['dispatch_date']) && $row['dispatch_date'] != '0000-00-00 00:00:00' ? formatDateOnly(substr($row['dispatch_date'], 0, 10), 'd-m-Y') : '—' ?></td>
                             <?php 
-                                // QC Completed = QC row. CRX columns must show dash.
-                                // Only show CRX data when QC is NOT Completed AND QC_CRX stage IS Moved.
                                 $qc_completed = in_array(($row['qc_status'] ?? ''), ['Completed', 'Done']);
-                                $is_crx_moved = (($row['qc_crx_stage'] ?? '') === 'Moved');
+                                $is_crx_moved = !empty($row['is_moved']);
                                 $up_by = !empty($row['crx_upload_by']) ? $row['crx_upload_by'] : ($row['qc_upload_by'] ?? '');
                             ?>
                             <td>
                                 <?php echo !empty($up_by) ? h($emp_map[$up_by] ?? $up_by) : '—'; ?>
                             </td>
                             
-                            <!-- QC_CRX_Stage Column (ONLY FOR QC_CRX JOBS) -->
+                            <!-- QC_CRX_Stage Column -->
                             <td>
                                 <?php 
-                                    if ($is_crx_moved) {
-                                        echo '<span class="badge bg-success text-white">Moved</span>';
+                                    if (!empty($row['qc_crx_stage'])) {
+                                        echo '<span class="badge" style="background-color: #0f172a; color: white;">' . h($row['qc_crx_stage']) . '</span>';
                                     } else {
                                         echo '—';
                                     }
@@ -768,6 +767,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     —
                                 <?php endif; ?>
                             </td>
+                            
+                            <!-- Status Column (Moved indicator) -->
+                            <td class="text-center">
+                                <?php if ($is_crx_moved): ?>
+                                    <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-paper-plane me-1"></i> Moved</span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+
                             <!-- TAT Column -->
                             <?php
                                 $qc_done = in_array($row['qc_status'] ?? '', ['Completed', 'Done']);
