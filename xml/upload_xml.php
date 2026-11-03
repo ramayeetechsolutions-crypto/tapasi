@@ -29,10 +29,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_excel') {
     SELECT j.*, 
            COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(j.journal_name_client, ''), '-') as full_client_name,
            CASE 
-               WHEN j.journal_name_client IS NOT NULL AND j.journal_name_client != '' AND j.issue IS NOT NULL AND j.issue != '' 
-               THEN CONCAT(j.journal_name_client, '-', j.issue)
-               ELSE j.issue 
-           END as full_issue
+                   WHEN j.journal_name_client IS NOT NULL AND j.journal_name_client != '' AND j.issue IS NOT NULL AND j.issue != '' 
+                   THEN CONCAT(j.journal_name_client, '-', j.issue)
+                   ELSE COALESCE(NULLIF(jb.journal_issue, ''), NULLIF(j.issue, ''), NULLIF(j.journal_name_client, ''), j.job_id, '-')
+               END as full_issue
     FROM unique_xml_jobs j
     LEFT JOIN jobs jb ON j.job_id = jb.job_id
     LEFT JOIN client_master c ON jb.client_id = c.client_id
@@ -71,13 +71,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_excel') {
     // FORMAT DATES AND COMMON INFO
     $rec_date_fmt = !empty($job['rec_date']) ? date('j-M-y', strtotime($job['rec_date'])) : '-'; 
     $job_client = !empty($job['full_client_name']) ? $job['full_client_name'] : '-';
-    $job_issue = !empty($job['issue']) ? $job['issue'] : '-';
+    $job_issue = !empty($job['full_issue']) && $job['full_issue'] !== '-' ? $job['full_issue'] : (!empty($job['job_id']) ? $job['job_id'] : '-');
     $job_arts_fallback = !empty($job['articles']) ? $job['articles'] : '-';
 
     // MAPPING DB COLUMNS TO EXCEL DISPLAY NAMES (Scielo Excluded!)
     $process_map = [
         'nlm' => 'XML',
-        'new_html' => 'New XML',
+        'new_html' => 'New HTML',
         'direct_html' => 'Direct HTML',
         'jats' => 'JATS',
         'clockss' => 'Clockss',
@@ -112,7 +112,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_excel') {
         // Fallback for parent job
         $parent_map = [
             'xml_status' => 'XML',
-            'new_html' => 'New XML',
+            'new_html' => 'New HTML',
             'direct_html' => 'Direct HTML',
             'html' => 'HTML',
             'pubmed_biblat_status' => 'PubMed'
@@ -133,7 +133,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_excel') {
 
     // START EXCEL TABLE
     echo '<table border="1" cellpadding="3" cellspacing="0" style="font-family: Calibri, sans-serif; font-size: 11pt;">';
-    echo '<tr style="background-color: #bcbcbc; font-weight: bold; text-align: center;">';
+    echo '<tr style="background-color: #5e6b77; color: #ffffff; font-weight: bold; text-align: center;">';
     echo '<th>Rec. Date</th><th>Journal Name</th><th>Issue</th><th>Article Name</th><th>Pages</th>';
     echo '</tr>';
 
@@ -216,7 +216,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_client_month_excel')
                CASE 
                    WHEN j.journal_name_client IS NOT NULL AND j.journal_name_client != '' AND j.issue IS NOT NULL AND j.issue != '' 
                    THEN CONCAT(j.journal_name_client, '-', j.issue)
-                   ELSE COALESCE(NULLIF(jb.journal_issue, ''), NULLIF(j.issue, ''), NULLIF(j.journal_name_client, ''), '-')
+                   ELSE COALESCE(NULLIF(jb.journal_issue, ''), NULLIF(j.issue, ''), NULLIF(j.journal_name_client, ''), j.job_id, '-')
                END as full_issue
         FROM unique_xml_jobs j
         LEFT JOIN jobs jb ON j.job_id = jb.job_id
@@ -243,13 +243,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_client_month_excel')
     echo '<head><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head>';
     echo '<body>';
     echo '<table border="1" cellpadding="3" cellspacing="0" style="font-family: Calibri, sans-serif; font-size: 11pt;">';
-    echo '<tr style="background-color: #bcbcbc; font-weight: bold; text-align: center;">';
+    echo '<tr style="background-color: #5e6b77; color: #ffffff; font-weight: bold; text-align: center;">';
     echo '<th>Rec. Date</th><th>Journal Name</th><th>Issue</th><th>Article Name</th><th>Pages</th>';
     echo '</tr>';
 
     $process_map = [
         'nlm' => 'XML',
-        'new_html' => 'New XML',
+        'new_html' => 'New HTML',
         'direct_html' => 'Direct HTML',
         'jats' => 'JATS',
         'clockss' => 'Clockss',
@@ -268,7 +268,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_client_month_excel')
             $job_id = (int)$job['id'];
             $rec_date_fmt = !empty($job['rec_date']) ? date('j-M-y', strtotime($job['rec_date'])) : '-'; 
             $job_client = !empty($job['full_client_name']) ? $job['full_client_name'] : '-';
-            $job_issue = !empty($job['full_issue']) ? $job['full_issue'] : (!empty($job['issue']) ? $job['issue'] : '-');
+            $job_issue = !empty($job['full_issue']) && $job['full_issue'] !== '-' ? $job['full_issue'] : (!empty($job['job_id']) ? $job['job_id'] : '-');
             $job_arts_fallback = !empty($job['articles']) ? $job['articles'] : '-';
 
             // Fetch associated articles
@@ -299,7 +299,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_client_month_excel')
             } else {
                 $parent_map = [
                     'xml_status' => 'XML',
-                    'new_html' => 'New XML',
+                    'new_html' => 'New HTML',
                     'direct_html' => 'Direct HTML',
                     'html' => 'HTML',
                     'pubmed_biblat_status' => 'PubMed'
@@ -698,7 +698,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_all_clients') {
 if (isset($_GET['action']) && $_GET['action'] === 'download_scielo_excel') {
     $job_id = (int)$_GET['job_id'];
 
-    $stmt = $mysqli->prepare("SELECT j.*, COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(j.journal_name_client, ''), '-') as full_client_name, CASE WHEN j.journal_name_client IS NOT NULL AND j.journal_name_client != '' AND j.issue IS NOT NULL AND j.issue != '' THEN CONCAT(j.journal_name_client, '-', j.issue) ELSE j.issue END as full_issue FROM unique_xml_jobs j LEFT JOIN jobs jb ON j.job_id = jb.job_id LEFT JOIN client_master c ON jb.client_id = c.client_id WHERE j.id = ?");
+    $stmt = $mysqli->prepare("SELECT j.*, COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(j.journal_name_client, ''), '-') as full_client_name, CASE WHEN j.journal_name_client IS NOT NULL AND j.journal_name_client != '' AND j.issue IS NOT NULL AND j.issue != '' THEN CONCAT(j.journal_name_client, '-', j.issue) ELSE COALESCE(NULLIF(jb.journal_issue, ''), NULLIF(j.issue, ''), NULLIF(j.journal_name_client, ''), j.job_id, '-') END as full_issue FROM unique_xml_jobs j LEFT JOIN jobs jb ON j.job_id = jb.job_id LEFT JOIN client_master c ON jb.client_id = c.client_id WHERE j.id = ?");
     $stmt->bind_param("i", $job_id);
     $stmt->execute();
     $job = $stmt->get_result()->fetch_assoc();
@@ -724,13 +724,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_scielo_excel') {
 
     echo '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body>';
     echo '<table border="1" cellpadding="3" cellspacing="0" style="font-family: Calibri, sans-serif; font-size: 11pt;">';
-    echo '<tr style="background-color: #f0ad4e; font-weight: bold; text-align: center;">';
+    echo '<tr style="background-color: #5e6b77; color: #ffffff; font-weight: bold; text-align: center;">';
     echo '<th>Rec. Date</th><th>Journal Name</th><th>Issue</th><th>Article Name</th><th>Pages</th>';
     echo '</tr>';
 
     $rec_date_fmt = !empty($job['rec_date']) ? date('j-M-y', strtotime($job['rec_date'])) : '-'; 
     $job_client = !empty($job['full_client_name']) ? $job['full_client_name'] : '-';
-    $job_issue = !empty($job['issue']) ? $job['issue'] : '-';
+    $job_issue = !empty($job['full_issue']) && $job['full_issue'] !== '-' ? $job['full_issue'] : (!empty($job['job_id']) ? $job['job_id'] : '-');
 
     if ($articles->num_rows > 0) {
         $total_pages = 0;
@@ -969,9 +969,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     <div class="container-fluid mt-4 px-4 pb-5">
         <div class="card mb-4">
-            <div class="card-header py-3" style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
-                <h5 class="mb-0 fw-bold" style="color: #0f172a !important;">
-                    <i class="bi bi-send-check-fill me-2" style="color: #000000 !important;"></i> Upload Status
+            <div class="card-header py-3" style="background-color: #5e6b77; border-bottom: 2px solid #475569;">
+                <h5 class="mb-0 fw-bold" style="color: #ffffff !important;">
+                    <i class="bi bi-send-check-fill me-2" style="color: #ffffff !important;"></i> Upload Status
                 </h5>
             </div>
         

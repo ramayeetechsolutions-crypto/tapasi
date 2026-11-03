@@ -338,7 +338,7 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
         <div class="user-header">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <!-- <h4><i class="fas fa-tasks me-2"></i>My Jobs</h4> -->
+                    <h4 class="mb-2 text-white"><i class="fas fa-chart-line me-2 text-white"></i>Client Report</h4>
                     <div class="mt-2">
                         <span class="user-badge">User: <?= h($current_user_name) ?></span>
                         <!-- <span class="user-badge ms-2">Total Jobs: <?= $total_count ?></span> -->
