@@ -61,6 +61,21 @@ session_start();
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES); }
 
+// Returns the badge class: green for completed-type statuses, otherwise info
+function simpleStatusBadge($status, $default = 'Pending') {
+    $st = trim((string)$status);
+    if ($st === '') $st = $default;
+    $done = ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done', 'W-Complete', 'ID_Complete'];
+    $isDone = false;
+    foreach ($done as $d) {
+        if (strcasecmp($st, $d) === 0) { $isDone = true; break; }
+    }
+    if ($isDone) {
+        return '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . h($st) . '</span>';
+    }
+    return '<span class="badge bg-info">' . h($st) . '</span>';
+}
+
 $current_user = $_SESSION['username'] ?? '';
 $uid = $_SESSION['uid'] ?? '';
 if (!$current_user) {
@@ -222,8 +237,12 @@ $sql = "SELECT
     ju.upload_date, ju.upload_by, ju.file_path,
     
     le.last_updated as le_moved_date, ce.ce_date as ce_moved_date,
+    ce.status as ce_status, ce.remarks as ce_remarks,
     le.status as le_status, qc.status as qc_status,
-    qc.rtat, qc.atat
+    qc.rtat, qc.atat,
+    qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to,
+    qc_crx.pag_crx_start_time, qc_crx.pag_crx_end_time,
+    qc_crx.img_tab_stage
 
 FROM jobs j
 JOIN client_master c ON j.client_id=c.client_id
@@ -232,6 +251,7 @@ LEFT JOIN pag ON pag.job_id=j.job_id
 LEFT JOIN ce ON ce.job_id=j.job_id
 LEFT JOIN le ON le.job_id=j.job_id
 LEFT JOIN qc ON qc.job_id=j.job_id
+LEFT JOIN qc_crx ON qc_crx.job_id=j.job_id
 LEFT JOIN (
     SELECT job_id, upload_date, upload_by, file_path
     FROM job_uploads 
@@ -274,12 +294,13 @@ if ($results->num_rows > 0) {
         $normalized_process = strtoupper(str_replace(' ', '', $process_name));
         $required_stages = $processStageMap[$normalized_process] ?? ['PAG']; // Default to PAG
         
-        // Determine final status based on PAG only
+        // Determine final status based on PAG only (with qc_crx fallback)
         $pag_status = trim($row['pag_status'] ?? '');
-        if (empty($pag_status) || $pag_status === 'Need to Assign') {
-            $final_status = 'Need to Assign';
-        } elseif (in_array($pag_status, ['Completed', 'Done'])) {
+        $is_done = in_array($pag_status, ['Completed', 'Done']) || in_array(trim($row['pag_crx_stage'] ?? ''), ['PAG_CRX_Compelete', 'Completed', 'Done']);
+        if ($is_done) {
             $final_status = 'Completed';
+        } elseif (empty($pag_status) || $pag_status === 'Need to Assign') {
+            $final_status = 'Need to Assign';
         } else {
             $final_status = 'In Progress';
         }
@@ -579,18 +600,88 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h($row['tables_count'] ?? '0') ?></td>
                             <td><span class="badge bg-secondary"><?= h($row['process']) ?></span></td>
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
-                            <td><span class="badge bg-info"><?= h($row['qc_status'] ?? 'Pending') ?></span></td>
-                            <td><span class="badge bg-info"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
+                            <?php
+                                $proc_name = strtoupper(str_replace(' ', '', $row['process'] ?? ''));
+                                $has_ce = (strpos($proc_name, 'CE') !== false);
+                                $is_ce_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']) || trim($row['ce_remarks'] ?? '') === 'Moved' || !empty($row['ce_moved_date']);
+                                
+                                if (!$has_ce || $is_ce_done) {
+                                    $fqa_stat = 'Completed';
+                                } elseif (!empty($row['assigned_to'])) {
+                                    $fqa_stat = 'In Progress';
+                                } else {
+                                    $fqa_stat = 'Need to Assign';
+                                }
+                            ?>
+                            <td><?= simpleStatusBadge($fqa_stat, 'Pending') ?></td>
+                            <td><?= simpleStatusBadge($row['le_status'] ?? '', 'Pending') ?></td>
                             
                             <!-- Word Process & Times -->
-                            <td><?= getStatusBadge($row['word_status'] ?? 'Need to Assign', $row['assigned_to_img'] ?? '', $emp_map) ?></td>
-                            <td><?= !empty($row['img_start_time']) ? date('H:i', strtotime($row['img_start_time'])) : '—' ?></td>
-                            <td><?= !empty($row['img_end_time']) ? date('H:i', strtotime($row['img_end_time'])) : '—' ?></td>
+                            <?php
+                                $is_pag_completed = in_array(($row['pag_status'] ?? ''), ['Completed', 'Done']) || in_array(($row['pag_crx_stage'] ?? ''), ['PAG_CRX_Compelete', 'Completed', 'Done']);
+                                
+                                // Word Process
+                                $word_stat = trim((string)($row['word_status'] ?? ''));
+                                if (empty($word_stat) || $word_stat === 'Need to Assign') {
+                                    if ($is_pag_completed || in_array(($row['img_tab_stage'] ?? ''), ['IMG_COMPLETE', 'TAB_COMPLETE', 'IMG_TAB_COMPLETE'])) {
+                                        $word_stat = 'Completed';
+                                    } else {
+                                        $word_stat = 'Need to Assign';
+                                    }
+                                }
+                                $word_emp = !empty($row['assigned_to_img']) ? $row['assigned_to_img'] : (!empty($row['assigned_to_pag']) ? $row['assigned_to_pag'] : (!empty($row['pag_crx_assigned_to']) ? $row['pag_crx_assigned_to'] : ($row['assigned_pag'] ?? '')));
+                                
+                                $word_start = '—';
+                                if (!empty($row['img_start_time'])) {
+                                    $word_start = date('H:i', strtotime($row['img_start_time']));
+                                } elseif (!empty($row['pag_start_time'])) {
+                                    $word_start = date('H:i', strtotime($row['pag_start_time']));
+                                } elseif (!empty($row['pag_crx_start_time'])) {
+                                    $word_start = date('H:i', strtotime($row['pag_crx_start_time']));
+                                }
+
+                                $word_end = '—';
+                                if (!empty($row['img_end_time'])) {
+                                    $word_end = date('H:i', strtotime($row['img_end_time']));
+                                } elseif (!empty($row['pag_end_time'])) {
+                                    $word_end = date('H:i', strtotime($row['pag_end_time']));
+                                } elseif (!empty($row['pag_crx_end_time'])) {
+                                    $word_end = date('H:i', strtotime($row['pag_crx_end_time']));
+                                }
+
+                                // TS Process
+                                $ts_stat = trim((string)($row['pag_status_col'] ?? ''));
+                                if (empty($ts_stat) || $ts_stat === 'Need to Assign') {
+                                    if ($is_pag_completed) {
+                                        $ts_stat = 'Completed';
+                                    } else {
+                                        $ts_stat = 'Need to Assign';
+                                    }
+                                }
+                                $ts_emp = !empty($row['assigned_to_pag']) ? $row['assigned_to_pag'] : (!empty($row['pag_crx_assigned_to']) ? $row['pag_crx_assigned_to'] : ($row['assigned_pag'] ?? ''));
+                                
+                                $ts_start = '—';
+                                if (!empty($row['pag_start_time'])) {
+                                    $ts_start = date('H:i', strtotime($row['pag_start_time']));
+                                } elseif (!empty($row['pag_crx_start_time'])) {
+                                    $ts_start = date('H:i', strtotime($row['pag_crx_start_time']));
+                                }
+
+                                $ts_end = '—';
+                                if (!empty($row['pag_end_time'])) {
+                                    $ts_end = date('H:i', strtotime($row['pag_end_time']));
+                                } elseif (!empty($row['pag_crx_end_time'])) {
+                                    $ts_end = date('H:i', strtotime($row['pag_crx_end_time']));
+                                }
+                            ?>
+                            <td><?= getStatusBadge($word_stat, $word_emp, $emp_map) ?></td>
+                            <td><?= $word_start ?></td>
+                            <td><?= $word_end ?></td>
                             
                             <!-- TS Process & Times -->
-                            <td><?= getStatusBadge($row['pag_status_col'] ?? 'Need to Assign', $row['assigned_to_pag'] ?? '', $emp_map) ?></td>
-                            <td><?= !empty($row['pag_start_time']) ? date('H:i', strtotime($row['pag_start_time'])) : '—' ?></td>
-                            <td><?= !empty($row['pag_end_time']) ? date('H:i', strtotime($row['pag_end_time'])) : '—' ?></td>
+                            <td><?= getStatusBadge($ts_stat, $ts_emp, $emp_map) ?></td>
+                            <td><?= $ts_start ?></td>
+                            <td><?= $ts_end ?></td>
                             
                             <!-- TAT, Path & Priority -->
                             <td class="fw-bold"><?= intval($row['rtat'] ?? 0) ?></td>
@@ -615,7 +706,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             </td>
                             <!-- TAT Column -->
                             <?php
-                                $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']);
+                                $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']) || in_array($row['pag_crx_stage'] ?? '', ['PAG_CRX_Compelete', 'Completed', 'Done']);
                                 $end_d = $pag_done ? (($row['pag_date'] ?? null) ?: ($row['last_updated'] ?? null) ?: date('Y-m-d')) : null;
                                 $tat = getWorkingDaysWithoutSunday($row['job_date'] ?? '', $end_d);
                                 $bg = $pag_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');

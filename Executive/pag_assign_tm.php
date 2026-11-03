@@ -283,6 +283,8 @@ $pag_query = "SELECT pag.*,
                     c.client_id,
                     p.job_name as process_name,
                     ce.ce_date as ce_moved_date,
+                    ce.status as ce_status,
+                    ce.remarks as ce_remarks,
                     le.status as le_status,
                     le.last_updated as le_moved_date,
                     qc.status as qc_status,
@@ -668,7 +670,23 @@ require 'header.php';
                                     <!-- Due Date -->
                                     <td><?= formatDate($row['due_date']) ?></td>
                                     <!-- FQA Status -->
-                                    <td><span class="badge bg-info"><?= h($row['qc_status'] ?? 'Pending') ?></span></td>
+                                    <?php
+                                        $proc_name = strtoupper(str_replace(' ', '', $row['process_name'] ?? ''));
+                                        $has_ce = (strpos($proc_name, 'CE') !== false);
+                                        $ce_is_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']) || trim($row['ce_remarks'] ?? '') === 'Moved' || !empty($row['ce_moved_date']);
+                                        
+                                        if (!$has_ce || $ce_is_done) {
+                                            $fqa_badge_cls = 'badge bg-success';
+                                            $fqa_stat_label = 'Completed';
+                                        } elseif (!empty($row['assigned_to'])) {
+                                            $fqa_badge_cls = 'badge bg-primary';
+                                            $fqa_stat_label = 'In Progress';
+                                        } else {
+                                            $fqa_badge_cls = 'badge bg-info';
+                                            $fqa_stat_label = 'Need to Assign';
+                                        }
+                                    ?>
+                                    <td><span class="<?= $fqa_badge_cls ?>"><?= h($fqa_stat_label) ?></span></td>
                                     <!-- LE Status -->
                                     <td><span class="badge bg-info"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
                                     

@@ -462,6 +462,14 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 </main>
 
 <style>
+/* Page wrapper (same spacing as TL dashboard) */
+.main-content {
+    padding: 100px 5% 40px 5% !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+}
+
 /* Weekly Target Card */
 .weekly-target-card {
     /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
@@ -718,18 +726,21 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 
 /* Page Header */
 .page-title-container {
-    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+    display: block !important;
+    visibility: visible !important;
     background: #5e6b77 !important;
-    color: white;
-    padding: 20px;
+    color: white !important;
+    padding: 8px 12px;
     border-radius: 12px;
-    margin-bottom: 20px;
+    margin: 0 0 20px 0;
 }
 
 .page-title-container h1 {
+    display: block !important;
     margin: 0;
-    font-size: 2.5rem;
+    font-size: 1.1rem;
     font-weight: 700;
+    color: white !important;
 }
 
 .page-description {
