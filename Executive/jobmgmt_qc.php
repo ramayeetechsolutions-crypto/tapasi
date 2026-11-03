@@ -606,7 +606,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Process</th>
                             <th>CE Status</th>
                             <th>LE Status</th>
-                            <th>PAG Status</th>
+                            <th>TS Status</th>
                             <th>QC Assign</th>
                             <th>QC Start</th>
                             <th>QC End</th>
