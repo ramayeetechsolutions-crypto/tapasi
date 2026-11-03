@@ -17,6 +17,8 @@ if (!isset($_SESSION['teamname'])) {
 
 // Detect current page for menu highlighting
 $currentPage = basename($_SERVER['PHP_SELF']);
+// Release session lock early to prevent session file blocking across requests/tabs
+session_write_close();
 $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
 $employee_id = $_SESSION['uid'] ?? 0; // set at login
 

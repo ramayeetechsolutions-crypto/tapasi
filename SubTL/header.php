@@ -23,6 +23,8 @@ require 'db.php'; // Ensure db connection is available
 $employee_id = $_SESSION['uid'] ?? 0; 
 $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 $currentPage = basename($_SERVER['PHP_SELF']);
+// Release session lock early to prevent session file blocking across requests/tabs
+session_write_close();
 
 // --- DATABASE LOGIC FOR DYNAMIC MENU ---
 
