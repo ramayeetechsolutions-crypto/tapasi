@@ -2,28 +2,20 @@
 // Start a session if one is not already active
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
-    if(isset($_SESSION['uid'])) $exeid=$_SESSION['uid'];
 }
+$current_user_id = $_SESSION['uid'] ?? 0;
+$current_username = $_SESSION['username'] ?? '';
+$role_name = $_SESSION['role_name'] ?? '';
+if (isset($_SESSION['uid'])) $exeid = $_SESSION['uid'];
+
+// Release session lock early to allow parallel AJAX requests without blocking
+session_write_close();
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require 'db.php';
-
-// Auto-fix database schema for status column (Converts ENUM to VARCHAR automatically)
-$check_col = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'status'");
-if ($check_col) {
-    $col_data = $check_col->fetch_assoc();
-    if (strpos(strtolower($col_data['Type']), 'enum') !== false) {
-        $mysqli->query("ALTER TABLE ce MODIFY COLUMN status VARCHAR(100) DEFAULT 'Need to Assign'");
-    }
-}
-
-// Auto-add priority column if not exists
-$check_priority = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'priority'");
-if ($check_priority && $check_priority->num_rows == 0) {
-    $mysqli->query("ALTER TABLE ce ADD COLUMN priority VARCHAR(50) NULL DEFAULT NULL");
-}
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
@@ -35,52 +27,11 @@ function formatDate($date, $format = 'd-m-Y') {
     return $dateObj ? $dateObj->format($format) : $date;
 }
 
-// Get current user info
-$current_user_id = $_SESSION['uid'] ?? 0;
-$current_username = $_SESSION['username'] ?? '';
-$role_name = $_SESSION['role_name'] ?? '';
+// ==========================================
+// FAST AJAX HANDLERS (Execute without loading full page queries)
+// ==========================================
 
-// Get reporting manager for current user
-$reporting_manager = '';
-$current_user_name = '';
-if ($current_user_id) {
-    $stmt = $mysqli->prepare("SELECT employee_name, reporting_manager FROM employee_master WHERE employee_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("i", $current_user_id);
-        $stmt->execute();
-        $stmt->bind_result($current_user_name, $reporting_manager);
-        $stmt->fetch();
-        $stmt->close();
-    }
-}
-
-// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
-$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
-
-// Get all employees under the same reporting manager with TM role
-$tms = [];
-if ($effective_manager) {
-    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ?) 
-                 AND em.status = 'Active' 
-                 AND ur.role_name IN ('TM', 'TL', 'Admin')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($tm_query);
-    if ($stmt) {
-        $stmt->bind_param("ss", $effective_manager, $current_user_name);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($tm = $result->fetch_assoc()) {
-            $tms[] = $tm;
-        }
-        $stmt->close();
-    }
-}
-
-// --- START: Status Update AJAX ---
+// --- 1. Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
     $ce_id = (int)$_POST['ce_id'];
@@ -136,14 +87,15 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $stmt = $mysqli->prepare($update_query);
     $stmt->bind_param("si", $db_status, $ce_id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'status' => $db_status]);
+        echo json_encode(['success' => true, 'status' => $db_status, 'new_status' => $new_status, 'type' => $target_type]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
     }
+    $stmt->close();
     exit;
 }
 
-// --- START: Inline Edit AJAX (For Counts & Time) ---
+// --- 2. Inline Edit AJAX (For Counts & Time) ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     header('Content-Type: application/json');
     $ce_id = (int)$_POST['ce_id'];
@@ -153,20 +105,26 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     // Allowed fields for security
     $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
     if (in_array($field, $allowed_fields)) {
-        $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
-        $stmt->bind_param("si", $val, $ce_id);
+        if ($val === '') {
+            $stmt = $mysqli->prepare("UPDATE ce SET $field = NULL, last_updated = NOW() WHERE id = ?");
+            $stmt->bind_param("i", $ce_id);
+        } else {
+            $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
+            $stmt->bind_param("si", $val, $ce_id);
+        }
         if ($stmt->execute()) {
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
         }
+        $stmt->close();
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid field update']);
     }
     exit;
 }
 
-// Handle AJAX quick assignment
+// --- 3. Quick Assign AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     header('Content-Type: application/json');
     
@@ -193,24 +151,15 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $current_status = $ce_row['status'];
         $get_ce->close();
 
-        // SubTL Logics Integration: Stamp assignment time and set done_by
-        $current_datetime = date('Y-m-d H:i:s');
-        $employee_username = $_SESSION['username'] ?? null;
-        
-        if (!$employee_username) { 
-            throw new Exception('User session not found. Please log in.'); 
-        }
-
         // Target field in CE table
-        // Note: For CE table, FQA assignee is stored in assigned_to (since assigned_fqa column does not exist)
         if ($type == 'content') {
-            $update_ce = "UPDATE ce SET assigned_to_content = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, ce_date = ?, done_by = ?, last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET assigned_to_content = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
-            $stmt->bind_param("sssi", $assigned_to, $current_datetime, $employee_username, $ce_id);
+            $stmt->bind_param("si", $assigned_to, $ce_id);
         } elseif ($type == 'images') {
-            $update_ce = "UPDATE ce SET assigned_to_img = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, ce_date = ?, done_by = ?, last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET assigned_to_img = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
-            $stmt->bind_param("sssi", $assigned_to, $current_datetime, $employee_username, $ce_id);
+            $stmt->bind_param("si", $assigned_to, $ce_id);
         } elseif ($type == 'fqa') {
             $update_ce = "UPDATE ce SET last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
@@ -241,11 +190,15 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $mysqli->commit();
         $response['success'] = true;
         
-        foreach ($tms as $tm) {
-            if ($tm['employee_username'] == $assigned_to) {
-                $response['tm_name'] = $tm['employee_name'];
-                break;
+        $stmt_name = $mysqli->prepare("SELECT employee_name FROM employee_master WHERE employee_username = ? LIMIT 1");
+        if ($stmt_name) {
+            $stmt_name->bind_param("s", $assigned_to);
+            $stmt_name->execute();
+            $res_name = $stmt_name->get_result();
+            if ($row_name = $res_name->fetch_assoc()) {
+                $response['tm_name'] = $row_name['employee_name'];
             }
+            $stmt_name->close();
         }
     } catch (Exception $e) {
         $mysqli->rollback();
@@ -254,6 +207,48 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     
     echo json_encode($response);
     exit;
+}
+
+// ==========================================
+// FULL PAGE DATA INITIALIZATION
+// ==========================================
+
+// Get reporting manager for current user
+$reporting_manager = '';
+$current_user_name = '';
+if ($current_user_id) {
+    $stmt = $mysqli->prepare("SELECT employee_name, reporting_manager FROM employee_master WHERE employee_id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $current_user_id);
+        $stmt->execute();
+        $stmt->bind_result($current_user_name, $reporting_manager);
+        $stmt->fetch();
+        $stmt->close();
+    }
+}
+
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
+$tms = [];
+$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_tms = $mysqli->query($tm_query);
+if ($res_tms) {
+    while ($tm = $res_tms->fetch_assoc()) {
+        $tms[] = $tm;
+    }
 }
 
 // Handle regular form submission
@@ -399,6 +394,20 @@ if (!empty($images_tm_filter)) {
 
 $where_sql = implode(' AND ', $where_conditions);
 
+// --- START PAGINATION FIX ---
+$limit = 15; // Number of rows per page
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+$count_query = "SELECT COUNT(*) as total FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id LEFT JOIN client_master c ON j.client_id = c.client_id WHERE $where_sql";
+$stmt_count = $mysqli->prepare($count_query);
+if (!empty($params)) { $stmt_count->bind_param($types, ...$params); }
+$stmt_count->execute();
+$total_rows = $stmt_count->get_result()->fetch_assoc()['total'];
+$stmt_count->close();
+$total_pages = ceil($total_rows / $limit);
+// --- END PAGINATION FIX ---
+
 // Main query
 $ce_query = "SELECT ce.*, 
                     j.journal_issue, 
@@ -420,6 +429,12 @@ $ce_query = "SELECT ce.*,
              LEFT JOIN client_master c ON j.client_id = c.client_id
              WHERE $where_sql
              ORDER BY $sort $dir";
+
+// Apply LIMIT and OFFSET
+$ce_query .= " LIMIT ? OFFSET ?";
+$params[] = $limit;
+$params[] = $offset;
+$types .= 'ii';
 
 $stmt = $mysqli->prepare($ce_query);
 if (!empty($params)) {
@@ -1143,7 +1158,7 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'ce', this.value)">
+                                                    data-prev="<?= h($ce_curr_status) ?>" onchange="updateStatus(<?= $row['id'] ?>, 'ce', this.value, this)">
                                                 <option value="Need to Assign" <?= ($ce_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($ce_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($ce_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
@@ -1207,7 +1222,7 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'ref', this.value)">
+                                                    data-prev="<?= h($ref_curr_status) ?>" onchange="updateStatus(<?= $row['id'] ?>, 'ref', this.value, this)">
                                                 <option value="Need to Assign" <?= ($ref_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($ref_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($ref_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
@@ -1269,7 +1284,7 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'fqa', this.value)">
+                                                    data-prev="<?= h($fqa_curr_status) ?>" onchange="updateStatus(<?= $row['id'] ?>, 'fqa', this.value, this)">
                                                 <option value="Need to Assign" <?= ($fqa_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($fqa_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($fqa_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
@@ -1346,11 +1361,27 @@ require 'header.php';
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">
-                            <i class="fas fa-list me-1"></i> Showing <?= $ce_result->num_rows ?> job(s)
+                            <i class="fas fa-list me-1"></i> Showing <?= $ce_result->num_rows ?> job(s) on this page (Total: <?= $total_rows ?>)
                         </small>
-                        <!-- <small class="text-muted">
-                            Reporting Manager: <strong><?= h($reporting_manager) ?></strong>
-                        </small> -->
+                        
+                        <!-- Pagination Controls -->
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                <?php 
+                                    $query_string = $_GET; unset($query_string['page']);
+                                    $qs = http_build_query($query_string); $qs = $qs ? '&' . $qs : '';
+                                ?>
+                                <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $page - 1 ?><?= $qs ?>">Previous</a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link text-dark">Page <?= $page ?> of <?= $total_pages ?></span>
+                                </li>
+                                <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $page + 1 ?><?= $qs ?>">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -1412,8 +1443,11 @@ require 'header.php';
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
-       // Status Update Function with stage type support
-        function updateStatus(ceId, type, newStatus) {
+       // Status Update Function with instant DOM badge update
+        function updateStatus(ceId, type, newStatus, selectElement) {
+            const select = selectElement || (typeof event !== 'undefined' ? event.target : null);
+            const prevValue = select ? (select.getAttribute('data-prev') || select.value) : '';
+
             // Frontend validation to enforce time completion
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + ceId);
@@ -1427,14 +1461,15 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500); // reload to revert the dropdown change
+                            if (select) { select.value = prevValue; }
                             return; 
                         }
                     }
                 }
             }
 
-            showLoading();
+            if (select) { select.disabled = true; }
+
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1442,18 +1477,37 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
+                if (select) { select.disabled = false; }
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
-                    setTimeout(() => { window.location.reload(); }, 500);
+                    if (select) { 
+                        select.setAttribute('data-prev', newStatus);
+                        
+                        // INSTANT UI BADGE UPDATE (Green for Completed, Purple for In Progress)
+                        const cell = select.closest('.assignment-cell');
+                        if (cell) {
+                            const badge = cell.querySelector('.tm-badge');
+                            if (badge) {
+                                badge.classList.remove('completed', 'in-progress');
+                                if (newStatus === 'Completed') {
+                                    badge.classList.add('completed');
+                                } else if (newStatus === 'In Progress') {
+                                    badge.classList.add('in-progress');
+                                }
+                            }
+                        }
+                    }
                 } else { 
+                    if (select) { select.value = prevValue; }
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             }).catch(error => { 
-                hideLoading(); 
+                if (select) { 
+                    select.disabled = false; 
+                    select.value = prevValue;
+                }
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
+                showNotification('danger', 'Network error. Please try again.');
             });
         }
 
@@ -1468,7 +1522,7 @@ require 'header.php';
                 const currentTime = currentHour + ':' + currentMinute;
 
                 // Compare selected time with current time (Forces ONLY current time)
-                if (value !== currentTime) {   // <---- INDHA LINE-A IPPADI MAATHUNGA
+                if (value !== currentTime) {
                     if (element) {
                         element.value = currentTime; 
                         value = currentTime;
@@ -1479,7 +1533,6 @@ require 'header.php';
             }
             // --- BACKDATE PREVENTION LOGIC END ---
 
-            showLoading();
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1487,7 +1540,6 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) { 
                     if (field === 'remarks' && value === 'Moved') {
                         showNotification('success', 'Job moved to LE Assign successfully!');
@@ -1497,7 +1549,6 @@ require 'header.php';
                             rowEl.style.opacity = '0';
                             setTimeout(() => { 
                                 rowEl.remove(); 
-                                window.location.reload(); 
                             }, 400);
                         }
                     } else {
@@ -1505,10 +1556,10 @@ require 'header.php';
                     }
                 } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+            }).catch(error => { console.error('Error:', error); });
         }
         
-        // Quick assign function
+        // Quick assign function with instant TM badge update
         function quickAssign(ceId, jobId, type, selectElement) {
             const selectedValue = selectElement.value;
             if (!selectedValue) return;
@@ -1535,19 +1586,46 @@ require 'header.php';
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
                     document.getElementById('row-' + ceId).classList.add('assigned');
-                    setTimeout(() => { window.location.reload(); }, 800); // Reload to show new badge
+                    selectElement.options[0].text = 'Change TM';
+
+                    // Update status dropdown and badge tag in DOM dynamically
+                    const cell = selectElement.closest('.assignment-cell');
+                    if (cell) {
+                        const statusSelect = cell.querySelector('select.form-select');
+                        if (statusSelect && statusSelect.value === 'Need to Assign') {
+                            statusSelect.value = 'In Progress';
+                            statusSelect.setAttribute('data-prev', 'In Progress');
+                        }
+
+                        let badge = cell.querySelector('.tm-badge');
+                        const iconClass = type === 'content' ? 'fa-file-alt' : (type === 'images' ? 'fa-image' : 'fa-search');
+                        if (badge) {
+                            badge.className = 'tm-badge in-progress mb-1';
+                            badge.innerHTML = `<i class="fas ${iconClass}"></i> ${selectedValue}`;
+                        } else {
+                            const badgeDiv = document.createElement('div');
+                            badgeDiv.className = 'tm-badge in-progress mb-1';
+                            badgeDiv.title = typeLabel + ' TM';
+                            badgeDiv.innerHTML = `<i class="fas ${iconClass}"></i> ${selectedValue}`;
+                            const smallName = document.createElement('small');
+                            smallName.className = 'text-muted d-block mb-1';
+                            smallName.textContent = tmName;
+                            selectElement.parentNode.insertBefore(badgeDiv, selectElement);
+                            selectElement.parentNode.insertBefore(smallName, selectElement);
+                        }
+                    }
                 } else {
                     showNotification('danger', 'Error: ' + data.message);
                     selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
-                hideLoading(); selectElement.disabled = false;
+                hideLoading(); 
+                selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 selectElement.value = selectElement.getAttribute('data-previous') || '';
             });
         }
-        
         // Show full assignment modal
         function showFullAssignment(ceId, jobId) {
             const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
