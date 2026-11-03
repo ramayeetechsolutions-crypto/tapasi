@@ -107,7 +107,6 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     }
     exit;
 }
-
 // --- START: Inline Edit AJAX (For Time) ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     header('Content-Type: application/json');
@@ -121,10 +120,43 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             $stmt = $mysqli->prepare("UPDATE qc_crx SET $field = NULL, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("i", $qc_id);
         } else {
+            if ($field === 'qc_crx_stage' && $val === 'Moved') {
+                $mysqli->query("UPDATE qc_crx SET is_moved = 1 WHERE id = $qc_id");
+            }
             $stmt = $mysqli->prepare("UPDATE qc_crx SET $field = ?, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("si", $val, $qc_id);
         }
         if ($stmt->execute()) {
+            // Auto-sync PAG status and assigned TM to pag and jobs tables when updated in QC_CRX
+            if ($field === 'pag_crx_stage') {
+                if (in_array($val, ['PAG_CRX_Compelete', 'Completed', 'Done'])) {
+                    $j_res = $mysqli->query("SELECT job_id, pag_crx_assigned_to FROM qc_crx WHERE id = $qc_id");
+                    if ($j_row = $j_res->fetch_assoc()) {
+                        $jid = (int)$j_row['job_id'];
+                        $pag_tm = $j_row['pag_crx_assigned_to'];
+                        if ($jid > 0) {
+                            if (!empty($pag_tm)) {
+                                $mysqli->query("UPDATE pag SET status = 'Completed', assigned_to_pag = '$pag_tm', last_updated = NOW() WHERE job_id = $jid");
+                                $mysqli->query("UPDATE jobs SET assigned_pag = '$pag_tm' WHERE job_id = $jid");
+                            } else {
+                                $mysqli->query("UPDATE pag SET status = 'Completed', last_updated = NOW() WHERE job_id = $jid");
+                            }
+                        }
+                    }
+                }
+            }
+            if ($field === 'pag_crx_assigned_to' && !empty($val)) {
+                $j_res = $mysqli->query("SELECT job_id, pag_crx_stage FROM qc_crx WHERE id = $qc_id");
+                if ($j_row = $j_res->fetch_assoc()) {
+                    $jid = (int)$j_row['job_id'];
+                    $pag_stg = $j_row['pag_crx_stage'];
+                    if ($jid > 0) {
+                        $status_sql = in_array($pag_stg, ['PAG_CRX_Compelete', 'Completed', 'Done']) ? ", status = 'Completed'" : "";
+                        $mysqli->query("UPDATE pag SET assigned_to_pag = '$val' $status_sql, last_updated = NOW() WHERE job_id = $jid");
+                        $mysqli->query("UPDATE jobs SET assigned_pag = '$val' WHERE job_id = $jid");
+                    }
+                }
+            }
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -140,17 +172,33 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_to_report') {
     header('Content-Type: application/json');
     $qc_id = (int)$_POST['qc_id'];
     $job_id = isset($_POST['job_id']) ? (int)$_POST['job_id'] : 0;
+    // Mark is_moved = 1 without overwriting qc_crx_stage so stage details are preserved in the report
     $stmt = $mysqli->prepare("UPDATE qc_crx SET is_moved = 1, last_updated = NOW() WHERE id = ?");
     $stmt->bind_param("i", $qc_id);
     if ($stmt->execute()) {
         $stmt->close();
+        if ($job_id > 0) {
+            $mysqli->query("UPDATE qc_crx SET is_moved = 1, last_updated = NOW() WHERE job_id = $job_id");
+            // Also ensure if pag_crx_stage is complete, pag table is marked completed
+            $c_res = $mysqli->query("SELECT pag_crx_stage, pag_crx_assigned_to FROM qc_crx WHERE id = $qc_id");
+            if ($c_row = $c_res->fetch_assoc()) {
+                if (in_array($c_row['pag_crx_stage'], ['PAG_CRX_Compelete', 'Completed', 'Done'])) {
+                    $ptm = $c_row['pag_crx_assigned_to'];
+                    if (!empty($ptm)) {
+                        $mysqli->query("UPDATE pag SET status = 'Completed', assigned_to_pag = '$ptm', last_updated = NOW() WHERE job_id = $job_id");
+                        $mysqli->query("UPDATE jobs SET assigned_pag = '$ptm' WHERE job_id = $job_id");
+                    } else {
+                        $mysqli->query("UPDATE pag SET status = 'Completed', last_updated = NOW() WHERE job_id = $job_id");
+                    }
+                }
+            }
+        }
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
     }
     exit;
 }
-
 // Helper to style CRX (Orange) vs Complete (Green) dropdowns
 if (!function_exists('getStageSelectStyle')) {
     function getStageSelectStyle($val) {
@@ -359,26 +407,36 @@ $params = [];
 $types = '';
 
 if (!empty($search)) {
-    $where_conditions[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR qc.journal_issue LIKE ? OR qc.article LIKE ? OR qc.process LIKE ?)";
+    $where_conditions[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR qc.journal_issue LIKE ? OR qc.article LIKE ? OR qc.process LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ? OR p.job_name LIKE ?)";
     $search_term = "%$search%";
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $types .= 'sssss';
+    for ($i = 0; $i < 8; $i++) {
+        $params[] = $search_term;
+    }
+    $types .= 'ssssssss';
 }
 
 if (!empty($status_filter)) {
-    $where_conditions[] = "qc.status = ?";
-    $params[] = $status_filter;
-    $types .= 's';
+    if ($status_filter === 'Completed') {
+        $where_conditions[] = "(qc.status = 'Completed' OR qc.qc_crx_stage IN ('QC_Complete', 'QC_RECRX_COMPLETE') OR qc.pag_crx_stage = 'PAG_CRX_Compelete')";
+    } elseif ($status_filter === 'In Progress') {
+        $where_conditions[] = "(qc.status = 'In Progress' OR qc.qc_crx_stage IN ('QC_CRX', 'QC_RECRX') OR qc.pag_crx_stage = 'Assign PAG-CRX' OR (qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != ''))";
+    } elseif ($status_filter === 'Need to Assign') {
+        $where_conditions[] = "(qc.status = 'Need to Assign' OR qc.qc_crx_stage IS NULL OR qc.qc_crx_stage = '' OR qc.assigned_to_qc IS NULL OR qc.assigned_to_qc = '')";
+    } else {
+        $where_conditions[] = "(qc.status = ? OR qc.qc_crx_stage = ? OR qc.pag_crx_stage = ?)";
+        $params[] = $status_filter;
+        $params[] = $status_filter;
+        $params[] = $status_filter;
+        $types .= 'sss';
+    }
 }
 
 if (!empty($qc_tm_filter)) {
-    $where_conditions[] = "qc.assigned_to_qc = ?";
+    $where_conditions[] = "(qc.assigned_to_qc = ? OR j.assigned_qc = ? OR qc.pag_crx_assigned_to = ?)";
     $params[] = $qc_tm_filter;
-    $types .= 's';
+    $params[] = $qc_tm_filter;
+    $params[] = $qc_tm_filter;
+    $types .= 'sss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -446,12 +504,17 @@ $status_result = $mysqli->query($status_query);
 // Get count statistics (Using same conditions for accuracy)
 $stats_query = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN qc.status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN qc.status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN qc.status = 'Need to Assign' OR qc.qc_crx_stage IS NULL OR qc.qc_crx_stage = '' OR qc.assigned_to_qc IS NULL OR qc.assigned_to_qc = '' THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN qc.status = 'In Progress' OR qc.qc_crx_stage IN ('QC_CRX', 'QC_RECRX') OR qc.pag_crx_stage = 'Assign PAG-CRX' THEN 1 ELSE 0 END) as in_progress,
                     SUM(CASE WHEN qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != '' THEN 1 ELSE 0 END) as qc_assigned
                 FROM qc_crx qc 
                 LEFT JOIN jobs j ON qc.job_id = j.job_id
+                LEFT JOIN client_master c ON j.client_id = c.client_id
                 LEFT JOIN job_master p ON j.process_id = p.job_id
+                LEFT JOIN ce ON j.job_id = ce.job_id
+                LEFT JOIN le ON j.job_id = le.job_id
+                LEFT JOIN pag ON j.job_id = pag.job_id
+                LEFT JOIN qc q_orig ON qc.job_id = q_orig.job_id
                 WHERE $where_sql";
 
 $stats_stmt = $mysqli->prepare($stats_query);
@@ -624,17 +687,12 @@ require 'header.php';
                            value="<?= h($search) ?>">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small">Status</label>
+                                        <label class="form-label small">Status</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
-                        <?php if ($status_result): ?>
-                            <?php while ($status = $status_result->fetch_assoc()): ?>
-                                <option value="<?= h($status['status']) ?>" 
-                                    <?= $status_filter == $status['status'] ? 'selected' : '' ?>>
-                                    <?= h($status['status']) ?>
-                                </option>
-                            <?php endwhile; ?>
-                        <?php endif; ?>
+                        <option value="Completed" <?= $status_filter == 'Completed' ? 'selected' : '' ?>>Completed</option>
+                        <option value="In Progress" <?= $status_filter == 'In Progress' ? 'selected' : '' ?>>In Progress</option>
+                        <option value="Need to Assign" <?= $status_filter == 'Need to Assign' ? 'selected' : '' ?>>Need to Assign</option>
                     </select>
                 </div>
                 <div class="col-md-3">
