@@ -128,16 +128,29 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             // Auto-sync PAG status and assigned TM to pag and jobs tables when updated in QC_CRX
             if ($field === 'pag_crx_stage') {
                 if (in_array($val, ['PAG_CRX_Compelete', 'Completed', 'Done'])) {
-                    $j_res = $mysqli->query("SELECT job_id, pag_crx_assigned_to FROM qc_crx WHERE id = $qc_id");
+                    $j_res = $mysqli->query("SELECT job_id, pag_crx_assigned_to, pag_crx_start_time, pag_crx_end_time FROM qc_crx WHERE id = $qc_id");
                     if ($j_row = $j_res->fetch_assoc()) {
                         $jid = (int)$j_row['job_id'];
-                        $pag_tm = $j_row['pag_crx_assigned_to'];
+                        $pag_tm = $j_row['pag_crx_assigned_to'] ?? '';
+                        $st = $j_row['pag_crx_start_time'] ?? null;
+                        $et = $j_row['pag_crx_end_time'] ?? null;
+                        $st_sql = $st ? "'$st'" : "NULL";
+                        $et_sql = $et ? "'$et'" : "NULL";
                         if ($jid > 0) {
+                            $mysqli->query("UPDATE pag SET 
+                                status = 'Completed', 
+                                pag_status_col = 'Completed', 
+                                word_status = 'Completed',
+                                assigned_to_pag = IF(COALESCE(assigned_to_pag,'')='', '$pag_tm', assigned_to_pag),
+                                assigned_to_img = IF(COALESCE(assigned_to_img,'')='', '$pag_tm', assigned_to_img),
+                                pag_start_time = IF(pag_start_time IS NULL, $st_sql, pag_start_time),
+                                pag_end_time = IF(pag_end_time IS NULL, $et_sql, pag_end_time),
+                                img_start_time = IF(img_start_time IS NULL, $st_sql, img_start_time),
+                                img_end_time = IF(img_end_time IS NULL, $et_sql, img_end_time),
+                                last_updated = NOW() 
+                            WHERE job_id = $jid");
                             if (!empty($pag_tm)) {
-                                $mysqli->query("UPDATE pag SET status = 'Completed', assigned_to_pag = '$pag_tm', last_updated = NOW() WHERE job_id = $jid");
                                 $mysqli->query("UPDATE jobs SET assigned_pag = '$pag_tm' WHERE job_id = $jid");
-                            } else {
-                                $mysqli->query("UPDATE pag SET status = 'Completed', last_updated = NOW() WHERE job_id = $jid");
                             }
                         }
                     }
@@ -149,8 +162,8 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
                     $jid = (int)$j_row['job_id'];
                     $pag_stg = $j_row['pag_crx_stage'];
                     if ($jid > 0) {
-                        $status_sql = in_array($pag_stg, ['PAG_CRX_Compelete', 'Completed', 'Done']) ? ", status = 'Completed'" : "";
-                        $mysqli->query("UPDATE pag SET assigned_to_pag = '$val' $status_sql, last_updated = NOW() WHERE job_id = $jid");
+                        $status_sql = in_array($pag_stg, ['PAG_CRX_Compelete', 'Completed', 'Done']) ? ", status = 'Completed', pag_status_col = 'Completed', word_status = 'Completed'" : "";
+                        $mysqli->query("UPDATE pag SET assigned_to_pag = '$val', assigned_to_img = IF(COALESCE(assigned_to_img,'')='', '$val', assigned_to_img) $status_sql, last_updated = NOW() WHERE job_id = $jid");
                         $mysqli->query("UPDATE jobs SET assigned_pag = '$val' WHERE job_id = $jid");
                     }
                 }
@@ -178,15 +191,28 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_to_report') {
         if ($job_id > 0) {
             $mysqli->query("UPDATE qc_crx SET is_moved = 1, last_updated = NOW() WHERE job_id = $job_id");
             // Also ensure if pag_crx_stage is complete, pag table is marked completed
-            $c_res = $mysqli->query("SELECT pag_crx_stage, pag_crx_assigned_to FROM qc_crx WHERE id = $qc_id");
+            $c_res = $mysqli->query("SELECT pag_crx_stage, pag_crx_assigned_to, pag_crx_start_time, pag_crx_end_time FROM qc_crx WHERE id = $qc_id");
             if ($c_row = $c_res->fetch_assoc()) {
                 if (in_array($c_row['pag_crx_stage'], ['PAG_CRX_Compelete', 'Completed', 'Done'])) {
-                    $ptm = $c_row['pag_crx_assigned_to'];
+                    $ptm = $c_row['pag_crx_assigned_to'] ?? '';
+                    $st = $c_row['pag_crx_start_time'] ?? null;
+                    $et = $c_row['pag_crx_end_time'] ?? null;
+                    $st_sql = $st ? "'$st'" : "NULL";
+                    $et_sql = $et ? "'$et'" : "NULL";
+                    $mysqli->query("UPDATE pag SET 
+                        status = 'Completed', 
+                        pag_status_col = 'Completed', 
+                        word_status = 'Completed',
+                        assigned_to_pag = IF(COALESCE(assigned_to_pag,'')='', '$ptm', assigned_to_pag),
+                        assigned_to_img = IF(COALESCE(assigned_to_img,'')='', '$ptm', assigned_to_img),
+                        pag_start_time = IF(pag_start_time IS NULL, $st_sql, pag_start_time),
+                        pag_end_time = IF(pag_end_time IS NULL, $et_sql, pag_end_time),
+                        img_start_time = IF(img_start_time IS NULL, $st_sql, img_start_time),
+                        img_end_time = IF(img_end_time IS NULL, $et_sql, img_end_time),
+                        last_updated = NOW() 
+                    WHERE job_id = $job_id");
                     if (!empty($ptm)) {
-                        $mysqli->query("UPDATE pag SET status = 'Completed', assigned_to_pag = '$ptm', last_updated = NOW() WHERE job_id = $job_id");
                         $mysqli->query("UPDATE jobs SET assigned_pag = '$ptm' WHERE job_id = $job_id");
-                    } else {
-                        $mysqli->query("UPDATE pag SET status = 'Completed', last_updated = NOW() WHERE job_id = $job_id");
                     }
                 }
             }
