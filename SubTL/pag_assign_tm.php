@@ -248,38 +248,46 @@ $where_conditions = [
     "pag.status != 'Completed'", 
     "pag.status != 'Done'",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'TS', 'TS+XML', 'CE+TS', 'CE+TS+XML')",
-    "(p.job_name NOT LIKE '%CE%' OR le.status_button = 'Moved' OR EXISTS (SELECT 1 FROM job_uploads ju WHERE ju.job_id = pag.job_id))"
+    "(p.job_name NOT LIKE '%CE%' OR TRIM(COALESCE(ce.remarks, '')) = 'Moved' OR ce.status IN ('Completed', 'Done') OR le.status_button = 'Moved' OR EXISTS (SELECT 1 FROM job_uploads ju WHERE ju.job_id = pag.job_id))"
 ];
 $params = [];
 $types = '';
 
 if (!empty($search)) {
-    $where_conditions[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR pag.issue LIKE ? OR pag.articles LIKE ? OR pag.process LIKE ?)";
+    $where_conditions[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR pag.issue LIKE ? OR pag.articles LIKE ? OR pag.process LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ? OR p.job_name LIKE ?)";
     $search_term = "%$search%";
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $types .= 'sssss';
+    for ($i = 0; $i < 8; $i++) {
+        $params[] = $search_term;
+    }
+    $types .= 'ssssssss';
 }
 
 if (!empty($status_filter)) {
-    $where_conditions[] = "pag.status = ?";
-    $params[] = $status_filter;
-    $types .= 's';
+    if ($status_filter === 'Need to Assign') {
+        $where_conditions[] = "(pag.status = 'Need to Assign' OR pag.pag_status_col = 'Need to Assign' OR pag.word_status = 'Need to Assign' OR pag.table_status = 'Need to Assign' OR pag.assigned_to_pag IS NULL OR pag.assigned_to_pag = '')";
+    } elseif ($status_filter === 'In Progress') {
+        $where_conditions[] = "(pag.status = 'In Progress' OR pag.pag_status_col = 'In Progress' OR pag.word_status IN ('W-In process', 'In Progress') OR pag.table_status = 'In Progress' OR (pag.assigned_to_pag IS NOT NULL AND pag.assigned_to_pag != ''))";
+    } elseif ($status_filter === 'Completed') {
+        $where_conditions[] = "(pag.status IN ('Completed', 'Done') OR pag.pag_status_col = 'Completed' OR pag.word_status IN ('Completed', 'W-Complete', 'ID_Complete'))";
+    } else {
+        $where_conditions[] = "pag.status = ?";
+        $params[] = $status_filter;
+        $types .= 's';
+    }
 }
 
 if (!empty($pag_tm_filter)) {
-    $where_conditions[] = "pag.assigned_to_pag = ?";
+    $where_conditions[] = "(pag.assigned_to_pag = ? OR j.assigned_pag = ?)";
     $params[] = $pag_tm_filter;
-    $types .= 's';
+    $params[] = $pag_tm_filter;
+    $types .= 'ss';
 }
 
 if (!empty($images_tm_filter)) {
-    $where_conditions[] = "pag.assigned_to_img = ?";
+    $where_conditions[] = "(pag.assigned_to_img = ? OR pag.assigned_to_table = ?)";
     $params[] = $images_tm_filter;
-    $types .= 's';
+    $params[] = $images_tm_filter;
+    $types .= 'ss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -332,13 +340,15 @@ $status_result = $mysqli->query($status_query);
 // Get count statistics (Using same conditions for accuracy)
 $stats_query = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN pag.status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN pag.status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN pag.status = 'Need to Assign' OR pag.pag_status_col = 'Need to Assign' OR pag.table_status = 'Need to Assign' OR pag.assigned_to_pag IS NULL OR pag.assigned_to_pag = '' THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN pag.status = 'In Progress' OR pag.pag_status_col = 'In Progress' OR (pag.assigned_to_pag IS NOT NULL AND pag.assigned_to_pag != '') THEN 1 ELSE 0 END) as in_progress,
                     SUM(CASE WHEN pag.assigned_to_pag IS NOT NULL AND pag.assigned_to_pag != '' THEN 1 ELSE 0 END) as pag_assigned,
-                    SUM(CASE WHEN pag.assigned_to_img IS NOT NULL AND pag.assigned_to_img != '' THEN 1 ELSE 0 END) as images_assigned
+                    SUM(CASE WHEN (pag.assigned_to_img IS NOT NULL AND pag.assigned_to_img != '') OR (pag.assigned_to_table IS NOT NULL AND pag.assigned_to_table != '') THEN 1 ELSE 0 END) as images_assigned
                 FROM pag 
                 LEFT JOIN jobs j ON pag.job_id = j.job_id
+                LEFT JOIN client_master c ON j.client_id = c.client_id
                 LEFT JOIN job_master p ON j.process_id = p.job_id
+                LEFT JOIN ce ON j.job_id = ce.job_id
                 LEFT JOIN le ON j.job_id = le.job_id
                 WHERE $where_sql";
 
@@ -537,17 +547,11 @@ require 'header.php';
                            value="<?= h($search) ?>">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small">Status</label>
+                                        <label class="form-label small">Status</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
-                        <?php if ($status_result): ?>
-                            <?php while ($status = $status_result->fetch_assoc()): ?>
-                                <option value="<?= h($status['status']) ?>" 
-                                    <?= $status_filter == $status['status'] ? 'selected' : '' ?>>
-                                    <?= h($status['status']) ?>
-                                </option>
-                            <?php endwhile; ?>
-                        <?php endif; ?>
+                        <option value="Need to Assign" <?= $status_filter == 'Need to Assign' ? 'selected' : '' ?>>Need to Assign</option>
+                        <option value="In Progress" <?= $status_filter == 'In Progress' ? 'selected' : '' ?>>In Progress</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -734,6 +738,7 @@ require 'header.php';
                                         <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table Start" value="<?= !empty($row['table_start_time']) ? date('H:i', strtotime($row['table_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_start_time', t, this);">
                                         <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table End" value="<?= !empty($row['table_end_time']) ? date('H:i', strtotime($row['table_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_end_time', t, this);">
                                             </div>
+                                    </td>
                                     
                                     <!-- Process -->
                                     <td><span class="badge bg-secondary"><?= h($row['process_name'] ?? 'N/A') ?></span></td>
