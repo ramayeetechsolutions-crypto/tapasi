@@ -21,17 +21,33 @@ function redirect_with($params = []) {
     exit;
 }
 
-// Fetch dropdown data from master tables
-$employees = $mysqli->query("SELECT employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name");
-$clients = $mysqli->query("SELECT client_name, team_client_name FROM client_master WHERE status = 'Active' ORDER BY client_name");
+// Fetch dropdown data from master tables (Filtered for UQ members only)
+$employees = $mysqli->query("
+    SELECT DISTINCT em.employee_name 
+    FROM employee_master em
+    LEFT JOIN team_master tm_tbl ON em.team_id = tm_tbl.team_id
+    WHERE (
+        tm_tbl.team_name LIKE '%UQ%'
+        OR em.team_id LIKE '%UQ%'
+        OR em.process LIKE '%UQ%'
+        OR EXISTS (
+            SELECT 1 FROM process_master pm 
+            WHERE FIND_IN_SET(pm.process_id, em.process) 
+            AND pm.process_name LIKE '%UQ%'
+        )
+    ) 
+    AND em.status = 'Active' 
+    ORDER BY em.employee_name ASC
+");
+$clients = $mysqli->query("SELECT DISTINCT team_client_name FROM client_master WHERE status = 'Active' AND team_client_name IS NOT NULL AND team_client_name != '' ORDER BY team_client_name");
 
 // Fetch articles from jobs table
 $articles_query = $mysqli->query("
-    SELECT DISTINCT j.article, cm.client_name 
+    SELECT DISTINCT j.article, cm.client_name, cm.team_client_name 
     FROM jobs j 
     LEFT JOIN client_master cm ON j.client_id = cm.client_id 
     WHERE j.article != '' AND j.article IS NOT NULL 
-    ORDER BY cm.client_name, j.article
+    ORDER BY cm.team_client_name, j.article
 ");
 
 // Create an array of articles with client names
@@ -40,7 +56,7 @@ if ($articles_query && $articles_query->num_rows > 0) {
     while($row = $articles_query->fetch_assoc()) {
         $articles_data[] = [
             'article' => $row['article'],
-            'client_name' => $row['client_name']
+            'client_name' => $row['team_client_name'] ?: $row['client_name']
         ];
     }
 }
@@ -59,6 +75,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_taken_by = trim($_POST['error_taken_by'] ?? '');
         $reason_for_errors = trim($_POST['reason_for_errors'] ?? '');
         
+        // New fields
+        $team = trim($_POST['team'] ?? 'UQ');
+        $department = trim($_POST['department'] ?? 'UQ');
+        $internal_external = trim($_POST['internal_external'] ?? '');
+        $error_subtype = trim($_POST['error_subtype'] ?? '');
+        $yn = trim($_POST['yn'] ?? '');
+        
         // Basic validation
         if ($week === '' || $date === '' || $client === '') {
             redirect_with(['msg' => 'Week, Date and Client are required.', 'type' => 'danger']);
@@ -66,12 +89,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Convert date format for MySQL
         $mysql_date = date('Y-m-d', strtotime($date));
+
+        // Photo Upload Logic
+        $error_photo = '';
+        if (isset($_FILES['error_photo']) && $_FILES['error_photo']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = 'uploads/error_photos/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            $ext = pathinfo($_FILES['error_photo']['name'], PATHINFO_EXTENSION);
+            $error_photo = 'err_' . time() . '_' . rand(1000,9999) . '.' . $ext;
+            if (!move_uploaded_file($_FILES['error_photo']['tmp_name'], $uploadDir . $error_photo)) {
+                $error_photo = ''; 
+            }
+        }
         
         if ($action === 'add') {
-            // Insert new error log
-            $stmt = $mysqli->prepare("INSERT INTO article_errors (week, date, client, article, type_of_errors, team_error_made_by, error_taken_by, reason_for_errors, status, created_date) 
-                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
-            $stmt->bind_param("ssssssss", $week, $mysql_date, $client, $article, $type_of_errors, $team_error_made_by, $error_taken_by, $reason_for_errors);
+            $stmt = $mysqli->prepare("INSERT INTO article_errors (week, date, client, article, type_of_errors, error_subtype, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date) 
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
+            $stmt->bind_param("ssssssssss", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $error_photo);
             
             if ($stmt->execute()) {
                 redirect_with(['msg' => "Article error entry added successfully", 'type' => 'success']);
@@ -85,11 +121,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0);
             
             if ($id > 0) {
-                // Update error log
-                $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, 
-                                         type_of_errors = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ? 
-                                         WHERE id = ?");
-                $stmt->bind_param("ssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $team_error_made_by, $error_taken_by, $reason_for_errors, $id);
+                if ($error_photo !== '') {
+                    $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, type_of_errors = ?, error_subtype = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ?, error_photo = ? WHERE id = ?");
+                    $stmt->bind_param("ssssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $error_photo, $id);
+                } else {
+                    $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, type_of_errors = ?, error_subtype = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ? WHERE id = ?");
+                    $stmt->bind_param("sssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $id);
+                }
                 
                 if ($stmt->execute()) {
                     redirect_with(['msg' => "Article error updated successfully", 'type' => 'success']);
@@ -147,6 +185,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    if ($action === 'import') {
+        if (isset($_FILES['excel_file']) && $_FILES['excel_file']['error'] === UPLOAD_ERR_OK) {
+            $tmpName = $_FILES['excel_file']['tmp_name'];
+            $fileName = $_FILES['excel_file']['name'];
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            
+            $success = 0;
+            
+            if ($ext === 'csv') {
+                // --- CSV FORMAT IMPORT LOGIC ---
+                if (($handle = fopen($tmpName, "r")) !== FALSE) {
+                    fgetcsv($handle); // First row header, so skip it
+                    
+                    $stmt = $mysqli->prepare("INSERT INTO article_errors (week, date, client, article, type_of_errors, team_error_made_by, error_taken_by, reason_for_errors, status, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
+                    
+                    while (($data = fgetcsv($handle, 10000, ",")) !== FALSE) {
+                        $week = trim($data[0] ?? '');
+                        $date_raw = trim($data[1] ?? '');
+                        $client = trim($data[2] ?? '');
+                        $article = trim($data[3] ?? '');
+                        $type_error = trim($data[4] ?? '');
+                        $made_by = trim($data[5] ?? '');
+                        $taken_by = trim($data[6] ?? '');
+                        $reason = trim($data[7] ?? '');
+                        
+                        // Week and Client are required, if empty skip that row
+                        if (empty($week) || empty($client)) continue;
+                        
+                        $mysql_date = !empty($date_raw) ? date('Y-m-d', strtotime($date_raw)) : '0000-00-00';
+                        
+                        $stmt->bind_param("ssssssss", $week, $mysql_date, $client, $article, $type_error, $made_by, $taken_by, $reason);
+                        if ($stmt->execute()) $success++;
+                    }
+                    fclose($handle);
+                    $stmt->close();
+                    redirect_with(['msg' => "$success entries imported successfully from CSV file!", 'type' => 'success']);
+                }
+            } elseif ($ext === 'xlsx' || $ext === 'xls') {
+                // --- EXCEL FORMAT IMPORT LOGIC ---
+                if (file_exists('vendor/autoload.php')) {
+                    require_once 'vendor/autoload.php'; // Load PhpSpreadsheet
+                    
+                    $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($tmpName);
+                    $reader->setReadDataOnly(true);
+                    $spreadsheet = $reader->load($tmpName);
+                    $worksheet = $spreadsheet->getActiveSheet();
+                    $rows = $worksheet->toArray();
+                    
+                    $stmt = $mysqli->prepare("INSERT INTO article_errors (week, date, client, article, type_of_errors, team_error_made_by, error_taken_by, reason_for_errors, status, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
+                    
+                    foreach ($rows as $index => $data) {
+                        if ($index === 0) continue; // Skip header
+                        
+                        $week = trim($data[0] ?? '');
+                        $date_raw = trim($data[1] ?? '');
+                        $client = trim($data[2] ?? '');
+                        $article = trim($data[3] ?? '');
+                        $type_error = trim($data[4] ?? '');
+                        $made_by = trim($data[5] ?? '');
+                        $taken_by = trim($data[6] ?? '');
+                        $reason = trim($data[7] ?? '');
+                        
+                        if (empty($week) || empty($client)) continue;
+                        
+                        $mysql_date = !empty($date_raw) ? date('Y-m-d', strtotime($date_raw)) : '0000-00-00';
+                        $stmt->bind_param("ssssssss", $week, $mysql_date, $client, $article, $type_error, $made_by, $taken_by, $reason);
+                        if ($stmt->execute()) $success++;
+                    }
+                    $stmt->close();
+                    redirect_with(['msg' => "$success entries imported successfully from Excel!", 'type' => 'success']);
+                } else {
+                    // Alert warning if Excel library is missing
+                    redirect_with(['msg' => 'Excel (.xlsx) import requires PhpSpreadsheet library on server. Please Save your Excel file as CSV (.csv) and upload it, it works 100%!', 'type' => 'warning']);
+                }
+            }
+        } else {
+            redirect_with(['msg' => 'Please upload a valid file.', 'type' => 'danger']);
+        }
+    }
+    
     redirect_with();
 }
 
@@ -157,7 +275,7 @@ $editEntry = null;
 if ($mode === 'edit') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT id, week, date, client, article, type_of_errors, team_error_made_by, error_taken_by, reason_for_errors, status, created_date 
+        $stmt = $mysqli->prepare("SELECT id, week, date, 'UQ' AS team, 'UQ' AS department, '' AS internal_external, client, article, type_of_errors, error_subtype, '' AS yn, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date 
                                  FROM article_errors WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -183,7 +301,7 @@ $sort = $_GET['sort'] ?? 'created_date';
 $dir = strtolower($_GET['dir'] ?? 'desc');
 
 // Build query
-$sql = "SELECT id, week, date, client, article, type_of_errors, team_error_made_by, error_taken_by, reason_for_errors, status, created_date 
+$sql = "SELECT id, week, date, 'UQ' AS team, 'UQ' AS department, '' AS internal_external, client, article, type_of_errors, error_subtype, '' AS yn, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date 
         FROM article_errors";
 $cond = [];
 $params = [];
@@ -341,8 +459,8 @@ if (!$entries) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-file-alt me-2"></i><?= $mode === 'edit' ? 'Edit Article Error Entry' : 'Add New Article Error Entry' ?></h4>
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-5 pt-3">
+            <h4><i class="fas fa-file-alt me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry ' : 'Add New Error Log Entry' ?></h4>
             <a href="error_entry_team.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -350,12 +468,13 @@ if (!$entries) {
 
         <div class="card">
             <div class="card-body">
-                <form method="post" autocomplete="off" id="articleErrorForm">
+                <form method="post" enctype="multipart/form-data" autocomplete="off" id="articleErrorForm">
                     <input type="hidden" name="action" value="<?= $mode ?>">
                     <?php if($mode === 'edit'): ?>
                     <input type="hidden" name="id" value="<?= (int)($editEntry['id'] ?? 0) ?>">
                     <?php endif; ?>
 
+                    <!-- Row 1 -->
                     <div class="row">
                         <div class="col-md-3">
                             <div class="mb-3">
@@ -377,148 +496,41 @@ if (!$entries) {
                         </div>
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="client" class="form-label">Client <span class="text-danger">*</span></label>
-                                <select class="form-control select2" id="client" name="client" required
-                                        data-placeholder="Select client" onchange="filterArticlesByClient()">
-                                    <option value=""></option>
-                                    <!-- Existing entries from master table -->
-                                    <?php if($clients && $clients->num_rows > 0): ?>
-                                        <?php 
-                                        $clients->data_seek(0); 
-                                        $displayed_clients = [];
-                                        while($client_row = $clients->fetch_assoc()): 
-                                            $display_name = !empty($client_row['team_client_name']) ? $client_row['team_client_name'] : $client_row['client_name'];
-                                            
-                                            if (!in_array($display_name, $displayed_clients)):
-                                                $displayed_clients[] = $display_name;
-                                        ?>
-                                        <option value="<?= h($display_name) ?>" 
-                                            <?= ($editEntry['client'] ?? '') === $display_name ? 'selected' : '' ?>>
-                                            <?= h($display_name) ?>
-                                        </option>
-                                        <?php 
-                                            endif;
-                                        endwhile; 
-                                        ?>
-                                    <?php endif; ?>
-                                    <!-- Existing entries from article_errors table -->
-                                    <?php if($unique_clients && $unique_clients->num_rows > 0): ?>
-                                        <?php $unique_clients->data_seek(0); ?>
-                                        <?php while($client = $unique_clients->fetch_assoc()): ?>
-                                        <option value="<?= h($client['client']) ?>" 
-                                            <?= ($editEntry['client'] ?? '') === $client['client'] ? 'selected' : '' ?>>
-                                            <?= h($client['client']) ?>
-                                        </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
+                                <label for="team" class="form-label">Team</label>
+                                <select class="form-control select2" id="team" name="team" data-placeholder="Select team">
+                                    <option value="UQ" selected>UQ</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="article" class="form-label">Article</label>
-                                <select class="form-control select2" id="article" name="article"
-                                        data-placeholder="Select article from jobs">
-                                    <option value=""></option>
-                                    <!-- Articles from jobs table -->
-                                    <?php if(!empty($articles_data)): ?>
-                                        <?php foreach($articles_data as $article_item): ?>
-                                        <option value="<?= h($article_item['article']) ?>" 
-                                            data-client="<?= h($article_item['client_name']) ?>"
-                                            <?= ($editEntry['article'] ?? '') === $article_item['article'] ? 'selected' : '' ?>>
-                                            <div class="article-option">
-                                                <span class="article-text"><?= h($article_item['article']) ?></span>
-                                                <span class="client-text"><?= h($article_item['client_name']) ?></span>
-                                            </div>
-                                        </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                    <!-- Existing entries from article_errors table (for backward compatibility) -->
-                                    <?php if($unique_articles && $unique_articles->num_rows > 0): ?>
-                                        <?php $unique_articles->data_seek(0); ?>
-                                        <?php while($article = $unique_articles->fetch_assoc()): ?>
-                                        <option value="<?= h($article['article']) ?>" 
-                                            <?= ($editEntry['article'] ?? '') === $article['article'] ? 'selected' : '' ?>>
-                                            <?= h($article['article']) ?>
-                                        </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
+                                <label for="department" class="form-label">Department</label>
+                                <select class="form-control select2" id="department" name="department">
+                                    <option value="UQ" selected>UQ</option>
                                 </select>
-                                <div class="form-text">Select from existing articles in jobs</div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Row 2 -->
                     <div class="row">
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="type_of_errors" class="form-label">Type of Errors</label>
-                                <select class="form-select select2" id="type_of_errors" name="type_of_errors" data-placeholder="Select type of error">
-                                    <option value=""></option>
-                                    <option value="Acknowledgement Issue" <?= ($editEntry['type_of_errors'] ?? '') === 'Acknowledgement Issue' ? 'selected' : '' ?>>Acknowledgement Issue</option>
-                                    <option value="NA" <?= ($editEntry['type_of_errors'] ?? '') === 'NA' ? 'selected' : '' ?>>NA</option>
-                                    <option value="Technical Issue" <?= ($editEntry['type_of_errors'] ?? '') === 'Technical Issue' ? 'selected' : '' ?>>Technical Issue</option>
-                                    <option value="Missed TAT" <?= ($editEntry['type_of_errors'] ?? '') === 'Missed TAT' ? 'selected' : '' ?>>Missed TAT</option>
-                                    <option value="Entry Miss" <?= ($editEntry['type_of_errors'] ?? '') === 'Entry Miss' ? 'selected' : '' ?>>Entry Miss</option>
-                                </select>
-                                <div class="form-text">Select the category of the error</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="team_error_made_by" class="form-label">Team/Error Made By</label>
-                                <select class="form-control select2" id="team_error_made_by" name="team_error_made_by"
-                                        data-placeholder="Select employee">
-                                    <option value=""></option>
-                                    <!-- Existing entries from employee_master table -->
-                                    <?php if($employees && $employees->num_rows > 0): ?>
-                                        <?php $employees->data_seek(0); ?>
-                                        <?php while($emp_row = $employees->fetch_assoc()): ?>
-                                        <option value="<?= h($emp_row['employee_name']) ?>" 
-                                            <?= ($editEntry['team_error_made_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '' ?>>
-                                            <?= h($emp_row['employee_name']) ?>
-                                        </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                    <!-- Existing entries from article_errors table (for backward compatibility) -->
-                                    <?php if($unique_teams && $unique_teams->num_rows > 0): ?>
-                                        <?php $unique_teams->data_seek(0); ?>
-                                        <?php while($team = $unique_teams->fetch_assoc()): ?>
-                                        <option value="<?= h($team['team_error_made_by']) ?>" 
-                                            <?= ($editEntry['team_error_made_by'] ?? '') === $team['team_error_made_by'] ? 'selected' : '' ?>>
-                                            <?= h($team['team_error_made_by']) ?>
-                                        </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                </select>
-                                <div class="form-text">Select employee who made the error</div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
                                 <label for="error_taken_by" class="form-label">Error Taken By</label>
-                                <select class="form-control select2" id="error_taken_by" name="error_taken_by"
-                                        data-placeholder="Select employee">
+                                <select class="form-control select2" id="error_taken_by" name="error_taken_by" data-placeholder="Select employee">
                                     <option value=""></option>
-                                    <!-- Existing entries from employee_master table -->
-                                    <?php if($employees && $employees->num_rows > 0): ?>
-                                        <?php $employees->data_seek(0); ?>
-                                        <?php while($emp_row = $employees->fetch_assoc()): ?>
-                                        <option value="<?= h($emp_row['employee_name']) ?>" 
-                                            <?= ($editEntry['error_taken_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '' ?>>
-                                            <?= h($emp_row['employee_name']) ?>
-                                        </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                    <!-- Existing entries from article_errors table (for backward compatibility) -->
-                                    <?php if($unique_error_takers && $unique_error_takers->num_rows > 0): ?>
-                                        <?php $unique_error_takers->data_seek(0); ?>
-                                        <?php while($taker = $unique_error_takers->fetch_assoc()): ?>
-                                        <option value="<?= h($taker['error_taken_by']) ?>" 
-                                            <?= ($editEntry['error_taken_by'] ?? '') === $taker['error_taken_by'] ? 'selected' : '' ?>>
-                                            <?= h($taker['error_taken_by']) ?>
-                                        </option>
-                                        <?php endwhile; ?>
+                                    <?php 
+                                    $taken_by_found = false;
+                                    if($employees && $employees->num_rows > 0): 
+                                        $employees->data_seek(0);
+                                        while($emp_row = $employees->fetch_assoc()): 
+                                            $selected = ($editEntry['error_taken_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '';
+                                            if ($selected) $taken_by_found = true;
+                                    ?>
+                                        <option value="<?= h($emp_row['employee_name']) ?>" <?= $selected ?>><?= h($emp_row['employee_name']) ?></option>
+                                    <?php endwhile; endif; ?>
+                                    <?php if(!empty($editEntry['error_taken_by']) && !$taken_by_found): ?>
+                                        <option value="<?= h($editEntry['error_taken_by']) ?>" selected><?= h($editEntry['error_taken_by']) ?></option>
                                     <?php endif; ?>
                                 </select>
                                 <div class="form-text">Select employee who took/corrected the error</div>
@@ -526,10 +538,132 @@ if (!$entries) {
                         </div>
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="reason_for_errors" class="form-label">Reason for Errors</label>
-                                <textarea class="form-control" id="reason_for_errors" name="reason_for_errors" 
-                                          rows="3" placeholder="Reason for errors"><?= h($editEntry['reason_for_errors'] ?? '') ?></textarea>
-                                <div class="form-text">Explain why the errors occurred</div>
+                                <label for="internal_external" class="form-label">Internal / External</label>
+                                <select class="form-select" id="internal_external" name="internal_external">
+                                    <option value="">Select</option>
+                                    <option value="Internal" <?= ($editEntry['internal_external'] ?? '') === 'Internal' ? 'selected' : '' ?>>Internal</option>
+                                    <option value="External" <?= ($editEntry['internal_external'] ?? '') === 'External' ? 'selected' : '' ?>>External</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="client" class="form-label">Client Name <span class="text-danger">*</span></label>
+                                <select class="form-control select2" id="client" name="client" required data-placeholder="Select team client" onchange="filterArticlesByClient()">
+                                    <option value=""></option>
+                                    <?php if($clients && $clients->num_rows > 0): $clients->data_seek(0); while($client_row = $clients->fetch_assoc()): $cName = $client_row['team_client_name']; ?>
+                                        <option value="<?= h($cName) ?>" <?= ($editEntry['client'] ?? '') === $cName ? 'selected' : '' ?>><?= h($cName) ?></option>
+                                    <?php endwhile; endif; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="article" class="form-label">Article</label>
+                                <select class="form-control select2" id="article" name="article" data-placeholder="Select article from jobs">
+                                    <option value=""></option>
+                                    <?php if(!empty($articles_data)): foreach($articles_data as $article_item): ?>
+                                        <option value="<?= h($article_item['article']) ?>" data-client="<?= h($article_item['client_name']) ?>" <?= ($editEntry['article'] ?? '') === $article_item['article'] ? 'selected' : '' ?>>
+                                            <div class="article-option"><span class="article-text"><?= h($article_item['article']) ?></span><span class="client-text"><?= h($article_item['client_name']) ?></span></div>
+                                        </option>
+                                    <?php endforeach; endif; ?>
+                                    <?php if($unique_articles && $unique_articles->num_rows > 0): $unique_articles->data_seek(0); while($article = $unique_articles->fetch_assoc()): ?>
+                                        <option value="<?= h($article['article']) ?>" <?= ($editEntry['article'] ?? '') === $article['article'] ? 'selected' : '' ?>><?= h($article['article']) ?></option>
+                                    <?php endwhile; endif; ?>
+                                </select>
+                                <div class="form-text">Select from existing articles in jobs</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3 -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="type_of_errors" class="form-label">Error Type</label>
+                                <select class="form-select select2" id="type_of_errors" name="type_of_errors" data-placeholder="Select type of error">
+                                    <option value=""></option>
+                                    <?php 
+                                        $types_list = ['Acknowledgement Issue', 'NA', 'Technical Issue', 'Missed TAT', 'Entry Miss'];
+                                        foreach($types_list as $type): 
+                                            $selected = (($editEntry['type_of_errors'] ?? '') === $type) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?= h($type) ?>" <?= $selected ?>><?= h($type) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text">Select the category of the error</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="error_subtype" class="form-label">Error Subtype</label>
+                                <select class="form-select select2" id="error_subtype" name="error_subtype" data-placeholder="Select Error Subtype">
+                                    <option value=""></option>
+                                    <?php 
+                                        $subtypes_list = ['Ack_Client', 'Ack_Sales', 'Communication Issue', 'Wrong Upload', 'Commitment not met', 'Feedback not send', 'Improper response', 'Reply late', 'Priority to same client', 'Priority to other client', 'Missed out Crx', 'Misunderstand Crx'];
+                                        foreach($subtypes_list as $subtype): 
+                                            $selected = (($editEntry['error_subtype'] ?? '') === $subtype) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?= h($subtype) ?>" <?= $selected ?>><?= h($subtype) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="yn" class="form-label">Y/N</label>
+                                <select class="form-select" id="yn" name="yn">
+                                    <option value="">Select</option>
+                                    <option value="Yes" <?= ($editEntry['yn'] ?? '') === 'Yes' ? 'selected' : '' ?>>Yes</option>
+                                    <option value="No" <?= ($editEntry['yn'] ?? '') === 'No' ? 'selected' : '' ?>>No</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="team_error_made_by" class="form-label">Error Made By</label>
+                                <select class="form-control select2" id="team_error_made_by" name="team_error_made_by" data-placeholder="Select employee">
+                                    <option value=""></option>
+                                    <?php 
+                                    $made_by_found = false;
+                                    if($employees && $employees->num_rows > 0): 
+                                        $employees->data_seek(0);
+                                        while($emp_row = $employees->fetch_assoc()): 
+                                            $selected = ($editEntry['team_error_made_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '';
+                                            if ($selected) $made_by_found = true;
+                                    ?>
+                                        <option value="<?= h($emp_row['employee_name']) ?>" <?= $selected ?>><?= h($emp_row['employee_name']) ?></option>
+                                    <?php endwhile; endif; ?>
+                                    <?php if(!empty($editEntry['team_error_made_by']) && !$made_by_found): ?>
+                                        <option value="<?= h($editEntry['team_error_made_by']) ?>" selected><?= h($editEntry['team_error_made_by']) ?></option>
+                                    <?php endif; ?>
+                                </select>
+                                <div class="form-text">Select employee who made the error</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4 -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reason_for_errors" class="form-label">Reason</label>
+                                <textarea class="form-control" id="reason_for_errors" name="reason_for_errors" rows="3" placeholder="Provide reason or description"><?= h($editEntry['reason_for_errors'] ?? '') ?></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="error_photo" class="form-label">Attach Error Photo</label>
+                                <input class="form-control" type="file" id="error_photo" name="error_photo" accept="image/*">
+                                <div class="form-text">Optional. Upload a screenshot/photo.</div>
+                                <?php if(!empty($editEntry['error_photo'])): ?>
+                                    <div class="mt-2">
+                                        <a href="uploads/error_photos/<?= h($editEntry['error_photo']) ?>" target="_blank">
+                                            <img src="uploads/error_photos/<?= h($editEntry['error_photo']) ?>" class="img-thumbnail" width="100">
+                                        </a>
+                                        <span class="d-block small text-muted">Current photo attached</span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -540,11 +674,6 @@ if (!$entries) {
                             <?= $mode === 'edit' ? 'Update Entry' : 'Save Entry' ?>
                         </button>
                         <a href="error_entry_team.php" class="btn btn-outline-secondary">Cancel</a>
-                        <?php if($mode === 'edit'): ?>
-                        <a href="error_entry_team.php?mode=add" class="btn btn-outline-success">
-                            <i class="fas fa-plus me-1"></i> Add New
-                        </a>
-                        <?php endif; ?>
                     </div>
                 </form>
             </div>
@@ -553,21 +682,26 @@ if (!$entries) {
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-file-alt me-2"></i>Article Error Management</h4>
-            <div>
-                <a href="error_entry_team.php?mode=add" class="btn btn-success btn-sm">
-                    <i class="fas fa-plus me-1"></i> Add New Entry
-                </a>
-                <button class="btn btn-outline-primary btn-sm" onclick="exportToExcel()">
-                    <i class="fas fa-file-excel me-1"></i> Export Excel
-                </button>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-5 pt-3">
+            <h4><i class="fas fa-file-alt me-2"></i>Error Logs </h4>
         </div>
 
         <!-- Search and Filter Form -->
         <div class="card mb-4">
             <div class="card-body">
+                <!-- Action Buttons on Top Right -->
+                <div class="d-flex justify-content-end mb-2 gap-2">
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                        <i class="fas fa-file-import me-1"></i> Import Excel
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-1"></i> Export Excel
+                    </button>
+                    <a href="error_entry_team.php?mode=add" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i> Add New
+                    </a>
+                </div>
+                
                 <form method="get" class="row g-3 align-items-center" id="searchForm">
                     <div class="col-md-2">
                         <input type="text" name="q" class="form-control form-control-sm" 
@@ -648,10 +782,6 @@ if (!$entries) {
                             <option value="week" <?= $sort === 'week' ? 'selected' : '' ?>>Week</option>
                             <option value="client" <?= $sort === 'client' ? 'selected' : '' ?>>Client</option>
                         </select>
-                        <!-- <select name="dir" class="form-select form-control-sm mt-1">
-                            <option value="desc" <?= $dir === 'desc' ? 'selected' : '' ?>>Desc</option>
-                            <option value="asc" <?= $dir === 'asc' ? 'selected' : '' ?>>Asc</option>
-                        </select> -->
                     </div>
                     <div class="col-md-12 mt-2">
                         <button type="submit" class="btn btn-primary btn-sm me-2">
@@ -673,6 +803,32 @@ if (!$entries) {
             </div>
         </div>
 
+        <!-- Import Excel Modal -->
+        <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="error_entry_team.php" method="post" enctype="multipart/form-data">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="importExcelModalLabel"><i class="fas fa-file-import me-2"></i>Import Excel File</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" name="action" value="import">
+                            <div class="mb-3">
+                                <label for="excel_file" class="form-label">Choose File (.csv, .xlsx, .xls)</label>
+                                <input class="form-control" type="file" id="excel_file" name="excel_file" accept=".csv, .xlsx, .xls" required>
+                                <div class="form-text mt-2">Select the file to upload (CSV format is highly recommended).</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-upload me-1"></i> Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Article Errors Table -->
         <div class="card">
             <div class="card-body p-0">
@@ -680,18 +836,22 @@ if (!$entries) {
                     <table class="table table-hover align-middle mb-0" id="articleErrorTable">
                         <thead class="table-light">
                             <tr>
-                                <th width="50">ID</th>
-                                <th width="100">Week</th>
-                                <th width="100">Date</th>
-                                <th>Client</th>
+                                <th>S.No</th>
+                                <th>Week</th>
+                                <th>Date</th>
+                                <th>Team</th>
+                                <th>Department</th>
+                                <th>Error Taken By</th>
+                                <th>Internal / External</th>
+                                <th>Client Name</th>
                                 <th>Article</th>
-                                <th width="120">Type of Errors</th>
-                                <th width="120">Error Made By</th>
-                                <th width="120">Error Taken By</th>
-                                <th width="120">Reason for Errors</th>
-                                
-                                <th width="120">Created Date</th>
-                                <th width="150" class="text-center">Actions</th>
+                                <th>Error Type</th>
+                                <th>Error Subtype</th>
+                                <th>Y/N</th>
+                                <th>Error Made By</th>
+                                <th>Reason for Errors</th>
+                                <th class="text-center">Photo</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -699,15 +859,13 @@ if (!$entries) {
                                 <?php while($row = $entries->fetch_assoc()): ?>
                                 <tr>
                                     <td class="fw-bold"><?= (int)$row['id'] ?></td>
-                                    <td>
-                                        <span class="badge bg-primary"><?= h($row['week']) ?></span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted"><?= h(formatDate($row['date'])) ?></small>
-                                    </td>
-                                    <td>
-                                        <span class="fw-semibold"><?= h($row['client']) ?></span>
-                                    </td>
+                                    <td><span class="badge bg-primary"><?= h($row['week']) ?></span></td>
+                                    <td><small class="text-muted"><?= h(formatDate($row['date'])) ?></small></td>
+                                    <td><?= h($row['team'] ?? 'UQ') ?></td>
+                                    <td><span class="badge bg-secondary"><?= h($row['department'] ?? 'UQ') ?></span></td>
+                                    <td><?= h($row['error_taken_by'] ?: '—') ?></td>
+                                    <td><?= h($row['internal_external'] ?: '—') ?></td>
+                                    <td><span class="fw-semibold"><?= h($row['client']) ?></span></td>
                                     <td>
                                         <?php if(!empty($row['article'])): ?>
                                             <span class="text-primary fw-medium"><?= h($row['article']) ?></span>
@@ -715,25 +873,33 @@ if (!$entries) {
                                             <span class="text-muted">—</span>
                                         <?php endif; ?>
                                     </td>
+                                    <td><span class="fw-semibold"><?= h($row['type_of_errors'] ?: '—') ?></span></td>
                                     <td>
-                                        <?php if(!empty($row['type_of_errors'])): 
-                                             echo   $row['type_of_errors'];
-                                           
-                                        else:?>
+                                        <?php if(!empty($row['error_subtype'])): ?>
+                                            <span class="badge bg-info text-dark"><?= h($row['error_subtype']) ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if(($row['yn'] ?? '') === 'Yes'): ?>
+                                            <span class="badge bg-success">Yes</span>
+                                        <?php elseif(($row['yn'] ?? '') === 'No'): ?>
+                                            <span class="badge bg-danger">No</span>
+                                        <?php else: ?>
                                             <span class="text-muted">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?= h($row['team_error_made_by'] ?: '—') ?></td>
-                                    <td><?= h($row['error_taken_by'] ?: '—') ?></td>
-                                    <td>
-                                        <?php if(!empty($row['reason_for_errors'])):
-                                        echo ($row['reason_for_errors']);   
-                                        else: ?>
-                                            <span class="text-muted">—</span>
+                                    <td><?= h($row['reason_for_errors'] ?: '—') ?></td>
+                                    <td class="text-center">
+                                        <?php if(!empty($row['error_photo'])): ?>
+                                            <a href="uploads/error_photos/<?= h($row['error_photo']) ?>" target="_blank" title="View Image">
+                                                <i class="fas fa-image text-primary" style="font-size:1.5rem;"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-muted" title="No photo"><i class="fas fa-image" style="opacity: 0.2; font-size:1.5rem;"></i></span>
                                         <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted"><?= h(formatDate($row['created_date'])) ?></small>
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group btn-group-sm" role="group">
@@ -1041,7 +1207,7 @@ if (!$entries) {
             const exportHeader = document.createElement('tr');
             
             // Export headers (excluding Actions column)
-            const headers = ['ID', 'Week', 'Date', 'Client', 'Article', 'Type of Errors', 'Error Made By', 'Error Taken By', 'Reason for Errors', 'Created Date'];
+            const headers = ['ID', 'Week', 'Date', 'Team', 'Department', 'Error Taken By', 'Internal/External', 'Client Name', 'Article', 'Error Type', 'Error Subtype', 'Y/N', 'Error Made By', 'Reason for Errors'];
             
             headers.forEach(headerText => {
                 const th = document.createElement('th');
@@ -1139,14 +1305,17 @@ if (!$entries) {
                 {wch: 8},   // ID
                 {wch: 15},  // Week
                 {wch: 12},  // Date
-                {wch: 25},  // Client
-                {wch: 30},  // Article
-                {wch: 40},  // Type of Errors
-                {wch: 20},  // Error Made By
+                {wch: 10},  // Team
+                {wch: 15},  // Department
                 {wch: 20},  // Error Taken By
-                {wch: 40},  // Reason for Errors
-                
-                {wch: 15}   // Created Date
+                {wch: 15},  // Internal/External
+                {wch: 25},  // Client Name
+                {wch: 30},  // Article
+                {wch: 25},  // Error Type
+                {wch: 20},  // Error Subtype
+                {wch: 8},   // Y/N
+                {wch: 20},  // Error Made By
+                {wch: 40}   // Reason
             ];
             ws['!cols'] = wscols;
             
