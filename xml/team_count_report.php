@@ -136,7 +136,14 @@ if ($employees_result && $employees_result->num_rows > 0) {
 }
 
 // 2. Fetch Fixed Targets (Grouped by Process dynamically)
-$pt_sql = "SELECT tm_id, process_id, MAX(target_limit) as total_limit FROM daily_targets_xml GROUP BY tm_id, process_id";
+// FIX: Using INNER JOIN with MAX(id) to get the LATEST target revision instead of the MAX target number
+$pt_sql = "SELECT t1.tm_id, t1.process_id, t1.target_limit as total_limit 
+           FROM daily_targets_xml t1
+           INNER JOIN (
+               SELECT tm_id, process_id, MAX(id) as latest_id 
+               FROM daily_targets_xml 
+               GROUP BY tm_id, process_id
+           ) t2 ON t1.id = t2.latest_id";
 $pt_res = @$mysqli->query($pt_sql); 
 
 if ($pt_res) {
@@ -154,7 +161,13 @@ if ($pt_res) {
     }
 } else {
     // Fallback if 'process' column isn't in target table
-    $ft_sql = "SELECT tm_id, MAX(target_limit) as total_limit FROM daily_targets_xml GROUP BY tm_id";
+    $ft_sql = "SELECT t1.tm_id, t1.target_limit as total_limit 
+               FROM daily_targets_xml t1
+               INNER JOIN (
+                   SELECT tm_id, MAX(id) as latest_id 
+                   FROM daily_targets_xml 
+                   GROUP BY tm_id
+               ) t2 ON t1.id = t2.latest_id";
     $ft_res = $mysqli->query($ft_sql);
     if ($ft_res) {
         while ($row = $ft_res->fetch_assoc()) {

@@ -618,15 +618,15 @@ function fetchData() {
     <div class="container-fluid mt-2 px-4 pb-5">
         <div class="card mb-4">
             <!-- Header -->
-            <div class="card-header d-flex justify-content-between align-items-center py-3">
-                <h5 class="mb-0 fw-bold" style="color: #0f172a;"><i class="bi bi-table me-2 text-primary"></i>Unassigned Jobs</h5>
+            <div class="card-header d-flex justify-content-between align-items-center py-3" style="background-color: #5e6b77; border-bottom: 2px solid #475569;">
+                <h5 class="mb-0 fw-bold text-white"><i class="bi bi-table me-2 text-white"></i>Unassigned Jobs</h5>
                 <div class="d-flex align-items-center gap-3">
                     <span class="badge bg-light text-dark border px-3 py-2 fw-medium rounded-pill">
                         <i class="bi bi-person-circle text-muted me-1"></i> <?php echo h($username); ?>
                     </span>
                     <div class="form-check form-switch mb-0">
                         <input class="form-check-input" type="checkbox" id="showCompleted" <?php echo $show_completed ? 'checked' : ''; ?> onchange="toggleShowCompleted()" style="cursor: pointer;">
-                        <label class="form-check-label small fw-medium text-muted" for="showCompleted" style="cursor: pointer; padding-top:2px;">Show Completed</label>
+                        <label class="form-check-label small fw-medium text-white" for="showCompleted" style="cursor: pointer; padding-top:2px;">Show Completed</label>
                     </div>
                 </div>
             </div>
