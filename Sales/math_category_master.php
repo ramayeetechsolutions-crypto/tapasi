@@ -52,6 +52,10 @@ require 'header.php';
         color: white !important;
         border-bottom: none !important;
     }
+    .card-header.bg-header-grey {
+        background-color: #6c757d !important;
+        color: white !important;
+    }
 </style>
 
 <!-- Main Container with top margin to clear fixed header -->
@@ -98,9 +102,9 @@ require 'header.php';
     <!-- TABLE SECTION -->
     <!-- Cyan/Info Background Header -->
     <div class="card shadow border-0">
-        <div class="card-header bg-info text-white py-3 d-flex justify-content-between align-items-center">
+        <div class="card-header bg-header-grey text-white py-3 d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold"><i class="fas fa-list-ul me-2"></i>All Categories</h5>
-            <span class="badge bg-white text-info fw-bold fs-6 px-3"><?= $cats->num_rows ?> records found</span>
+            <span class="badge bg-white text-dark fw-bold fs-6 px-3"><?= $cats->num_rows ?> records found</span>
         </div>
         
         <div class="card-body p-0">

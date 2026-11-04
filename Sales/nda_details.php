@@ -479,6 +479,7 @@ if ($res_countries) {
 $q = trim($_GET['q'] ?? '');
 $filter_nda = $_GET['nda_status'] ?? '';
 $filter_country = trim($_GET['country'] ?? '');
+$filter_status = $_GET['client_status'] ?? '';
 $from_year = $_GET['from_year'] ?? '';
 $to_year = $_GET['to_year'] ?? '';
 $service_name = $_GET['service_name'] ?? '';
@@ -499,8 +500,21 @@ $sortMap =[
 ];
 $orderBy = $sortMap[$sort];
 
+// Status is calculated from the signed year (To Year)
+$ref_year = 0;
+if ($to_year !== '' && is_numeric($to_year)) {
+    $ref_year = (int)$to_year;
+} elseif ($from_year !== '' && is_numeric($from_year)) {
+    $ref_year = (int)date('Y');
+}
+if ($ref_year > 0) {
+    $status_expr = "IF(EXISTS(SELECT 1 FROM nda_details y WHERE y.client_id = cm.client_id AND YEAR(y.signed_date) = $ref_year), 'Active', 'Inactive')";
+} else {
+    $status_expr = "cm.status";
+}
+
 $sql = "SELECT 
-            nd.id as nda_id, cm.client_id, cm.client_name, cm.company_name, cm.email, cm.phone, cm.country, cm.status as client_status,
+            nd.id as nda_id, cm.client_id, cm.client_name, cm.company_name, cm.email, cm.phone, cm.country, $status_expr as client_status,
             IFNULL(nd.nda_status, 'No') as nda_status, 
             IFNULL(nd.revision_amount_status, 'No') as revision_amount_status, 
             nd.signed_date, nd.remarks,
@@ -555,6 +569,13 @@ if (!empty($service_name) && array_key_exists($service_name, $workflows)) {
 if ($filter_country !== '') {
     $cond[] = "cm.country = ?";
     $params[] = $filter_country;
+    $types .= "s";
+}
+
+// 7. Client Status Filter (Active / Inactive)
+if ($filter_status === 'Active' || $filter_status === 'Inactive') {
+    $cond[] = "$status_expr = ?";
+    $params[] = $filter_status;
     $types .= "s";
 }
 
@@ -838,6 +859,15 @@ require 'header.php';
                     </select>
                 </div>
                 
+                <!-- Client Status (Active / Inactive) -->
+                <div class="col-xl-2 col-lg-3 col-md-4">
+                    <select name="client_status" class="form-select form-select-sm">
+                        <option value="">Filter by Client Status</option>
+                        <option value="Active" <?= $filter_status === 'Active' ? 'selected' : '' ?>>Active</option>
+                        <option value="Inactive" <?= $filter_status === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
+                    </select>
+                </div>
+
                 <!-- 3. NDA Status -->
                 <div class="col-xl-2 col-lg-3 col-md-4">
                     <select name="nda_status" class="form-select form-select-sm">
