@@ -478,11 +478,11 @@ if (!empty($qc_tm_filter)) {
 if (!empty($employee_filter)) {
     // Strictly filter only employees visibly displayed on screen (QC TM, PAG-CRX, PAG TM, LE TM, CE Content, Upload By)
     $where_conditions[] = "(
-        COALESCE(NULLIF(qc.assigned_to_qc, ''), NULLIF(q_orig.assigned_to_qc, '')) = ?
+        (COALESCE(NULLIF(qc.assigned_to_qc, ''), NULLIF(q_orig.assigned_to_qc, '')) COLLATE utf8mb4_general_ci) = ?
         OR qc.pag_crx_assigned_to = ?
-        OR COALESCE(NULLIF(pag.assigned_to_pag, ''), NULLIF(j.assigned_pag, ''), NULLIF(pag.done_by, '')) = ?
-        OR COALESCE(NULLIF(le.assigned_to_le_qc, ''), NULLIF(le.assigned_to_le, ''), NULLIF(j.assigned_le, ''), NULLIF(le.done_by, '')) = ?
-        OR COALESCE(NULLIF(ce.assigned_to_content, ''), NULLIF(j.assigned_ce, ''), NULLIF(ce.done_by, '')) = ?
+        OR (COALESCE(NULLIF(pag.assigned_to_pag, ''), NULLIF(j.assigned_pag, ''), NULLIF(pag.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR (COALESCE(NULLIF(le.assigned_to_le_qc, ''), NULLIF(le.assigned_to_le, ''), NULLIF(j.assigned_le, ''), NULLIF(le.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR (COALESCE(NULLIF(ce.assigned_to_content, ''), NULLIF(j.assigned_ce, ''), NULLIF(ce.done_by, '')) COLLATE utf8mb4_general_ci) = ?
         OR qc.upload_by = ?
     )";
     for ($k = 0; $k < 6; $k++) {
