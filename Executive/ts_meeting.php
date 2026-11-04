@@ -163,7 +163,7 @@ if ($filter_mode === 'month') {
         FROM jobs j 
         LEFT JOIN pag p ON j.job_id = p.job_id 
         WHERE (p.assigned_to_pag = ? OR p.done_by = ? OR j.assigned_to = ?)
-        AND MONTH(j.job_date) = ? AND YEAR(j.job_date) = ?
+        AND MONTH(COALESCE(p.last_updated, p.created_at)) = ? AND YEAR(COALESCE(p.last_updated, p.created_at)) = ?
     ";
     $stmt_prod = $mysqli->prepare($prod_sql);
 
@@ -179,7 +179,7 @@ if ($filter_mode === 'month') {
         FROM jobs j 
         LEFT JOIN pag p ON j.job_id = p.job_id 
         WHERE (p.assigned_to_pag = ? OR p.done_by = ? OR j.assigned_to = ?)
-        AND DATE(j.job_date) BETWEEN ? AND ?
+        AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
     ";
     $stmt_prod = $mysqli->prepare($prod_sql);
 
@@ -297,11 +297,18 @@ if (!empty($user_employee_name)) {
                 $errors = $res_error['error_count'] ?? 0;
             }
 
-            // Calculations
+            // Calculations - EXACTLY AS PER YOUR FORMULAS
+            
+            // 1. Production points = Production / (Target / 100)
             $production_points = $target > 0 ? round($production / ($target / 100), 2) : 0;
+            
+            // 2. Errors points = Errors * 2
             $errors_points = $errors * 2;
-            $prod_pct = $production_points; 
+            
+            // 3. Production % = (Production Points / Target) (Note: * 100 is added to format it as Percentage natively)
+            $prod_pct = $target > 0 ? round(($production_points / $target) * 100, 2) : 0; 
 
+            // 4. Accuracy % = (Production points - Errors points) / Production points
             $accuracy = 100;
             if ($production_points > 0) {
                 $accuracy = round((($production_points - $errors_points) / $production_points) * 100, 2);
@@ -310,9 +317,9 @@ if (!empty($user_employee_name)) {
                 $accuracy = 0;
             }
 
-            // --- NET PRODUCTION % FORMULA: (Prod Points - Error Points) ---
-            $net_prod_pct = ($target > 0) ? round($production_points - $errors_points, 2) : 0;
-            $net_prod_decimal = $net_prod_pct / 100;
+            // 5. Net Production = Production - (Errors points / 100)
+            $net_prod_pct = round($production - ($errors_points / 100), 2);
+            $net_prod_decimal = $net_prod_pct > 0 ? ($net_prod_pct / 100) : 0;
             
             $team_data[] = [
                 'id' => $emp_username,
