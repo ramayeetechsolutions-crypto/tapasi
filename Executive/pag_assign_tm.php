@@ -285,8 +285,10 @@ $pag_query = "SELECT pag.*,
                     ce.ce_date as ce_moved_date,
                     ce.status as ce_status,
                     ce.remarks as ce_remarks,
+                    ce.assigned_to_content as ce_assigned,
                     le.status as le_status,
                     le.last_updated as le_moved_date,
+                    le.assigned_to_le as le_assigned,
                     qc.status as qc_status,
                     qc.rtat,
                     qc.atat,
@@ -675,20 +677,53 @@ require 'header.php';
                                         $has_ce = (strpos($proc_name, 'CE') !== false);
                                         $ce_is_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']) || trim($row['ce_remarks'] ?? '') === 'Moved' || !empty($row['ce_moved_date']);
                                         
+                                        $ce_user = !empty($row['ce_assigned']) ? $row['ce_assigned'] : $row['assigned_to'];
+                                        $ce_name = $ce_user;
+                                        foreach ($tms as $tm) { if ($tm['employee_username'] == $ce_user) { $ce_name = $tm['employee_name']; break; } }
+                                        
+                                        $fqa_user_html = '';
+                                        if (!empty($ce_user)) {
+                                            $fqa_user_html = "<br><small style='color: #198754; font-weight: 600;'><i class='fas fa-user'></i> ".h($ce_name)." (".h($ce_user).")</small>";
+                                        }
+
                                         if (!$has_ce || $ce_is_done) {
                                             $fqa_badge_cls = 'badge bg-success';
                                             $fqa_stat_label = 'Completed';
                                         } elseif (!empty($row['assigned_to'])) {
                                             $fqa_badge_cls = 'badge bg-primary';
                                             $fqa_stat_label = 'In Progress';
+                                            $fqa_user_html = "<br><small style='color: #0d6efd; font-weight: 600;'><i class='fas fa-user'></i> ".h($ce_name)." (".h($ce_user).")</small>";
                                         } else {
                                             $fqa_badge_cls = 'badge bg-info';
                                             $fqa_stat_label = 'Need to Assign';
+                                            $fqa_user_html = '';
                                         }
                                     ?>
-                                    <td><span class="<?= $fqa_badge_cls ?>"><?= h($fqa_stat_label) ?></span></td>
+                                    <td class="text-center">
+                                        <span class="<?= $fqa_badge_cls ?>"><?= h($fqa_stat_label) ?></span>
+                                        <?= ($has_ce && !empty($ce_user)) ? $fqa_user_html : '' ?>
+                                    </td>
+                                    
                                     <!-- LE Status -->
-                                    <td><span class="badge bg-info"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
+                                    <?php
+                                        $le_status = $row['le_status'] ?? 'Need to Assign';
+                                        $le_is_done = in_array($le_status, ['Completed', 'Done', 'LE & LE-QC Done', 'LE-QC Done', 'LE Done']);
+                                        $le_badge_cls = $le_is_done ? 'badge bg-success' : ($le_status == 'In Progress' ? 'badge bg-primary' : 'badge bg-info');
+                                        
+                                        $le_user = $row['le_assigned'] ?? ''; 
+                                        $le_name = $le_user;
+                                        foreach ($tms as $tm) { if ($tm['employee_username'] == $le_user) { $le_name = $tm['employee_name']; break; } }
+                                        
+                                        $le_user_html = '';
+                                        if (!empty($le_user)) {
+                                            $le_color = $le_is_done ? '#198754' : '#0d6efd';
+                                            $le_user_html = "<br><small style='color: {$le_color}; font-weight: 600;'><i class='fas fa-user'></i> ".h($le_name)." (".h($le_user).")</small>";
+                                        }
+                                    ?>
+                                    <td class="text-center">
+                                        <span class="<?= $le_badge_cls ?>"><?= h($le_status) ?></span>
+                                        <?= $le_user_html ?>
+                                    </td>
                                     
                                     <!-- Word Process Column -->
                                     <?php 

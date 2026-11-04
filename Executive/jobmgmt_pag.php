@@ -239,7 +239,7 @@ $sql = "SELECT
     
     le.last_updated as le_moved_date, ce.ce_date as ce_moved_date,
     ce.status as ce_status, ce.remarks as ce_remarks,
-    le.status as le_status, qc.status as qc_status,
+    le.status as le_status, le.assigned_to_le as le_assigned_to, qc.status as qc_status,
     qc.rtat, qc.atat,
     qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to,
     qc_crx.pag_crx_start_time, qc_crx.pag_crx_end_time,
@@ -614,8 +614,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     $fqa_stat = 'Need to Assign';
                                 }
                             ?>
-                            <td><?= simpleStatusBadge($fqa_stat, 'Pending') ?></td>
-                            <td><?= simpleStatusBadge($row['le_status'] ?? '', 'Pending') ?></td>
+                            <td><?= getStatusBadge($fqa_stat, $row['assigned_to'] ?? '', $emp_map) ?></td>
+                            <td><?= getStatusBadge($row['le_status'] ?? 'Pending', $row['le_assigned_to'] ?? '', $emp_map) ?></td>
                             
                             <!-- Word Process & Times -->
                             <?php
