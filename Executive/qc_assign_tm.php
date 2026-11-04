@@ -23,6 +23,15 @@ foreach ($check_columns as $col => $definition) {
     }
 }
 
+// Fetch all active employees for Employee filter
+$all_employees = [];
+$emp_filter_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
+if ($emp_filter_res) {
+    while ($e_row = $emp_filter_res->fetch_assoc()) {
+        $all_employees[] = $e_row;
+    }
+}
+
 // --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
@@ -258,6 +267,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 // Get filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$employee_filter = isset($_GET['employee']) ? trim($_GET['employee']) : '';
 $qc_tm_filter = isset($_GET['qc_tm']) ? trim($_GET['qc_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'qc.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
@@ -300,6 +310,21 @@ if (!empty($qc_tm_filter)) {
     $where_conditions[] = "qc.assigned_to_qc = ?";
     $params[] = $qc_tm_filter;
     $types .= 's';
+}
+
+if (!empty($employee_filter)) {
+    // Strictly filter only employees visibly displayed on screen
+    $where_conditions[] = "(
+        qc.assigned_to_qc = ? 
+        OR COALESCE(NULLIF(pag.assigned_to_pag, ''), NULLIF(j.assigned_pag, ''), NULLIF(pag.done_by, '')) = ? 
+        OR COALESCE(NULLIF(le.assigned_to_le_qc, ''), NULLIF(le.assigned_to_le, ''), NULLIF(j.assigned_le, ''), NULLIF(le.done_by, '')) = ? 
+        OR COALESCE(NULLIF(ce.assigned_to_content, ''), NULLIF(j.assigned_ce, ''), NULLIF(ce.done_by, '')) = ?
+        OR qc.upload_by = ?
+    )";
+    for ($k = 0; $k < 5; $k++) {
+        $params[] = $employee_filter;
+    }
+    $types .= 'sssss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -370,7 +395,11 @@ $stats_query = "SELECT
                     SUM(CASE WHEN qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != '' THEN 1 ELSE 0 END) as qc_assigned
                 FROM qc 
                 LEFT JOIN jobs j ON qc.job_id = j.job_id
+                LEFT JOIN client_master c ON j.client_id = c.client_id
                 LEFT JOIN job_master p ON j.process_id = p.job_id
+                LEFT JOIN ce ON j.job_id = ce.job_id
+                LEFT JOIN le ON j.job_id = le.job_id
+                LEFT JOIN pag ON j.job_id = pag.job_id
                 WHERE $where_sql";
 
 $stats_stmt = $mysqli->prepare($stats_query);
@@ -556,7 +585,18 @@ require 'header.php';
                         <?php endif; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small">Employee</label>
+                    <select name="employee" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        <?php foreach ($all_employees as $emp): ?>
+                            <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
+                                <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small">QC TM</label>
                     <select name="qc_tm" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
