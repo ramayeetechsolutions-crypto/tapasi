@@ -93,6 +93,15 @@ if ($effective_manager) {
 }
 
 // --- START: Status Update AJAX ---
+// Fetch all active employees for Employee filter
+$all_employees = [];
+$emp_filter_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
+if ($emp_filter_res) {
+    while ($e_row = $emp_filter_res->fetch_assoc()) {
+        $all_employees[] = $e_row;
+    }
+}
+
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
     $pag_id = (int)$_POST['pag_id'];
@@ -212,6 +221,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 // Get filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$employee_filter = isset($_GET['employee']) ? trim($_GET['employee']) : '';
 $pag_tm_filter = isset($_GET['pag_tm']) ? trim($_GET['pag_tm']) : '';
 $images_tm_filter = isset($_GET['images_tm']) ? trim($_GET['images_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'pag.created_at';
@@ -265,6 +275,21 @@ if (!empty($images_tm_filter)) {
     $params[] = $images_tm_filter;
     $params[] = $images_tm_filter;
     $types .= 'ss';
+}
+
+if (!empty($employee_filter)) {
+    // Strictly filter only employees visibly displayed on screen (CE/FQA Content, LE, TS, Images, Tables)
+    $where_conditions[] = "(
+        pag.assigned_to_pag = ? 
+        OR pag.assigned_to_img = ? 
+        OR pag.assigned_to_table = ? 
+        OR (p.job_name LIKE '%CE%' AND ce.assigned_to_content = ?) 
+        OR le.assigned_to_le = ?
+    )";
+    for ($k = 0; $k < 5; $k++) {
+        $params[] = $employee_filter;
+    }
+    $types .= 'sssss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -523,6 +548,17 @@ require 'header.php';
                         <option value="">All Status</option>
                         <option value="Need to Assign" <?= $status_filter == 'Need to Assign' ? 'selected' : '' ?>>Need to Assign</option>
                         <option value="In Progress" <?= $status_filter == 'In Progress' ? 'selected' : '' ?>>In Progress</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Employee</label>
+                    <select name="employee" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        <?php foreach ($all_employees as $emp): ?>
+                            <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
+                                <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-2">

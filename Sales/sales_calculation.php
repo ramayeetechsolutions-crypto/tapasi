@@ -70,6 +70,10 @@ require 'header.php';
         color: white !important;
         border-bottom: none !important;
     }
+    .card-header.bg-header-grey {
+        background-color: #6c757d !important;
+        color: white !important;
+    }
 </style>
 
 <div class="container-fluid py-4" style="margin-top: 60px;">
@@ -142,7 +146,7 @@ require 'header.php';
         <!-- GRID COLUMN -->
         <div class="col-lg-8">
             <div class="card shadow">
-                <div class="card-header bg-dark text-white">
+                <div class="card-header bg-header-grey text-white">
                     <h5 class="mb-0"><i class="fas fa-list me-2"></i> Saved Calculations</h5>
                 </div>
                 <div class="card-body p-0">
