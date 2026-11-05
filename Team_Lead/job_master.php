@@ -1,12 +1,11 @@
 <?php 
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require 'db.php';
 require 'header.php';?>
   <div class="main-content">
         <div class="job-master-container">
 
 <?php
-
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ---------- Helpers ----------
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
