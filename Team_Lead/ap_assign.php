@@ -344,7 +344,8 @@ $process_tm      = trim($_GET['process_tm'] ?? '');
 $supplements_tm  = trim($_GET['supplements_tm'] ?? '');
 $sort            = trim($_GET['sort'] ?? 'id');
 
-$where = ["1=1"];
+// Hide completed rows from assign page
+$where = ["(remarks != 'Completed' OR remarks IS NULL)"];
 $params = [];
 $types = '';
 
@@ -652,9 +653,12 @@ require 'header.php';
                                         <span class="fw-semibold text-dark"><?= h($display_client) ?></span>
                                     </td>
 
-                                    <!-- 3. Mail Subject (Read-Only) -->
-                                    <td class="align-middle">
-                                        <?= h($row['mail_subject'] ?? '—') ?>
+                                    <!-- 3. Mail Subject (Editable) -->
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm editable-input" style="min-width: 150px;"
+                                               value="<?= h($row['mail_subject'] ?? '') ?>" 
+                                               placeholder="Mail Subject"
+                                               onchange="updateField(<?= $row['id'] ?>, 'mail_subject', this.value)">
                                     </td>
 
                                     <!-- 4. Process (Hardcoded Dropdown) -->
@@ -900,6 +904,12 @@ require 'header.php';
                         const hrsElem = document.getElementById(`total-hrs-${id}`);
                         if (hrsElem) hrsElem.value = data.total_hrs;
                     }
+                    
+                    // Reload page to hide the row and update top count cards
+                    if (field === 'remarks' && value === 'Completed') {
+                        location.reload();
+                    }
+                    
                     if (typeof callback === 'function') callback(data);
                 }
             })
