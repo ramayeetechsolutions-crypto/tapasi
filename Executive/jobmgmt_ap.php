@@ -194,6 +194,7 @@ function getStatusBadge($status) {
                             <th>Process TM</th>
                             <th>Suppl. TM</th>
                             <th>Note</th>
+                            <th>Path</th>
                             <th>Remarks</th>
                             <th>Job Status</th>
                             <th>Start Time</th>
@@ -243,6 +244,7 @@ function getStatusBadge($status) {
                             </td>
 
                             <td><?=h($row['note'] ?? '—')?></td>
+                            <td><?=h($row['path'] ?? '—')?></td>
                             <td>
                                 <?php if (!empty($row['remarks'])): ?>
                                     <?php if ($row['remarks'] === 'Completed'): ?>
@@ -267,10 +269,18 @@ function getStatusBadge($status) {
                             <td><span class="fw-bold"><?= !empty($row['total_hrs']) ? h($row['total_hrs']) : '—' ?></span></td>
 
                             <td><?= formatDateOnly($row['dispatch_date'], 'd-m-Y') ?></td>
-                            <td><span class="badge bg-dark"><?= h($row['tat'] ?? '0') ?></span></td>
+                            <?php
+                                $live_tat = 0;
+                                if (!empty($row['date']) && $row['date'] !== '0000-00-00') {
+                                    $start = new DateTime($row['date']);
+                                    $end = (!empty($row['dispatch_date']) && $row['dispatch_date'] !== '0000-00-00') ? new DateTime($row['dispatch_date']) : new DateTime();
+                                    $live_tat = $start->diff($end)->format('%a');
+                                }
+                            ?>
+                            <td><span class="badge bg-dark"><?= $live_tat ?> Days</span></td>
                         </tr>
                         <?php endforeach; else: ?>
-                        <tr><td colspan="14" class="text-center">No AP jobs found.</td></tr>
+                        <tr><td colspan="18" class="text-center">No AP jobs found.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

@@ -493,7 +493,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="journal_issue" <?=$sort==='journal_issue'?'selected':''?>>Issue</option>
                         <option value="process" <?=$sort==='process'?'selected':''?>>Process</option>
                     </select>
-                </div>
+                </div> 
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Employee</label>
                     <select name="filter_emp" class="form-select form-select-sm">
