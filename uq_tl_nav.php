@@ -127,6 +127,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <a href="#"><i class="fas fa-layer-group"></i> AP</a>
     <ul class="nav-dropdown">
         <li>
+            <a href="mail_subject_master.php">
+                <i class="fas fa-envelope"></i> Job Entry
+            </a>
+        </li>
+        <li>
+            <a href="jobs.php">
+                <i class="fas fa-tasks"></i> Manage Jobs
+            </a>
+        </li>
+        <li>
             <a href="ap_assign.php" class="<?= $currentPage === 'ap_assign.php' ? 'active' : '' ?>">
                 <i class="fas fa-user-plus"></i> AP Assign
             </a>
@@ -134,6 +144,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <li>
             <a class="nav-link" href="jobmgmt_ap.php">
                 <i class="fa fa-bar-chart"></i> AP Report
+            </a>
+        </li>
+        <li>
+            <a href="ap_meeting.php" class="<?= $currentPage === 'ap_meeting.php' ? 'active' : '' ?>">
+                <i class="fas fa-handshake"></i> AP Meeting
             </a>
         </li>
     </ul>

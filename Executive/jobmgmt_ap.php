@@ -198,12 +198,29 @@ function getStatusBadge($status) {
                             <th>Job Status</th>
                             <th>Start Time</th>
                             <th>End Time</th>
+                            <th>Total Hrs</th>
                             <th>Dispatch Date</th>
                             <th>TAT (Days)</th>
                         </tr>
                     </thead>
                     <tbody>
-                       <?php if (count($all_jobs) > 0): $i=1; foreach($all_jobs as $row): ?>
+                       <?php 
+                       // Fetch employee names to display Name + ID
+                       $emp_map = [];
+                       $emp_query = $mysqli->query("SELECT employee_username, employee_name FROM employee_master");
+                       if ($emp_query) {
+                           while ($e = $emp_query->fetch_assoc()) {
+                               $emp_map[$e['employee_username']] = $e['employee_name'];
+                           }
+                       }
+                       
+                       if (count($all_jobs) > 0): $i=1; foreach($all_jobs as $row): 
+                           $p_mem = $row['process_member'];
+                           $p_display = (!empty($p_mem) && isset($emp_map[$p_mem])) ? $emp_map[$p_mem] . ' (' . $p_mem . ')' : $p_mem;
+                           
+                           $s_mem = $row['supplements_member'];
+                           $s_display = (!empty($s_mem) && isset($emp_map[$s_mem])) ? $emp_map[$s_mem] . ' (' . $s_mem . ')' : $s_mem;
+                       ?>
                         <tr>
                             <td><?=$i++?></td>
                             <td><?= formatDateOnly($row['date'], 'd-m-Y') ?></td>
@@ -216,19 +233,23 @@ function getStatusBadge($status) {
                             <!-- Process TM -->
                             <td>
                                 <?= getStatusBadge($row['process_status']) ?><br>
-                                <small class="text-success fw-bold"><?=h($row['process_member'])?></small>
+                                <small class="text-success fw-bold"><?=h($p_display)?></small>
                             </td>
 
                             <!-- Suppl TM -->
                             <td>
                                 <?= getStatusBadge($row['supplements_status']) ?><br>
-                                <small class="text-success fw-bold"><?=h($row['supplements_member'])?></small>
+                                <small class="text-success fw-bold"><?=h($s_display)?></small>
                             </td>
 
                             <td><?=h($row['note'] ?? '—')?></td>
                             <td>
                                 <?php if (!empty($row['remarks'])): ?>
-                                    <span class="badge bg-danger"><?= h($row['remarks']) ?></span>
+                                    <?php if ($row['remarks'] === 'Completed'): ?>
+                                        <span class="badge bg-success"><?= h($row['remarks']) ?></span>
+                                    <?php else: ?>
+                                        <span class="badge bg-danger"><?= h($row['remarks']) ?></span>
+                                    <?php endif; ?>
                                 <?php else: ?>—<?php endif; ?>
                             </td>
                             
@@ -242,6 +263,8 @@ function getStatusBadge($status) {
 
                             <td><?= !empty($row['start_time']) ? date('H:i', strtotime($row['start_time'])) : '—' ?></td>
                             <td><?= !empty($row['end_time']) ? date('H:i', strtotime($row['end_time'])) : '—' ?></td>
+                            
+                            <td><span class="fw-bold"><?= !empty($row['total_hrs']) ? h($row['total_hrs']) : '—' ?></span></td>
 
                             <td><?= formatDateOnly($row['dispatch_date'], 'd-m-Y') ?></td>
                             <td><span class="badge bg-dark"><?= h($row['tat'] ?? '0') ?></span></td>
