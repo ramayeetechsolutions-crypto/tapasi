@@ -47,11 +47,17 @@ function formatDate($date, $format = 'd-m-Y') {
 $processStageMap = [
     'CE'          => ['CE','LE'],
     'PAG'         => ['PAG','QC'],
+    'TS'          => ['PAG','QC'],
     'CE+PAG'      => ['CE','LE','PAG','QC'],
+    'CE+TS'       => ['CE','LE','PAG','QC'],
     'CE+PAG+XML'  => ['CE','LE','PAG','QC','XML'],
     'CE+XML'      => ['CE','LE','XML'],
     'PAG+XML'     => ['PAG','QC','XML'],
     'XML'         => ['XML'],
+    'AP'          => ['AP'],
+    'MINORCORRECTIONS' => ['AP'],
+    'HEAVYCORRECTIONS' => ['AP'],
+    'AOPCORRECTIONS'   => ['AP']
 ];
 
 $skillHierarchy = [
@@ -495,6 +501,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                j.due_date, j.process_id, c.client_name, c.team_client_name, p.job_name,
                ce.status AS ce_status, le.status AS le_status, 
                pag.status AS pag_status, qc.status AS qc_status,
+               ap.process_member AS assigned_ap, ap.process_status AS ap_status,
                CASE 
                    WHEN p.job_name = 'CE' THEN 
                        CASE 
@@ -503,7 +510,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                            WHEN j.assigned_ce IS NOT NULL AND j.assigned_le IS NOT NULL THEN 'Completed'
                            ELSE 'In Progress'
                        END
-                   WHEN p.job_name = 'PAG' THEN 
+                   WHEN p.job_name IN ('PAG', 'TS') THEN 
                        CASE 
                            WHEN j.assigned_pag IS NULL AND j.assigned_qc IS NULL THEN 'Pending'
                            WHEN j.assigned_qc IS NULL THEN 'In Progress'
@@ -516,7 +523,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                            WHEN j.assigned_xml IS NOT NULL THEN 'Completed'
                            ELSE 'Pending'
                        END
-                   WHEN p.job_name IN ('CE+PAG', 'CE+PAG+XML') THEN 
+                   WHEN p.job_name IN ('CE+PAG', 'CE+TS', 'CE+PAG+XML') THEN 
                        CASE 
                            WHEN j.assigned_ce IS NULL AND j.assigned_le IS NULL AND j.assigned_pag IS NULL AND j.assigned_qc IS NULL THEN 'Pending'
                            WHEN j.assigned_ce IS NOT NULL AND j.assigned_le IS NOT NULL AND j.assigned_pag IS NOT NULL AND j.assigned_qc IS NOT NULL THEN 'Completed'
@@ -530,6 +537,12 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                                 (j.assigned_pag IS NOT NULL AND j.assigned_qc IS NOT NULL AND j.assigned_xml IS NOT NULL) THEN 'Completed'
                            ELSE 'In Progress'
                        END
+                   WHEN p.job_name = 'AP' OR p.job_name LIKE '%Corrections%' THEN
+                       CASE
+                           WHEN ap.process_member IS NULL OR ap.process_member = '' THEN 'Pending'
+                           WHEN ap.process_status = 'Completed' THEN 'Completed'
+                           ELSE 'In Progress'
+                       END
                    ELSE 'Pending'
                END as status
         FROM jobs j
@@ -539,6 +552,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
         LEFT JOIN le ON j.job_id = le.job_id
         LEFT JOIN pag ON j.job_id = pag.job_id
         LEFT JOIN qc ON j.job_id = qc.job_id
+        LEFT JOIN ap_assign ap ON j.job_id = ap.job_id
         $where_sql
         ORDER BY $sort $dir";
 
@@ -608,7 +622,7 @@ require 'header.php';
         }
         
         .form-card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #707981; /* Grey color matching table header */
             padding: 0.75rem 1.25rem;
             color: white;
         }
@@ -694,20 +708,23 @@ require 'header.php';
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #0d6efd; /* Standard Blue */
             border: none;
             border-radius: 8px;
             padding: 0.4rem 1rem;
             font-weight: 500;
             font-size: 0.85rem;
             letter-spacing: 0.025em;
-            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
             transition: all 0.15s ease;
+            color: white;
         }
         
         .btn-primary:hover {
+            background-color: #0b5ed7; /* Darker Blue on hover */
             transform: translateY(-1px);
-            box-shadow: 0 3px 6px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 3px 6px rgba(13, 110, 253, 0.4);
+            color: white;
         }
         
         .btn-outline-secondary {
@@ -1411,7 +1428,8 @@ require 'header.php';
                                             'LE'  => 'bg-info',
                                             'PAG' => 'bg-success',
                                             'QC'  => 'bg-warning',
-                                            'XML' => 'bg-danger'
+                                            'XML' => 'bg-danger',
+                                            'AP'  => 'bg-dark'
                                         ];
 
                                         foreach ($stages as $stage):
