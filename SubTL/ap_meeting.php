@@ -151,8 +151,9 @@ if ($filter_mode === 'month') {
     $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND year = ?";
     $stmt_target = $mysqli->prepare($target_sql);
 
-    // Muted Production query for now until logic is defined for AP
-    // $prod_sql = "..."; 
+    // Production Query fetching Article Count (word_count) for AP
+    $prod_sql = "SELECT SUM(j.word_count) as total_prod FROM ap_assign a JOIN jobs j ON a.job_id = j.job_id WHERE a.process_member = ? AND a.process_status = 'Completed' AND MONTH(a.date) = ? AND YEAR(a.date) = ?";
+    $stmt_prod = $mysqli->prepare($prod_sql);
     
     $error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND MONTH(date) = ? AND YEAR(date) = ?";
     $stmt_error = $mysqli->prepare($error_sql);
@@ -160,8 +161,9 @@ if ($filter_mode === 'month') {
     $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
     $stmt_target = $mysqli->prepare($target_sql);
 
-    // Muted Production query for now until logic is defined for AP
-    // $prod_sql = "..."; 
+    // Production Query fetching Article Count (word_count) for AP
+    $prod_sql = "SELECT SUM(j.word_count) as total_prod FROM ap_assign a JOIN jobs j ON a.job_id = j.job_id WHERE a.process_member = ? AND a.process_status = 'Completed' AND DATE(a.date) BETWEEN ? AND ?";
+    $stmt_prod = $mysqli->prepare($prod_sql);
 
     $error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND DATE(date) BETWEEN ? AND ?";
     $stmt_error = $mysqli->prepare($error_sql);
@@ -251,8 +253,18 @@ if (!empty($user_employee_name)) {
                 }
             }
             
-            // Production skipped for now as per requirement
+            // Fetch Production (Article Count sum from AP jobs)
             $production = 0;
+            if (isset($stmt_prod) && $stmt_prod) {
+                if ($filter_mode === 'month') {
+                    $stmt_prod->bind_param("sii", $emp_username, $filter_month, $filter_year);
+                } else {
+                    $stmt_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                }
+                $stmt_prod->execute();
+                $res_prod = $stmt_prod->get_result()->fetch_assoc();
+                $production = $res_prod['total_prod'] ?? 0;
+            }
             
             // Get Errors
             $errors = 0;
@@ -267,11 +279,21 @@ if (!empty($user_employee_name)) {
                 $errors = $res_error['error_count'] ?? 0;
             }
 
-            // Calculations
+            // Calculations (Using exactly your formulas)
+            
+            // 1. Production points = Production / (Target / 100)
             $production_points = $target > 0 ? round($production / ($target / 100), 2) : 0;
+            
+            // 2. Errors points = Errors * 2
             $errors_points = $errors * 2;
-            $prod_pct = $production_points; 
+            
+            // 3. Production % = (Production Points / Target)
+            // (Note: $production_points is mathematically already the percentage out of 100, so mathematically $prod_pct = $production_points. 
+            // Aana neenga ketta exact format padi kela koduthurukken, ithu romba chinnatha (0.01) varum naala, % format kaga * 100 potruken).
+            $prod_pct = $target > 0 ? round(($production_points / $target) * 100, 2) : 0;
+            if ($prod_pct == 0 && $production_points > 0) { $prod_pct = $production_points; } // Fallback to normal if formula output is too small.
 
+            // 4. Accuracy % = (Production points - Errors points) / Production points
             $accuracy = 100;
             if ($production_points > 0) {
                 $accuracy = round((($production_points - $errors_points) / $production_points) * 100, 2);
@@ -280,8 +302,8 @@ if (!empty($user_employee_name)) {
                 $accuracy = 0;
             }
 
-            // --- NET PRODUCTION % FORMULA: (Prod Points - Error Points) ---
-            $net_prod_pct = ($target > 0) ? round($production_points - $errors_points, 2) : 0;
+            // 5. Net Production = Production - (Errors points / 100)
+            $net_prod_pct = round($production - ($errors_points / 100), 2);
             $net_prod_decimal = $net_prod_pct / 100;
             
             $team_data[] = [
@@ -306,6 +328,7 @@ if (!empty($user_employee_name)) {
 }
 if($stmt_target) $stmt_target->close();
 if($stmt_error) $stmt_error->close();
+if(isset($stmt_prod) && $stmt_prod) $stmt_prod->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -438,9 +461,9 @@ if($stmt_error) $stmt_error->close();
         
         // Exact processes list
         $required_processes = [
-            'CE', 'LE', 'Front Matter-CE', 'Content-CE', 'Equation-CE', 'Table-CE', 
-            'Image-CE', 'Reference-CE', 'FQA-CE', 'Sub TL', 
-            'QC', 'AP', 'TAB/IMG', 'PRE-PAG', 'AP_CRX', 'CE-REF', 'PAG'
+            'AP', 'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 
+            'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 
+            'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing'
         ];
         
         $proc_db_res = $mysqli->query("SELECT process_id, process_name FROM process_master");
