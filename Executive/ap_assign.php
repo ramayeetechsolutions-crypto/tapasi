@@ -390,7 +390,7 @@ $allowed_sorts = [
 ];
 $order_sql = "ORDER BY " . ($allowed_sorts[$sort] ?? 'id DESC');
 
-$stmt_list = $mysqli->prepare("SELECT * FROM ap_assign WHERE $where_sql $order_sql");
+$stmt_list = $mysqli->prepare("SELECT *, (SELECT word_count FROM jobs WHERE jobs.job_id = ap_assign.job_id) as article_count FROM ap_assign WHERE $where_sql $order_sql");
 if (!empty($params)) {
     $stmt_list->bind_param($types, ...$params);
 }
@@ -614,6 +614,7 @@ require 'header.php';
                             <th>Mail Subject</th>
                             <th>Process</th>
                             <th>Articles</th>
+                            <th>Article Count</th>
                             <th style="min-width: 170px;">Process Member</th>
                             <th>Supplements</th>
                             <th style="min-width: 170px;">Suppl. Member</th>
@@ -680,6 +681,11 @@ require 'header.php';
                                                value="<?= h($row['articles'] ?? '') ?>" 
                                                placeholder="Articles"
                                                onchange="updateField(<?= $row['id'] ?>, 'articles', this.value)">
+                                    </td>
+
+                                    <!-- 5.5 Article Count (Read-Only from Jobs table) -->
+                                    <td class="align-middle text-center">
+                                        <?= !empty($row['article_count']) ? h($row['article_count']) : '0' ?>
                                     </td>
 
                                     <!-- 6. Process Member (Assign Cell) -->
@@ -866,7 +872,7 @@ require 'header.php';
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="17" class="text-center py-4 text-muted">
+                                <td colspan="18" class="text-center py-4 text-muted">
                                     <i class="fas fa-layer-group fa-2x mb-2 d-block"></i>
                                     No AP entries found. Click "Add AP Job" to create your first entry.
                                 </td>

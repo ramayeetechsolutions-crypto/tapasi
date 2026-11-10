@@ -70,7 +70,7 @@ if ($to_date) {
 $where_sql = "WHERE " . implode(" AND ", $where);
 
 // SAFE QUERY for AP Report
-$sql = "SELECT * FROM ap_assign $where_sql ORDER BY date DESC, id DESC";
+$sql = "SELECT *, (SELECT word_count FROM jobs WHERE jobs.job_id = ap_assign.job_id) as article_count FROM ap_assign $where_sql ORDER BY date DESC, id DESC";
 $stmt = $mysqli->prepare($sql);
 if ($params) $stmt->bind_param($types, ...$params);
 $stmt->execute();
@@ -190,6 +190,7 @@ function getStatusBadge($status) {
                             <th>Mail Subject</th>
                             <th>Process</th>
                             <th>Articles</th>
+                            <th>Article Count</th>
                             <th>Supplements</th>
                             <th>Process TM</th>
                             <th>Suppl. TM</th>
@@ -229,6 +230,7 @@ function getStatusBadge($status) {
                             <td><?=h($row['mail_subject'])?></td>
                             <td><span class="badge bg-secondary"><?=h($row['process'])?></span></td>
                             <td><?=h($row['articles'])?></td>
+                            <td class="text-center"><?= !empty($row['article_count']) ? h($row['article_count']) : '0' ?></td>
                             <td><?=h($row['supplements'])?></td>
                             
                             <!-- Process TM -->
@@ -280,7 +282,7 @@ function getStatusBadge($status) {
                             <td><span class="badge bg-dark"><?= $live_tat ?> Days</span></td>
                         </tr>
                         <?php endforeach; else: ?>
-                        <tr><td colspan="18" class="text-center">No AP jobs found.</td></tr>
+                        <tr><td colspan="19" class="text-center">No AP jobs found.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

@@ -132,7 +132,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a href="jobs.php">
+            <a href="ap_jobs.php">
                 <i class="fas fa-tasks"></i> Manage Jobs
             </a>
         </li>

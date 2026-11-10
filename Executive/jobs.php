@@ -92,9 +92,10 @@ if (!in_array($sort, $allowed_sorts, true)) $sort = 'job_id';
 
 $default_due_date = date('Y-m-d H:i:s', strtotime('+5 days'));
 
-// Load all processes
+// Load all processes (Hide AP processes from normal jobs)
 $all_processes = [];
-$res = $mysqli->query("SELECT job_id, job_name FROM job_master WHERE status='Active' ORDER BY job_name");
+$ap_exclude = "'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing', 'AP'";
+$res = $mysqli->query("SELECT job_id, job_name FROM job_master WHERE status='Active' AND job_name NOT IN ($ap_exclude) ORDER BY job_name");
 if (!$res) die('Error loading processes: ' . $mysqli->error);
 while ($r = $res->fetch_assoc()) $all_processes[$r['job_id']] = $r['job_name'];
 
@@ -480,8 +481,9 @@ $where_clauses = [];
 $params = [];
 $types = '';
 
-// ADDED FIX: Hide XML Team jobs from this view
-$where_clauses[] = "p.job_name != 'XML'";
+// ADDED FIX: Hide XML Team & AP Team jobs from this view
+$ap_exclude = "'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing', 'AP'";
+$where_clauses[] = "p.job_name != 'XML' AND p.job_name NOT IN ($ap_exclude)";
 
 if (!empty($search_client)) {
     $where_clauses[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ?)";
