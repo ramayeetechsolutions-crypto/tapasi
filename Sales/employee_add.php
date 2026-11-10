@@ -73,11 +73,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $designation_id = isset($_POST['designation_id']) ? (int)$_POST['designation_id'] : 0;
         $shift = trim($_POST['shift'] ?? 'General');
 
+        // Fetch Sales team ID (default 9)
+        $sales_team_id = 9;
+        $t_res = $mysqli->query("SELECT team_id FROM team_master WHERE team_name = 'Sales' LIMIT 1");
+        if ($t_res && $t_row = $t_res->fetch_assoc()) {
+            $sales_team_id = (int)$t_row['team_id'];
+        }
+
         $stmt = $mysqli->prepare("INSERT INTO employee_master 
             (employee_name, employee_username, password_hash, email, phone, 
-             date_of_birth, joining_date, reporting_manager, user_role_id, designation_id, shift, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
-        $stmt->bind_param("ssssssssiis", 
+             date_of_birth, joining_date, reporting_manager, user_role_id, designation_id, shift, team_id, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
+        $stmt->bind_param("ssssssssiisi", 
             $employee_name, 
             $employee_username, 
             $password_hash, 
@@ -88,7 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reporting_manager, 
             $user_role_id,
             $designation_id,
-            $shift
+            $shift,
+            $sales_team_id
         );
 
         if ($stmt->execute()) {
@@ -113,7 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $roles = $mysqli->query("SELECT role_id, role_name FROM user_role_master WHERE role_name != 'Super Admin' ORDER BY role_name");
 
 // Get team leaders for reporting manager dropdown
-$team_leaders = $mysqli->query("SELECT employee_name FROM employee_master WHERE user_role_id=3 AND status='Active' ORDER BY employee_name");
+$current_tl_name = $_SESSION['ename'] ?? $_SESSION['username'] ?? '';
+$team_leaders = $mysqli->query("SELECT DISTINCT employee_name FROM employee_master WHERE (user_role_id IN (3, 9) OR employee_username = '$current_tl_name' OR employee_name = '$current_tl_name') AND status='Active' ORDER BY employee_name");
 
 require 'header.php';
 ?>
@@ -230,13 +239,19 @@ require 'header.php';
                 <select name="reporting_manager" class="form-select" required>
                     <option value="">Select Team Leader</option>
                     <?php
-                    $selected_rm = $_POST['reporting_manager'] ?? '';
-                    
+                    $selected_rm = $_POST['reporting_manager'] ?? $current_tl_name;
+                    $tl_names = [];
                     if ($team_leaders && $team_leaders->num_rows > 0) {
                         while($tl = $team_leaders->fetch_assoc()) {
-                            $selected = ($selected_rm == $tl['employee_name']) ? 'selected' : '';
-                            echo "<option value='" . h($tl['employee_name']) . "' $selected>" . h($tl['employee_name']) . "</option>";
+                            $tl_names[] = $tl['employee_name'];
                         }
+                    }
+                    if ($current_tl_name && !in_array($current_tl_name, $tl_names)) {
+                        $tl_names[] = $current_tl_name;
+                    }
+                    foreach ($tl_names as $tl_name) {
+                        $selected = ($selected_rm == $tl_name) ? 'selected' : '';
+                        echo "<option value='" . h($tl_name) . "' $selected>" . h($tl_name) . "</option>";
                     }
                     ?>
                 </select>

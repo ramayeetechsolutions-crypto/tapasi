@@ -120,6 +120,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $_SESSION['salesname']="Sales Market";
                     header("Location: Sales/dashboard.php");
                     break;
+                case "sales":
+                    $_SESSION['sales_exec']="Sales Executive";
+                    $_SESSION['salesname']="Sales Executive";
+                    header("Location: Sales_Executive/dashboard.php");
+                    break;
                 case "IT":
                     $_SESSION['infoname']="Info Tech";
                     header("Location: system/dashboard.php");
@@ -191,13 +196,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 case "TM":
                     $_SESSION['teamname']="Team Member";
                     if ($empRow['team_id'] == 3) {
-                      
                         header("Location: xml/dashboard_tl.php");
+                    } else if ($empRow['team_id'] == 9) {
+                        $_SESSION['sales_exec']="Sales Executive";
+                        $_SESSION['salesname']="Sales Executive";
+                        header("Location: Sales_Executive/dashboard.php");
                     } else{
                         echo "test";
                        // die;
                         header("Location: Executive/dashboard_exec.php");
                     }
+                    break;
+                case "sales":
+                    $_SESSION['sales_exec']="Sales Executive";
+                    $_SESSION['salesname']="Sales Executive";
+                    header("Location: Sales_Executive/dashboard.php");
                     break;
                 case "Admin":
                     $_SESSION['adminname']="Sub Admin";
