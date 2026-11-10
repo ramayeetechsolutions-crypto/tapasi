@@ -642,11 +642,12 @@ if ($row = $result->fetch_assoc()) {
                         <ul class="nav-dropdown">
                             <li><a href="client_report.php"><i class="fas fa-chart-line"></i> Client Report</a></li>
                             <li><a href="team_count_report.php"><i class="fas fa-diagram-project"></i> Team Report</a></li>
-                            <li>
+                            <li><a href="xml_weekly_report.php"><i class="fas fa-file-alt"></i> Weekly Production Report</a></li>
+                            <!-- <li>
                                 <a class="nav-link" href="xml_report.php">
                                     <i class="fa fa-line-chart"></i> Graphical Reports
                                 </a>
-                            </li>
+                            </li> -->
                             <li>
     <a class="dropdown-item" href="error_entry_wk.php">
         <i class="fas fa-calculator me-2 text-muted"></i> Error Log (WK)
