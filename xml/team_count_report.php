@@ -243,6 +243,88 @@ if (!empty($employee_details)) {
 // Master tables for dropdowns
 $teams_sql = "SELECT team_id, team_name FROM team_master ORDER BY team_name";
 $teams_result = $mysqli->query($teams_sql);
+
+/* =========================================
+   PREPARE DATA FOR CHARTS (ADDED)
+========================================= */
+
+$start_ts = strtotime($start_date);
+$end_ts = strtotime($end_date);
+$num_days_chart = max(1, floor(($end_ts - $start_ts) / 86400) + 1);
+
+$emp_chart_labels = [];
+$emp_chart_percentages = [];
+$emp_proc_datasets_raw = [];
+
+foreach($processes_array as $proc) {
+    $emp_proc_datasets_raw[$proc['process_name']] = [
+        'label' => $proc['process_name'],
+        'data' => [],
+        'raw_achieved' => [],
+        'raw_target' => [],
+        'has_data' => false
+    ];
+}
+
+foreach($employee_details as $emp_id => $emp) {
+    $sum_of_percentages = 0;
+    $has_any_data = false;
+    
+    foreach($processes_array as $proc) {
+        $p_name = $proc['process_name'];
+        $p_achieved = 0;
+        
+        foreach($dates as $date) {
+            $p_achieved += $process_daily_achieved[$emp_id][$p_name][$date] ?? 0;
+        }
+        
+        $p_daily_target = $process_targets[$emp_id][$p_name] ?? 0;
+        $p_total_target = $p_daily_target * $num_days_chart;
+        
+        $p_percent = 0;
+        if ($p_total_target > 0) {
+            $p_percent = ($p_achieved / $p_total_target) * 100;
+            $sum_of_percentages += $p_percent;
+        } elseif ($p_achieved > 0) {
+            $p_percent = 100;
+            $sum_of_percentages += 100;
+        }
+        
+        $emp_proc_datasets_raw[$p_name]['data'][] = round($p_percent, 1);
+        $emp_proc_datasets_raw[$p_name]['raw_achieved'][] = $p_achieved;
+        $emp_proc_datasets_raw[$p_name]['raw_target'][] = $p_total_target;
+        
+        if ($p_total_target > 0 || $p_achieved > 0) {
+            $emp_proc_datasets_raw[$p_name]['has_data'] = true;
+            $has_any_data = true;
+        }
+    }
+    
+    if ($has_any_data) {
+        $emp_chart_labels[] = $emp['employee_name'];
+        $emp_chart_percentages[] = round($sum_of_percentages, 0); 
+    }
+}
+
+$emp_proc_final_datasets = [];
+$color_palette = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'];
+$c_idx = 0;
+
+foreach($emp_proc_datasets_raw as $p_name => $ds) {
+    if ($ds['has_data']) {
+        $color = $color_palette[$c_idx % count($color_palette)];
+        $emp_proc_final_datasets[] = [
+            'label' => $p_name,
+            'data' => $ds['data'],
+            'raw_achieved' => $ds['raw_achieved'],
+            'raw_target' => $ds['raw_target'],
+            'backgroundColor' => $color . 'CC',
+            'borderColor' => $color,
+            'borderWidth' => 1
+        ];
+        $c_idx++;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -254,6 +336,7 @@ $teams_result = $mysqli->query($teams_sql);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { padding: 20px; margin: 0 auto; }
@@ -545,6 +628,52 @@ $teams_result = $mysqli->query($teams_sql);
         </div>
 
         <?php endif; ?>
+        
+        <!-- Employee Performance Charts Heading Added Here -->
+        <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+            <h4><i class="fas fa-chart-bar me-2"></i>Employee Performance Charts</h4>
+        </div>
+
+        <!-- Graphical Reports Added Here -->
+        <div class="row">
+            <!-- Chart 1: Bar Chart -->
+            <div class="col-12 mb-4">
+                <div class="card border-primary">
+                    <div class="card-header bg-white border-primary">
+                        <h5 class="mb-0 text-primary"><i class="fas fa-bars me-2"></i>Employee Process Performance (Bar Chart)</h5>
+                        <small class="text-muted">Stacked bars representing individual process calculation: (Achieved / Target) * 100</small>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 450px; width: 100%; padding: 15px;">
+                        <?php if (empty($emp_chart_labels) || empty($emp_proc_final_datasets)): ?>
+                            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                                <div><i class="fas fa-chart-bar fa-3x mb-3 d-block text-center"></i>No data available.</div>
+                            </div>
+                        <?php else: ?>
+                            <canvas id="employeeBarChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 2: Line Chart -->
+            <div class="col-12 mb-4">
+                <div class="card border-success">
+                    <div class="card-header bg-white border-success">
+                        <h5 class="mb-0 text-success"><i class="fas fa-chart-line me-2"></i>Overall Employee Performance (Line Chart)</h5>
+                        <small class="text-muted">Summing the percentages: SUM(ARRAYFORMULA(Achieved / Target * 100))</small>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 450px; width: 100%; padding: 15px;">
+                        <?php if (empty($emp_chart_labels)): ?>
+                            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                                <div><i class="fas fa-chart-line fa-3x mb-3 d-block text-center"></i>No data available.</div>
+                            </div>
+                        <?php else: ?>
+                            <canvas id="employeeLineChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -593,6 +722,94 @@ $teams_result = $mysqli->query($teams_sql);
                     $('input[name="end_date"]').val(dates[1]);
                 }
             });
+
+            <?php if (!empty($emp_chart_labels)): ?>
+            // ----------------------------------------------------
+            // 1. BAR CHART: Employee Process Breakdowns (Stacked)
+            // ----------------------------------------------------
+            new Chart(document.getElementById('employeeBarChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: <?= json_encode($emp_chart_labels) ?>,
+                    datasets: <?= json_encode($emp_proc_final_datasets) ?>
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    let percent = context.raw;
+                                    let achieved = context.dataset.raw_achieved[context.dataIndex];
+                                    let target = context.dataset.raw_target[context.dataIndex];
+                                    
+                                    if(target === 0 && achieved === 0) return null;
+                                    return `${label}: ${percent}% (${achieved} / ${target} * 100)`;
+                                }
+                            },
+                            filter: function(tooltipItem) {
+                                let achieved = tooltipItem.dataset.raw_achieved[tooltipItem.dataIndex];
+                                let target = tooltipItem.dataset.raw_target[tooltipItem.dataIndex];
+                                return (target > 0 || achieved > 0);
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true,
+                            beginAtZero: true, 
+                            title: { display: true, text: 'Percentage (%)' }
+                        }
+                    }
+                }
+            });
+
+            // ----------------------------------------------------
+            // 2. LINE CHART: Employee Overall Sum
+            // ----------------------------------------------------
+            new Chart(document.getElementById('employeeLineChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: <?= json_encode($emp_chart_labels) ?>,
+                    datasets: [
+                        {
+                            label: 'Sum of Process Percentages (%)',
+                            data: <?= json_encode($emp_chart_percentages) ?>,
+                            backgroundColor: 'rgba(25, 135, 84, 0.2)', 
+                            borderColor: 'rgb(25, 135, 84)',           
+                            borderWidth: 3,
+                            pointBackgroundColor: 'rgb(25, 135, 84)',
+                            pointRadius: 5,
+                            fill: true, 
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Total Overall: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Overall Summed %' }
+                        }
+                    }
+                } 
+            });
+            <?php endif; ?>
         });
     </script>
 </body>
