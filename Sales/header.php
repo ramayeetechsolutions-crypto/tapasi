@@ -24,7 +24,6 @@ $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 $employeePages = [
     'employee_master.php',
     'employee_add.php',
-    'teamleader_ot_approval.php',
     'employee_leave.php', 
     'employee_registration.php', 
     'employee_regby_emp.php', 
@@ -463,7 +462,6 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                         </a>
                         <ul class="nav-dropdown">
                             <li><a href="employee_master.php"><i class="fas fa-id-card"></i> Profile</a></li>
-                            <li><a href="teamleader_ot_approval.php"><i class="fas fa-bullseye"></i> OT Approvals</a></li>
                         </ul>
                     </li>
 
