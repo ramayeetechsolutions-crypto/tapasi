@@ -401,8 +401,8 @@ if($up_res) $today_uq_uploaded_pages = (int)$up_res->fetch_row()[0];
         <!-- LEFT: Today's Overview (XML UQ) -->
         <div class="col-md-6 mb-3">
             <div class="card h-100">
-                <div class="card-header">
-                    <h5><i class="fas fa-calendar-check me-2"></i>Today's Overview</h5>
+                <div class="card-header bg-white">
+                    <h5 style="color: #000000;"><i class="fas fa-calendar-check me-2"></i>Today's Overview</h5>
                 </div>
                 <div class="card-body">
                     <div class="today-stats">
@@ -437,8 +437,8 @@ if($up_res) $today_uq_uploaded_pages = (int)$up_res->fetch_row()[0];
         <!-- RIGHT: Job In-Progress Distribution -->
         <div class="col-md-6 mb-3">
             <div class="card h-100">
-                <div class="card-header">
-                    <h5><i class="fas fa-list-alt me-2"></i>Job In-Progress Distribution</h5>
+                <div class="card-header bg-white">
+                    <h5 style="color: #000000;"><i class="fas fa-list-alt me-2"></i>Job In-Progress Distribution</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex flex-column gap-3">
