@@ -30,20 +30,30 @@ function calculateExperience($joining_date) {
 
 // Get current team leader's team_id
 $team_leader_team = null;
+$team_leader_name = ''; // Added to store TL name
 if ($current_username) {
-    $stmt = $mysqli->prepare("SELECT e.team_id, team_name FROM employee_master e, team_master t WHERE employee_username = ? AND e.team_id=t.team_id AND e.status = 'Active'");
+    $stmt = $mysqli->prepare("SELECT e.team_id, e.employee_name, t.team_name FROM employee_master e, team_master t WHERE e.employee_username = ? AND e.team_id=t.team_id AND e.status = 'Active'");
     $stmt->bind_param("s", $current_username);
     $stmt->execute();
     $result = $stmt->get_result();
     if ($row = $result->fetch_assoc()) {
         $team_leader_team = $row['team_id'];
+        $team_leader_name = $row['employee_name']; // Fetching TL name
         $team_leader_team_name = $row['team_name'];
     }
     $stmt->close();
 }
 
+// Calculate Default Financial Week (Starting from First Monday of April)
+$today = new DateTime();
+$curr_y = (int)$today->format('Y');
+if ((int)$today->format('n') < 4) { $curr_y--; } // If Jan-Mar, use previous year's April
+$fy_start_date = new DateTime("first monday of april $curr_y");
+$days_passed = $fy_start_date->diff($today)->days;
+$default_week = floor($days_passed / 7) + 1;
+
 // Get parameters
-$week = $_GET['week'] ?? date('W');
+$week = $_GET['week'] ?? $default_week;
 $year = $_GET['year'] ?? date('Y');
 
 
@@ -76,11 +86,11 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     LEFT JOIN process_master pm ON em.designation_id = pm.process_id AND pm.status = 'Active'
     LEFT JOIN designation_master d ON em.designation_id = d.designation_id AND d.status = 'Active'
     WHERE em.status = 'Active' 
-    AND em.team_id = ?
-    ORDER BY em.employee_name ASC";
+    AND em.reporting_manager = ?
+    ORDER BY em.employee_username ASC";
     
     $stmt = $mysqli->prepare($sql);
-    $stmt->bind_param("iiis", $week, $year, $week_str, $team_leader_team);
+    $stmt->bind_param("iiis", $week, $year, $week_str, $team_leader_name);
     $stmt->execute();
     $excel_data = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
@@ -216,9 +226,14 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     exit();
 }
 
-// Get start and end dates for the selected week to fetch XML data
-$dto = new DateTime();
-$dto->setISODate($year, $week);
+// Get start and end dates for the selected week to fetch XML data (Starting from April First Monday)
+$dto = new DateTime("first monday of april $year");
+
+$week_offset = (int)$week - 1;
+if ($week_offset > 0) {
+    $dto->modify("+$week_offset weeks");
+}
+
 $start_date = $dto->format('Y-m-d');
 $dto->modify('+5 days'); // Monday to Saturday (6 days)
 $end_date = $dto->format('Y-m-d');
@@ -236,13 +251,13 @@ if ($pm_result) {
     }
 }
 
-// Fetch Employees (Ordered by ID Ascending)
+// Fetch Employees (Filtered by reporting_manager to match Assignment Page)
 $employees_sql = "SELECT em.employee_id, em.employee_name, em.employee_username, em.team_id, em.joining_date, em.process
                   FROM employee_master em
-                  WHERE em.status = 'Active' AND em.team_id = ?
+                  WHERE em.status = 'Active' AND em.reporting_manager = ?
                   ORDER BY em.employee_username ASC";
 $stmt = $mysqli->prepare($employees_sql);
-$stmt->bind_param("s", $team_leader_team);
+$stmt->bind_param("s", $team_leader_name);
 $stmt->execute();
 $employees_res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
@@ -257,9 +272,9 @@ $targets_sql = "SELECT t1.tm_id, SUM(t1.target_limit) as total_daily_target
                 ) t2 ON t1.id = t2.latest_id
                 GROUP BY t1.tm_id";
 $targets_res = $mysqli->query($targets_sql);
-$employee_targets = [];
-while ($row = $targets_res->fetch_assoc()) {
-    $employee_targets[$row['tm_id']] = $row['total_daily_target'] * 6; // Weekly Target = Daily * 6
+        $employee_targets = [];
+        while ($row = $targets_res->fetch_assoc()) {
+            $employee_targets[$row['tm_id']] = $row['total_daily_target']; // Removed * 6 to show exact total from assignment
 }
 
 // 3. Fetch Achieved from daily_achieved_xml
@@ -273,18 +288,34 @@ while ($row = $achieved_res->fetch_assoc()) {
     $employee_achieved[$row['tm_id']] = $row['total_achieved'];
 }
 
-// 4. Fetch Errors
-$error_sql = "SELECT error_made_by as employee_username,
+// 4. Fetch Errors (Fixed Week Match & mapping by Name)
+$formatted_week = sprintf("%02d", $week); // converts 7 to '07'
+$error_sql = "SELECT error_made_by,
                      SUM(CASE WHEN internal_external = 'Internal' THEN 1 ELSE 0 END) as internal_errors,
                      SUM(CASE WHEN internal_external = 'External' THEN 1 ELSE 0 END) as external_errors
               FROM error_log
-              WHERE week = '$week_str' AND status = 'Active'
+              WHERE (week = '$week_str' OR week LIKE '%$week%' OR week LIKE '%$formatted_week%') AND status = 'Active'
               GROUP BY error_made_by";
 $error_res = $mysqli->query($error_sql);
 $employee_errors = [];
 while ($row = $error_res->fetch_assoc()) {
-    $employee_errors[$row['employee_username']] = $row;
+    $employee_errors[$row['error_made_by']] = $row;
 }
+
+// ADDED: Fetch process-wise targets & achieved for accurate "Sum of Process %" calculation
+$pw_targets_sql = "SELECT t1.tm_id, t1.process_id, t1.target_limit FROM daily_targets_xml t1 INNER JOIN (SELECT tm_id, process_id, MAX(id) as latest_id FROM daily_targets_xml GROUP BY tm_id, process_id) t2 ON t1.id = t2.latest_id";
+$pw_targets_res = $mysqli->query($pw_targets_sql);
+$pw_targets = [];
+while($r = $pw_targets_res->fetch_assoc()) { $pw_targets[$r['tm_id']][$r['process_id']] = $r['target_limit']; }
+
+$pw_achieved_sql = "SELECT tm_id, process_id, SUM(achieved_target) as proc_achieved FROM daily_achieved_xml WHERE target_date BETWEEN '$start_date' AND '$end_date' GROUP BY tm_id, process_id";
+$pw_achieved_res = $mysqli->query($pw_achieved_sql);
+$pw_achieved = [];
+while($r = $pw_achieved_res->fetch_assoc()) { $pw_achieved[$r['tm_id']][$r['process_id']] = $r['proc_achieved']; }
+
+$sts = strtotime($start_date);
+$ets = strtotime($end_date);
+$num_days = max(1, floor(($ets - $sts) / 86400) + 1);
 
 // 5. Process data and calculations
 $performance_data = [];
@@ -310,27 +341,59 @@ foreach ($employees_res as $emp) {
         }
     }
     $emp['process_display_name'] = !empty($mapped_names) ? implode(', ', array_unique($mapped_names)) : 'Unassigned';
-    
-    $emp['target_pages'] = $employee_targets[$username] ?? 0;
-    $emp['achieved_pages'] = $employee_achieved[$username] ?? 0;
+            
+            // Used employee_id instead of username to fetch the mapped target correctly
+            $emp_id = $emp['employee_id'];
+            $emp['target_pages'] = $employee_targets[$emp_id] ?? 0;
+            
+            $emp['achieved_pages'] = $employee_achieved[$emp_id] ?? 0;
 
-    $errors = $employee_errors[$username] ?? ['internal_errors' => 0, 'external_errors' => 0];
-    $emp['internal_errors'] = $errors['internal_errors'];
-    $emp['external_errors'] = $errors['external_errors'];
+    // Match errors using Employee Name (or partial name from Excel imports like 'Deepa' matching 'T. Deepa')
+    $emp_name = $emp['employee_name'];
+    $int_err = 0;
+    $ext_err = 0;
+    
+    foreach($employee_errors as $err_name => $err_data) {
+        $e_name = trim($err_name);
+        if(!empty($e_name) && $e_name !== 'NA') {
+            if(strcasecmp($e_name, trim($emp_name)) === 0 || stripos(trim($emp_name), $e_name) !== false) {
+                $int_err += $err_data['internal_errors'];
+                $ext_err += $err_data['external_errors'];
+            }
+        }
+    }
+    
+    $emp['internal_errors'] = $int_err;
+    $emp['external_errors'] = $ext_err;
 
     // Calculations based on Excel Sheet
     $emp['internal_error_points'] = $emp['internal_errors'] * 2;
     $emp['external_error_points'] = $emp['external_errors'] * 4;
     $total_error_points = $emp['internal_error_points'] + $emp['external_error_points'];
 
-    $emp['production_percentage'] = $emp['target_pages'] > 0 ? ($emp['achieved_pages'] / $emp['target_pages']) * 100 : 0;
+    // ADDED: Calculate Production % as Sum of Process % (matching team_count_report.php)
+    $sum_of_percentages = 0;
+    if(isset($pw_targets[$emp_id])) {
+        foreach($pw_targets[$emp_id] as $pid => $daily_target) {
+            $p_total_target = $daily_target * $num_days;
+            $p_achieved = $pw_achieved[$emp_id][$pid] ?? 0;
+            if ($p_total_target > 0) {
+                $sum_of_percentages += ($p_achieved / $p_total_target) * 100;
+            } elseif ($p_achieved > 0) {
+                $sum_of_percentages += 100;
+            }
+        }
+    }
+    $emp['production_percentage'] = $sum_of_percentages;
 
-    // NET Prod % = Prod % - Total Error Points
+    // NET Prod % = Production % - (Internal Error Points + External Error Points sum)
     $emp['net_prod_percentage'] = $emp['production_percentage'] - $total_error_points;
 
-    // Accuracy % = (NET Prod % / Prod %) * 100
+    // Accuracy % = (NET Prod % / Production %) * 100
     if ($emp['production_percentage'] > 0) {
-        $emp['accuracy_percentage'] = ($emp['net_prod_percentage'] / $emp['production_percentage']) * 100;
+        $calculated_accuracy = ($emp['net_prod_percentage'] / $emp['production_percentage']) * 100;
+        // Safety: Minus-la (-%) poga koodathu nu 0 limit panrom
+        $emp['accuracy_percentage'] = $calculated_accuracy > 0 ? $calculated_accuracy : 0;
     } else {
         $emp['accuracy_percentage'] = 0;
     }
@@ -344,6 +407,7 @@ foreach ($employees_res as $emp) {
     $chart_accuracy[] = round($emp['accuracy_percentage'], 2);
 
     $team_stats['total_employees']++;
+    $team_stats['sum_prod_percentage'] = ($team_stats['sum_prod_percentage'] ?? 0) + $emp['production_percentage']; // ADDED THIS LINE
     $team_stats['total_target'] += $emp['target_pages'];
     $team_stats['total_achieved'] += $emp['achieved_pages'];
     $team_stats['total_internal_errors'] += $emp['internal_errors'];
@@ -351,12 +415,16 @@ foreach ($employees_res as $emp) {
     $team_stats['total_errors'] += ($emp['internal_errors'] + $emp['external_errors']);
 }
 
-// Team averages
-$team_stats['avg_production'] = $team_stats['total_target'] > 0 ? ($team_stats['total_achieved'] / $team_stats['total_target']) * 100 : 0;
+// Team averages (Updated to SUM the individual production percentages as requested)
+$team_stats['avg_production'] = $team_stats['sum_prod_percentage'] ?? 0;
+// Team total error points sum (Internal + External)
 $team_total_error_pts = ($team_stats['total_internal_errors'] * 2) + ($team_stats['total_external_errors'] * 4);
 $team_stats['avg_net_prod'] = $team_stats['avg_production'] - $team_total_error_pts;
+
 if ($team_stats['avg_production'] > 0) {
-    $team_stats['avg_accuracy'] = ($team_stats['avg_net_prod'] / $team_stats['avg_production']) * 100;
+    $team_calc_acc = ($team_stats['avg_net_prod'] / $team_stats['avg_production']) * 100;
+    // Safety: Minus-la (-%) poga koodathu nu 0 limit panrom
+    $team_stats['avg_accuracy'] = $team_calc_acc > 0 ? $team_calc_acc : 0;
 } else {
     $team_stats['avg_accuracy'] = 0;
 }
@@ -508,12 +576,12 @@ if ($team_stats['avg_production'] > 0) {
                                 <tr class="text-center align-middle">
                                     <td class="fw-bold"><?= $counter++ ?></td>
                                     <td><?= h($emp['employee_username']) ?></td>
-                                    <td class="text-start"><?= h($emp['employee_name']) ?></td>
+                                    <td class="text-start text-nowrap"><?= h($emp['employee_name']) ?></td>
                                     <td><?= h($emp['experience']) ?></td>
                                     <td class="fw-bold"><?= h($emp['process_display_name'] ?? 'Unassigned') ?></td>
                                     <td><?= number_format($emp['target_pages']) ?></td>
                                     <td><?= number_format($emp['achieved_pages']) ?></td>
-                                    <td><?= number_format($emp['production_percentage'], 1) ?></td>
+                                    <td><?= number_format($emp['production_percentage'], 1) ?>%</td>
                                     
                                     <!-- Colors based on excel logic: yellow for int error, red for ext error -->
                                     <td class="<?= $emp['internal_errors'] > 0 ? 'bg-warning text-dark fw-bold' : '' ?>"><?= $emp['internal_errors'] ?></td>
