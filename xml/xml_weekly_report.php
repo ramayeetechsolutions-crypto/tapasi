@@ -448,6 +448,12 @@ if ($team_stats['avg_production'] > 0) {
         .stat-card.achieved { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
         .stat-card.errors { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
         .stat-card h3 { font-size: 2.5rem; margin: 10px 0; }
+        /* ADDED: Scrollable container for the table */
+        .table-responsive {
+            max-height: 65vh; /* Sets height so table scrolls internally */
+            overflow-y: auto;
+        }
+
         .table thead th {
             background-color: #707981 !important;
             font-weight: bold;
@@ -458,6 +464,10 @@ if ($team_stats['avg_production'] > 0) {
             padding: 0.8rem 0.5rem;
             border: 1px solid #5a6268 !important;
             white-space: nowrap;
+            /* ADDED: Sticky properties to freeze the header */
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         .team-badge { font-size: 1.2em; padding: 10px 20px; }
         .chart-container { height: 400px; }
