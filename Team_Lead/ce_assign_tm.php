@@ -498,6 +498,15 @@ require 'header.php';
     <!-- Select2 CSS for Search+Dropdown -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
+        /* Remove increase/decrease spinner buttons from number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { 
+            -moz-appearance: textfield; 
+        }
         /* Select2 Custom Style */
         .select2-container .select2-selection--single {
             height: 31px !important;
@@ -1122,19 +1131,19 @@ require 'header.php';
                                         </span>
                                     </td>
 
-                                    <!-- 4. EQ (Editable) -->
+                                                                        <!-- EQ (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 55px; font-size:11px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
                                     </td>
 
-                                    <!-- 5. Images (Editable) -->
+                                    <!-- Images (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h($row['images'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 55px; font-size:11px;" value="<?= h($row['images'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
                                     </td>
 
-                                    <!-- 6. Tables (Editable) -->
+                                    <!-- Tables (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h($row['tables_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 55px; font-size:11px;" value="<?= h($row['tables_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
                                     </td>
 
                                     <!-- 7. Process -->
