@@ -483,6 +483,15 @@ require 'header.php';
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Remove increase/decrease spinner buttons from number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { 
+            -moz-appearance: textfield; 
+        }
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
@@ -1045,19 +1054,19 @@ require 'header.php';
                                             <?= h($row['articles'] ?? 'N/A') ?>
                                         </span>
                                     </td>
-                                    <!-- EQ (Editable) -->
+                                                                        <!-- EQ (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 55px; font-size: 11px; height: 22px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
                                     </td>
 
                                     <!-- Images (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 55px; font-size: 11px; height: 22px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
                                     </td>
 
                                     <!-- Tables (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 55px; font-size: 11px; height: 22px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary"><?= h($row['process'] ?? 'N/A') ?></span>
