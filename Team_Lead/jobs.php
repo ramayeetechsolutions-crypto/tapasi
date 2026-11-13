@@ -11,6 +11,16 @@ error_reporting(E_ALL);
 
 require 'db.php';
 
+// Auto-add separate journal and issue columns if not exists
+$check_journal = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_journal && $check_journal->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_issue = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_issue && $check_issue->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
 }
@@ -128,7 +138,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $job_id = (int)($_POST['job_id'] ?? 0);
     $job_date = $_POST['job_date'] ?: date('Y-m-d');
     $client_id = (int)($_POST['client_id'] ?? 0);
-    $journal = trim($_POST['journal_issue'] ?? '');
+    $journal_name = trim($_POST['journal'] ?? '');
+    $issue_name = trim($_POST['issue'] ?? '');
+    $journal = trim($journal_name . ($issue_name !== '' ? ' ' . $issue_name : ''));
     $mail_subject = trim($_POST['mail_subject'] ?? '');
     $notes = trim($_POST['notes'] ?? '');
     $queries = trim($_POST['queries'] ?? '');
@@ -231,13 +243,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Insert job
             $stmt = $mysqli->prepare("
                 INSERT INTO jobs (
-                    job_date, client_id, journal_issue, mail_subject, article, process_id,
+                    job_date, client_id, journal, issue, journal_issue, mail_subject, article, process_id,
                     assigned_to, assigned_ce, assigned_le, assigned_pag,
                     assigned_qc, assigned_xml, due_date, due_date_ce,
                     due_date_le, due_date_pag, due_date_qc,
                     notes, queries, word_count
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             if (!$stmt) {
                 $errors[] = 'Error preparing jobs insert: ' . $mysqli->error;
@@ -257,9 +269,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $assigned_to_tm = ''; // Empty as removed
 
             $stmt->bind_param(
-                'sisssssssssssssssssi',
+                'sisssssisssssssssssssi',
                 $job_date,
                 $client_id,
+                $journal_name,
+                $issue_name,
                 $journal,
                 $mail_subject,
                 $article,
@@ -453,9 +467,9 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
         }
 
         // Update the job record
-        $stmt = $mysqli->prepare("UPDATE jobs SET job_date=?, client_id=?, journal_issue=?, mail_subject=?, article=?, process_id=?, due_date=?, notes=?, queries=?, word_count=? WHERE job_id=?");
+        $stmt = $mysqli->prepare("UPDATE jobs SET job_date=?, client_id=?, journal=?, issue=?, journal_issue=?, mail_subject=?, article=?, process_id=?, due_date=?, notes=?, queries=?, word_count=? WHERE job_id=?");
         if (!$stmt) die('Error preparing update: ' . $mysqli->error);
-        $stmt->bind_param('sisssssssii', $job_date, $client_id, $journal, $mail_subject, $article, $process_id, $due_date, $notes, $queries, $word_count, $job_id);
+        $stmt->bind_param('sisssssisssii', $job_date, $client_id, $journal_name, $issue_name, $journal, $mail_subject, $article, $process_id, $due_date, $notes, $queries, $word_count, $job_id);
         if (!$stmt->execute()) {
             die('Update failed: ' . $stmt->error);
         }
@@ -497,7 +511,7 @@ if ($where_clauses) {
     $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
 }
 
-$sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article, 
+$sql = "SELECT j.job_id, j.job_date, j.journal, j.issue, j.journal_issue, j.mail_subject, j.article, 
                j.assigned_to, j.notes, j.queries, j.word_count,
                j.assigned_ce, j.assigned_le, j.assigned_pag, j.assigned_qc, j.assigned_xml, 
                j.due_date, j.process_id, c.client_name, c.team_client_name, p.job_name,
@@ -1151,16 +1165,25 @@ require 'header.php';
                             </div>
                             
                             <div class="row g-2">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">
-                                        Journal / Issue <span class="required-asterisk">*</span>
+                                        Journal <span class="required-asterisk">*</span>
                                     </label>
-                                    <input type="text" name="journal_issue" class="form-control" required 
-                                           value="<?= h($mode === 'edit' ? $edit_job['journal_issue'] : '') ?>" 
-                                           placeholder="e.g., Nature V25">
+                                    <input type="text" name="journal" class="form-control" required 
+                                           value="<?= h($mode === 'edit' ? (!empty($edit_job['journal']) ? $edit_job['journal'] : $edit_job['journal_issue']) : '') ?>" 
+                                           placeholder="e.g., Nature">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        Issue
+                                    </label>
+                                    <input type="text" name="issue" class="form-control" 
+                                           value="<?= h($mode === 'edit' ? ($edit_job['issue'] ?? '') : '') ?>" 
+                                           placeholder="e.g., V25">
                                 </div>
                                 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Mail Subject</label>
                                     <input type="text" name="mail_subject" class="form-control" 
                                            value="<?= h($mode === 'edit' ? $edit_job['mail_subject'] : $mail_subject); ?>" 
@@ -1393,7 +1416,8 @@ require 'header.php';
                                 <th>S.No</th>
                                 <th>Date</th>
                                 <th>Client</th>
-                                <th>Journal/Issue</th>
+                                <th>Journal</th>
+                                <th>Issue</th>
                                 <th>Article</th>
                                 <th>Process</th>
                                 <th>Job Assign</th>
@@ -1415,7 +1439,8 @@ require 'header.php';
                                     <td><?= $i; ?></td>
                                     <td><?= formatDate($job['job_date']) ?></td>
                                     <td><?= h($job['team_client_name'] ?: $job['client_name']) ?></td>
-                                    <td><?= h($job['journal_issue']) ?></td>
+                                    <td><?= h(!empty($job['journal']) ? $job['journal'] : $job['journal_issue']) ?></td>
+                                    <td><?= !empty($job['issue']) ? h($job['issue']) : '<span class="text-muted">-</span>' ?></td>
                                     <td><?= h($job['article']) ?></td>
                                     <td><?= h($job['job_name']) ?></td>
                                     
@@ -1638,9 +1663,9 @@ require 'header.php';
                 return false;
             }
             
-            const journalInput = document.querySelector('input[name="journal_issue"]');
+            const journalInput = document.querySelector('input[name="journal"]');
             if (!journalInput || !journalInput.value.trim()) {
-                alert('Please enter a journal/issue.');
+                alert('Please enter a journal.');
                 e.preventDefault();
                 return false;
             }

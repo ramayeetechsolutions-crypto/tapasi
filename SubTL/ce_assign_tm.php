@@ -17,6 +17,16 @@ error_reporting(E_ALL);
 
 require 'db.php';
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
 }
@@ -54,9 +64,17 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         } elseif ($target_type === 'ref' && (empty($curr_data['ref_start_time']) || empty($curr_data['ref_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both REF Start Time and End Time before marking as Completed.']);
             exit;
-        } elseif ($target_type === 'fqa' && (empty($curr_data['fqa_start_time']) || empty($curr_data['fqa_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both FQA Start Time and End Time before marking as Completed.']);
-            exit;
+        } elseif ($target_type === 'fqa') {
+            $ce_done = in_array($curr_status, ['CE Done', 'CE & REF Done', 'Completed']);
+            $ref_done = in_array($curr_status, ['REF Done', 'CE & REF Done', 'Completed']);
+            if (!$ce_done || !$ref_done) {
+                echo json_encode(['success' => false, 'message' => 'Please complete both CE Assignment and REF Assignment before marking FQA as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['fqa_start_time']) || empty($curr_data['fqa_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both FQA Start Time and End Time before marking as Completed.']);
+                exit;
+            }
         }
     }
 
@@ -413,6 +431,8 @@ $total_pages = ceil($total_rows / $limit);
 
 // Main query
 $ce_query = "SELECT ce.*, 
+                    j.journal AS job_journal,
+                    j.issue AS job_issue,
                     j.journal_issue, 
                     j.article,
                     j.process_id,
@@ -1031,6 +1051,7 @@ require 'header.php';
                             <th>S.No</th>
                             <th>Received Date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -1038,14 +1059,14 @@ require 'header.php';
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
-                            <th>Remarks</th>
                             <th>CE Assignment</th>
                             <th>Word Count</th>
                             <th>REF Assignment</th>
                             <th>REF Count</th>
                             <th>FQA Assignment</th>
-                            <th>TAT</th>
+                            <th>Status</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1081,10 +1102,19 @@ require 'header.php';
                                         </span>
                                     </td>
 
+                                    <!-- Journal -->
+                                    <td>
+                                        <?php $display_journal = !empty($row['job_journal']) ? $row['job_journal'] : (!empty($row['journal_issue']) ? $row['journal_issue'] : ($row['issue'] ?? 'N/A')); ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_journal) ?>">
+                                            <?= h($display_journal) ?>
+                                        </span>
+                                    </td>
+
                                     <!-- 2. Issue -->
                                     <td>
-                                        <span class="text-truncate d-block" title="<?= h($row['issue'] ?? '') ?>">
-                                            <?= h($row['issue'] ?? 'N/A') ?>
+                                        <?php $display_issue = !empty($row['job_issue']) ? $row['job_issue'] : '—'; ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_issue) ?>">
+                                            <?= h($display_issue) ?>
                                         </span>
                                     </td>
 
@@ -1124,20 +1154,6 @@ require 'header.php';
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
-                                    </td>
-
-                                    <!-- Remarks Dropdown -->
-                                    <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
-                                            <option value="">Select</option>
-                                            <?php 
-                                            $remarks_options = ['Moved', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
-                                            foreach($remarks_options as $opt) {
-                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
-                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
-                                            }
-                                            ?>
-                                        </select>
                                     </td>
 
                                     <!-- 9. CE Assignment (Content) -->
@@ -1318,7 +1334,30 @@ require 'header.php';
                                         </div>
                                         </td>
 
-                                    <!-- 16. TAT -->
+                                    <!-- Status Dropdown (Formerly Remarks) -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
+                                            <option value="">Select</option>
+                                            <?php 
+                                            $remarks_options = ['Moved', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
+                                            foreach($remarks_options as $opt) {
+                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
+                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </td>
+
+                                    <!-- Priority -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
+                                            <option value="">Select Priority</option>
+                                            <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
+                                            <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
+                                        </select>
+                                    </td>
+
+                                    <!-- TAT -->
                                     <td>
                                         <?php 
                                             if (!empty($row['job_date'])) {
@@ -1332,15 +1371,6 @@ require 'header.php';
                                                 echo '<span class="text-muted">-</span>';
                                             }
                                         ?>
-                                    </td>
-                                    
-                                    <!-- 17. Priority -->
-                                    <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
-                                            <option value="">Select Priority</option>
-                                            <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
-                                            <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
-                                        </select>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
@@ -1461,6 +1491,20 @@ require 'header.php';
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + ceId);
                 if (row) {
+                    // Check if both CE and REF are Completed before allowing FQA Completed
+                    if (type === 'fqa') {
+                        let ceSelect = Array.from(row.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ce'"));
+                        let refSelect = Array.from(row.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ref'"));
+                        let ceDone = ceSelect && ceSelect.value === 'Completed';
+                        let refDone = refSelect && refSelect.value === 'Completed';
+
+                        if (!ceDone || !refDone) {
+                            showNotification('danger', 'Please complete both CE Assignment and REF Assignment before marking FQA as Completed!');
+                            if (select) { select.value = prevValue; }
+                            return;
+                        }
+                    }
+
                     let startTitle = type === 'ce' ? 'CE Start' : (type === 'ref' ? 'REF Start' : 'FQA Start');
                     let endTitle = type === 'ce' ? 'CE End' : (type === 'ref' ? 'REF End' : 'FQA End');
                     

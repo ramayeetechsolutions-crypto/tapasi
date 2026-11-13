@@ -133,9 +133,16 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         if ($target_type === 'le' && (empty($curr_data['le_start_time']) || empty($curr_data['le_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both LE Start Time and End Time before marking as Completed.']);
             exit;
-        } elseif ($target_type === 'le_qc' && (empty($curr_data['le_qc_start_time']) || empty($curr_data['le_qc_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both LE-QC Start Time and End Time before marking as Completed.']);
-            exit;
+        } elseif ($target_type === 'le_qc') {
+            $le_side_done = in_array($curr_status, ['LE Done', 'Completed', 'LE & LE-QC Done']);
+            if (!$le_side_done) {
+                echo json_encode(['success' => false, 'message' => 'Please complete LE Assignment before marking LE-QC Assignment as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['le_qc_start_time']) || empty($curr_data['le_qc_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both LE-QC Start Time and End Time before marking as Completed.']);
+                exit;
+            }
         }
     }
 
@@ -1352,6 +1359,21 @@ require 'header.php';
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + leId);
                 if (row) {
+                    // Check if LE is Completed before allowing LE-QC Completed
+                    if (type === 'le_qc') {
+                        let leSelect = Array.from(row.querySelectorAll('select')).find(s => {
+                            let oc = s.getAttribute('onchange') || '';
+                            return oc.includes("'le'") && !oc.includes("'le_qc'");
+                        });
+                        let leDone = leSelect && leSelect.value === 'Completed';
+
+                        if (!leDone) {
+                            showNotification('danger', 'Please complete LE Assignment before marking LE-QC Assignment as Completed!');
+                            setTimeout(() => { window.location.reload(); }, 1500);
+                            return;
+                        }
+                    }
+
                     let startTitle = (type === 'le') ? 'LE Start' : 'LE QC Start';
                     let endTitle = (type === 'le') ? 'LE End' : 'LE QC End';
                     

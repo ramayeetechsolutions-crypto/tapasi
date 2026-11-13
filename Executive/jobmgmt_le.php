@@ -59,6 +59,16 @@ function formatDateOnly($date, $format = 'd-m-Y') {
 require 'db.php';
 session_start();
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES); }
 
 $current_user = $_SESSION['username'] ?? '';
@@ -125,8 +135,8 @@ $stmt_team->close();
 $team_condition = "j.assigned_to = ?";
 if (!empty($team_users)) {
     $team_list = implode(',', $team_users);
-    // Show jobs if assigned to TL directly, OR assigned to any TM for LE or LE-QC
-    $team_condition = "(j.assigned_to = ? OR le.assigned_to_le IN ($team_list) OR le.assigned_to_le_qc IN ($team_list))";
+    // Show jobs if assigned to TL directly, OR assigned to any TM for LE, LE-QC, CE, or FQA
+    $team_condition = "(j.assigned_to = ? OR le.assigned_to_le IN ($team_list) OR le.assigned_to_le_qc IN ($team_list) OR ce.assigned_to_content IN ($team_list) OR ce.assigned_to_img IN ($team_list) OR j.assigned_to IN ($team_list))";
 }
 
 // WHERE conditions - Base conditions
@@ -134,8 +144,8 @@ $where = [$team_condition];
 $params = [$user_employee_name];
 $types  = 's';
 
-// Ensure we only show LE jobs that have been Moved by TL
-$where[] = "le.status_button = 'Moved'";
+// Show LE jobs as soon as any column is updated in LE Assign (row exists in le table)
+$where[] = "le.job_id IS NOT NULL";
 $where[] = "(REPLACE(jm.job_name, ' ', '') IN ('CE+PAG', 'CE+TS', 'LE', 'CE'))";
 
 // Search query filter
@@ -188,7 +198,7 @@ $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
 // MODIFIED QUERY: Prioritizing LE table data for EQ, Images, Tables, and Word Count
 $sql = "SELECT 
-    j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal_issue, j.article,
+    j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal, j.issue, j.journal_issue, j.article,
     jm.job_name AS process, j.due_date, j.assigned_to AS fqa_user,
     ce.status AS ce_status, ce.ce_date, ce.assigned_to_content, ce.assigned_to_img, ce.ref, 
     COALESCE(NULLIF(le.word_count, 0), NULLIF(ce.word_count, 0), NULLIF(j.word_count, 0), 0) AS word_count,
@@ -204,7 +214,7 @@ JOIN job_master jm ON j.process_id=jm.job_id
 LEFT JOIN le ON le.job_id=j.job_id
 LEFT JOIN ce ON ce.job_id=j.job_id
 $where_sql
-ORDER BY $sort $dir";
+ORDER BY $sort $dir, j.job_id $dir";
 
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) die("Prepare failed: ".$mysqli->error);
@@ -537,6 +547,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>CE Completed Date</th>
                             <th>Received Date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -575,7 +586,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= formatDateOnly($row['ce_date'], 'd-m-Y') ?></td>
                             <td><?= formatDateOnly($row['job_date'], 'd-m-Y') ?></td>
                             <td><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : $row['client_name']) ?></td>
-                            <td><?= h($row['journal_issue']) ?></td>
+                            <td><?= h(!empty($row['journal']) ? $row['journal'] : $row['journal_issue']) ?></td>
+                            <td><?= !empty($row['issue']) ? h($row['issue']) : '—' ?></td>
                             <td><?= h($row['article']) ?></td>
                             <td><?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?></td>
                              <td><?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?></td>
@@ -587,7 +599,13 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h($row['wc_exref'] ?? '—') ?></td>
                             <td><?= getStatusBadge($ref_stat, $row['assigned_to_img'] ?? '', $emp_map) ?></td>
                             <td><?= h($row['ref'] ?? '0') ?></td>
-                            <td><?= getStatusBadge($fqa_stat, $row['fqa_user'] ?? '', $emp_map) ?></td>
+                            <?php
+                            $fqa_user = $row['fqa_user'] ?? '';
+                            if ($fqa_user === $user_employee_name || $fqa_user === $logged_in_name || !isset($emp_map[$fqa_user])) {
+                                $fqa_user = '';
+                            }
+                            ?>
+                            <td><?= getStatusBadge($fqa_stat, $fqa_user, $emp_map) ?></td>
                             <td><?= getStatusBadge($le_stat, $row['assigned_to_le'] ?? '', $emp_map) ?></td>
                             <td><?= getStatusBadge($leqc_stat, $row['assigned_to_le_qc'] ?? '', $emp_map) ?></td>
                             <td><?= !empty($row['le_start_time']) ? date('H:i', strtotime($row['le_start_time'])) : '—' ?></td>
