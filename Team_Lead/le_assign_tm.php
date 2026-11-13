@@ -11,6 +11,16 @@ error_reporting(E_ALL);
 require 'db.php';
 date_default_timezone_set('Asia/Kolkata');
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 // --- AUTO FIX DB SCHEMA (Add missing columns automatically) ---
 $check_columns = [
     'le_start_time' => "TIME NULL DEFAULT NULL",
@@ -135,9 +145,16 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         if ($target_type === 'le' && (empty($curr_data['le_start_time']) || empty($curr_data['le_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both LE Start Time and End Time before marking as Completed.']);
             exit;
-        } elseif ($target_type === 'le_qc' && (empty($curr_data['le_qc_start_time']) || empty($curr_data['le_qc_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both LE-QC Start Time and End Time before marking as Completed.']);
-            exit;
+        } elseif ($target_type === 'le_qc') {
+            $le_side_done = in_array($curr_status, ['LE Done', 'Completed', 'LE & LE-QC Done']);
+            if (!$le_side_done) {
+                echo json_encode(['success' => false, 'message' => 'Please complete LE Assignment before marking LE-QC Assignment as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['le_qc_start_time']) || empty($curr_data['le_qc_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both LE-QC Start Time and End Time before marking as Completed.']);
+                exit;
+            }
         }
     }
 
@@ -362,6 +379,8 @@ $where_sql = implode(' AND ', $where_conditions);
 // Main query - Join with jobs and client_master to get CE completion status
 // Main query - Join with jobs, client_master, and ce table to get exact columns
 $le_query = "SELECT le.*, 
+                    j.journal AS job_journal,
+                    j.issue AS job_issue,
                     j.journal_issue, 
                     j.article,
                     j.process_id,
@@ -976,6 +995,7 @@ require 'header.php';
                             <th>CE Completed Date</th>
                             <th>Received Date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -1028,8 +1048,15 @@ require 'header.php';
                                         <span class="fw-500"><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : ($row['client_name'] ?? $row['client'] ?? 'N/A')) ?></span>
                                     </td>
                                     <td>
-                                        <span class="text-truncate d-block" title="<?= h($row['issue'] ?? '') ?>">
-                                            <?= h($row['issue'] ?? 'N/A') ?>
+                                        <?php $display_journal = !empty($row['job_journal']) ? $row['job_journal'] : (!empty($row['journal_issue']) ? $row['journal_issue'] : ($row['issue'] ?? 'N/A')); ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_journal) ?>">
+                                            <?= h($display_journal) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php $display_issue = !empty($row['job_issue']) ? $row['job_issue'] : '—'; ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_issue) ?>">
+                                            <?= h($display_issue) ?>
                                         </span>
                                     </td>
                                     <td>
@@ -1377,6 +1404,21 @@ require 'header.php';
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + leId);
                 if (row) {
+                    // Check if LE is Completed before allowing LE-QC Completed
+                    if (type === 'le_qc') {
+                        let leSelect = Array.from(row.querySelectorAll('select')).find(s => {
+                            let oc = s.getAttribute('onchange') || '';
+                            return oc.includes("'le'") && !oc.includes("'le_qc'");
+                        });
+                        let leDone = leSelect && leSelect.value === 'Completed';
+
+                        if (!leDone) {
+                            showNotification('danger', 'Please complete LE Assignment before marking LE-QC Assignment as Completed!');
+                            setTimeout(() => { window.location.reload(); }, 1500);
+                            return;
+                        }
+                    }
+
                     let startTitle = (type === 'le') ? 'LE Start' : 'LE QC Start';
                     let endTitle = (type === 'le') ? 'LE End' : 'LE QC End';
                     

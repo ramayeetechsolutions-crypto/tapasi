@@ -38,6 +38,16 @@ function formatDateOnly($date, $format = 'd-m-Y') {
 require 'db.php';
 session_start();
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 // Auto-add priority column if not exists to avoid Unknown column error
 $check_priority = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'priority'");
 if ($check_priority && $check_priority->num_rows == 0) {
@@ -213,7 +223,7 @@ if ($emp_res) {
 // SAFE QUERY: Using only existing columns in database
 $sql = "SELECT 
     -- Jobs table fields
-    j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal_issue, j.article,
+    j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal, j.issue, j.journal_issue, j.article,
     jm.job_name AS process, j.dispatch_date, j.file_path as jfile_path, j.assigned_to, j.due_date,
     j.word_count,
     
@@ -238,7 +248,7 @@ LEFT JOIN (
 ) ju ON ju.job_id = j.job_id
 
 $where_sql
-ORDER BY $sort $dir";
+ORDER BY $sort $dir, j.job_id $dir";
 
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) die("Prepare failed: ".$mysqli->error);
@@ -558,6 +568,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Received Date</th>
                             <th>CE Completed Date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -616,8 +627,11 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 1. Client -->
                             <td><?=h($row['team_client_name'] ?: $row['client_name'])?></td>
 
+                            <!-- Journal -->
+                            <td><?= h(!empty($row['journal']) ? $row['journal'] : $row['journal_issue']) ?></td>
+
                             <!-- 2. Issue -->
-                            <td><?=h($row['journal_issue'])?></td>
+                            <td><?= !empty($row['issue']) ? h($row['issue']) : '—' ?></td>
 
                             <!-- 3. Articles -->
                             <td><?=h($row['article'])?></td>
@@ -659,7 +673,13 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?=h($row['ce_ref'] ?? '0')?></td>
 
                             <!-- 13. FQA Status (Orange: WIP / Green: Completed) -->
-                            <td><?= getStatusBadge($fqa_stat, $row['assigned_to'] ?? '', $emp_map) ?></td>
+                            <?php
+                            $fqa_user = $row['assigned_to'] ?? '';
+                            if ($fqa_user === $user_employee_name || $fqa_user === $logged_in_name || !isset($emp_map[$fqa_user])) {
+                                $fqa_user = '';
+                            }
+                            ?>
+                            <td><?= getStatusBadge($fqa_stat, $fqa_user, $emp_map) ?></td>
 
                             <!-- CE Times -->
                             <td><?= !empty($row['ce_start_time']) ? date('H:i', strtotime($row['ce_start_time'])) : '—' ?></td>
