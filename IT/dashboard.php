@@ -1,857 +1,310 @@
 <?php
+// IT/dashboard.php - Client Dashboard
 require 'db.php';
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+
+if (session_status() === PHP_SESSION_NONE) { 
+    session_start(); 
 }
 
-$pageTitle = "Dashboard";
+// Session guard for IT
+if (!isset($_SESSION['itname']) && !isset($_SESSION['infoname']) && !isset($_SESSION['uid'])) { 
+    header("Location: ../index.php"); 
+    exit; 
+}
+
+$pageTitle = "Client Dashboard";
 $currentPage = "dashboard.php";
+
+// Current user
+$current_user = $_SESSION['username'] ?? 'User';
+
+// TOTAL CLIENTS
+$total_clients = 0;
+$total_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master");
+if ($total_stmt) {
+    $total_stmt->execute();
+    $total_result = $total_stmt->get_result();
+    $total_data = $total_result->fetch_assoc();
+    $total_clients = (int)($total_data['total'] ?? 0);
+    $total_stmt->close();
+}
+
+// ACTIVE CLIENTS (clients with jobs)
+$active_clients = 0;
+$active_stmt = $mysqli->prepare("SELECT COUNT(DISTINCT `client_id`) as total FROM `jobs`");
+if ($active_stmt) {
+    $active_stmt->execute();
+    $active_result = $active_stmt->get_result();
+    $active_data = $active_result->fetch_assoc();
+    $active_clients = (int)($active_data['total'] ?? 0);
+    $active_stmt->close();
+}
+
+// PASSIVE CLIENTS (active in client_master but no jobs)
+$passive_clients = 0;
+$passive_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master WHERE status = 'Active'");
+if ($passive_stmt) {
+    $passive_stmt->execute();
+    $passive_result = $passive_stmt->get_result();
+    $passive_data = $passive_result->fetch_assoc();
+    $passive_clients = (int)($passive_data['total'] ?? 0);
+    $passive_stmt->close();
+}
+$passive_clients = $passive_clients - $active_clients; // Active in master but no jobs
+
+// INACTIVE CLIENTS (status = 'Inactive' in client_master)
+$inactive_clients = 0;
+$inactive_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master WHERE status = 'Inactive'");
+if ($inactive_stmt) {
+    $inactive_stmt->execute();
+    $inactive_result = $inactive_stmt->get_result();
+    $inactive_data = $inactive_result->fetch_assoc();
+    $inactive_clients = (int)($inactive_data['total'] ?? 0);
+    $inactive_stmt->close();
+}
+
+// Calculate percentages
+$active_percentage = $total_clients > 0 ? round(($active_clients / $total_clients) * 100, 1) : 0;
+$passive_percentage = $total_clients > 0 ? round(($passive_clients / $total_clients) * 100, 1) : 0;
+$inactive_percentage = $total_clients > 0 ? round(($inactive_clients / $total_clients) * 100, 1) : 0;
+
 include 'header.php';
-
-// Get current user
-$current_user = $_SESSION['username'] ?? '';
-$ename = $_SESSION['ename'] ?? '';
-
-// Get employee details including reporting manager
-$employee_username = $current_user;
-$sql = "SELECT `reporting_manager`, `employee_name` FROM `employee_master` WHERE `employee_username` = ?";
-$stmt = $mysqli->prepare($sql);
-$reporting_manager = '';
-$current_user_name = '';
-if ($stmt) {
-    $stmt->bind_param("s", $employee_username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result && $result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $current_user_name = $row['employee_name'] ?? '';
-        $reporting_manager = $row['reporting_manager'] ?? '';
-    }
-    $stmt->close();
-}
-
-if (empty($ename)) {
-    $ename = $current_user_name ?: $current_user;
-}
-
-// Get current week target details
-$current_week_number = date('W');
-$current_year = date('Y');
-$weekly_target_data = [
-    'target_limit' => 0,
-    'achieved_target' => 0,
-    'status' => 'No Target Set',
-    'percentage' => 0,
-    'remaining' => 0,
-    'week_number' => $current_week_number,
-    'year' => $current_year
-];
-
-$target_stmt = $mysqli->prepare("SELECT target_limit, achieved_target, status FROM weekly_targets 
-                               WHERE tm_id = ? AND week_number = ? AND year = ?");
-if ($target_stmt) {
-    $target_stmt->bind_param("sii", $employee_username, $current_week_number, $current_year);
-    $target_stmt->execute();
-    $target_result = $target_stmt->get_result();
-    
-    if ($target_row = $target_result->fetch_assoc()) {
-        $target_limit = (int)$target_row['target_limit'];
-        $achieved = (int)$target_row['achieved_target'];
-        $remaining = max(0, $target_limit - $achieved);
-        $percentage = $target_limit > 0 ? round(($achieved / $target_limit) * 100, 2) : 0;
-        
-        $weekly_target_data = [
-            'target_limit' => $target_limit,
-            'achieved_target' => $achieved,
-            'status' => $target_row['status'],
-            'percentage' => $percentage,
-            'remaining' => $remaining,
-            'week_number' => $current_week_number,
-            'year' => $current_year
-        ];
-    }
-    $target_stmt->close();
-}
-
-// Count total clients
-$client_count = 0;
-$client_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master WHERE status='Active'");
-if ($client_stmt) {
-    $client_stmt->execute();
-    $client_result = $client_stmt->get_result();
-    $client_data = $client_result->fetch_assoc();
-    $client_count = $client_data['total'] ?? 0;
-    $client_stmt->close();
-}
-
-// Count jobs by status
-$need_to_assign_count = 0;
-$in_progress_count = 0;
-$completed_count = 0;
-
-// Get all jobs and calculate status
-$jobs_sql = "
-    SELECT 
-        j.job_id, 
-        j.job_date,
-        jm.job_name AS process,
-        ce.status AS ce_status,
-        le.status AS le_status,
-        pag.status AS pag_status,
-        qc.status AS qc_status
-    FROM 
-        jobs j
-    JOIN 
-        job_master jm ON j.process_id = jm.job_id
-    LEFT JOIN 
-        ce ON ce.job_id = j.job_id
-    LEFT JOIN 
-        le ON le.job_id = j.job_id
-    LEFT JOIN 
-        pag ON pag.job_id = j.job_id
-    LEFT JOIN 
-        qc ON qc.job_id = j.job_id
-    WHERE 
-        j.assigned_to = ?
-";
-
-$jobs_stmt = $mysqli->prepare($jobs_sql);
-if ($jobs_stmt) {
-    $target_assignee = $current_user_name ?: $current_user;
-    $jobs_stmt->bind_param("s", $target_assignee);
-    $jobs_stmt->execute();
-    $jobs_result = $jobs_stmt->get_result();
-    
-    // Process stage mapping
-    $processStageMap = [
-        'CE' => ['CE', 'LE'],
-        'PAG' => ['PAG', 'QC'],
-        'CE+PAG' => ['CE', 'LE', 'PAG', 'QC'],
-        'CE+PAG+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
-        'CE+XML' => ['CE', 'LE', 'XML'],
-        'PAG+XML' => ['PAG', 'QC', 'XML'],
-        'XML' => ['XML'],
-    ];
-    
-    while ($row = $jobs_result->fetch_assoc()) {
-        $process_name = $row['process'];
-        $normalized_process = strtoupper(str_replace(' ', '', $process_name));
-        $required_stages = $processStageMap[$normalized_process] ?? [];
-        
-        // Determine final status based on required stages
-        $all_completed = true;
-        $has_in_progress = false;
-        $has_need_to_assign = false;
-        
-        foreach ($required_stages as $stage) {
-            $status_field = strtolower($stage) . '_status';
-            $stage_status = $row[$status_field] ?? 'Need to Assign';
-            
-            if ($stage_status !== 'Completed') {
-                $all_completed = false;
-                
-                if ($stage_status === 'In Progress') {
-                    $has_in_progress = true;
-                } elseif ($stage_status === 'Need to Assign') {
-                    $has_need_to_assign = true;
-                }
-            }
-        }
-        
-        // Determine final status and count
-        if ($all_completed) {
-            $completed_count++;
-        } elseif ($has_in_progress) {
-            $in_progress_count++;
-        } elseif ($has_need_to_assign) {
-            $need_to_assign_count++;
-        } else {
-            $in_progress_count++;
-        }
-    }
-    $jobs_stmt->close();
-}
-
-// Count today's new jobs
-$today = date('Y-m-d');
-$today_jobs_count = 0;
-$today_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM jobs WHERE DATE(job_date) = ? AND assigned_to = ?");
-if ($today_stmt) {
-    $target_assignee = $current_user_name ?: $current_user;
-    $today_stmt->bind_param("ss", $today, $target_assignee);
-    $today_stmt->execute();
-    $today_result = $today_stmt->get_result();
-    $today_data = $today_result->fetch_assoc();
-    $today_jobs_count = $today_data['total'] ?? 0;
-    $today_stmt->close();
-}
-
-// Total jobs count
-$total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_count;
 ?>
 
-<main class="main-content">
-    
-    <div class="page-title-container">
-        <h1><i class="fas fa-chart-line me-2"></i>Dashboard</h1>
-    </div>
-    <p class="page-description">Welcome back! <?php echo htmlspecialchars($ename); ?></p>
-    
-    <!-- Weekly Target Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card weekly-target-card">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-lg-8 col-md-7 mb-3 mb-md-0">
-                            <h5 class="card-title mb-3"><i class="fas fa-bullseye me-2 text-primary"></i>Weekly Target Progress</h5>
-                            <div class="d-flex flex-wrap align-items-center gap-4">
-                                <div class="target-stat">
-                                    <div class="target-stat-label">Target</div>
-                                    <div class="target-stat-value"><?= number_format($weekly_target_data['target_limit']) ?></div>
-                                    <div class="target-stat-unit">words</div>
-                                </div>
-                                <div class="target-stat">
-                                    <div class="target-stat-label">Achieved</div>
-                                    <div class="target-stat-value <?= $weekly_target_data['achieved_target'] >= $weekly_target_data['target_limit'] ? 'text-success' : 'text-primary' ?>">
-                                        <?= number_format($weekly_target_data['achieved_target']) ?>
-                                    </div>
-                                    <div class="target-stat-unit">words</div>
-                                </div>
-                                <div class="target-stat">
-                                    <div class="target-stat-label">Remaining</div>
-                                    <div class="target-stat-value <?= $weekly_target_data['remaining'] > 0 ? 'text-warning' : 'text-success' ?>">
-                                        <?= number_format($weekly_target_data['remaining']) ?>
-                                    </div>
-                                    <div class="target-stat-unit">words</div>
-                                </div>
-                                <div class="target-stat">
-                                    <div class="target-stat-label">Progress</div>
-                                    <div class="target-stat-value <?= $weekly_target_data['percentage'] >= 100 ? 'text-success' : ($weekly_target_data['percentage'] >= 70 ? 'text-warning' : 'text-danger') ?>">
-                                        <?= $weekly_target_data['percentage'] ?>%
-                                    </div>
-                                    <div class="target-stat-unit">complete</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-5">
-                            <div class="progress-container">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="progress-label">Week <?= $weekly_target_data['week_number'] ?>, <?= $weekly_target_data['year'] ?></span>
-                                    <span class="badge status-badge bg-<?= $weekly_target_data['status'] === 'Completed' ? 'success' : ($weekly_target_data['status'] === 'Active' ? 'primary' : 'secondary') ?>">
-                                        <?= $weekly_target_data['status'] ?>
-                                    </span>
-                                </div>
-                                <div class="progress weekly-progress" style="height: 12px;">
-                                    <div class="progress-bar <?= $weekly_target_data['percentage'] >= 100 ? 'bg-success' : ($weekly_target_data['percentage'] >= 70 ? 'bg-warning' : 'bg-danger') ?>" 
-                                         role="progressbar" 
-                                         style="width: <?= min($weekly_target_data['percentage'], 100) ?>%"
-                                         aria-valuenow="<?= $weekly_target_data['percentage'] ?>" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="100">
-                                    </div>
-                                </div>
-                                <div class="progress-info mt-2">
-                                    <small class="text-white-50">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        <?php if($weekly_target_data['target_limit'] > 0): ?>
-                                            <?= $weekly_target_data['percentage'] >= 100 ? 'Target completed!' : ($weekly_target_data['percentage'] >= 70 ? 'Good progress!' : 'Keep going!') ?>
-                                        <?php else: ?>
-                                            No target set for this week
-                                        <?php endif; ?>
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="stats-cards">
-        <div class="stat-card">
-            <div class="stat-icon clients">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($client_count) ?></h3>
-                <p>Total Clients</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon pending">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($need_to_assign_count) ?></h3>
-                <p>Need to Assign</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon progress">
-                <i class="fas fa-spinner"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($in_progress_count) ?></h3>
-                <p>In Progress</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon completed">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($completed_count) ?></h3>
-                <p>Completed</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon today">
-                <i class="fas fa-calendar-day"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($today_jobs_count) ?></h3>
-                <p>Today's Jobs</p>
-            </div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon total">
-                <i class="fas fa-tasks"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($total_jobs_count) ?></h3>
-                <p>Total Jobs</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Stats Section -->
-    <div class="row mt-4">
-        <div class="col-lg-6 col-md-12 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5><i class="fas fa-calendar-check me-2"></i>Today's Overview</h5>
-                </div>
-                <div class="card-body">
-                    <div class="today-stats">
-                        <div class="today-stat-item">
-                            <div class="today-stat-icon bg-primary">
-                                <i class="fas fa-plus-circle"></i>
-                            </div>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($today_jobs_count) ?></h4>
-                                <p>Today's Jobs</p>
-                            </div>
-                        </div>
-                        <div class="today-stat-item">
-                            <div class="today-stat-icon bg-success">
-                                <i class="fas fa-building"></i>
-                            </div>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($client_count) ?></h4>
-                                <p>Active Clients</p>
-                            </div>
-                        </div>
-                        <div class="today-stat-item">
-                            <div class="today-stat-icon bg-info">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($total_jobs_count) ?></h4>
-                                <p>Total Jobs</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-6 col-md-12 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5><i class="fas fa-chart-pie me-2"></i>Job Status Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="progress-stats">
-                        <div class="progress-item">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="progress-label">
-                                    <i class="fas fa-clock text-warning me-2"></i>Need to Assign
-                                </span>
-                                <span class="progress-percentage"><?= $total_jobs_count > 0 ? round(($need_to_assign_count / $total_jobs_count) * 100, 1) : 0 ?>%</span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar bg-warning" 
-                                     style="width: <?= $total_jobs_count > 0 ? ($need_to_assign_count / $total_jobs_count) * 100 : 0 ?>%">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="progress-item">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="progress-label">
-                                    <i class="fas fa-spinner text-info me-2"></i>In Progress
-                                </span>
-                                <span class="progress-percentage"><?= $total_jobs_count > 0 ? round(($in_progress_count / $total_jobs_count) * 100, 1) : 0 ?>%</span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar bg-info" 
-                                     style="width: <?= $total_jobs_count > 0 ? ($in_progress_count / $total_jobs_count) * 100 : 0 ?>%">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="progress-item">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="progress-label">
-                                    <i class="fas fa-check-circle text-success me-2"></i>Completed
-                                </span>
-                                <span class="progress-percentage"><?= $total_jobs_count > 0 ? round(($completed_count / $total_jobs_count) * 100, 1) : 0 ?>%</span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar bg-success" 
-                                     style="width: <?= $total_jobs_count > 0 ? ($completed_count / $total_jobs_count) * 100 : 0 ?>%">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Additional Info Section -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-user-tie me-2"></i>Employee Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <div class="info-item">
-                                <div class="info-label">Employee Name</div>
-                                <div class="info-value"><?= htmlspecialchars($current_user_name ?: $current_user) ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <div class="info-item">
-                                <div class="info-label">Username</div>
-                                <div class="info-value"><?= htmlspecialchars($employee_username) ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <div class="info-item">
-                                <div class="info-label">Reporting Manager</div>
-                                <div class="info-value"><?= htmlspecialchars($reporting_manager ?: '—') ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <div class="info-item">
-                                <div class="info-label">Current Week</div>
-                                <div class="info-value">Week <?= $current_week_number ?>, <?= $current_year ?></div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <div class="info-item">
-                                <div class="info-label">Today's Date</div>
-                                <div class="info-value"><?= date('F d, Y') ?></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</main>
-
 <style>
-/* Page wrapper (same spacing as Executive member dashboard) */
-.main-content {
-    padding: 100px 5% 40px 5% !important;
-    margin: 0 auto !important;
-    max-width: 100% !important;
-    box-sizing: border-box;
-}
-
-/* Weekly Target Card */
-.weekly-target-card {
-    background: #5e6b77 !important;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.weekly-target-card .card-body {
-    padding: 25px;
-}
-
-.weekly-target-card .card-title {
-    color: white;
-    font-weight: 600;
-    font-size: 1.3rem;
-}
-
-.target-stat {
-    text-align: center;
-    min-width: 100px;
-}
-
-.target-stat-label {
-    font-size: 0.85rem;
-    opacity: 0.9;
-    margin-bottom: 5px;
-}
-
-.target-stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.target-stat-unit {
-    font-size: 0.8rem;
-    opacity: 0.8;
-    margin-top: 2px;
-}
-
-.progress-container {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 20px;
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-}
-
-.progress-label {
-    font-weight: 600;
-    color: white;
-}
-
-.status-badge {
-    font-size: 0.75rem;
-    padding: 5px 10px;
-}
-
-.weekly-progress {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-}
-
-.weekly-progress .progress-bar {
-    border-radius: 10px;
-}
-
-.progress-info {
-    font-size: 0.85rem;
-}
-
-/* Stats Cards */
-.stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-card {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid #007bff;
-    display: flex;
-    align-items: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-}
-
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 20px;
-    font-size: 24px;
-    color: white;
-}
-
-.stat-icon.clients { background: linear-gradient(45deg, #667eea, #764ba2); }
-.stat-icon.pending { background: linear-gradient(45deg, #f093fb, #f5576c); }
-.stat-icon.progress { background: linear-gradient(45deg, #4facfe, #00f2fe); }
-.stat-icon.completed { background: linear-gradient(45deg, #43e97b, #38f9d7); }
-.stat-icon.today { background: linear-gradient(45deg, #fa709a, #fee140); }
-.stat-icon.total { background: linear-gradient(45deg, #a8edea, #fed6e3); }
-
-.stat-info h3 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 0;
-    color: #2c3e50;
-}
-
-.stat-info p {
-    margin: 5px 0 0 0;
-    color: #7f8c8d;
-    font-size: 0.9rem;
-}
-
-/* Today Stats */
-.today-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.today-stat-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    transition: background-color 0.3s ease;
-}
-
-.today-stat-item:hover {
-    background: #e9ecef;
-}
-
-.today-stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-}
-
-.today-stat-info h4 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-.today-stat-info p {
-    margin: 5px 0 0 0;
-    color: #7f8c8d;
-    font-size: 0.9rem;
-}
-
-/* Progress Stats */
-.progress-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.progress-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.progress-label {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-}
-
-.progress-percentage {
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.progress {
-    height: 10px;
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    border-radius: 5px;
-}
-
-/* Info Items */
-.info-item {
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-
-.info-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    margin-bottom: 5px;
-}
-
-.info-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-/* General Card Styling */
-.card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 0;
-}
-
-.card-header {
-    background: white;
-    border-bottom: 1px solid #e9ecef;
-    padding: 20px;
-    border-radius: 12px 12px 0 0 !important;
-}
-
-.card-header h5 {
-    margin: 0;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.card-body {
-    padding: 25px;
-}
-
-/* Page Header */
-.page-title-container {
-    display: block !important;
-    visibility: visible !important;
-    background: #5e6b77 !important;
-    color: white !important;
-    padding: 8px 12px;
-    border-radius: 12px;
-    margin: 0 0 20px 0;
-}
-
-.page-title-container h1 {
-    display: block !important;
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: white !important;
-}
-
-.page-description {
-    color: #6c757d;
-    font-size: 1.1rem;
-    margin-bottom: 30px;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .stats-cards {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --success-color: #198754;
+        --warning-color: #f8961e;
+        --danger-color: #f94144;
+        --border-radius: 8px;
+        --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
     }
-}
 
-@media (max-width: 992px) {
-    .weekly-target-card .row > div {
+    body {
+        background-color: #f8f9fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 14px;
+    }
+
+    .dashboard-container {
+        padding: 90px 20px 30px 20px;
+        width: 100%;
+    }
+
+    /* Compact Header */
+    .dashboard-header {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 15px 20px;
         margin-bottom: 20px;
+        box-shadow: var(--box-shadow);
+        border-left: 4px solid var(--primary-color);
     }
-    
-    .target-stat {
-        min-width: 80px;
-    }
-    
-    .target-stat-value {
-        font-size: 1.5rem;
-    }
-}
 
-@media (max-width: 768px) {
-    .stats-cards {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
+    .dashboard-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--primary-color);
     }
-    
+
+    .dashboard-subtitle {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin: 5px 0 0 0;
+    }
+
+    .user-badge {
+        background: #e9ecef;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: #495057;
+    }
+
+    /* Stat Cards */
     .stat-card {
-        padding: 15px;
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--box-shadow);
+        transition: all 0.2s;
+        height: 100%;
+        border-left: 4px solid;
+        position: relative;
+        overflow: hidden;
     }
-    
-    .stat-icon {
-        width: 50px;
-        height: 50px;
-        font-size: 20px;
-        margin-right: 15px;
-    }
-    
-    .stat-info h3 {
-        font-size: 1.5rem;
-    }
-    
-    .page-title-container h1 {
-        font-size: 2rem;
-    }
-    
-    .today-stat-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1.2rem;
-    }
-    
-    .today-stat-info h4 {
-        font-size: 1.2rem;
-    }
-}
 
-@media (max-width: 576px) {
-    .stats-cards {
-        grid-template-columns: 1fr;
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
-    
-    .target-stat {
-        min-width: 70px;
+
+    .stat-card.total { border-left-color: var(--primary-color); }
+    .stat-card.active { border-left-color: var(--success-color); }
+    .stat-card.passive { border-left-color: var(--warning-color); }
+    .stat-card.inactive { border-left-color: var(--danger-color); }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        opacity: 0.8;
     }
-    
-    .target-stat-value {
-        font-size: 1.3rem;
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 5px;
+        color: #212529;
     }
-    
-    .weekly-target-card .card-body {
-        padding: 15px;
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+        font-weight: 600;
     }
-    
-    .progress-container {
-        padding: 15px;
+
+    .stat-percentage {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 10px;
     }
-}
+
+    .stat-percentage.total { color: var(--primary-color); }
+    .stat-percentage.active { color: var(--success-color); }
+    .stat-percentage.passive { color: var(--warning-color); }
+    .stat-percentage.inactive { color: var(--danger-color); }
+
+    /* Progress Bars */
+    .progress {
+        height: 6px;
+        border-radius: 3px;
+        background-color: #e9ecef;
+        margin-top: 5px;
+    }
+
+    .progress-bar {
+        border-radius: 3px;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 80px 10px 20px 10px;
+        }
+        .dashboard-title {
+            font-size: 1.3rem;
+        }
+        .stat-number {
+            font-size: 2rem;
+        }
+        .stat-icon {
+            font-size: 1.8rem;
+        }
+    }
 </style>
 
-<script>
-// Add animation to stats cards on page load
-document.addEventListener('DOMContentLoaded', function() {
-    const statCards = document.querySelectorAll('.stat-card');
-    statCards.forEach((card, index) => {
-        setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-});
-</script>
+<div class="dashboard-container">
+    <div class="container-fluid px-0">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="dashboard-title"><i class="fas fa-chart-line me-2"></i>Client Dashboard</h1>
+                    <p class="dashboard-subtitle">
+                        Welcome, <strong><?= htmlspecialchars($current_user) ?></strong> • 
+                        <?= date('M j, Y') ?>
+                    </p>
+                </div>
+                <div class="user-badge">
+                    <i class="fas fa-user-circle me-1"></i><?= htmlspecialchars($current_user) ?>
+                </div>
+            </div>
+        </div>
 
-<?php include 'footer.php'; ?>
+        <!-- Stats Cards -->
+        <div class="row">
+            <!-- Total Clients -->
+            <div class="col-md-3">
+                <div class="stat-card total">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number"><?= number_format($total_clients) ?></div>
+                    <div class="stat-label">Total Clients</div>
+                    <div class="stat-percentage total">100% of total</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Active Clients -->
+            <div class="col-md-3">
+                <div class="stat-card active">
+                    <div class="stat-icon text-success">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-number"><?= number_format($active_clients) ?></div>
+                    <div class="stat-label">Active Clients</div>
+                    <div class="stat-percentage active"><?= $active_percentage ?>% of total</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: <?= max(0, min(100, $active_percentage)) ?>%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Passive Clients -->
+            <div class="col-md-3">
+                <div class="stat-card passive">
+                    <div class="stat-icon text-warning">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <div class="stat-number"><?= number_format($passive_clients) ?></div>
+                    <div class="stat-label">Passive Clients</div>
+                    <div class="stat-percentage passive"><?= $passive_percentage ?>% of total</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: <?= max(0, min(100, $passive_percentage)) ?>%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inactive Clients -->
+            <div class="col-md-3">
+                <div class="stat-card inactive">
+                    <div class="stat-icon text-danger">
+                        <i class="fas fa-user-times"></i>
+                    </div>
+                    <div class="stat-number"><?= number_format($inactive_clients) ?></div>
+                    <div class="stat-label">Inactive Clients</div>
+                    <div class="stat-percentage inactive"><?= $inactive_percentage ?>% of total</div>
+                    <div class="progress">
+                        <div class="progress-bar bg-danger" style="width: <?= max(0, min(100, $inactive_percentage)) ?>%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    });
+</script>
 </body>
 </html>
