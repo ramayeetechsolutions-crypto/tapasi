@@ -37,6 +37,31 @@ function formatDate($date, $format = 'd-m-Y') {
     return $dateObj ? $dateObj->format($format) : $date;
 }
 
+function getCeStats($mysqli) {
+    $sql = "SELECT 
+                COUNT(*) as total,
+                SUM(CASE 
+                    WHEN (ce.status IS NULL OR ce.status NOT IN ('Completed', 'Done'))
+                     AND (
+                         ce.status IN ('Need to Assign', 'Pending', '') OR ce.status IS NULL
+                         OR ce.assigned_to_content IS NULL OR TRIM(ce.assigned_to_content) = ''
+                         OR ce.assigned_to_img IS NULL OR TRIM(ce.assigned_to_img) = ''
+                         OR j.assigned_to IS NULL OR TRIM(j.assigned_to) = ''
+                         OR NOT EXISTS (SELECT 1 FROM employee_master em WHERE em.employee_username = j.assigned_to)
+                     )
+                    THEN 1 ELSE 0 
+                END) as need_assign,
+                SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND TRIM(ce.assigned_to_content) != '' THEN 1 ELSE 0 END) as content_assigned,
+                SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND TRIM(ce.assigned_to_img) != '' THEN 1 ELSE 0 END) as images_assigned
+            FROM ce 
+            LEFT JOIN jobs j ON ce.job_id = j.job_id
+            WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved'
+            AND (ce.status IS NULL OR ce.status NOT IN ('Completed', 'Done') OR DATE(COALESCE(j.job_date, ce.created_at)) >= '2026-10-01')";
+    $res = $mysqli->query($sql);
+    return $res ? $res->fetch_assoc() : ['total' => 0, 'need_assign' => 0, 'in_progress' => 0, 'content_assigned' => 0, 'images_assigned' => 0];
+}
+
 // ==========================================
 // FAST AJAX HANDLERS (Execute without loading full page queries)
 // ==========================================
@@ -105,7 +130,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $stmt = $mysqli->prepare($update_query);
     $stmt->bind_param("si", $db_status, $ce_id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'status' => $db_status, 'new_status' => $new_status, 'type' => $target_type]);
+        echo json_encode(['success' => true, 'status' => $db_status, 'new_status' => $new_status, 'type' => $target_type, 'stats' => getCeStats($mysqli)]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
     }
@@ -123,6 +148,45 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     // Allowed fields for security
     $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
     if (in_array($field, $allowed_fields)) {
+        // Validation for 'Moved': CE, REF, and FQA assignments must all be assigned and Completed before moving!
+        if ($field === 'remarks' && $val === 'Moved') {
+            $check_stmt = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+            $check_stmt->bind_param("i", $ce_id);
+            $check_stmt->execute();
+            $check_row = $check_stmt->get_result()->fetch_assoc();
+            $check_stmt->close();
+
+            $fqa_user = trim($check_row['fqa_tm'] ?? '');
+            $fqa_assigned = false;
+            if (!empty($fqa_user) && !in_array($fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL', $current_username])) {
+                $emp_chk = $mysqli->prepare("SELECT 1 FROM employee_master WHERE employee_username = ? LIMIT 1");
+                if ($emp_chk) {
+                    $emp_chk->bind_param("s", $fqa_user);
+                    $emp_chk->execute();
+                    $fqa_assigned = ($emp_chk->get_result()->num_rows > 0);
+                    $emp_chk->close();
+                }
+            }
+
+            $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
+            $ref_assigned = !empty(trim($check_row['assigned_to_img'] ?? ''));
+            $is_completed = ($check_row['status'] === 'Completed');
+
+            if (!$ce_assigned || !$ref_assigned || !$fqa_assigned || !$is_completed) {
+                $missing = [];
+                if (!$ce_assigned) $missing[] = 'CE TM not assigned';
+                if (!$ref_assigned) $missing[] = 'REF TM not assigned';
+                if (!$fqa_assigned) $missing[] = 'FQA TM not assigned';
+                if (!$is_completed) $missing[] = 'CE / REF / FQA not Completed';
+                
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Cannot move! ' . implode(', ', $missing) . '. CE, REF, and FQA must all be Completed before moving.'
+                ]);
+                exit;
+            }
+        }
+
         if ($val === '') {
             $stmt = $mysqli->prepare("UPDATE ce SET $field = NULL, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("i", $ce_id);
@@ -131,7 +195,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             $stmt->bind_param("si", $val, $ce_id);
         }
         if ($stmt->execute()) {
-            echo json_encode(['success' => true]);
+            echo json_encode(['success' => true, 'stats' => getCeStats($mysqli)]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
         }
@@ -207,6 +271,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         
         $mysqli->commit();
         $response['success'] = true;
+        $response['stats'] = getCeStats($mysqli);
         
         $stmt_name = $mysqli->prepare("SELECT employee_name FROM employee_master WHERE employee_username = ? LIMIT 1");
         if ($stmt_name) {
@@ -475,17 +540,8 @@ $status_result = $mysqli->query($status_query);
 $clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
 $clients_result = $mysqli->query($clients_query);
 
-// Get count statistics
-$stats_query = "SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
-                    SUM(CASE WHEN assigned_to_content IS NOT NULL THEN 1 ELSE 0 END) as content_assigned,
-                    SUM(CASE WHEN assigned_to_img IS NOT NULL THEN 1 ELSE 0 END) as images_assigned
-                FROM ce 
-                WHERE TRIM(COALESCE(remarks, '')) != 'Moved'";
-$stats_result = $mysqli->query($stats_query);
-$stats = $stats_result->fetch_assoc();
+// Get count statistics (Exact match with table rows + CE, REF, FQA assignment check)
+$stats = getCeStats($mysqli);
 
 require 'header.php';
 ?>
@@ -510,19 +566,91 @@ require 'header.php';
         input[type=number] { 
             -moz-appearance: textfield; 
         }
-        /* Select2 Custom Style */
+        /* Select2 Custom Style - Exactly matching other filter boxes in size (26px height & 11px font) */
         .select2-container .select2-selection--single {
-            height: 31px !important;
+            height: 26px !important;
+            min-height: 26px !important;
             border: 1px solid #dee2e6 !important;
             border-radius: 0.25rem !important;
+            background-color: #fff !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
         }
+        /* Active / Open Focus Blue Ring */
+        .select2-container--default.select2-container--open .select2-selection--single,
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #86b7fe !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+            outline: 0 !important;
+        }
+        /* Top Box Text (Matched to 11px font like other filters) */
         .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 29px !important;
-            font-size: 0.875rem !important;
+            line-height: 24px !important;
+            font-size: 11px !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            color: #212529 !important;
+            padding-left: 0.5rem !important;
+            padding-right: 1.75rem !important;
+        }
+        /* Arrow matching other dropdowns */
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 24px !important;
+            right: 6px !important;
+            width: 14px !important;
+            top: 1px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            display: none !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow::after {
+            content: "" !important;
+            display: inline-block !important;
+            width: 10px !important;
+            height: 10px !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-size: 10px 10px !important;
+            background-position: center !important;
+        }
+        /* Dropdown options box */
+        .select2-dropdown {
+            border: 1px solid #ced4da !important;
+            border-radius: 0.25rem !important;
+            background-color: #fff !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            margin-top: 1px !important;
+        }
+        /* Search box */
+        .select2-container--default .select2-search--dropdown {
+            padding: 4px 6px !important;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            font-size: 11px !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 0.25rem !important;
+            padding: 3px 6px !important;
+            height: 24px !important;
+            outline: none !important;
+        }
+        /* Options list */
+        .select2-container--default .select2-results__option {
+            font-size: 11px !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            padding: 4px 10px !important;
             color: #212529 !important;
         }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 29px !important;
+        /* Selected & Hover item */
+        .select2-container--default .select2-results__option--highlighted,
+        .select2-container--default .select2-results__option--highlighted[aria-selected],
+        .select2-container--default .select2-results__option[aria-selected="true"],
+        .select2-container--default .select2-results__option--selected {
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
         }
 
         * {
@@ -916,7 +1044,7 @@ require 'header.php';
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['total'] ?? 0 ?></h3>
+                        <h3 id="stat-total"><?= $stats['total'] ?? 0 ?></h3>
                         <p>Total Pending</p>
                     </div>
                 </div>
@@ -927,7 +1055,7 @@ require 'header.php';
                         <i class="fas fa-hourglass-start"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['need_assign'] ?? 0 ?></h3>
+                        <h3 id="stat-need"><?= $stats['need_assign'] ?? 0 ?></h3>
                         <p>Need to Assign</p>
                     </div>
                 </div>
@@ -938,7 +1066,7 @@ require 'header.php';
                         <i class="fas fa-spinner"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['in_progress'] ?? 0 ?></h3>
+                        <h3 id="stat-progress"><?= $stats['in_progress'] ?? 0 ?></h3>
                         <p>In Progress</p>
                     </div>
                 </div>
@@ -949,7 +1077,7 @@ require 'header.php';
                         <i class="fas fa-file-alt"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['content_assigned'] ?? 0 ?></h3>
+                        <h3 id="stat-content"><?= $stats['content_assigned'] ?? 0 ?></h3>
                         <p>Content Assigned</p>
                     </div>
                 </div>
@@ -960,7 +1088,7 @@ require 'header.php';
                         <i class="fas fa-image"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['images_assigned'] ?? 0 ?></h3>
+                        <h3 id="stat-images"><?= $stats['images_assigned'] ?? 0 ?></h3>
                         <p>Images Assigned</p>
                     </div>
                 </div>
@@ -970,7 +1098,7 @@ require 'header.php';
         <!-- Filter Section -->
         <div class="filter-section">
             <form method="get" class="row g-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small">Search Client</label>
                     <select name="search" id="clientSearchDropdown" class="form-select form-select-sm">
                         <option value="">All Clients...</option>
@@ -1029,7 +1157,6 @@ require 'header.php';
                     <select name="sort" class="form-select form-select-sm">
                         <option value="ce.created_at" <?= $sort == 'ce.created_at' ? 'selected' : '' ?>>Created Date</option>
                         <option value="c.client_name" <?= $sort == 'c.client_name' ? 'selected' : '' ?>>Client Name</option>
-                        <option value="ce.status" <?= $sort == 'ce.status' ? 'selected' : '' ?>>Status</option>
                         <option value="j.due_date" <?= $sort == 'j.due_date' ? 'selected' : '' ?>>Due Date</option>
                     </select>
                 </div>
@@ -1345,7 +1472,7 @@ require 'header.php';
 
                                     <!-- Status Dropdown (Formerly Remarks) -->
                                     <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" data-prev="<?= h($row['remarks'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value, this)">
                                             <option value="">Select</option>
                                             <?php 
                                             $remarks_options = ['Moved', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
@@ -1491,6 +1618,16 @@ require 'header.php';
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
+        // Update 5 Summary Cards immediately after any AJAX update
+        function updateStatsCards(stats) {
+            if (!stats) return;
+            if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total ?? 0;
+            if (document.getElementById('stat-need')) document.getElementById('stat-need').textContent = stats.need_assign ?? 0;
+            if (document.getElementById('stat-progress')) document.getElementById('stat-progress').textContent = stats.in_progress ?? 0;
+            if (document.getElementById('stat-content')) document.getElementById('stat-content').textContent = stats.content_assigned ?? 0;
+            if (document.getElementById('stat-images')) document.getElementById('stat-images').textContent = stats.images_assigned ?? 0;
+        }
+
        // Status Update Function with instant DOM badge update
         function updateStatus(ceId, type, newStatus, selectElement) {
             const select = selectElement || (typeof event !== 'undefined' ? event.target : null);
@@ -1541,6 +1678,7 @@ require 'header.php';
             .then(data => {
                 if (select) { select.disabled = false; }
                 if (data.success) {
+                    updateStatsCards(data.stats);
                     showNotification('success', 'Status updated successfully!');
                     if (select) { 
                         select.setAttribute('data-prev', newStatus);
@@ -1575,6 +1713,35 @@ require 'header.php';
 
         // Inline Field Editor (For Counts and Time)
         function updateInlineField(ceId, field, value, element = null) {
+            // Check CE, REF, and FQA are all assigned & Completed before allowing 'Moved'
+            if (field === 'remarks' && value === 'Moved') {
+                const rowEl = document.getElementById('row-' + ceId);
+                if (rowEl) {
+                    const ceSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ce'"));
+                    const refSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ref'"));
+                    const fqaSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'fqa'"));
+
+                    const ceTm = rowEl.querySelector('.content-select-' + ceId);
+                    const refTm = rowEl.querySelector('.images-select-' + ceId);
+                    const fqaTm = rowEl.querySelector('.fqa-select-' + ceId);
+
+                    const ceHasBadge = ceSel && ceSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+                    const refHasBadge = refSel && refSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+                    const fqaHasBadge = fqaSel && fqaSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+
+                    const ceOk = ceSel && ceSel.value === 'Completed' && ((ceTm && ceTm.value !== '') || ceHasBadge);
+                    const refOk = refSel && refSel.value === 'Completed' && ((refTm && refTm.value !== '') || refHasBadge);
+                    const fqaOk = fqaSel && fqaSel.value === 'Completed' && ((fqaTm && fqaTm.value !== '') || fqaHasBadge);
+
+                    if (!ceOk || !refOk || !fqaOk) {
+                        if (element) {
+                            element.value = element.getAttribute('data-prev') || '';
+                        }
+                        showNotification('danger', 'Cannot move! CE, REF, and FQA must all have a TM assigned and be marked Completed.');
+                        return;
+                    }
+                }
+            }
             
             // --- BACKDATE PREVENTION LOGIC START ---
             if ((field.includes('start_time') || field.includes('end_time')) && value !== '') {
@@ -1603,6 +1770,10 @@ require 'header.php';
             .then(response => response.json())
             .then(data => {
                 if (data.success) { 
+                    updateStatsCards(data.stats);
+                    if (element) {
+                        element.setAttribute('data-prev', value);
+                    }
                     if (field === 'remarks' && value === 'Moved') {
                         showNotification('success', 'Job moved to LE Assign successfully!');
                         const rowEl = document.getElementById('row-' + ceId);
@@ -1617,8 +1788,18 @@ require 'header.php';
                         showNotification('success', 'Value updated successfully!'); 
                     }
                 } 
-                else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { console.error('Error:', error); });
+                else { 
+                    if (element) {
+                        element.value = element.getAttribute('data-prev') || '';
+                    }
+                    showNotification('danger', data.message || 'Update failed'); 
+                }
+            }).catch(error => { 
+                console.error('Error:', error); 
+                if (element) {
+                    element.value = element.getAttribute('data-prev') || '';
+                }
+            });
         }
         
         // Quick assign function with instant TM badge update
@@ -1646,6 +1827,7 @@ require 'header.php';
                 hideLoading();
                 selectElement.disabled = false;
                 if (data.success) {
+                    updateStatsCards(data.stats);
                     showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
                     document.getElementById('row-' + ceId).classList.add('assigned');
                     selectElement.options[0].text = 'Change TM';
