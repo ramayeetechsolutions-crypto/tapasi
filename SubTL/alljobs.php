@@ -11,6 +11,16 @@ error_reporting(E_ALL);
 require 'db.php';
 date_default_timezone_set('Asia/Kolkata');
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 // --- AUTO FIX DB SCHEMA (Add missing columns automatically) ---
 $check_columns = [
     'le_start_time' => "TIME NULL DEFAULT NULL",
@@ -372,6 +382,8 @@ $where_sql = implode(' AND ', $where_conditions);
 // Main query - Join with jobs and client_master to get CE completion status
 // Main query - Join with jobs, client_master, and ce table to get exact columns
 $le_query = "SELECT le.*, 
+                    j.journal AS job_journal,
+                    j.issue AS job_issue,
                     j.journal_issue, 
                     j.article,
                     j.process_id,
@@ -964,6 +976,7 @@ require 'header.php';
                             <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">CE c date</th>
                             <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">R.date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -1016,8 +1029,15 @@ require 'header.php';
                                         <span class="fw-500"><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : ($row['client_name'] ?? $row['client'] ?? 'N/A')) ?></span>
                                     </td>
                                     <td>
-                                        <span class="text-truncate d-block" title="<?= h($row['issue'] ?? '') ?>">
-                                            <?= h($row['issue'] ?? 'N/A') ?>
+                                        <?php $display_journal = !empty($row['job_journal']) ? $row['job_journal'] : (!empty($row['journal_issue']) ? $row['journal_issue'] : ($row['issue'] ?? 'N/A')); ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_journal) ?>">
+                                            <?= h($display_journal) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php $display_issue = !empty($row['job_issue']) ? $row['job_issue'] : '—'; ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_issue) ?>">
+                                            <?= h($display_issue) ?>
                                         </span>
                                     </td>
                                     <td>
