@@ -11,6 +11,16 @@ error_reporting(E_ALL);
 require 'db.php';
 date_default_timezone_set('Asia/Kolkata');
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 // --- AUTO FIX DB SCHEMA (Add missing columns automatically) ---
 $check_columns = [
     'le_start_time' => "TIME NULL DEFAULT NULL",
@@ -133,9 +143,16 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         if ($target_type === 'le' && (empty($curr_data['le_start_time']) || empty($curr_data['le_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both LE Start Time and End Time before marking as Completed.']);
             exit;
-        } elseif ($target_type === 'le_qc' && (empty($curr_data['le_qc_start_time']) || empty($curr_data['le_qc_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both LE-QC Start Time and End Time before marking as Completed.']);
-            exit;
+        } elseif ($target_type === 'le_qc') {
+            $le_side_done = in_array($curr_status, ['LE Done', 'Completed', 'LE & LE-QC Done']);
+            if (!$le_side_done) {
+                echo json_encode(['success' => false, 'message' => 'Please complete LE Assignment before marking LE-QC Assignment as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['le_qc_start_time']) || empty($curr_data['le_qc_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both LE-QC Start Time and End Time before marking as Completed.']);
+                exit;
+            }
         }
     }
 
@@ -365,6 +382,8 @@ $where_sql = implode(' AND ', $where_conditions);
 // Main query - Join with jobs and client_master to get CE completion status
 // Main query - Join with jobs, client_master, and ce table to get exact columns
 $le_query = "SELECT le.*, 
+                    j.journal AS job_journal,
+                    j.issue AS job_issue,
                     j.journal_issue, 
                     j.article,
                     j.process_id,
@@ -454,6 +473,15 @@ require 'header.php';
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Remove increase/decrease spinner buttons from number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { 
+            -moz-appearance: textfield; 
+        }
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
@@ -948,6 +976,7 @@ require 'header.php';
                             <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">CE c date</th>
                             <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">R.date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -1000,8 +1029,15 @@ require 'header.php';
                                         <span class="fw-500"><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : ($row['client_name'] ?? $row['client'] ?? 'N/A')) ?></span>
                                     </td>
                                     <td>
-                                        <span class="text-truncate d-block" title="<?= h($row['issue'] ?? '') ?>">
-                                            <?= h($row['issue'] ?? 'N/A') ?>
+                                        <?php $display_journal = !empty($row['job_journal']) ? $row['job_journal'] : (!empty($row['journal_issue']) ? $row['journal_issue'] : ($row['issue'] ?? 'N/A')); ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_journal) ?>">
+                                            <?= h($display_journal) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php $display_issue = !empty($row['job_issue']) ? $row['job_issue'] : '—'; ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_issue) ?>">
+                                            <?= h($display_issue) ?>
                                         </span>
                                     </td>
                                     <td>
@@ -1009,19 +1045,19 @@ require 'header.php';
                                             <?= h($row['articles'] ?? 'N/A') ?>
                                         </span>
                                     </td>
-                                    <!-- EQ (Editable) -->
+                                                                        <!-- EQ (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 55px; font-size: 11px; height: 22px; padding: 1px 2px;" value="<?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
                                     </td>
 
                                     <!-- Images (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 55px; font-size: 11px; height: 22px; padding: 1px 2px;" value="<?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
                                     </td>
 
                                     <!-- Tables (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 34px; font-size: 10px; height: 20px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center mx-auto d-block" style="width: 55px; font-size: 11px; height: 22px; padding: 1px 2px;" value="<?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary"><?= h($row['process'] ?? 'N/A') ?></span>
@@ -1143,13 +1179,15 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 10px; width: 100%; height: 21px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le', this.value)">
+                                                    onfocus="this.setAttribute('data-previous', this.value)"
+                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le', this.value, this)">
                                                 <option value="Need to Assign" <?= ($le_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($le_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($le_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
                                             </select>
                                         </div>
 
+                                        <div class="member-info-container">
                                         <?php if (!empty($row['assigned_to_le'])): ?>
                                             <div class="le-badge <?= $le_badge_cls ?> mb-1" title="LE TM">
                                                 <i class="fas fa-file-alt"></i> <?= h($row['assigned_to_le']) ?>
@@ -1162,6 +1200,7 @@ require 'header.php';
                                                 ?>
                                             </small>
                                         <?php endif; ?>
+                                        </div>
                                         
                                         <select class="assign-select mt-1 le-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
                                             <option value=""><?= !empty($row['assigned_to_le']) ? 'Change LE TM' : 'Assign LE' ?></option>
@@ -1198,13 +1237,15 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 10px; width: 100%; height: 21px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le_qc', this.value)">
+                                                    onfocus="this.setAttribute('data-previous', this.value)"
+                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le_qc', this.value, this)">
                                                 <option value="Need to Assign" <?= ($leqc_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($leqc_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($leqc_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
                                             </select>
                                         </div>
 
+                                        <div class="member-info-container">
                                         <?php if (!empty($row['assigned_to_le_qc'])): ?>
                                             <div class="le-badge <?= $leqc_badge_cls ?> mb-1" title="LE QC TM">
                                                 <i class="fas fa-search"></i> <?= h($row['assigned_to_le_qc']) ?>
@@ -1217,6 +1258,7 @@ require 'header.php';
                                                 ?>
                                             </small>
                                         <?php endif; ?>
+                                        </div>
                                         
                                         <select class="assign-select mt-1 le-qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
                                             <option value=""><?= !empty($row['assigned_to_le_qc']) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
@@ -1346,12 +1388,80 @@ require 'header.php';
             document.getElementById('loadingOverlay').classList.remove('active');
         }
         
-        // Status Update Function
-        function updateStatus(leId, type, newStatus) {
+        // Helper to safely escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Scroll Position Preservation
+        function saveScrollPositions() {
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                sessionStorage.setItem('subtl_alljobs_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('subtl_alljobs_table_y', tableResp.scrollTop);
+            }
+            sessionStorage.setItem('subtl_alljobs_win_x', window.scrollX || 0);
+            sessionStorage.setItem('subtl_alljobs_win_y', window.scrollY || 0);
+        }
+
+        function restoreScrollPositions() {
+            const tableX = sessionStorage.getItem('subtl_alljobs_table_x');
+            const tableY = sessionStorage.getItem('subtl_alljobs_table_y');
+            const winX = sessionStorage.getItem('subtl_alljobs_win_x');
+            const winY = sessionStorage.getItem('subtl_alljobs_win_y');
+            
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp && tableX !== null) {
+                tableResp.scrollLeft = parseFloat(tableX);
+                if (tableY !== null) tableResp.scrollTop = parseFloat(tableY);
+            }
+            if (winX !== null || winY !== null) {
+                window.scrollTo(parseFloat(winX || 0), parseFloat(winY || 0));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreScrollPositions();
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                tableResp.addEventListener('scroll', () => {
+                    sessionStorage.setItem('subtl_alljobs_table_x', tableResp.scrollLeft);
+                }, { passive: true });
+            }
+        });
+        window.addEventListener('beforeunload', saveScrollPositions);
+
+        // Status Update Function (In-Place, No Reload)
+        function updateStatus(leId, type, newStatus, selectElement = null) {
+            let row = document.getElementById('row-' + leId);
+            const prevValue = selectElement ? (selectElement.getAttribute('data-previous') || 'Need to Assign') : 'Need to Assign';
+
             // Frontend validation to enforce time completion
             if (newStatus === 'Completed') {
-                let row = document.getElementById('row-' + leId);
                 if (row) {
+                    // Check if LE is Completed before allowing LE-QC Completed
+                    if (type === 'le_qc') {
+                        let leSelect = Array.from(row.querySelectorAll('select')).find(s => {
+                            let oc = s.getAttribute('onchange') || '';
+                            return oc.includes("'le'") && !oc.includes("'le_qc'");
+                        });
+                        let leDone = leSelect && leSelect.value === 'Completed';
+
+                        if (!leDone) {
+                            showNotification('danger', 'Please complete LE Assignment before marking LE-QC Assignment as Completed!');
+                            if (selectElement) selectElement.value = prevValue;
+                            return;
+                        }
+                    }
+
                     let startTitle = (type === 'le') ? 'LE Start' : 'LE QC Start';
                     let endTitle = (type === 'le') ? 'LE End' : 'LE QC End';
                     
@@ -1361,7 +1471,7 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500);
+                            if (selectElement) selectElement.value = prevValue;
                             return; 
                         }
                     }
@@ -1377,16 +1487,36 @@ require 'header.php';
             .then(data => {
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
-                    setTimeout(() => { window.location.reload(); }, 500);
+                    if (selectElement) selectElement.setAttribute('data-previous', newStatus);
+
+                    // Update badge style in-place
+                    if (row) {
+                        const cell = selectElement ? selectElement.closest('td') : null;
+                        if (cell) {
+                            const badge = cell.querySelector('.le-badge');
+                            if (badge) {
+                                badge.classList.remove('completed', 'in-progress', 'pending');
+                                if (newStatus === 'Completed') {
+                                    badge.classList.add('completed');
+                                } else if (newStatus === 'In Progress') {
+                                    badge.classList.add('in-progress');
+                                } else {
+                                    badge.classList.add('pending');
+                                }
+                            }
+                        }
+                    }
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
+                    if (selectElement) selectElement.value = prevValue;
                 }
             }).catch(error => { 
                 console.error('Error:', error); 
+                if (selectElement) selectElement.value = prevValue;
             });
         }
 
-        // Inline Field Editor (For Time)
+        // Inline Field Editor (For Time & Status Button)
         function updateInlineField(leId, field, value, element = null) {
             if ((field.includes('start_time') || field.includes('end_time')) && value !== '') {
                 const now = new Date();
@@ -1415,6 +1545,7 @@ require 'header.php';
                             rowEl.style.opacity = '0';
                             setTimeout(() => { 
                                 rowEl.remove(); 
+                                saveScrollPositions();
                                 window.location.reload(); 
                             }, 400);
                         }
@@ -1426,7 +1557,7 @@ require 'header.php';
             }).catch(error => { console.error('Error:', error); });
         }
         
-        // Quick assign function
+        // Quick assign function (In-Place, No Reload)
         function quickAssign(leId, jobId, type, selectElement) {
             const selectedValue = selectElement.value;
             if (!selectedValue) return;
@@ -1439,7 +1570,6 @@ require 'header.php';
             selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
             
-            // Post directly to alljobs.php (Correct Handler)
             fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1450,8 +1580,40 @@ require 'header.php';
                 selectElement.disabled = false;
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${leName} successfully!`);
-                    document.getElementById('row-' + leId).classList.add('assigned');
-                    setTimeout(() => { window.location.reload(); }, 600);
+                    
+                    const row = document.getElementById('row-' + leId);
+                    if (row) {
+                        row.classList.add('assigned');
+                        const cell = selectElement.closest('td');
+                        if (cell) {
+                            let infoContainer = cell.querySelector('.member-info-container');
+                            if (!infoContainer) {
+                                infoContainer = document.createElement('div');
+                                infoContainer.className = 'member-info-container';
+                                cell.insertBefore(infoContainer, selectElement);
+                            }
+                            const iconClass = (type === 'le_qc') ? 'fa-search' : 'fa-file-alt';
+                            const titleText = (type === 'le_qc') ? 'LE QC TM' : 'LE TM';
+                            infoContainer.innerHTML = `
+                                <div class="le-badge in-progress mb-1" title="${titleText}">
+                                    <i class="fas ${iconClass}"></i> ${escapeHtml(selectedValue)}
+                                </div>
+                                <small class="text-muted d-block mb-1">${escapeHtml(leName)}</small>
+                            `;
+
+                            // Update first option text
+                            if (selectElement.options.length > 0) {
+                                selectElement.options[0].text = (type === 'le_qc') ? 'Change LE-QC TM' : 'Change LE TM';
+                            }
+
+                            // If status was 'Need to Assign', update to 'In Progress'
+                            const statusSelect = cell.querySelector('select.form-select');
+                            if (statusSelect && (statusSelect.value === 'Need to Assign' || statusSelect.value === '')) {
+                                statusSelect.value = 'In Progress';
+                                statusSelect.setAttribute('data-previous', 'In Progress');
+                            }
+                        }
+                    }
                 } else {
                     showNotification('danger', 'Error: ' + data.message);
                     selectElement.value = selectElement.getAttribute('data-previous') || '';

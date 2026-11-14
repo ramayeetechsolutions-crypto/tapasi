@@ -73,11 +73,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $designation_id = isset($_POST['designation_id']) ? (int)$_POST['designation_id'] : 0;
         $shift = trim($_POST['shift'] ?? 'General');
 
-        // Fetch Sales team ID (default 9)
-        $sales_team_id = 9;
+        // Determine Team ID based on Role
+        $assigned_team_id = 9; // Default Sales
         $t_res = $mysqli->query("SELECT team_id FROM team_master WHERE team_name = 'Sales' LIMIT 1");
         if ($t_res && $t_row = $t_res->fetch_assoc()) {
-            $sales_team_id = (int)$t_row['team_id'];
+            $assigned_team_id = (int)$t_row['team_id'];
+        }
+
+        // Check if selected role is IT (role_id = 10)
+        $role_check = $mysqli->query("SELECT role_name FROM user_role_master WHERE role_id = $user_role_id LIMIT 1");
+        if ($role_check && $rc = $role_check->fetch_assoc()) {
+            if ($rc['role_name'] === 'IT' || $user_role_id == 10) {
+                $it_res = $mysqli->query("SELECT team_id FROM team_master WHERE team_name = 'IT' LIMIT 1");
+                $assigned_team_id = ($it_res && $it_row = $it_res->fetch_assoc()) ? (int)$it_row['team_id'] : 8;
+                if (empty($reporting_manager)) {
+                    $reporting_manager = 'Thambithurai Thilakavathy';
+                }
+            }
         }
 
         $stmt = $mysqli->prepare("INSERT INTO employee_master 
@@ -96,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user_role_id,
             $designation_id,
             $shift,
-            $sales_team_id
+            $assigned_team_id
         );
 
         if ($stmt->execute()) {
@@ -221,13 +233,13 @@ require 'header.php';
 
             <div class="col-md-6">
                 <label class="form-label">User Role *</label>
-                <select name="user_role_id" class="form-select" required>
+                <select name="user_role_id" id="user_role_id" class="form-select" required onchange="handleRoleChange(this)">
                     <option value="">Select Role</option>
                     <?php 
                     if ($roles) { 
                         while($r = $roles->fetch_assoc()) { 
                             $selected = ((int)($_POST['user_role_id'] ?? 0) === (int)$r['role_id']) ? 'selected' : '';
-                            echo "<option value='{$r['role_id']}' $selected>" . h($r['role_name']) . "</option>";
+                            echo "<option value='{$r['role_id']}' data-role-name='" . h($r['role_name']) . "' $selected>" . h($r['role_name']) . "</option>";
                         } 
                     } 
                     ?>
@@ -236,7 +248,7 @@ require 'header.php';
 
             <div class="col-md-6">
                 <label class="form-label">Reporting Manager *</label>
-                <select name="reporting_manager" class="form-select" required>
+                <select name="reporting_manager" id="reporting_manager" class="form-select" required>
                     <option value="">Select Team Leader</option>
                     <?php
                     $selected_rm = $_POST['reporting_manager'] ?? $current_tl_name;
@@ -248,6 +260,9 @@ require 'header.php';
                     }
                     if ($current_tl_name && !in_array($current_tl_name, $tl_names)) {
                         $tl_names[] = $current_tl_name;
+                    }
+                    if (!in_array('Thambithurai Thilakavathy', $tl_names)) {
+                        $tl_names[] = 'Thambithurai Thilakavathy';
                     }
                     foreach ($tl_names as $tl_name) {
                         $selected = ($selected_rm == $tl_name) ? 'selected' : '';
@@ -303,6 +318,20 @@ function checkPasswordMatch() {
         return false;
     }
     return true;
+}
+
+function handleRoleChange(select) {
+    const selectedOption = select.options[select.selectedIndex];
+    const roleName = selectedOption.getAttribute('data-role-name') || selectedOption.text;
+    const rmSelect = document.getElementById('reporting_manager');
+    if (roleName.trim() === 'IT' || select.value === '10') {
+        for (let i = 0; i < rmSelect.options.length; i++) {
+            if (rmSelect.options[i].value === 'Thambithurai Thilakavathy') {
+                rmSelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
 }
 </script>
 

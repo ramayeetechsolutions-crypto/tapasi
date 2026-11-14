@@ -349,7 +349,7 @@ LEFT JOIN
 LEFT JOIN 
     designation_master d ON e.designation_id = d.designation_id 
 WHERE 
-    (e.reporting_manager = '$emp_username' OR e.employee_username = '$emp_username' OR e.user_role_id = 9 OR t.team_name = 'Sales' OR e.team_id = 9)";
+    (e.reporting_manager = '$emp_username' OR e.employee_username = '$emp_username' OR e.user_role_id = 9 OR t.team_name = 'Sales' OR e.team_id = 9 OR e.user_role_id = 10 OR t.team_name = 'IT')";
         
 $cond=[];$params=[];$types='';
 
