@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // Helper functions
 function formatDateTime($datetime, $format = 'd-m-Y H:i') {
@@ -90,11 +89,21 @@ $filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
-$dir  = $_GET['dir'] ?? 'DESC';
-$dir  = strtoupper($dir)==='ASC' ? 'ASC' : 'DESC';
-
 $valid_sorts = ['job_id','j.job_date','client_name','journal_issue','process'];
 if (!in_array($sort, $valid_sorts)) $sort = 'j.job_date';
+
+$default_dir = ($sort === 'j.job_date') ? 'DESC' : 'ASC';
+$dir  = $_GET['dir'] ?? $default_dir;
+$dir  = strtoupper($dir)==='ASC' ? 'ASC' : 'DESC';
+
+$sort_map = [
+    'job_id'        => 'j.job_id',
+    'j.job_date'    => 'j.job_date',
+    'client_name'   => "COALESCE(NULLIF(c.team_client_name, ''), c.client_name)",
+    'journal_issue' => "COALESCE(NULLIF(j.issue, ''), j.journal_issue)",
+    'process'       => 'process'
+];
+$order_col = $sort_map[$sort] ?? 'j.job_date';
 
 // Process stage mapping - keeping only CE related
 $processStageMap = [
@@ -248,7 +257,7 @@ LEFT JOIN (
 ) ju ON ju.job_id = j.job_id
 
 $where_sql
-ORDER BY $sort $dir, j.job_id $dir";
+ORDER BY $order_col $dir, j.job_id DESC";
 
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) die("Prepare failed: ".$mysqli->error);
@@ -293,7 +302,9 @@ if ($results->num_rows > 0) {
     }
 }
 
+require 'header.php';
 ?>
+<br><br><br>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"/>
 <!-- Select2 CSS -->
@@ -310,18 +321,98 @@ if ($results->num_rows > 0) {
     border: 1px solid #5a6268 !important;
 }
 
-/* Select2 Custom Style */
-.select2-container .select2-selection--single
-    height: 31px !important;
+/* Select2 Custom Style - Exactly matching CE Assign page (26px height & 11px font) */
+.select2-container .select2-selection--single {
+    height: 26px !important;
+    min-height: 26px !important;
     border: 1px solid #dee2e6 !important;
     border-radius: 0.25rem !important;
+    background-color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
 }
+/* Active / Open Focus Blue Ring */
+.select2-container--default.select2-container--open .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    outline: 0 !important;
+}
+/* Top Box Text (Matched to 11px font like CE Assign) */
 .select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 29px !important;
-    font-size: 0.875rem !important;
+    line-height: 24px !important;
+    font-size: 11px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    color: #212529 !important;
+    padding-left: 0.5rem !important;
+    padding-right: 1.75rem !important;
 }
+/* Arrow matching other dropdowns */
 .select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 29px !important;
+    height: 24px !important;
+    right: 6px !important;
+    width: 14px !important;
+    top: 1px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    display: none !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow::after {
+    content: "" !important;
+    display: inline-block !important;
+    width: 10px !important;
+    height: 10px !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-size: 10px 10px !important;
+    background-position: center !important;
+}
+/* Dropdown options box */
+.select2-dropdown {
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    background-color: #fff !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    margin-top: 1px !important;
+    overflow: hidden !important;
+}
+/* Search box */
+.select2-container--default .select2-search--dropdown {
+    padding: 4px 6px !important;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    font-size: 11px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    padding: 3px 6px !important;
+    height: 24px !important;
+    outline: none !important;
+}
+.select2-results__options {
+    overflow-x: hidden !important;
+}
+/* Options list */
+.select2-container--default .select2-results__option {
+    font-size: 11px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    padding: 4px 10px !important;
+    color: #212529 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+/* Selected & Hover item */
+.select2-container--default .select2-results__option--highlighted,
+.select2-container--default .select2-results__option--highlighted[aria-selected],
+.select2-container--default .select2-results__option[aria-selected="true"],
+.select2-container--default .select2-results__option--selected {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
 }
 
 table td,th { vertical-align: middle; padding: 6px 8px; white-space: nowrap; font-size: 0.9rem; }
@@ -409,13 +500,15 @@ table td {
 <?php
 function getStatusBadge($status, $username = '', $emp_map = []) {
     $st = trim((string)$status);
-    if (empty($st)) $st = 'WIP';
+    if (empty($st)) $st = 'Need to Assign';
     
     if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
         $badge = '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Completed</span>';
+    } elseif (strcasecmp($st, 'Need to Assign') === 0) {
+        $badge = '<span class="badge" style="background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Need to Assign</span>';
     } else {
-        // WIP / In Progress / Need to Assign -> Orange
-        $label = (strcasecmp($st, 'In Progress') === 0 || strcasecmp($st, 'WIP') === 0) ? 'WIP' : h($st);
+        // In Progress / WIP -> Orange
+        $label = (strcasecmp($st, 'WIP') === 0) ? 'In Progress' : h($st);
         $badge = '<span class="badge" style="background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . $label . '</span>';
     }
     
@@ -429,8 +522,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     return $badge;
 }
 ?>
-
-<?php require 'header.php';?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -522,17 +613,17 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     </select>
                 </div>
                 
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <label class="form-label small mb-1">From Date</label>
                     <input type="date" name="from_date" value="<?= h($from_date) ?>" class="form-control form-control-sm">
                 </div>
                 
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <label class="form-label small mb-1">To Date</label>
                     <input type="date" name="to_date" value="<?= h($to_date) ?>" class="form-control form-control-sm">
                 </div>
                 
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <label class="form-label small mb-1">Sort By</label>
                     <select name="sort" class="form-select form-select-sm">
                         <option value="j.job_date" <?=$sort==='j.job_date'?'selected':''?>>Date</option>
@@ -542,14 +633,14 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     </select>
                 </div>
                 
-                <div class="col-md-1">
+                <div class="col-md-2">
                     <label class="form-label small mb-1 d-block">&nbsp;</label>
                     <div class="d-flex gap-1">
                         <button class="btn btn-primary btn-sm" type="submit">
-                            <i class="fas fa-search"></i>
+                            <i class="fas fa-search"></i> Filter
                         </button>
                         <a href="jobmgmt_ce.php" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times"></i> Clear
                         </a>
                     </div>
                 </div>
@@ -596,9 +687,38 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                        <?php if (count($all_jobs) > 0): 
                             $i=1; 
                             foreach($all_jobs as $row): 
-                                $ce_stat = !empty($row['ce_status']) ? $row['ce_status'] : 'WIP';
-                                $ref_stat = !empty($row['assigned_to_img']) ? ($row['ce_status'] ?? 'WIP') : 'WIP';
-                                $fqa_stat = ($ce_stat === 'Completed') ? 'Completed' : 'WIP';
+                                $raw_ce_status = trim((string)($row['ce_status'] ?? ''));
+                                $fqa_user = $row['assigned_to'] ?? '';
+                                if ($fqa_user === $user_employee_name || $fqa_user === $logged_in_name || !isset($emp_map[$fqa_user])) {
+                                    $fqa_user = '';
+                                }
+
+                                // CE Status: Completed / In Progress / Need to Assign
+                                if (in_array($raw_ce_status, ['CE Done', 'CE & REF Done', 'Completed', 'Done'])) {
+                                    $ce_stat = 'Completed';
+                                } elseif (!empty(trim((string)($row['assigned_to_content'] ?? '')))) {
+                                    $ce_stat = 'In Progress';
+                                } else {
+                                    $ce_stat = 'Need to Assign';
+                                }
+
+                                // REF Status: Completed / In Progress / Need to Assign
+                                if (in_array($raw_ce_status, ['REF Done', 'CE & REF Done', 'Completed', 'Done'])) {
+                                    $ref_stat = 'Completed';
+                                } elseif (!empty(trim((string)($row['assigned_to_img'] ?? '')))) {
+                                    $ref_stat = 'In Progress';
+                                } else {
+                                    $ref_stat = 'Need to Assign';
+                                }
+
+                                // FQA Status: Completed / In Progress / Need to Assign
+                                if (in_array($raw_ce_status, ['Completed', 'Done'])) {
+                                    $fqa_stat = 'Completed';
+                                } elseif (!empty($fqa_user)) {
+                                    $fqa_stat = 'In Progress';
+                                } else {
+                                    $fqa_stat = 'Need to Assign';
+                                }
                                 
                                 // TAT Calculation (Current Date - Received Date)
                                 $tat_display = '—';
@@ -672,13 +792,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 12. REF Count -->
                             <td><?=h($row['ce_ref'] ?? '0')?></td>
 
-                            <!-- 13. FQA Status (Orange: WIP / Green: Completed) -->
-                            <?php
-                            $fqa_user = $row['assigned_to'] ?? '';
-                            if ($fqa_user === $user_employee_name || $fqa_user === $logged_in_name || !isset($emp_map[$fqa_user])) {
-                                $fqa_user = '';
-                            }
-                            ?>
+                            <!-- 13. FQA Status -->
                             <td><?= getStatusBadge($fqa_stat, $fqa_user, $emp_map) ?></td>
 
                             <!-- CE Times -->
