@@ -451,20 +451,38 @@ if (!empty($images_tm_filter)) {
 
 $where_sql = implode(' AND ', $where_conditions);
 
-// --- START PAGINATION FIX ---
+// --- START STATS & PAGINATION ---
 $limit = 15; // Number of rows per page
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
-// Get total rows for pagination
-$count_query = "SELECT COUNT(*) as total FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id LEFT JOIN client_master c ON j.client_id = c.client_id WHERE $where_sql";
-$stmt_count = $mysqli->prepare($count_query);
-if (!empty($params)) { $stmt_count->bind_param($types, ...$params); }
-$stmt_count->execute();
-$total_rows = $stmt_count->get_result()->fetch_assoc()['total'];
-$stmt_count->close();
+// Save filter params for stats & count
+$filter_params = $params;
+$filter_types = $types;
+
+// Get count statistics (matches the exact dataset and filters of this page)
+$stats_query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN ce.status = 'Need to Assign' OR (ce.assigned_to_content IS NULL OR ce.assigned_to_content = '') OR (ce.assigned_to_img IS NULL OR ce.assigned_to_img = '') THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND ce.assigned_to_content != '' THEN 1 ELSE 0 END) as content_assigned,
+                    SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND ce.assigned_to_img != '' THEN 1 ELSE 0 END) as images_assigned
+                FROM ce 
+                LEFT JOIN jobs j ON ce.job_id = j.job_id 
+                LEFT JOIN client_master c ON j.client_id = c.client_id 
+                WHERE $where_sql";
+
+$stmt_stats = $mysqli->prepare($stats_query);
+if (!empty($filter_params)) {
+    $stmt_stats->bind_param($filter_types, ...$filter_params);
+}
+$stmt_stats->execute();
+$stats = $stmt_stats->get_result()->fetch_assoc();
+$stmt_stats->close();
+
+$total_rows = (int)($stats['total'] ?? 0);
 $total_pages = ceil($total_rows / $limit);
-// --- END PAGINATION FIX ---
+// --- END STATS & PAGINATION ---
 
 
 
@@ -513,39 +531,6 @@ $status_result = $mysqli->query($status_query);
 // Get unique clients for search dropdown
 $clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
 $clients_result = $mysqli->query($clients_query);
-
-// Get count statistics (Exact match with table rows + CE, REF, FQA assignment check)
-$tl_defaults = array_unique(array_filter([
-    'T.G. Bragadeeshwaran',
-    'TL- TPS004',
-    'TL- TPS032',
-    'TL- TPS002',
-    'TL- TPS005',
-    'TL',
-    $current_user_name,
-    $reporting_manager,
-    $current_username
-]));
-$tl_default_list = "'" . implode("','", array_map([$mysqli, 'real_escape_string'], $tl_defaults)) . "'";
-
-$stats_query = "SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE 
-                        WHEN ce.status IN ('Need to Assign', 'Pending', '') OR ce.status IS NULL
-                          OR ce.assigned_to_content IS NULL OR TRIM(ce.assigned_to_content) = ''
-                          OR ce.assigned_to_img IS NULL OR TRIM(ce.assigned_to_img) = ''
-                          OR j.assigned_to IS NULL OR TRIM(j.assigned_to) = '' OR TRIM(j.assigned_to) IN ($tl_default_list)
-                        THEN 1 ELSE 0 
-                    END) as need_assign,
-                    SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
-                    SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND TRIM(ce.assigned_to_content) != '' THEN 1 ELSE 0 END) as content_assigned,
-                    SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND TRIM(ce.assigned_to_img) != '' THEN 1 ELSE 0 END) as images_assigned
-                FROM ce 
-                LEFT JOIN jobs j ON ce.job_id = j.job_id
-                WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved'
-                AND (ce.status NOT IN ('Completed', 'Done') OR DATE(COALESCE(j.job_date, ce.created_at)) >= '2026-10-01')";
-$stats_result = $mysqli->query($stats_query);
-$stats = $stats_result->fetch_assoc();
 
 require 'header.php';
 ?>
@@ -1049,7 +1034,7 @@ require 'header.php';
                     </div>
                     <div class="stats-info">
                         <h3><?= $stats['total'] ?? 0 ?></h3>
-                        <p>Total Pending</p>
+                        <p>Total Jobs</p>
                     </div>
                 </div>
             </div>

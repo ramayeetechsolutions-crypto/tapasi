@@ -466,14 +466,35 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
         redirect_to(['msg' => 'Job updated successfully', 'type' => 'success']);
     } 
     elseif ($action === 'delete') {
-        $stmt = $mysqli->prepare("DELETE FROM jobs WHERE job_id = ?");
-        if (!$stmt) die('Error preparing delete: ' . $mysqli->error);
-        $stmt->bind_param('i', $job_id);
-        if (!$stmt->execute()) {
-            die('Deletion failed: ' . $stmt->error);
+        // Cascade delete related records across all assigning and stage tables
+        $tables_to_clean = [
+            'ce',
+            'le',
+            'pag',
+            'qc',
+            'qc_crx',
+            'ap_assign',
+            'wk_cs',
+            'wk_le',
+            'wk_ts',
+            'unique_xml_jobs',
+            'job_uploads',
+            'job_uploads_qc',
+            'job_uploads_xml',
+            'job_time_tracking',
+            'jobs'
+        ];
+        
+        foreach ($tables_to_clean as $tbl) {
+            $del_stmt = $mysqli->prepare("DELETE FROM `$tbl` WHERE `job_id` = ?");
+            if ($del_stmt) {
+                $del_stmt->bind_param('i', $job_id);
+                $del_stmt->execute();
+                $del_stmt->close();
+            }
         }
-        $stmt->close();
-        redirect_to(['msg' => 'Job deleted', 'type' => 'warning']);
+        
+        redirect_to(['msg' => 'Job and all related stage assignments deleted', 'type' => 'warning']);
     }
 }
 

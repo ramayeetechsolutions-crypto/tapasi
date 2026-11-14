@@ -53,9 +53,9 @@ function redirect_to($params = []) {
 }
 
 function formatDate($date, $format = 'd-m-Y') {
-    if (!$date) return '';
-    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
-    return $dateObj ? $dateObj->format($format) : $date;
+    if (empty($date) || $date === '0000-00-00' || $date === '0000-00-00 00:00:00') return '';
+    $ts = strtotime($date);
+    return $ts ? date($format, $ts) : $date;
 }
 
 $processStageMap = [
@@ -97,12 +97,12 @@ $logged_user = $_SESSION['username'] ?? '';
 $role_name = $_SESSION['role_name'] ?? '';
 
 $search_client = trim($_GET['search_client'] ?? '');
-$sort = $_GET['sort'] ?? 'job_id';
+$sort = $_GET['sort'] ?? 'job_date';
 $dir = strtoupper($_GET['dir'] ?? 'DESC');
 if (!in_array($dir, ['ASC', 'DESC'], true)) $dir = 'DESC';
 
-$allowed_sorts = ['job_id', 'job_date', 'client_name', 'job_name', 'article', 'assigned_to', 'due_date'];
-if (!in_array($sort, $allowed_sorts, true)) $sort = 'job_id';
+$allowed_sorts = ['job_date', 'client_name', 'article', 'due_date'];
+if (!in_array($sort, $allowed_sorts, true)) $sort = 'job_date';
 
 $default_due_date = date('Y-m-d H:i:s', strtotime('+5 days'));
 
@@ -148,7 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $mail_subject = trim($_POST['mail_subject'] ?? '');
     $notes = trim($_POST['notes'] ?? '');
     $queries = trim($_POST['queries'] ?? '');
-    $due_date = $default_due_date;
+    $due_date = !empty($_POST['due_date']) ? $_POST['due_date'] : $default_due_date;
+    
+    if (!empty($due_date) && !empty($job_date)) {
+        if (substr($due_date, 0, 10) < substr($job_date, 0, 10)) {
+            redirect_to(['msg' => 'Due date cannot be before Job date', 'type' => 'danger']);
+        }
+    }
     
     if ($action === 'add') {
         // Validation
@@ -174,6 +180,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['wordcount_textarea']) && !empty(trim($_POST['wordcount_textarea']))) {
                 $raw_wordcounts = trim($_POST['wordcount_textarea']);
                 $word_counts = array_filter(array_map('trim', explode("\n", $raw_wordcounts)), 'strlen');
+            }
+            if (empty($word_counts)) {
+                redirect_to(['msg' => 'Word count is required for each article', 'type' => 'danger']);
             }
             
             // Combine articles with their word counts
@@ -455,6 +464,9 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
         if (!$article || !$process_id) {
             redirect_to(['msg' => 'Article and Process are required', 'type' => 'danger']);
         }
+        if ($word_count <= 0) {
+            redirect_to(['msg' => 'Word count is required and must be greater than 0', 'type' => 'danger']);
+        }
 
         // Check for duplicates excluding current job
         $checkSql = "SELECT COUNT(*) FROM jobs WHERE journal_issue = ? AND article = ? AND job_id != ?";
@@ -482,14 +494,35 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
         redirect_to(['msg' => 'Job updated successfully', 'type' => 'success']);
     } 
     elseif ($action === 'delete') {
-        $stmt = $mysqli->prepare("DELETE FROM jobs WHERE job_id = ?");
-        if (!$stmt) die('Error preparing delete: ' . $mysqli->error);
-        $stmt->bind_param('i', $job_id);
-        if (!$stmt->execute()) {
-            die('Deletion failed: ' . $stmt->error);
+        // Cascade delete related records across all assigning and stage tables
+        $tables_to_clean = [
+            'ce',
+            'le',
+            'pag',
+            'qc',
+            'qc_crx',
+            'ap_assign',
+            'wk_cs',
+            'wk_le',
+            'wk_ts',
+            'unique_xml_jobs',
+            'job_uploads',
+            'job_uploads_qc',
+            'job_uploads_xml',
+            'job_time_tracking',
+            'jobs'
+        ];
+        
+        foreach ($tables_to_clean as $tbl) {
+            $del_stmt = $mysqli->prepare("DELETE FROM `$tbl` WHERE `job_id` = ?");
+            if ($del_stmt) {
+                $del_stmt->bind_param('i', $job_id);
+                $del_stmt->execute();
+                $del_stmt->close();
+            }
         }
-        $stmt->close();
-        redirect_to(['msg' => 'Job deleted', 'type' => 'warning']);
+        
+        redirect_to(['msg' => 'Job and all related stage assignments deleted', 'type' => 'warning']);
     }
 }
 
@@ -574,7 +607,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal, j.issue, j.journal_issue, j.mail
         LEFT JOIN qc ON j.job_id = qc.job_id
         LEFT JOIN ap_assign ap ON j.job_id = ap.job_id
         $where_sql
-        ORDER BY $sort $dir";
+        ORDER BY " . ($sort === 'job_date' ? "j.job_date DESC, j.job_id DESC" : "$sort $dir, j.job_date DESC, j.job_id DESC");
 
 if ($where_sql && $types) {
     $stmt = $mysqli->prepare($sql);
@@ -1129,7 +1162,7 @@ require 'header.php';
                                 <div class="col-md-4">
                                     <label class="form-label">Due Date</label>
                                     <input type="date" name="due_date" class="form-control" 
-                                           value="<?= h($mode === 'edit' ? $edit_job['due_date'] : date('Y-m-d', strtotime('+5 days'))) ?>">
+                                           value="<?= h($mode === 'edit' ? (!empty($edit_job['due_date']) && $edit_job['due_date'] !== '0000-00-00 00:00:00' ? date('Y-m-d', strtotime($edit_job['due_date'])) : '') : date('Y-m-d', strtotime('+5 days'))) ?>">
                                 </div>
                                 
                                 <div class="col-md-4">
@@ -1233,11 +1266,11 @@ require 'header.php';
                                                placeholder="Article title">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Word Count</label>
+                                        <label class="form-label">Word Count <span class="required-asterisk">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text"><i class="fas fa-calculator"></i></span>
-                                            <input type="number" name="word_count" class="form-control" 
-                                                   value="<?= h($edit_job['word_count'] ?? 0) ?>" min="0" placeholder="0">
+                                            <input type="number" name="word_count" class="form-control" required 
+                                                   value="<?= h($edit_job['word_count'] ?? '') ?>" min="1">
                                         </div>
                                     </div>
                                 </div>
@@ -1249,7 +1282,7 @@ require 'header.php';
                                         <div class="form-check">
                                             <input class="form-check-input" type="radio" name="input_method" 
                                                    id="methodTextarea" value="textarea" checked onclick="toggleInputMethod()">
-                                            <label class="form-check-label" for="methodTextarea">
+                                             <label class="form-check-label" for="methodTextarea">
                                                 <i class="fas fa-pencil-alt me-1"></i> Textarea
                                             </label>
                                         </div>
@@ -1272,37 +1305,45 @@ require 'header.php';
                                                 Articles <span class="required-asterisk">*</span>
                                             </h6>
                                             <textarea name="articles_textarea" class="form-control" 
-                                                      rows="3" placeholder="Article 1&#10;Article 2&#10;Article 3"><?= h($_POST['articles_textarea'] ?? '') ?></textarea>
+                                                      rows="3"><?= h($_POST['articles_textarea'] ?? '') ?></textarea>
                                         </div>
                                         
                                         <div class="textarea-wrapper">
                                             <h6>
                                                 <i class="fas fa-calculator"></i>
-                                                Word Counts
+                                                Word Counts <span class="required-asterisk">*</span>
                                             </h6>
                                             <textarea name="wordcount_textarea" class="form-control" 
-                                                      rows="3" placeholder="1500&#10;2500&#10;3200"><?= h($_POST['wordcount_textarea'] ?? '') ?></textarea>
+                                                      rows="3"><?= h($_POST['wordcount_textarea'] ?? '') ?></textarea>
                                         </div>
                                     </div>
                                     
                                     <div class="info-box">
                                         <i class="fas fa-info-circle"></i>
-                                        Line 1 → Article 1, Line 2 → Article 2, etc. Default word count: 0
+                                        Line 1 → Article 1, Line 2 → Article 2, etc. Word count is required.
                                     </div>
                                 </div>
                                 
                                 <!-- Individual Fields Method (Hidden by Default) -->
                                 <div id="individualMethod" style="display:none;">
+                                    <div class="row g-2 mb-2 fw-semibold px-2" style="font-size:0.8rem; color:#334155;">
+                                        <div class="col-md-7">
+                                            <i class="fas fa-file-lines me-1" style="color: #667eea;"></i> Articles <span class="required-asterisk">*</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <i class="fas fa-calculator me-1" style="color: #667eea;"></i> Word Counts <span class="required-asterisk">*</span>
+                                        </div>
+                                        <div class="col-md-1"></div>
+                                    </div>
                                     <div id="articleFields">
                                         <div class="article-card">
                                             <div class="row g-2 align-items-center">
                                                 <div class="col-md-7">
-                                                    <input type="text" name="article_individual[]" class="form-control form-control-sm" 
-                                                           placeholder="Article title">
+                                                    <input type="text" name="article_individual[]" class="form-control form-control-sm">
                                                 </div>
                                                 <div class="col-md-4">
                                                     <input type="number" name="article_word_count[]" class="form-control form-control-sm" 
-                                                           min="0" value="0" placeholder="WC">
+                                                           min="1">
                                                 </div>
                                                 <div class="col-md-1">
                                                     <button type="button" class="btn btn-outline-danger btn-sm w-100" 
@@ -1363,6 +1404,7 @@ require 'header.php';
             <!-- Filter Form -->
             <div class="filter-form">
                 <form method="get" class="row g-2 align-items-end">
+                    <input type="hidden" name="dir" value="DESC">
                     <div class="col-md-4">
     <label class="form-label">Search Client</label>
     <select name="search_client" class="form-select form-select-sm">
@@ -1610,12 +1652,11 @@ require 'header.php';
             newField.innerHTML = `
                 <div class="row g-2 align-items-center">
                     <div class="col-md-7">
-                        <input type="text" name="article_individual[]" class="form-control form-control-sm" 
-                               placeholder="Article title">
+                        <input type="text" name="article_individual[]" class="form-control form-control-sm">
                     </div>
                     <div class="col-md-4">
                         <input type="number" name="article_word_count[]" class="form-control form-control-sm" 
-                               min="0" value="0" placeholder="WC">
+                               min="1">
                     </div>
                     <div class="col-md-1">
                         <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeArticleField(this)">
@@ -1651,9 +1692,18 @@ require 'header.php';
         
         // Form validation
         document.getElementById('jobForm')?.addEventListener('submit', function(e) {
-            const methodIndividual = document.getElementById('methodIndividual');
-            const processSelect = document.querySelector('select[name="process_id"]');
+            const jobDateInput = document.querySelector('input[name="job_date"]');
+            const dueDateInput = document.querySelector('input[name="due_date"]');
             
+            if (jobDateInput && dueDateInput && jobDateInput.value && dueDateInput.value) {
+                if (dueDateInput.value < jobDateInput.value) {
+                    alert('Due date cannot be before Job date.');
+                    e.preventDefault();
+                    return false;
+                }
+            }
+            
+            const processSelect = document.querySelector('select[name="process_id"]');
             if (!processSelect || !processSelect.value) {
                 alert('Please select a process.');
                 e.preventDefault();
@@ -1673,16 +1723,46 @@ require 'header.php';
                 e.preventDefault();
                 return false;
             }
+
+            const actionInput = document.querySelector('input[name="action"]');
+            const action = actionInput ? actionInput.value : '';
+
+            // In Edit Mode, validate single article and word count
+            if (action === 'edit') {
+                const articleInput = document.querySelector('input[name="article"]');
+                if (!articleInput || !articleInput.value.trim()) {
+                    alert('Please enter an article title.');
+                    e.preventDefault();
+                    return false;
+                }
+                const wordCountInput = document.querySelector('input[name="word_count"]');
+                if (!wordCountInput || !wordCountInput.value.trim() || parseInt(wordCountInput.value) <= 0) {
+                    alert('Please enter a valid word count greater than 0.');
+                    e.preventDefault();
+                    return false;
+                }
+                return true;
+            }
             
+            // In Add Mode
+            const methodIndividual = document.getElementById('methodIndividual');
             if (methodIndividual && methodIndividual.checked) {
                 const articleInputs = document.querySelectorAll('input[name="article_individual[]"]');
+                const wcInputs = document.querySelectorAll('input[name="article_word_count[]"]');
                 let hasArticles = false;
                 
-                articleInputs.forEach((input) => {
-                    if (input.value.trim() !== '') {
+                for (let i = 0; i < articleInputs.length; i++) {
+                    const artVal = articleInputs[i].value.trim();
+                    const wcVal = wcInputs[i] ? wcInputs[i].value.trim() : '';
+                    if (artVal !== '') {
                         hasArticles = true;
+                        if (!wcVal || isNaN(parseInt(wcVal)) || parseInt(wcVal) <= 0) {
+                            alert(`Please enter a valid word count greater than 0 for article: "${artVal}".`);
+                            e.preventDefault();
+                            return false;
+                        }
                     }
-                });
+                }
                 
                 if (!hasArticles) {
                     alert('Please enter at least one article.');
@@ -1705,14 +1785,24 @@ require 'header.php';
                 }
                 
                 const wordcountTextarea = document.querySelector('textarea[name="wordcount_textarea"]');
-                if (wordcountTextarea && wordcountTextarea.value.trim() !== '') {
-                    const wordcountLines = wordcountTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
-                    for (let i = 0; i < wordcountLines.length; i++) {
-                        if (isNaN(parseInt(wordcountLines[i]))) {
-                            alert(`Word count on line ${i+1} is not a valid number.`);
-                            e.preventDefault();
-                            return false;
-                        }
+                if (!wordcountTextarea || wordcountTextarea.value.trim() === '') {
+                    alert('Please enter word count.');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const wordcountLines = wordcountTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
+                if (wordcountLines.length === 0) {
+                    alert('Please enter valid word count.');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                for (let i = 0; i < wordcountLines.length; i++) {
+                    if (isNaN(parseInt(wordcountLines[i])) || parseInt(wordcountLines[i]) <= 0) {
+                        alert(`Word count on line ${i+1} is not a valid number greater than 0.`);
+                        e.preventDefault();
+                        return false;
                     }
                 }
             }
@@ -1723,6 +1813,20 @@ require 'header.php';
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateRemoveButtons();
+
+            const jobDateInput = document.querySelector('input[name="job_date"]');
+            const dueDateInput = document.querySelector('input[name="due_date"]');
+            if (jobDateInput && dueDateInput) {
+                if (jobDateInput.value) {
+                    dueDateInput.min = jobDateInput.value;
+                }
+                jobDateInput.addEventListener('change', function() {
+                    dueDateInput.min = this.value;
+                    if (dueDateInput.value && dueDateInput.value < this.value) {
+                        dueDateInput.value = this.value;
+                    }
+                });
+            }
         });
     </script>
 

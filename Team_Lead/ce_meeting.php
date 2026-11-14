@@ -153,11 +153,31 @@ if ($filter_mode === 'month') {
     $stmt_target = $mysqli->prepare($target_sql);
 
     $prod_sql = "
-        SELECT SUM(j.word_count) as total_prod 
-        FROM jobs j 
-        LEFT JOIN ce c ON j.job_id = c.job_id 
-        WHERE (c.assigned_to_content = ? OR c.assigned_to_img = ? OR j.assigned_to = ?)
-        AND MONTH(j.job_date) = ? AND YEAR(j.job_date) = ?
+        SELECT (
+            SELECT COALESCE(SUM(COALESCE(NULLIF(c.word_count,0), NULLIF(j.word_count,0), 0)), 0)
+            FROM jobs j
+            LEFT JOIN ce c ON j.job_id = c.job_id
+            WHERE (c.assigned_to_content = ? OR c.assigned_to_img = ? OR c.done_by = ? OR j.assigned_ce = ? OR j.assigned_to = ?)
+            AND MONTH(COALESCE(c.ce_date, c.date, j.job_date)) = ? AND YEAR(COALESCE(c.ce_date, c.date, j.job_date)) = ?
+        ) + (
+            SELECT COALESCE(SUM(COALESCE(NULLIF(l.word_count,0), NULLIF(j.word_count,0), 0)), 0)
+            FROM jobs j
+            LEFT JOIN le l ON j.job_id = l.job_id
+            WHERE (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_le = ?)
+            AND MONTH(COALESCE(l.le_date, l.date, j.job_date)) = ? AND YEAR(COALESCE(l.le_date, l.date, j.job_date)) = ?
+        ) + (
+            SELECT COALESCE(SUM(p.pages), 0)
+            FROM jobs j
+            LEFT JOIN pag p ON j.job_id = p.job_id
+            WHERE (p.assigned_to_pag = ? OR p.done_by = ? OR j.assigned_pag = ?)
+            AND MONTH(COALESCE(p.last_updated, p.created_at, j.job_date)) = ? AND YEAR(COALESCE(p.last_updated, p.created_at, j.job_date)) = ?
+        ) + (
+            SELECT COALESCE(SUM(q.pages), 0)
+            FROM jobs j
+            LEFT JOIN qc q ON j.job_id = q.job_id
+            WHERE (q.assigned_to_qc = ? OR q.done_by = ? OR j.assigned_qc = ?)
+            AND MONTH(COALESCE(q.last_updated, q.created_at, j.job_date)) = ? AND YEAR(COALESCE(q.last_updated, q.created_at, j.job_date)) = ?
+        ) AS total_prod
     ";
     $stmt_prod = $mysqli->prepare($prod_sql);
 
@@ -169,11 +189,31 @@ if ($filter_mode === 'month') {
 
     // Filter using Exact April-based Week Dates (BETWEEN start_date AND end_date)
     $prod_sql = "
-        SELECT SUM(j.word_count) as total_prod 
-        FROM jobs j 
-        LEFT JOIN ce c ON j.job_id = c.job_id 
-        WHERE (c.assigned_to_content = ? OR c.assigned_to_img = ? OR j.assigned_to = ?)
-        AND DATE(j.job_date) BETWEEN ? AND ?
+        SELECT (
+            SELECT COALESCE(SUM(COALESCE(NULLIF(c.word_count,0), NULLIF(j.word_count,0), 0)), 0)
+            FROM jobs j
+            LEFT JOIN ce c ON j.job_id = c.job_id
+            WHERE (c.assigned_to_content = ? OR c.assigned_to_img = ? OR c.done_by = ? OR j.assigned_ce = ? OR j.assigned_to = ?)
+            AND DATE(COALESCE(c.ce_date, c.date, j.job_date)) BETWEEN ? AND ?
+        ) + (
+            SELECT COALESCE(SUM(COALESCE(NULLIF(l.word_count,0), NULLIF(j.word_count,0), 0)), 0)
+            FROM jobs j
+            LEFT JOIN le l ON j.job_id = l.job_id
+            WHERE (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_le = ?)
+            AND DATE(COALESCE(l.le_date, l.date, j.job_date)) BETWEEN ? AND ?
+        ) + (
+            SELECT COALESCE(SUM(p.pages), 0)
+            FROM jobs j
+            LEFT JOIN pag p ON j.job_id = p.job_id
+            WHERE (p.assigned_to_pag = ? OR p.done_by = ? OR j.assigned_pag = ?)
+            AND DATE(COALESCE(p.last_updated, p.created_at, j.job_date)) BETWEEN ? AND ?
+        ) + (
+            SELECT COALESCE(SUM(q.pages), 0)
+            FROM jobs j
+            LEFT JOIN qc q ON j.job_id = q.job_id
+            WHERE (q.assigned_to_qc = ? OR q.done_by = ? OR j.assigned_qc = ?)
+            AND DATE(COALESCE(q.last_updated, q.created_at, j.job_date)) BETWEEN ? AND ?
+        ) AS total_prod
     ";
     $stmt_prod = $mysqli->prepare($prod_sql);
 
@@ -235,10 +275,18 @@ if (!empty($user_employee_name)) {
             // Experience Calculation
             $exp_str = '-';
             if (!empty($row['joining_date']) && $row['joining_date'] != '0000-00-00') {
-                $doj_date = new DateTime($row['joining_date']);
-                $today = new DateTime();
-                $diff = $today->diff($doj_date);
-                $exp_str = $diff->y . ' Y ' . $diff->m . ' M';
+                try {
+                    $doj_date = new DateTime($row['joining_date']);
+                    $today = new DateTime('today');
+                    if ($doj_date > $today) {
+                        $exp_str = '0 Y 0 M';
+                    } else {
+                        $diff = $today->diff($doj_date);
+                        $exp_str = $diff->y . ' Y ' . $diff->m . ' M';
+                    }
+                } catch (Exception $e) {
+                    $exp_str = '-';
+                }
             }
             
             // Get Target & Leave
@@ -252,7 +300,7 @@ if (!empty($user_employee_name)) {
                 }
                 $stmt_target->execute();
                 $res_target = $stmt_target->get_result()->fetch_assoc();
-                $target = $res_target['total_target'] ?? 0;
+                $target = (float)($res_target['total_target'] ?? 0);
                 $leave_count = (int)($res_target['total_leave'] ?? 0);
                 
                 // Fallback target if empty
@@ -260,22 +308,33 @@ if (!empty($user_employee_name)) {
                     $stmt_target_fallback->bind_param("s", $emp_username);
                     $stmt_target_fallback->execute();
                     $res_fallback = $stmt_target_fallback->get_result()->fetch_assoc();
-                    $base_target = $res_fallback['target_limit'] ?? 0;
+                    $base_target = (float)($res_fallback['target_limit'] ?? 0);
                     $target = ($filter_mode === 'month') ? ($base_target * 4) : $base_target;
                 }
             }
             
-            // Get Production
+            // Get Production (Multi-process aggregated)
             $production = 0;
             if ($stmt_prod) {
                 if ($filter_mode === 'month') {
-                    $stmt_prod->bind_param("sssii", $emp_username, $emp_username, $emp_username, $filter_month, $filter_year);
+                    $stmt_prod->bind_param("sssssiisssiisssiisssii", 
+                        $emp_username, $emp_username, $emp_username, $emp_username, $emp_username, $filter_month, $filter_year,
+                        $emp_username, $emp_username, $emp_username, $filter_month, $filter_year,
+                        $emp_username, $emp_username, $emp_username, $filter_month, $filter_year,
+                        $emp_username, $emp_username, $emp_username, $filter_month, $filter_year
+                    );
                 } else {
-                    $stmt_prod->bind_param("sssss", $emp_username, $emp_username, $emp_username, $w1_from, $w1_to);
+                    $types22 = str_repeat("s", 22);
+                    $stmt_prod->bind_param($types22, 
+                        $emp_username, $emp_username, $emp_username, $emp_username, $emp_username, $w1_from, $w1_to,
+                        $emp_username, $emp_username, $emp_username, $w1_from, $w1_to,
+                        $emp_username, $emp_username, $emp_username, $w1_from, $w1_to,
+                        $emp_username, $emp_username, $emp_username, $w1_from, $w1_to
+                    );
                 }
                 $stmt_prod->execute();
                 $res_prod = $stmt_prod->get_result()->fetch_assoc();
-                $production = $res_prod['total_prod'] ?? 0;
+                $production = (float)($res_prod['total_prod'] ?? 0);
             }
             
             // Get Errors
@@ -288,24 +347,24 @@ if (!empty($user_employee_name)) {
                 }
                 $stmt_error->execute();
                 $res_error = $stmt_error->get_result()->fetch_assoc();
-                $errors = $res_error['error_count'] ?? 0;
+                $errors = (int)($res_error['error_count'] ?? 0);
             }
 
             // Calculations
-            $production_points = $target > 0 ? round($production / ($target / 100), 2) : 0;
+            $production_points = $production;
             $errors_points = $errors * 2;
-            $prod_pct = $production_points; 
+            $prod_pct = ($target > 0) ? round(($production / $target) * 100, 2) : 0;
 
-            $accuracy = 100;
-            if ($production_points > 0) {
-                $accuracy = round((($production_points - $errors_points) / $production_points) * 100, 2);
+            $accuracy = 0;
+            if ($production > 0) {
+                $accuracy = round((($production - $errors_points) / $production) * 100, 2);
                 if ($accuracy < 0) $accuracy = 0;
-            } else if ($errors_points > 0) {
-                $accuracy = 0;
+                if ($accuracy > 100) $accuracy = 100;
             }
 
-            // --- NET PRODUCTION % FORMULA: (Prod Points - Error Points) ---
-            $net_prod_pct = ($target > 0) ? round($production_points - $errors_points, 2) : 0;
+            // --- NET PRODUCTION %: matches Production % when 0 errors, accounts for error impact against target ---
+            $net_prod_pct = ($target > 0) ? round((($production - $errors_points) / $target) * 100, 2) : 0;
+            if ($net_prod_pct < 0) $net_prod_pct = 0;
             $net_prod_decimal = $net_prod_pct / 100;
             
             $team_data[] = [
@@ -628,7 +687,7 @@ if($stmt_error) $stmt_error->close();
                             <tr>
                                 <td class="fw-500"><?= h($emp['id']) ?></td>
                                 <td class="text-start fw-500"><?= h($emp['name']) ?></td>
-                                <td><?= h($emp['exp']) ?></td>
+                                <td style="white-space: nowrap;"><?= h($emp['exp']) ?></td>
                                 <td><span class="badge bg-light text-dark border"><?= h($emp['process']) ?></span></td>
                                 <td class="text-danger-fw"><?= h($emp['target']) ?></td>
                                 <td><?= h($emp['production']) ?></td>

@@ -149,7 +149,9 @@ if (!empty($types)) {
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
             <div class="card">
-                <div class="card-header"><h4><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Mail Subject</h4></div>
+                <div class="card-header" style="background-color: #707981; color: white;">
+                    <h5 class="mb-0" style="color: white; font-weight: 600;"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Mail Subject</h5>
+                </div>
                 <div class="card-body">
                     <form method="post">
                         <input type="hidden" name="action" value="<?= $mode ?>">
@@ -165,7 +167,7 @@ if (!empty($types)) {
                             <input type="date" name="date" class="form-control" value="<?= h($editMailSubject['date'] ?? date('Y-m-d')) ?>" required>
                         </div>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
-                        <a href="mail_subject_master.php" class="btn btn-link">Cancel</a>
+                        <a href="mail_subject_master.php" class="btn btn-secondary ms-2">Cancel</a>
                     </form>
                 </div>
             </div>
@@ -209,7 +211,7 @@ if (!empty($types)) {
                                         <div class="btn-group btn-group-sm">
                                             <!-- Edit Mail Subject Link -->
                                             <a href="mail_subject_master.php?mode=edit&id=<?= $row['mail_id'] ?>" class="btn btn-success" title="Edit Mail Subject">
-                                                <i class="fas fa-edit"></i> Mail
+                                                <i class="fas fa-edit"></i> Edit
                                             </a>
 
                                             <!-- Create/Open Job Link -->
@@ -217,12 +219,12 @@ if (!empty($types)) {
                                                 <i class="fas fa-briefcase"></i> Job
                                             </a>
 
-                                            <form method="post" onsubmit="return confirm('Delete this subject?')" style="display:inline;">
+                                            <form method="post" onsubmit="return confirm('Delete this subject?')" style="display:inline-block; margin:0;">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="mail_id" value="<?= $row['mail_id'] ?>">
-                                                <!--button type="submit" class="btn btn-danger" <?= $is_locked ? 'disabled title="Cannot delete: linked to a job"' : '' ?>>
-                                                    <i class="fas fa-trash"></i>
-                                                </button-->
+                                                <button type="submit" class="btn btn-danger btn-sm" style="border-top-left-radius: 0; border-bottom-left-radius: 0;" <?= $is_locked ? 'disabled title="Cannot delete: linked to a job"' : '' ?>>
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
                                             </form>
                                         </div>
                                     </td>

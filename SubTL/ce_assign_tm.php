@@ -477,22 +477,38 @@ if (!empty($images_tm_filter)) {
 
 $where_sql = implode(' AND ', $where_conditions);
 
-// --- START PAGINATION FIX ---
+// --- START STATS & PAGINATION ---
 $limit = 15; // Number of rows per page
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
-// Get total rows for pagination
-$count_query = "SELECT COUNT(*) as total FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id LEFT JOIN client_master c ON j.client_id = c.client_id WHERE $where_sql";
-$stmt_count = $mysqli->prepare($count_query);
-if (!empty($params)) { $stmt_count->bind_param($types, ...$params); }
-$stmt_count->execute();
-$total_rows = $stmt_count->get_result()->fetch_assoc()['total'];
-$stmt_count->close();
+// Save filter params for stats & count
+$filter_params = $params;
+$filter_types = $types;
+
+// Get count statistics (matches the exact dataset and filters of this page)
+$stats_query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN ce.status = 'Need to Assign' OR (ce.assigned_to_content IS NULL OR ce.assigned_to_content = '') OR (ce.assigned_to_img IS NULL OR ce.assigned_to_img = '') THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND ce.assigned_to_content != '' THEN 1 ELSE 0 END) as content_assigned,
+                    SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND ce.assigned_to_img != '' THEN 1 ELSE 0 END) as images_assigned
+                FROM ce 
+                LEFT JOIN jobs j ON ce.job_id = j.job_id 
+                LEFT JOIN client_master c ON j.client_id = c.client_id 
+                WHERE $where_sql";
+
+$stmt_stats = $mysqli->prepare($stats_query);
+if (!empty($filter_params)) {
+    $stmt_stats->bind_param($filter_types, ...$filter_params);
+}
+$stmt_stats->execute();
+$stats = $stmt_stats->get_result()->fetch_assoc();
+$stmt_stats->close();
+
+$total_rows = (int)($stats['total'] ?? 0);
 $total_pages = ceil($total_rows / $limit);
-// --- END PAGINATION FIX ---
-
-
+// --- END STATS & PAGINATION ---
 
 // Main query
 $ce_query = "SELECT ce.*, 
@@ -518,11 +534,11 @@ $ce_query = "SELECT ce.*,
              WHERE $where_sql
              ORDER BY $sort $dir";
 
-// Apply LIMIT and OFFSET to query
+// Apply LIMIT and OFFSET
 $ce_query .= " LIMIT ? OFFSET ?";
 $params[] = $limit;
 $params[] = $offset;
-$types .= 'ii'; // Append integer types for bind_param
+$types .= 'ii';
 
 $stmt = $mysqli->prepare($ce_query);
 if (!empty($params)) {
@@ -539,9 +555,6 @@ $status_result = $mysqli->query($status_query);
 // Get unique clients for search dropdown
 $clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
 $clients_result = $mysqli->query($clients_query);
-
-// Get count statistics (Exact match with table rows + CE, REF, FQA assignment check)
-$stats = getCeStats($mysqli);
 
 require 'header.php';
 ?>
@@ -1044,8 +1057,8 @@ require 'header.php';
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <div class="stats-info">
-                        <h3 id="stat-total"><?= $stats['total'] ?? 0 ?></h3>
-                        <p>Total Pending</p>
+                        <h3><?= $stats['total'] ?? 0 ?></h3>
+                        <p>Total Jobs</p>
                     </div>
                 </div>
             </div>
@@ -1526,7 +1539,7 @@ require 'header.php';
 
         <!-- Pagination Info -->
         <?php if ($ce_result && $ce_result->num_rows > 0): ?>
-            <div class="row mt-3 mb-5">
+            <div class="row mt-3">
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">
@@ -1537,11 +1550,8 @@ require 'header.php';
                         <nav aria-label="Page navigation">
                             <ul class="pagination pagination-sm mb-0">
                                 <?php 
-                                    // Keep existing search/filter parameters in URL when changing pages
-                                    $query_string = $_GET;
-                                    unset($query_string['page']);
-                                    $qs = http_build_query($query_string);
-                                    $qs = $qs ? '&' . $qs : '';
+                                    $query_string = $_GET; unset($query_string['page']);
+                                    $qs = http_build_query($query_string); $qs = $qs ? '&' . $qs : '';
                                 ?>
                                 <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link" href="?page=<?= $page - 1 ?><?= $qs ?>">Previous</a>
@@ -1554,9 +1564,6 @@ require 'header.php';
                                 </li>
                             </ul>
                         </nav>
-                        <!-- <small class="text-muted">
-                            Reporting Manager: <strong><?= h($reporting_manager) ?></strong>
-                        </small> -->
                     </div>
                 </div>
             </div>
