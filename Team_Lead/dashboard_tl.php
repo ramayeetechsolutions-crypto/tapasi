@@ -1,4 +1,10 @@
 <?php
+// =========================================================================
+// FILE: Team_Lead/dashboard_tl.php
+// PURPOSE: Team Lead Executive Dashboard & Production Analytics Hub
+// 100% Preserved Functionality • Senior Developer Executive UI
+// =========================================================================
+
 require 'db.php';
 session_start();
 
@@ -8,160 +14,33 @@ include 'header.php';
 
 // Get current user
 $current_user = $_SESSION['username'] ?? '';
+$employee_username = $current_user;
 
-// Get username from request (example: from form, session, or GET/POST)
-$employee_username = $current_user; // Replace with actual username source
-
-// Prepare SQL query to fetch employee_name
+// Fetch employee name
+$current_user_name = '';
 $sql = "SELECT `employee_name` FROM `employee_master` WHERE `employee_username` = ?";
-
 $stmt = $mysqli->prepare($sql);
-$stmt->bind_param("s", $employee_username);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    // Fetch the employee name
-    $row = $result->fetch_assoc();
-    $current_user_name = $row['employee_name'];
-
+if ($stmt) {
+    $stmt->bind_param("s", $employee_username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $current_user_name = $row['employee_name'];
+    }
+    $stmt->close();
 }
-// Count total clients
-// $client_count = 0;
-// $client_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master WHERE status='Active'");
-// if ($client_stmt) {
-//     $client_stmt->execute();
-//     $client_result = $client_stmt->get_result();
-//     $client_data = $client_result->fetch_assoc();
-//     $client_count = $client_data['total'];
-//     $client_stmt->close();
-// }
-
-// // Count jobs by status
-// // Count jobs by status
-// $need_to_assign_count = 0;
-// $in_progress_count = 0;
-// $completed_count = 0;
-
-// // Initialize metric counters (Point 3 Part 1)
-// $total_ce_words = 0;
-// $total_pag_pages = 0;
-// $total_ap_errors = 0;
-
-// $ename=$_SESSION["ename"];
-// // Get all jobs, calculate status, and fetch counts
-// $jobs_sql = "
-//     SELECT 
-//     j.job_id, 
-//     j.job_date,
-//     j.word_count,
-//     j.page_count,
-//     j.errors,
-//     jm.job_name AS process,
-//     ce.status AS ce_status,
-//     le.status AS le_status,
-//     pag.status AS pag_status,
-//     qc.status AS qc_status
-// FROM 
-//     jobs j
-// JOIN 
-//     job_master jm ON j.process_id = jm.job_id
-// LEFT JOIN 
-//     ce ON ce.job_id = j.job_id
-// LEFT JOIN 
-//     le ON le.job_id = j.job_id
-// LEFT JOIN 
-//     pag ON pag.job_id = j.job_id
-// LEFT JOIN 
-//     qc ON qc.job_id = j.job_id
-// WHERE 
-//     j.assigned_to='$ename'
-// ";
-
-// $jobs_stmt = $mysqli->prepare($jobs_sql);
-// if ($jobs_stmt) {
-//     $jobs_stmt->execute();
-//     $jobs_result = $jobs_stmt->get_result();
-    
-//     // Process stage mapping
-//     $processStageMap = [
-//         'CE' => ['CE', 'LE'],
-//         'PAG' => ['PAG', 'QC'],
-//         'CE+PAG' => ['CE', 'LE', 'PAG', 'QC'],
-//         'CE+PAG+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
-//         'CE+XML' => ['CE', 'LE', 'XML'],
-//         'PAG+XML' => ['PAG', 'QC', 'XML'],
-//         'XML' => ['XML'],
-//     ];
-    
-//     while ($row = $jobs_result->fetch_assoc()) {
-//         $process_name = $row['process'];
-//         $normalized_process = strtoupper(str_replace(' ', '', $process_name));
-//         $required_stages = $processStageMap[$normalized_process] ?? [];
-        
-//         // Determine final status based on required stages
-//         $all_completed = true;
-//         $has_in_progress = false;
-//         $has_need_to_assign = false;
-
-//         // Accumulate metric values inside the loop
-//         $total_ce_words += (int)($row['word_count'] ?? 0);
-//         $total_pag_pages += (int)($row['page_count'] ?? 0);
-//         $total_ap_errors += (int)($row['errors'] ?? 0);
-        
-//         foreach ($required_stages as $stage) {
-//             $status_field = strtolower($stage) . '_status';
-//             $stage_status = $row[$status_field] ?? 'Need to Assign';
-            
-//             if ($stage_status !== 'Completed') {
-//                 $all_completed = false;
-                
-//                 if ($stage_status === 'In Progress') {
-//                     $has_in_progress = true;
-//                 } elseif ($stage_status === 'Need to Assign') {
-//                     $has_need_to_assign = true;
-//                 }
-//             }
-//         }
-        
-//         // Determine final status and count
-//         if ($all_completed) {
-//             $completed_count++;
-//         } elseif ($has_in_progress) {
-//             $in_progress_count++;
-//         } elseif ($has_need_to_assign) {
-//             $need_to_assign_count++;
-//         } else {
-//             $in_progress_count++;
-//         }
-//     }
-//     $jobs_stmt->close();
-// }
-
-// // Count today's new jobs
-// $today = date('Y-m-d');
-// $today_jobs_count = 0;
-// $today_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM jobs WHERE DATE(job_date) = ?");
-// if ($today_stmt) {
-//     $today_stmt->bind_param("s", $today);
-//     $today_stmt->execute();
-//     $today_result = $today_stmt->get_result();
-//     $today_data = $today_result->fetch_assoc();
-//     $today_jobs_count = $today_data['total'];
-//     $today_stmt->close();
-// }
-
-// // Total jobs count
-// $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_count;
 
 // --- 1. CLIENT LOGIC: Get separate counts for Active and Inactive ---
 $total_client_count = 0;
 $active_client_count = 0;
 $inactive_client_count = 0;
 $client_res = $mysqli->query("SELECT status, COUNT(*) as count FROM client_master GROUP BY status");
-while($c = $client_res->fetch_assoc()){
-    if($c['status'] == 'Active') $active_client_count = $c['count'];
-    if($c['status'] == 'Inactive') $inactive_client_count = $c['count'];
+if ($client_res) {
+    while ($c = $client_res->fetch_assoc()) {
+        if ($c['status'] == 'Active') $active_client_count = (int)$c['count'];
+        if ($c['status'] == 'Inactive') $inactive_client_count = (int)$c['count'];
+    }
 }
 $total_client_count = $active_client_count + $inactive_client_count;
 
@@ -174,7 +53,7 @@ $total_pag_pages = 0;
 $total_ap_articles = 0; 
 $total_xml_articles = 0;
 
-$ename = $_SESSION["ename"];
+$ename = $_SESSION["ename"] ?? $current_user_name;
 
 // Fetch all jobs to calculate statuses and production sums
 $jobs_res = $mysqli->query("SELECT j.*, jm.job_name AS process, ce.status AS ce_status, le.status AS le_status, pag.status AS pag_status, qc.status AS qc_status 
@@ -183,669 +62,880 @@ $jobs_res = $mysqli->query("SELECT j.*, jm.job_name AS process, ce.status AS ce_
                              LEFT JOIN pag ON pag.job_id = j.job_id LEFT JOIN qc ON qc.job_id = j.job_id 
                              WHERE j.assigned_to='$ename'");
 
-while ($row = $jobs_res->fetch_assoc()) {
-    $pname = strtoupper(str_replace(' ', '', $row['process']));
-    
-    //PRODUCTION SUMS
-    $total_ce_words += (int)($row['word_count'] ?? 0);
-    $total_pag_pages += (int)($row['page_count'] ?? 0);
-    
-    // ARTICLE CATEGORIES
-    if (strpos($pname, 'XML') !== false) $total_xml_articles++;
-    if (strpos($pname, 'AP') !== false) $total_ap_articles++;
+if ($jobs_res) {
+    while ($row = $jobs_res->fetch_assoc()) {
+        $pname = strtoupper(str_replace(' ', '', $row['process'] ?? ''));
+        
+        // PRODUCTION SUMS
+        $total_ce_words += (int)($row['word_count'] ?? 0);
+        $total_pag_pages += (int)($row['page_count'] ?? 0);
+        
+        // ARTICLE CATEGORIES
+        if (strpos($pname, 'XML') !== false) $total_xml_articles++;
+        if (strpos($pname, 'AP') !== false) $total_ap_articles++;
 
-    // STATUS LOGIC
-    $processStageMap = ['CE'=>['CE','LE'],'PAG'=>['PAG','QC'],'CE+PAG'=>['CE','LE','PAG','QC'],'CE+PAG+XML'=>['CE','LE','PAG','QC','XML'],'CE+XML'=>['CE','LE','XML'],'PAG+XML'=>['PAG','QC','XML'],'XML'=>['XML']];
-    $required = $processStageMap[$pname] ?? [];
-    $is_done = true; $is_ip = false;
+        // STATUS LOGIC
+        $processStageMap = [
+            'CE' => ['CE', 'LE'],
+            'PAG' => ['PAG', 'QC'],
+            'CE+PAG' => ['CE', 'LE', 'PAG', 'QC'],
+            'CE+PAG+XML' => ['CE', 'LE', 'PAG', 'QC', 'XML'],
+            'CE+XML' => ['CE', 'LE', 'XML'],
+            'PAG+XML' => ['PAG', 'QC', 'XML'],
+            'XML' => ['XML']
+        ];
+        $required = $processStageMap[$pname] ?? [];
+        $is_done = true; 
+        $is_ip = false;
 
-    foreach($required as $s) {
-        $st = $row[strtolower($s).'_status'] ?? 'Need to Assign';
-        if($st !== 'Completed') $is_done = false;
-        if($st === 'In Progress') $is_ip = true;
+        foreach ($required as $s) {
+            $st = $row[strtolower($s).'_status'] ?? 'Need to Assign';
+            if ($st !== 'Completed') $is_done = false;
+            if ($st === 'In Progress') $is_ip = true;
+        }
+
+        if ($is_done) $completed_count++; 
+        elseif ($is_ip) $in_progress_count++; 
+        else $need_to_assign_count++;
     }
-
-    if($is_done) $completed_count++; 
-    elseif($is_ip) $in_progress_count++; 
-    else $need_to_assign_count++;
 }
 $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_count;
 
 // --- 3. UI PERCENTAGES ---
 $nta_per = $total_jobs_count > 0 ? round(($need_to_assign_count / $total_jobs_count) * 100) : 0;
-$ip_per = $total_jobs_count > 0 ? round(($in_progress_count / $total_jobs_count) * 100) : 0;
-$c_per = $total_jobs_count > 0 ? round(($completed_count / $total_jobs_count) * 100) : 0;
+$ip_per  = $total_jobs_count > 0 ? round(($in_progress_count / $total_jobs_count) * 100) : 0;
+$c_per   = $total_jobs_count > 0 ? round(($completed_count / $total_jobs_count) * 100) : 0;
 
-// --- 4. TODAY'S OVERVIEW & PROCESS COUNTS (CORRECTED) ---
+// --- 4. TODAY'S OVERVIEW & PROCESS COUNTS ---
 $today = date('Y-m-d');
-$ename = $_SESSION["ename"]; 
 
-// Input/Output Logic (Keeping TL filter for these)
-$today_input_count = $mysqli->query("SELECT COUNT(*) FROM jobs WHERE DATE(job_date) = '$today' AND assigned_to = '$ename'")->fetch_row()[0];
-$today_output_count = $mysqli->query("SELECT COUNT(q.id) FROM qc q JOIN jobs j ON q.job_id = j.job_id WHERE q.status = 'Completed' AND DATE(q.last_updated) = '$today' AND j.assigned_to = '$ename'")->fetch_row()[0];
+// Input/Output Logic
+$today_input_res = $mysqli->query("SELECT COUNT(*) FROM jobs WHERE DATE(job_date) = '$today' AND assigned_to = '$ename'");
+$today_input_count = $today_input_res ? (int)$today_input_res->fetch_row()[0] : 0;
 
-// --- 5. DIRECT PROCESS COUNTS (To match your tables exactly) ---
-// CE In-Progress (Ippo ithu 10-nu correct-ah varum)
-$ce_ip = $mysqli->query("SELECT COUNT(*) FROM ce WHERE status = 'In Progress'")->fetch_row()[0];
+$today_output_res = $mysqli->query("SELECT COUNT(q.id) FROM qc q JOIN jobs j ON q.job_id = j.job_id WHERE q.status = 'Completed' AND DATE(q.last_updated) = '$today' AND j.assigned_to = '$ename'");
+$today_output_count = $today_output_res ? (int)$today_output_res->fetch_row()[0] : 0;
 
-// LE In-Progress (Unna screenshot padi 7 varum)
-$le_ip = $mysqli->query("SELECT COUNT(*) FROM le WHERE status = 'In Progress'")->fetch_row()[0];
+// --- 5. DIRECT PROCESS COUNTS ---
+$ce_ip_res = $mysqli->query("SELECT COUNT(*) FROM ce WHERE status = 'In Progress'");
+$ce_ip = $ce_ip_res ? (int)$ce_ip_res->fetch_row()[0] : 0;
 
-// PAG In-Progress (Unna screenshot padi 6 varum)
-$pag_ip = $mysqli->query("SELECT COUNT(*) FROM pag WHERE status = 'In Progress'")->fetch_row()[0];
+$le_ip_res = $mysqli->query("SELECT COUNT(*) FROM le WHERE status = 'In Progress'");
+$le_ip = $le_ip_res ? (int)$le_ip_res->fetch_row()[0] : 0;
 
-// QC In-Progress
-$qc_ip = $mysqli->query("SELECT COUNT(*) FROM qc WHERE status = 'In Progress'")->fetch_row()[0];
+$pag_ip_res = $mysqli->query("SELECT COUNT(*) FROM pag WHERE status = 'In Progress'");
+$pag_ip = $pag_ip_res ? (int)$pag_ip_res->fetch_row()[0] : 0;
 
-// Today's Overview "In Progress Articles" count
-$current_ip_count = $ce_ip; 
+$qc_ip_res = $mysqli->query("SELECT COUNT(*) FROM qc WHERE status = 'In Progress'");
+$qc_ip = $qc_ip_res ? (int)$qc_ip_res->fetch_row()[0] : 0;
 
-// Percentage Calculation (Base is Total Jobs 30)
+$current_ip_count = $ce_ip;
+
+// Percentage Calculation
 $total_assigned = ($total_jobs_count > 0) ? $total_jobs_count : 1;
 $ce_per  = round(($ce_ip / $total_assigned) * 100);
 $le_per  = round(($le_ip / $total_assigned) * 100);
 $pag_per = round(($pag_ip / $total_assigned) * 100);
 $qc_per  = round(($qc_ip / $total_assigned) * 100);
 
-
+$active_client_per = $total_client_count > 0 ? round(($active_client_count / $total_client_count) * 100) : 0;
+$inactive_client_per = $total_client_count > 0 ? round(($inactive_client_count / $total_client_count) * 100) : 0;
 ?>
 
+<style>
+/* =========================================================================
+   SENIOR DEVELOPER EXECUTIVE DASHBOARD STYLING
+   ========================================================================= */
+.main-content {
+    padding-top: 85px;
+    padding-bottom: 50px;
+    background-color: #f8fafc;
+    min-height: 100vh;
+}
+
+/* Executive Hero Banner */
+.dashboard-hero-banner {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 18px;
+    padding: 24px 28px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.dashboard-hero-banner::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 35%;
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 70%);
+    pointer-events: none;
+}
+.hero-chip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 30px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(4px);
+}
+.hero-chip-badge.live {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+.live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #10b981;
+    display: inline-block;
+    box-shadow: 0 0 8px #10b981;
+    animation: livePulse 2s infinite;
+}
+@keyframes livePulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { transform: scale(1.25); opacity: 1; }
+    100% { transform: scale(0.95); opacity: 0.8; }
+}
+.hero-greeting {
+    font-size: 1.65rem;
+    letter-spacing: -0.4px;
+}
+.hero-name-highlight {
+    background: linear-gradient(120deg, #60a5fa, #93c5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.hero-subtitle {
+    font-size: 0.88rem;
+    max-width: 620px;
+}
+.hero-quick-pills {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 10px 18px;
+    backdrop-filter: blur(8px);
+}
+.quick-pill-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 10px;
+}
+.quick-pill-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+}
+.quick-pill-val {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+}
+.quick-pill-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Section Header Bar */
+.dashboard-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.section-icon-bubble {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+.section-title-text {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.section-subtitle-text {
+    display: block;
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: 500;
+}
+.section-badge-pill {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 4px 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+/* Stat Cards Architecture */
+.stat-card.compact-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 16px 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    display: flex;
+    align-items: center;
+    min-height: 88px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stat-card.compact-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--card-accent, #3b82f6);
+    border-top-left-radius: 14px;
+    border-bottom-left-radius: 14px;
+    transition: width 0.2s ease;
+}
+.stat-card.compact-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
+    border-color: #cbd5e1;
+}
+.stat-card.compact-card:hover::before {
+    width: 6px;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 12px;
+    margin-right: 14px;
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stat-card.compact-card:hover .stat-icon {
+    transform: scale(1.08);
+}
+
+.stat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+.stat-top-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.stat-info h3 {
+    font-size: 1.55rem;
+    margin: 0;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+}
+.stat-info p {
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    margin: 4px 0 0 0;
+    letter-spacing: 0.035em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.stat-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+/* Bottom Panels Styling */
+.overview-panel-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.overview-panel-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+.overview-panel-header {
+    padding: 16px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.overview-panel-header h5 {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.overview-panel-header .header-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 3px 10px;
+}
+
+/* Today's Overview Grid Tiles */
+.today-metric-tile {
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.2s ease;
+}
+.today-metric-tile:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    transform: translateY(-2px);
+}
+.today-metric-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+.today-metric-tile h4 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.1;
+}
+.today-metric-tile p {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 2px 0 0 0;
+}
+
+/* Job Distribution Progress Bars */
+.progress-stat-row {
+    margin-bottom: 16px;
+}
+.progress-stat-row:last-child {
+    margin-bottom: 0;
+}
+.progress-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.progress-stage-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.progress-stage-count {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+.progress-bar-track {
+    height: 12px;
+    border-radius: 20px;
+    background-color: #f1f5f9;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #e2e8f0;
+}
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+</style>
+
 <main class="main-content">
-    
-    <div class="page-title-container">
-        <h1><i class="fas fa-chart-line"></i>Dashboard</h1>
-    </div>
-    <p class="page-description">Welcome back! <?php echo $ename;?></p>
-    
-    <!-- <div class="stats-cards">
-        <div class="stat-card">
-            <div class="stat-icon clients">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($client_count) ?></h3>
-                <p>Total Clients</p>
-            </div>
-        </div> -->
+    <div class="container-fluid px-lg-4 px-md-3 px-2">
         
-        <!-- <div class="stat-card">
-            <div class="stat-icon pending">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($need_to_assign_count) ?></h3>
-                <p>Need to Assign</p>
-            </div>
-        </div> -->
-        
-        <!-- <div class="stat-card">
-            <div class="stat-icon progress">
-                <i class="fas fa-spinner"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($in_progress_count) ?></h3>
-                <p>In Progress</p>
-            </div>
-        </div> -->
-        
-        <!-- <div class="stat-card">
-            <div class="stat-icon completed">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($completed_count) ?></h3>
-                <p>Completed</p>
-            </div>
-        </div> -->
-        
-        <!--div class="stat-card">
-            <div class="stat-icon today">
-                <i class="fas fa-calendar-day"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($today_jobs_count) ?></h3>
-                <p>Today's New Jobs</p>
-            </div>
-        </div-->
-        
-        <!-- <div class="stat-card">
-            <div class="stat-icon total">
-                <i class="fas fa-tasks"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($total_jobs_count) ?></h3>
-                <p>Total Jobs</p>
-            </div>
-        </div>
-    </div> -->
-
-    <!-- CE Words Card -->
-        <!-- <div class="stat-card" style="border-left-color: #667eea;">
-            <div class="stat-icon" style="background: linear-gradient(45deg, #667eea, #764ba2);">
-                <i class="fas fa-file-word"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($total_ce_words) ?></h3>
-                <p>CE Words</p>
-            </div>
-        </div> -->
-
-        <!-- PAG Pages Card -->
-        <!-- <div class="stat-card" style="border-left-color: #38f9d7;">
-            <div class="stat-icon" style="background: linear-gradient(45deg, #43e97b, #38f9d7);">
-                <i class="fas fa-file-alt"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($total_pag_pages) ?></h3>
-                <p>PAG Pages</p>
-            </div>
-        </div> -->
-
-        <!-- AP Errors Card -->
-        <!-- <div class="stat-card" style="border-left-color: #f5576c;">
-            <div class="stat-icon" style="background: linear-gradient(45deg, #f093fb, #f5576c);">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="stat-info">
-                <h3><?= number_format($total_ap_errors) ?></h3>
-                <p>AP Errors</p>
-            </div>
-        </div> -->
-
-        <!-- ROW 1: CLIENTS -->
-    <div class="row mb-3 g-2">
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #4a69bd;">
-                <div class="stat-icon clients"><i class="fas fa-users"></i></div>
-                <div class="stat-info"><h3><?= $total_client_count ?></h3><p>Total Clients</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #4a69bd;">
-                <div class="stat-icon clients" style="background:#0984e3"><i class="fas fa-user-check"></i></div>
-                <div class="stat-info"><h3 class="text-primary"><?= $active_client_count ?></h3><p>Active Clients</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #4a69bd;">
-                <div class="stat-icon clients" style="background:#d63031"><i class="fas fa-user-slash"></i></div>
-                <div class="stat-info"><h3 class="text-danger"><?= $inactive_client_count ?></h3><p>Inactive Clients</p></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ROW 2: PRODUCTION METRICS -->
-    <div class="row mb-3 g-2">
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #6c5ce7;">
-                <div class="stat-icon" style="background: #6c5ce7;"><i class="fas fa-file-word"></i></div>
-                <div class="stat-info"><h3><?= number_format($total_ce_words) ?></h3><p>CE Words</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #00d2d3;">
-                <div class="stat-icon" style="background: #00d2d3;"><i class="fas fa-file-alt"></i></div>
-                <div class="stat-info"><h3><?= $total_pag_pages ?></h3><p>TS Pages</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #ff7675;">
-                <div class="stat-icon" style="background: #ff7675;"><i class="fas fa-exclamation-circle"></i></div>
-                <div class="stat-info"><h3><?= $total_ap_articles ?></h3><p>AP Articles</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #d63031;">
-                <div class="stat-icon" style="background: #d63031;"><i class="fas fa-code"></i></div>
-                <div class="stat-info"><h3><?= $total_xml_articles ?></h3><p>XML Articles</p></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ROW 3: JOB STATUS & PERCENTAGES -->
-    <div class="row mb-4 g-2">
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #fdcb6e;">
-                <div class="stat-icon pending" style="background:#f39c12"><i class="fas fa-clock"></i></div>
-                <div class="stat-info"><h3><?= $need_to_assign_count ?> <small class="text-dark fw-bold" style="opacity: 1;">(<?= $nta_per ?>%)</small></h3><p>Need to Assign</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #0984e3;">
-                <div class="stat-icon progress"><i class="fas fa-spinner"></i></div>
-                <div class="stat-info"><h3><?= $in_progress_count ?> <small class="text-dark fw-bold" style="opacity: 1;">(<?= $ip_per ?>%)</small></h3><p>In Progress</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #27ae60;">
-                <div class="stat-icon completed"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-info"><h3><?= $completed_count ?> <small class="text-dark fw-bold" style="opacity: 1;">(<?= $c_per ?>%)</small></h3><p>Completed</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card compact-card" style="border-left-color: #00cec9;">
-                <div class="stat-icon total" style="background:#00cec9"><i class="fas fa-tasks"></i></div>
-                <div class="stat-info"><h3><?= $total_jobs_count ?> <small class="text-dark fw-bold" style="opacity: 1;">(100%)</small>
-</h3><p>Total Jobs</p></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Statistics Row (Side-by-Side) -->
-    <div class="row mt-4">
-        
-        <!-- LEFT: Today's Overview -->
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5><i class="fas fa-calendar-check me-2"></i>Today's Overview</h5>
+        <!-- =========================================================================
+             HERO WELCOME BANNER (EXECUTIVE SUITE)
+             ========================================================================= -->
+        <div class="dashboard-hero-banner mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-lg-8 col-md-7 col-12">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span class="hero-chip-badge live">
+                            <span class="live-dot"></span> Live Operations
+                        </span>
+                        <span class="hero-chip-badge">
+                            <i class="fas fa-user-shield text-info me-1"></i> Team Lead Workspace
+                        </span>
+                        <span class="hero-chip-badge">
+                            <i class="fas fa-calendar-alt text-warning me-1"></i> <?= date('F Y') ?>
+                        </span>
+                    </div>
+                    <h2 class="hero-greeting fw-bold text-white mb-1">
+                        Welcome back, <span class="hero-name-highlight"><?= htmlspecialchars($ename ?: ($current_user_name ?? 'Team Lead')) ?></span> 👋
+                    </h2>
+                    <p class="hero-subtitle text-white-50 mb-0">
+                        Operational workload pipeline, real-time throughput metrics, and quality lifecycle monitoring.
+                    </p>
                 </div>
-                <div class="card-body">
-                    <div class="today-stats">
-                        <div class="today-stat-item">
-                            <i class="fas fa-file-import text-primary"></i>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($today_input_count) ?></h4>
-                                <p>Input Article</p>
-                            </div>
+                <div class="col-lg-4 col-md-5 col-12 text-md-end text-start">
+                    <div class="hero-quick-pills shadow-sm">
+                        <div class="quick-pill-item">
+                            <span class="quick-pill-label">Total Jobs</span>
+                            <strong class="quick-pill-val"><?= number_format($total_jobs_count) ?></strong>
                         </div>
-                        <div class="today-stat-item">
-                            <i class="fas fa-file-export text-success"></i>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($today_output_count) ?></h4>
-                                <p>Output Article</p>
-                            </div>
+                        <div class="quick-pill-divider"></div>
+                        <div class="quick-pill-item">
+                            <span class="quick-pill-label">Active Clients</span>
+                            <strong class="quick-pill-val text-info"><?= number_format($active_client_count) ?></strong>
                         </div>
-                        <div class="today-stat-item">
-                            <i class="fas fa-spinner fa-spin text-warning"></i>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($current_ip_count) ?></h4>
-                                <p>In Progress Articles</p>
-                            </div>
+                        <div class="quick-pill-divider"></div>
+                        <div class="quick-pill-item">
+                            <span class="quick-pill-label">In Progress</span>
+                            <strong class="quick-pill-val text-warning"><?= number_format($in_progress_count) ?></strong>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT: Job In-Progress Distribution with Percentage -->
-        <div class="col-md-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5><i class="fas fa-chart-pie me-2"></i>Job In-Progress Distribution</h5>
+        <!-- =========================================================================
+             SECTION 1: CLIENT OVERVIEW (3 CARDS)
+             ========================================================================= -->
+        <div class="dashboard-section-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="section-icon-bubble" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5;">
+                    <i class="fas fa-users"></i>
                 </div>
-                <div class="card-body">
-                    <div class="progress-stats">
-                        
-                        <!-- CE Bar -->
-                        <div class="progress-item mb-4">
-                            <span class="progress-label d-flex justify-content-between mb-1">
-                                <span class="small fw-bold">CE Jobs (In Progress)</span>
-                                <strong><?= $ce_ip ?></strong>
-                            </span>
-                            <div class="progress" style="height: 22px; border-radius: 12px; background-color: #f0f0f0;">
-                                <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" 
-                                     style="width: <?= $ce_per ?>%; font-size: 11px; font-weight: 800; line-height: 22px;">
-                                     <?= $ce_per ?>%
+                <div>
+                    <h6 class="section-title-text mb-0">Client Overview</h6>
+                    <span class="section-subtitle-text">Active client accounts & operational portfolio</span>
+                </div>
+            </div>
+            <span class="section-badge-pill">
+                <i class="fas fa-building me-1 text-muted"></i> <?= number_format($total_client_count) ?> Clients
+            </span>
+        </div>
+        <div class="row mb-4 g-3">
+            <!-- Total Clients -->
+            <div class="col-md-4">
+                <div class="stat-card compact-card" style="--card-accent: #4f46e5;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3><?= number_format($total_client_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; border-color: rgba(79, 70, 229, 0.2);">Total</span>
+                        </div>
+                        <p>Total Clients</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Active Clients -->
+            <div class="col-md-4">
+                <div class="stat-card compact-card" style="--card-accent: #0284c7;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3 class="text-primary"><?= number_format($active_client_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border-color: rgba(14, 165, 233, 0.2);"><?= $active_client_per ?>%</span>
+                        </div>
+                        <p>Active Clients</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Inactive Clients -->
+            <div class="col-md-4">
+                <div class="stat-card compact-card" style="--card-accent: #dc2626;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3 class="text-danger"><?= number_format($inactive_client_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.2);"><?= $inactive_client_per ?>%</span>
+                        </div>
+                        <p>Inactive Clients</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+             SECTION 2: PRODUCTION METRICS (4 CARDS)
+             ========================================================================= -->
+        <div class="dashboard-section-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="section-icon-bubble" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed;">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <h6 class="section-title-text mb-0">Production Metrics</h6>
+                    <span class="section-subtitle-text">Throughput volume & work breakdown for <?= date('F Y') ?></span>
+                </div>
+            </div>
+            <span class="section-badge-pill">
+                <i class="fas fa-calendar-check me-1 text-muted"></i> <?= date('F Y') ?>
+            </span>
+        </div>
+        <div class="row mb-4 g-3">
+            <!-- CE Words -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #7c3aed;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+                        <i class="fas fa-file-word"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3><?= number_format($total_ce_words) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed; border-color: rgba(139, 92, 246, 0.2);">Words</span>
+                        </div>
+                        <p>CE Words</p>
+                    </div>
+                </div>
+            </div>
+            <!-- TS Pages -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #0891b2;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%);">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3><?= number_format($total_pag_pages) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(6, 182, 212, 0.1); color: #0891b2; border-color: rgba(6, 182, 212, 0.2);">Pages</span>
+                        </div>
+                        <p>TS Pages</p>
+                    </div>
+                </div>
+            </div>
+            <!-- AP Articles -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #e11d48;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3><?= number_format($total_ap_articles) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(244, 63, 94, 0.1); color: #e11d48; border-color: rgba(244, 63, 94, 0.2);">Articles</span>
+                        </div>
+                        <p>AP Articles</p>
+                    </div>
+                </div>
+            </div>
+            <!-- XML Articles -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #c2410c;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3><?= number_format($total_xml_articles) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(234, 88, 12, 0.1); color: #c2410c; border-color: rgba(234, 88, 12, 0.2);">Articles</span>
+                        </div>
+                        <p>XML Articles</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+             SECTION 3: JOB STATUS & LIFECYCLE (4 CARDS)
+             ========================================================================= -->
+        <div class="dashboard-section-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="section-icon-bubble" style="background: rgba(2, 132, 199, 0.1); color: #0284c7;">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div>
+                    <h6 class="section-title-text mb-0">Job Status & Lifecycle</h6>
+                    <span class="section-subtitle-text">Operational pipeline progression & assignment velocity</span>
+                </div>
+            </div>
+            <span class="section-badge-pill">
+                <i class="fas fa-layer-group me-1 text-muted"></i> Total: <?= number_format($total_jobs_count) ?>
+            </span>
+        </div>
+        <div class="row mb-4 g-3">
+            <!-- Total Jobs -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #0284c7;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);">
+                        <i class="fas fa-list-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3><?= number_format($total_jobs_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(14, 165, 233, 0.1); color: #0284c7; border-color: rgba(14, 165, 233, 0.2);">100%</span>
+                        </div>
+                        <p>Total Jobs</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Need to Assign -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #d97706;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3 class="text-warning text-dark"><?= number_format($need_to_assign_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(245, 158, 11, 0.12); color: #b45309; border-color: rgba(245, 158, 11, 0.25);"><?= $nta_per ?>%</span>
+                        </div>
+                        <p>Need to Assign</p>
+                    </div>
+                </div>
+            </div>
+            <!-- In Progress -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #2563eb;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3 class="text-primary"><?= number_format($in_progress_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(37, 99, 235, 0.1); color: #2563eb; border-color: rgba(37, 99, 235, 0.2);"><?= $ip_per ?>%</span>
+                        </div>
+                        <p>In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Completed -->
+            <div class="col-lg-3 col-md-6 col-12">
+                <div class="stat-card compact-card" style="--card-accent: #059669;">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-top-row">
+                            <h3 style="color: #059669;"><?= number_format($completed_count) ?></h3>
+                            <span class="stat-pill-badge" style="background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.25);"><?= $c_per ?>%</span>
+                        </div>
+                        <p>Completed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+             MAIN STATISTICS ROW (SIDE-BY-SIDE PANELS)
+             ========================================================================= -->
+        <div class="row g-4 mt-1">
+            
+            <!-- LEFT: Today's Overview -->
+            <div class="col-lg-6 col-12">
+                <div class="overview-panel-card h-100">
+                    <div class="overview-panel-header">
+                        <h5>
+                            <i class="fas fa-calendar-check text-primary"></i>
+                            <span>Today's Overview</span>
+                        </h5>
+                        <span class="header-badge">
+                            <i class="fas fa-clock me-1 text-muted"></i> Live Audits
+                        </span>
+                    </div>
+                    <div class="p-4">
+                        <div class="row g-3">
+                            <div class="col-sm-4 col-12">
+                                <div class="today-metric-tile">
+                                    <div class="today-metric-icon bg-primary-subtle text-primary">
+                                        <i class="fas fa-file-import"></i>
+                                    </div>
+                                    <div>
+                                        <h4><?= number_format($today_input_count) ?></h4>
+                                        <p>Input Article</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4 col-12">
+                                <div class="today-metric-tile">
+                                    <div class="today-metric-icon bg-success-subtle text-success">
+                                        <i class="fas fa-file-export"></i>
+                                    </div>
+                                    <div>
+                                        <h4><?= number_format($today_output_count) ?></h4>
+                                        <p>Output Article</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4 col-12">
+                                <div class="today-metric-tile">
+                                    <div class="today-metric-icon bg-warning-subtle text-warning">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </div>
+                                    <div>
+                                        <h4><?= number_format($current_ip_count) ?></h4>
+                                        <p>In Progress</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- LE Bar -->
-                        <div class="progress-item mb-4">
-                            <span class="progress-label d-flex justify-content-between mb-1">
-                                <span class="small fw-bold">LE Jobs (In Progress)</span>
-                                <strong><?= $le_ip ?></strong>
-                            </span>
-                            <div class="progress" style="height: 22px; border-radius: 12px; background-color: #f0f0f0;">
-                                <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" 
-                                     style="width: <?= $le_per ?>%; font-size: 11px; font-weight: 800; line-height: 22px;">
-                                     <?= $le_per ?>%
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Job In-Progress Distribution -->
+            <div class="col-lg-6 col-12">
+                <div class="overview-panel-card h-100">
+                    <div class="overview-panel-header">
+                        <h5>
+                            <i class="fas fa-chart-pie text-info"></i>
+                            <span>Job In-Progress Distribution</span>
+                        </h5>
+                        <span class="header-badge">
+                            <i class="fas fa-arrows-split-up-and-left me-1 text-muted"></i> By Department
+                        </span>
+                    </div>
+                    <div class="p-4">
+                        <!-- CE Bar -->
+                        <div class="progress-stat-row">
+                            <div class="progress-header-info">
+                                <span class="progress-stage-name">
+                                    <span class="badge rounded-circle p-1 bg-primary-subtle text-primary"><i class="fas fa-circle" style="font-size: 0.45rem;"></i></span>
+                                    CE Jobs (In Progress)
+                                </span>
+                                <div>
+                                    <span class="progress-stage-count me-2"><?= (int)$ce_ip ?></span>
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2"><?= $ce_per ?>%</span>
                                 </div>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill bg-primary" style="width: <?= $ce_per ?>%;"></div>
                             </div>
                         </div>
 
-                        <!-- PAG Bar -->
-                        <div class="progress-item mb-4">
-                            <span class="progress-label d-flex justify-content-between mb-1">
-                                <span class="small fw-bold">TS Jobs (In Progress)</span>
-                                <strong><?= $pag_ip ?></strong>
-                            </span>
-                            <div class="progress" style="height: 22px; border-radius: 12px; background-color: #f0f0f0;">
-                                <div class="progress-bar bg-warning text-dark progress-bar-striped progress-bar-animated" 
-                                     style="width: <?= $pag_per ?>%; font-size: 11px; font-weight: 800; line-height: 22px;">
-                                     <?= $pag_per ?>%
+                        <!-- LE Bar -->
+                        <div class="progress-stat-row">
+                            <div class="progress-header-info">
+                                <span class="progress-stage-name">
+                                    <span class="badge rounded-circle p-1 bg-info-subtle text-info"><i class="fas fa-circle" style="font-size: 0.45rem;"></i></span>
+                                    LE Jobs (In Progress)
+                                </span>
+                                <div>
+                                    <span class="progress-stage-count me-2"><?= (int)$le_ip ?></span>
+                                    <span class="badge bg-info-subtle text-info rounded-pill px-2"><?= $le_per ?>%</span>
                                 </div>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill bg-info" style="width: <?= $le_per ?>%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- TS / PAG Bar -->
+                        <div class="progress-stat-row">
+                            <div class="progress-header-info">
+                                <span class="progress-stage-name">
+                                    <span class="badge rounded-circle p-1 bg-warning-subtle text-warning"><i class="fas fa-circle" style="font-size: 0.45rem;"></i></span>
+                                    TS Jobs (In Progress)
+                                </span>
+                                <div>
+                                    <span class="progress-stage-count me-2"><?= (int)$pag_ip ?></span>
+                                    <span class="badge bg-warning-subtle text-warning rounded-pill px-2"><?= $pag_per ?>%</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill bg-warning" style="width: <?= $pag_per ?>%;"></div>
                             </div>
                         </div>
 
                         <!-- QC Bar -->
-                        <div class="progress-item">
-                            <span class="progress-label d-flex justify-content-between mb-1">
-                                <span class="small fw-bold">QC Jobs (In Progress)</span>
-                                <strong><?= $qc_ip ?></strong>
-                            </span>
-                            <div class="progress" style="height: 22px; border-radius: 12px; background-color: #f0f0f0;">
-                                <div class="progress-bar bg-danger progress-bar-striped progress-bar-animated" 
-                                     style="width: <?= $qc_per ?>%; font-size: 11px; font-weight: 800; line-height: 22px;">
-                                     <?= ($qc_per > 0) ? $qc_per.'%' : '' ?>
+                        <div class="progress-stat-row">
+                            <div class="progress-header-info">
+                                <span class="progress-stage-name">
+                                    <span class="badge rounded-circle p-1 bg-danger-subtle text-danger"><i class="fas fa-circle" style="font-size: 0.45rem;"></i></span>
+                                    QC Jobs (In Progress)
+                                </span>
+                                <div>
+                                    <span class="progress-stage-count me-2"><?= (int)$qc_ip ?></span>
+                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2"><?= $qc_per ?>%</span>
                                 </div>
                             </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill bg-danger" style="width: <?= $qc_per ?>%;"></div>
+                            </div>
                         </div>
-
                     </div>
                 </div>
             </div>
+
         </div>
 
     </div>
-        
-        <!-- <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-calendar-check me-2"></i>Today's Overview</h5>
-                </div>
-                <div class="card-body">
-                    <div class="today-stats">
-                        <div class="today-stat-item">
-                            <i class="fas fa-plus-circle text-primary"></i>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($today_jobs_count) ?></h4>
-                                <p>Today's Job</p>
-                            </div>
-                        </div>
-                        <div class="today-stat-item">
-                            <i class="fas fa-building text-success"></i>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($client_count) ?></h4>
-                                <p>Active Clients</p>
-                            </div>
-                        </div>
-                        <div class="today-stat-item">
-                            <i class="fas fa-chart-line text-info"></i>
-                            <div class="today-stat-info">
-                                <h4><?= number_format($total_jobs_count) ?></h4>
-                                <p>Total Jobs</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> -->
-         <!-- <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-chart-pie me-2"></i>Job Status Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="progress-stats">
-                        <div class="progress-item">
-                            <span class="progress-label">Need to Assign</span>
-                            <div class="progress">
-                                <div class="progress-bar bg-warning" style="width: <?= $total_jobs_count > 0 ? ($need_to_assign_count / $total_jobs_count) * 100 : 0 ?>%">
-                                    <?= $total_jobs_count > 0 ? round(($need_to_assign_count / $total_jobs_count) * 100, 1) : 0 ?>%
-                                </div>
-                            </div>
-                        </div>
-                        <div class="progress-item">
-                            <span class="progress-label">In Progress</span>
-                            <div class="progress">
-                                <div class="progress-bar bg-info" style="width: <?= $total_jobs_count > 0 ? ($in_progress_count / $total_jobs_count) * 100 : 0 ?>%">
-                                    <?= $total_jobs_count > 0 ? round(($in_progress_count / $total_jobs_count) * 100, 1) : 0 ?>%
-                                </div>
-                            </div>
-                        </div>
-                        <div class="progress-item">
-                            <span class="progress-label">Completed</span>
-                            <div class="progress">
-                                <div class="progress-bar bg-success" style="width: <?= $total_jobs_count > 0 ? ($completed_count / $total_jobs_count) * 100 : 0 ?>%">
-                                    <?= $total_jobs_count > 0 ? round(($completed_count / $total_jobs_count) * 100, 1) : 0 ?>%
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> -->
-        
-    </div>
-
 </main>
-
-<style>
-/* .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-card {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid #007bff;
-    display: flex;
-    align-items: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-}
-
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 20px;
-    font-size: 24px;
-    color: white;
-}
-
-.stat-icon.clients { background: linear-gradient(45deg, #667eea, #764ba2); }
-.stat-icon.pending { background: linear-gradient(45deg, #f093fb, #f5576c); }
-.stat-icon.progress { background: linear-gradient(45deg, #4facfe, #00f2fe); }
-.stat-icon.completed { background: linear-gradient(45deg, #43e97b, #38f9d7); }
-.stat-icon.today { background: linear-gradient(45deg, #fa709a, #fee140); }
-.stat-icon.total { background: linear-gradient(45deg, #a8edea, #fed6e3); }
-
-.stat-info h3 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 0;
-    color: #2c3e50;
-} */
-
-/* Styling for the small compact grid boxes */
-.stat-card {
-    background: white;
-    border-radius: 8px; 
-    padding: 10px 15px; 
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); 
-    border-left: 5px solid #007bff;
-    display: flex;
-    align-items: center;
-    transition: transform 0.2s ease;
-    height: 75px; /* compact box height */
-}
-
-/* Icons resized for small boxes */
-.stat-icon {
-    width: 40px; 
-    height: 40px;
-    border-radius: 50%;
-    margin-right: 12px;
-    font-size: 15px; 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-.stat-icon.clients { background: #4a69bd; }
-.stat-icon.pending { background: #f39c12; }
-.stat-icon.progress { background: #0984e3; }
-.stat-icon.completed { background: #27ae60; }
-
-/* Number and Label sizes */
-.stat-info h3 {
-    font-size: 1.25rem; 
-    margin: 0;
-    font-weight: 700;
-}
-
-.stat-info p {
-    font-size: 0.7rem; 
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #636e72;
-    margin: 0;
-}
-
-.stat-info small {
-    font-size: 0.8rem;
-    font-weight: normal;
-}
-
-.stat-info p {
-    margin: 5px 0 0 0;
-    color: #7f8c8d;
-    font-size: 0.9rem;
-}
-
-.progress-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.progress-item {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.progress-label {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 0.9rem;
-}
-
-.progress {
-    height: 25px;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: white;
-}
-
-.today-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.today-stat-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    transition: background-color 0.3s ease;
-}
-
-.today-stat-item:hover {
-    background: #e9ecef;
-}
-
-.today-stat-item i {
-    font-size: 2rem;
-}
-
-.today-stat-info h4 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-.today-stat-info p {
-    margin: 5px 0 0 0;
-    color: #7f8c8d;
-    font-size: 0.9rem;
-}
-
-.card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-    background: white;
-    border-bottom: 1px solid #e9ecef;
-    padding: 20px;
-    border-radius: 12px 12px 0 0 !important;
-}
-
-.card-header h5 {
-    margin: 0;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.card-body {
-    padding: 25px;
-}
-
-.page-title-container {
-  background: var(--ash-dark);
-    color: white;
-    padding: 10px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-}
-
-.page-title-container h1 {
-    margin: 0;
-    font-size: 2.5rem;
-    font-weight: 700;
-}
-
-.page-description {
-    color: #7f8c8d;
-    font-size: 1.1rem;
-    margin-bottom: 30px;
-}
-
-@media (max-width: 768px) {
-    .stats-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .stat-card {
-        padding: 20px;
-    }
-    
-    .page-title-container h1 {
-        font-size: 2rem;
-    }
-}
-</style>
 
 <script>
     // Mobile menu toggle
@@ -854,28 +944,28 @@ $qc_per  = round(($qc_ip / $total_assigned) * 100);
     menuToggle.innerHTML = '<span></span><span></span><span></span>';
     
     const headerContainer = document.querySelector('.header-container');
-    headerContainer.insertBefore(menuToggle, headerContainer.firstChild);
-    
-    const mainNav = document.querySelector('.main-nav');
-    
-    menuToggle.addEventListener('click', () => {
-        menuToggle.classList.toggle('active');
-        mainNav.classList.toggle('active');
-    });
-    
-    // Close menu when clicking on a link (for mobile)
-    const navLinks = document.querySelectorAll('.nav-menu a');
-    navLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth <= 992) {
-                menuToggle.classList.remove('active');
-                mainNav.classList.remove('active');
-            }
-        });
-    });
+    if (headerContainer) {
+        headerContainer.insertBefore(menuToggle, headerContainer.firstChild);
+        
+        const mainNav = document.querySelector('.main-nav');
+        if (mainNav) {
+            menuToggle.addEventListener('click', () => {
+                menuToggle.classList.toggle('active');
+                mainNav.classList.toggle('active');
+            });
+            
+            const navLinks = document.querySelectorAll('.nav-menu a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 992) {
+                        menuToggle.classList.remove('active');
+                        mainNav.classList.remove('active');
+                    }
+                });
+            });
+        }
+    }
 </script>
 
 </body>
-</html> 
-
- 
+</html>

@@ -1,215 +1,190 @@
 <?php
-require 'db.php';
 if (session_status() === PHP_SESSION_NONE) { 
     session_start(); 
 }
 
-// Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+$db_paths = [__DIR__ . '/../db.php', __DIR__ . '/db.php', 'db.php'];
+$connected = false;
+foreach ($db_paths as $p) {
+    if (file_exists($p)) {
+        require_once $p;
+        $connected = true;
+        break;
+    }
+}
+if (!$connected) {
+    die("Database connection failed.");
 }
 
-function formatDate($d) {
-    if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
-    return date('d-m-Y H:i:s', strtotime($d));
+// ---------- Helpers ----------
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
-function redirect_with($params = []) {
-    $base = 'currency_master.php';
-    if (!empty($params)) $base .= '?' . http_build_query($params);
-    header("Location: $base");
-    exit;
+if (!function_exists('formatDate')) {
+    function formatDate($d) {
+        if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
+        return date('d M, Y', strtotime($d));
+    }
 }
 
-// Debug function - remove in production
-function debugLog($message, $data = null) {
-    file_put_contents('debug.log', date('Y-m-d H:i:s') . ' - ' . $message . ($data ? ': ' . print_r($data, true) : '') . PHP_EOL, FILE_APPEND);
+if (!function_exists('redirect_with')) {
+    function redirect_with($params = []) {
+        $base = 'currency_master.php';
+        if (!empty($params)) $base .= '?' . http_build_query($params);
+        header("Location: $base");
+        exit;
+    }
 }
 
-// Handle POST actions
+// ---------- Handle POST actions ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    debugLog('POST request received', $_POST);
-    
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'add' || $action === 'edit') {
-        $currency_code = trim(strtoupper($_POST['currency_code'] ?? ''));
-        $currency_name = trim($_POST['currency_name'] ?? '');
+        $currency_code   = trim(strtoupper($_POST['currency_code'] ?? ''));
+        $currency_name   = trim($_POST['currency_name'] ?? '');
         $currency_symbol = trim($_POST['currency_symbol'] ?? '');
-        $exchange_rate = (float)$_POST['exchange_rate'] ?? 0;
-        $auto_update = isset($_POST['auto_update']) ? 1 : 0;
-        
-        debugLog('Form data', [
-            'currency_code' => $currency_code,
-            'currency_name' => $currency_name,
-            'currency_symbol' => $currency_symbol,
-            'exchange_rate' => $exchange_rate,
-            'auto_update' => $auto_update,
-            'action' => $action
-        ]);
-        
-        // Basic validation
-        $errors = [];
-        if ($currency_code === '') $errors[] = 'Currency Code is required';
-        if (strlen($currency_code) !== 3) $errors[] = 'Currency Code must be exactly 3 characters';
-        if ($currency_name === '') $errors[] = 'Currency Name is required';
-        if ($currency_symbol === '') $errors[] = 'Currency Symbol is required';
-        if ($exchange_rate <= 0) $errors[] = 'Exchange Rate must be greater than 0';
-        
-        if (!empty($errors)) {
-            debugLog('Validation errors', $errors);
-            redirect_with(['msg' => implode('<br>', $errors), 'type' => 'danger']);
+        $exchange_rate   = (float)($_POST['exchange_rate'] ?? 1.0);
+        $auto_update     = isset($_POST['auto_update']) && $_POST['auto_update'] == '1' ? 1 : 0;
+
+        if ($currency_code === '' || strlen($currency_code) < 2 || strlen($currency_code) > 5) {
+            redirect_with(['msg' => 'Valid Currency Code (e.g. USD, INR) is required.', 'type' => 'danger']);
         }
-        
+        if ($currency_name === '') {
+            redirect_with(['msg' => 'Currency Name is required.', 'type' => 'danger']);
+        }
+        if ($exchange_rate <= 0) {
+            $exchange_rate = 1.0;
+        }
+
         if ($action === 'add') {
-            // Check if currency already exists by code
-            $check_stmt = $mysqli->prepare("SELECT currency_id FROM currency_master WHERE currency_code = ?");
-            if (!$check_stmt) {
-                debugLog('Prepare failed for check currency code', $mysqli->error);
-                redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
+            // Check uniqueness
+            $chk = $mysqli->prepare("SELECT currency_id FROM currency_master WHERE currency_code = ? OR currency_name = ?");
+            if ($chk) {
+                $chk->bind_param("ss", $currency_code, $currency_name);
+                $chk->execute();
+                $chk->store_result();
+                if ($chk->num_rows > 0) {
+                    $chk->close();
+                    redirect_with(['msg' => "Currency '$currency_code' or '$currency_name' already exists.", 'type' => 'warning']);
+                }
+                $chk->close();
             }
-            
-            $check_stmt->bind_param("s", $currency_code);
-            $check_stmt->execute();
-            $check_stmt->store_result();
-            
-            if ($check_stmt->num_rows > 0) {
-                $check_stmt->close();
-                debugLog('Currency code already exists', $currency_code);
-                redirect_with(['msg' => 'Currency with this code already exists.', 'type' => 'danger']);
-            }
-            $check_stmt->close();
-            
-            // Check by name
-            $check_stmt = $mysqli->prepare("SELECT currency_id FROM currency_master WHERE currency_name = ?");
-            if (!$check_stmt) {
-                debugLog('Prepare failed for check currency name', $mysqli->error);
-                redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
-            }
-            
-            $check_stmt->bind_param("s", $currency_name);
-            $check_stmt->execute();
-            $check_stmt->store_result();
-            
-            if ($check_stmt->num_rows > 0) {
-                $check_stmt->close();
-                debugLog('Currency name already exists', $currency_name);
-                redirect_with(['msg' => 'Currency with this name already exists.', 'type' => 'danger']);
-            }
-            $check_stmt->close();
-            
-            // Insert new currency
+
             $stmt = $mysqli->prepare("INSERT INTO currency_master (currency_code, currency_name, currency_symbol, exchange_rate, auto_update, status, created_date, last_updated) VALUES (?, ?, ?, ?, ?, 'Active', NOW(), NOW())");
-            
-            if (!$stmt) {
-                debugLog('Prepare failed for insert currency', $mysqli->error);
-                redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
-            }
-            
-            $stmt->bind_param("sssdi", $currency_code, $currency_name, $currency_symbol, $exchange_rate, $auto_update);
-            
-            if ($stmt->execute()) {
-                $insert_id = $stmt->insert_id;
-                debugLog('Currency added successfully', ['id' => $insert_id, 'name' => $currency_name]);
-                redirect_with(['msg' => "Currency '$currency_name' added successfully", 'type' => 'success']);
-            } else {
-                debugLog('Execute failed for insert currency', $stmt->error);
-                redirect_with(['msg' => 'Error adding currency: ' . $stmt->error, 'type' => 'danger']);
-            }
-            $stmt->close();
-        }
-        
-        if ($action === 'edit') {
-            $currency_id = (int)($_POST['currency_id'] ?? 0);
-            
-            if ($currency_id > 0) {
-                // Check if currency already exists (excluding current one)
-                $check_stmt = $mysqli->prepare("SELECT currency_id FROM currency_master WHERE currency_code = ? AND currency_id != ?");
-                if (!$check_stmt) {
-                    redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
-                }
-                
-                $check_stmt->bind_param("si", $currency_code, $currency_id);
-                $check_stmt->execute();
-                $check_stmt->store_result();
-                
-                if ($check_stmt->num_rows > 0) {
-                    $check_stmt->close();
-                    redirect_with(['msg' => 'Currency with this code already exists.', 'type' => 'danger']);
-                }
-                $check_stmt->close();
-                
-                // Check name uniqueness
-                $check_stmt = $mysqli->prepare("SELECT currency_id FROM currency_master WHERE currency_name = ? AND currency_id != ?");
-                if (!$check_stmt) {
-                    redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
-                }
-                
-                $check_stmt->bind_param("si", $currency_name, $currency_id);
-                $check_stmt->execute();
-                $check_stmt->store_result();
-                
-                if ($check_stmt->num_rows > 0) {
-                    $check_stmt->close();
-                    redirect_with(['msg' => 'Currency with this name already exists.', 'type' => 'danger']);
-                }
-                $check_stmt->close();
-                
-                // Update currency
-                $stmt = $mysqli->prepare("UPDATE currency_master SET currency_code = ?, currency_name = ?, currency_symbol = ?, exchange_rate = ?, auto_update = ?, last_updated = NOW() WHERE currency_id = ?");
-                if (!$stmt) {
-                    redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
-                }
-                
-                $stmt->bind_param("sssdii", $currency_code, $currency_name, $currency_symbol, $exchange_rate, $auto_update, $currency_id);
-                
+            if ($stmt) {
+                $stmt->bind_param("sssdi", $currency_code, $currency_name, $currency_symbol, $exchange_rate, $auto_update);
                 if ($stmt->execute()) {
-                    redirect_with(['msg' => "Currency updated successfully", 'type' => 'success']);
+                    redirect_with(['msg' => "Currency '$currency_code - $currency_name' added successfully", 'type' => 'success']);
                 } else {
-                    redirect_with(['msg' => 'Error updating currency: ' . $stmt->error, 'type' => 'danger']);
+                    redirect_with(['msg' => 'Error adding currency: ' . $stmt->error, 'type' => 'danger']);
                 }
                 $stmt->close();
+            } else {
+                redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
+            }
+        }
+
+        if ($action === 'edit') {
+            $currency_id = (int)($_POST['currency_id'] ?? 0);
+            if ($currency_id > 0) {
+                // Check uniqueness excluding current record
+                $chk = $mysqli->prepare("SELECT currency_id FROM currency_master WHERE (currency_code = ? OR currency_name = ?) AND currency_id != ?");
+                if ($chk) {
+                    $chk->bind_param("ssi", $currency_code, $currency_name, $currency_id);
+                    $chk->execute();
+                    $chk->store_result();
+                    if ($chk->num_rows > 0) {
+                        $chk->close();
+                        redirect_with(['msg' => "Another currency with code '$currency_code' or name '$currency_name' already exists.", 'type' => 'warning']);
+                    }
+                    $chk->close();
+                }
+
+                $stmt = $mysqli->prepare("UPDATE currency_master SET currency_code=?, currency_name=?, currency_symbol=?, exchange_rate=?, auto_update=?, last_updated=NOW() WHERE currency_id=?");
+                if ($stmt) {
+                    $stmt->bind_param("sssdii", $currency_code, $currency_name, $currency_symbol, $exchange_rate, $auto_update, $currency_id);
+                    if ($stmt->execute()) {
+                        redirect_with(['msg' => "Currency '$currency_code' updated successfully", 'type' => 'success']);
+                    } else {
+                        redirect_with(['msg' => 'Error updating currency: ' . $stmt->error, 'type' => 'danger']);
+                    }
+                    $stmt->close();
+                } else {
+                    redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
+                }
             }
         }
     }
-    
-    // ... rest of your POST handlers remain the same ...
-    
+
+    if ($action === 'delete') {
+        $currency_id = (int)($_POST['currency_id'] ?? 0);
+        if ($currency_id > 0) {
+            $name = '';
+            $q = $mysqli->prepare("SELECT currency_code, currency_name FROM currency_master WHERE currency_id = ?");
+            if ($q) {
+                $q->bind_param("i", $currency_id);
+                $q->execute();
+                $res = $q->get_result()->fetch_assoc();
+                $q->close();
+                if ($res) $name = $res['currency_code'] . ' (' . $res['currency_name'] . ')';
+            }
+
+            $del = $mysqli->prepare("DELETE FROM currency_master WHERE currency_id = ?");
+            if ($del) {
+                $del->bind_param("i", $currency_id);
+                $del->execute();
+                $del->close();
+                redirect_with(['msg' => "Currency '$name' deleted successfully", 'type' => 'warning']);
+            }
+        }
+    }
+
+    if ($action === 'toggle') {
+        $currency_id = (int)($_POST['currency_id'] ?? 0);
+        if ($currency_id > 0) {
+            $q = $mysqli->prepare("SELECT status, currency_code FROM currency_master WHERE currency_id = ?");
+            if ($q) {
+                $q->bind_param("i", $currency_id);
+                $q->execute();
+                $res = $q->get_result()->fetch_assoc();
+                $q->close();
+                if ($res) {
+                    $newStatus = ($res['status'] === 'Active') ? 'Inactive' : 'Active';
+                    $upd = $mysqli->prepare("UPDATE currency_master SET status = ?, last_updated = NOW() WHERE currency_id = ?");
+                    if ($upd) {
+                        $upd->bind_param("si", $newStatus, $currency_id);
+                        $upd->execute();
+                        $upd->close();
+                        redirect_with(['msg' => "Currency '{$res['currency_code']}' status changed to $newStatus", 'type' => 'info']);
+                    }
+                }
+            }
+        }
+    }
+
     redirect_with();
 }
 
-// Get mode
-$mode = $_GET['mode'] ?? 'view';
-$editCurrency = null;
+// ---------- Data Fetching & Filtering ----------
+$q       = trim($_GET['q'] ?? '');
+$fstatus = trim($_GET['status'] ?? '');
+$sort    = trim($_GET['sort'] ?? 'currency_code');
+$dir     = strtolower(trim($_GET['dir'] ?? 'asc'));
 
-if ($mode === 'edit') {
-    $id = (int)($_GET['id'] ?? 0);
-    if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT currency_id, currency_code, currency_name, currency_symbol, exchange_rate, auto_update, status, created_date, last_updated FROM currency_master WHERE currency_id = ?");
-        if ($stmt) {
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-            $editCurrency = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-        }
-    }
-    if (!$editCurrency) $mode = 'view';
-}
+$sortable = ['currency_id', 'currency_code', 'currency_name', 'exchange_rate', 'status', 'created_date', 'last_updated'];
+if (!in_array($sort, $sortable, true)) $sort = 'currency_code';
+$dir = ($dir === 'desc') ? 'desc' : 'asc';
 
-// Get search and filter parameters
-$q = trim($_GET['q'] ?? '');
-$fstatus = $_GET['status'] ?? '';
-$sort = $_GET['sort'] ?? 'currency_code';
-$dir = strtolower($_GET['dir'] ?? 'asc');
-
-// Build query
-$sql = "SELECT currency_id, currency_code, currency_name, currency_symbol, exchange_rate, auto_update, status, created_date, last_updated FROM currency_master";
-$cond = [];
+$sql = "SELECT * FROM currency_master WHERE 1=1";
 $params = [];
 $types = '';
 
 if ($q !== '') {
-    $cond[] = "(currency_code LIKE ? OR currency_name LIKE ? OR currency_symbol LIKE ?)";
+    $sql .= " AND (currency_code LIKE ? OR currency_name LIKE ? OR currency_symbol LIKE ?)";
     $like = "%$q%";
     $params[] = $like;
     $params[] = $like;
@@ -218,450 +193,466 @@ if ($q !== '') {
 }
 
 if ($fstatus === 'Active' || $fstatus === 'Inactive') {
-    $cond[] = "status = ?";
+    $sql .= " AND status = ?";
     $params[] = $fstatus;
     $types .= 's';
 }
 
-if (!empty($cond)) {
-    $sql .= " WHERE " . implode(" AND ", $cond);
-}
-
 $sql .= " ORDER BY $sort $dir";
 
-// Execute query
+$currencies = false;
 if (!empty($types)) {
     $stmt = $mysqli->prepare($sql);
     if ($stmt) {
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $currencies = $stmt->get_result();
-    } else {
-        $currencies = false;
     }
 } else {
     $currencies = $mysqli->query($sql);
 }
 
-// If query fails, show empty result
-if (!$currencies) {
-    $currencies = false;
+// KPI Metrics
+$metricsQuery = $mysqli->query("SELECT 
+    COUNT(*) as total, 
+    SUM(status='Active') as active, 
+    SUM(status='Inactive') as inactive,
+    SUM(auto_update=1) as auto_sync
+    FROM currency_master");
+$metrics = $metricsQuery ? $metricsQuery->fetch_assoc() : ['total' => 0, 'active' => 0, 'inactive' => 0, 'auto_sync' => 0];
+
+$pageTitle = "Currency Master";
+$currentPage = "currency_master.php";
+
+$header_paths = [__DIR__ . '/header.php', 'header.php'];
+foreach ($header_paths as $hp) {
+    if (file_exists($hp)) {
+        require_once $hp;
+        break;
+    }
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Currency Master</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .main-content {
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        .table th {
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-        }
-        .table td {
-            vertical-align: middle;
-        }
-        .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border: 1px solid rgba(0, 0, 0, 0.125);
-        }
-        .btn-group-sm > .btn {
-            padding: 0.25rem 0.5rem;
-        }
-        .currency-symbol {
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-        .exchange-rate {
-            font-family: monospace;
-            font-size: 1.1em;
-            color: #28a745;
-            font-weight: bold;
-        }
-        .currency-code {
-            font-family: monospace;
-            background-color: #e9ecef;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-        .auto-update-badge {
-            font-size: 0.7em;
-            padding: 2px 6px;
-        }
-        .last-updated {
-            font-size: 0.8em;
-            color: #6c757d;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .required-field::after {
-            content: " *";
-            color: #dc3545;
-        }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
-    
-    <div class="main-content">
-        <?php if (!empty($_GET['msg'])): ?>
-        <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show" role="alert">
-            <?= h($_GET['msg']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<main class="main-content" style="padding-top: 85px; padding-bottom: 50px;">
+    <div class="container-fluid px-lg-4 px-md-3 px-2">
+
+        <!-- FLOATING ERP TOAST NOTIFICATION -->
+        <?php if (!empty($_GET['msg'])): 
+            $toastMsg  = h($_GET['msg']);
+            $toastType = strtolower(trim($_GET['type'] ?? 'info'));
+            
+            $toastTitle = 'Notification';
+            $toastIcon  = 'fa-info-circle';
+            $toastBadge = 'Notice';
+            $toastClass = 'erp-toast-info';
+            
+            if (stripos($toastMsg, 'delete') !== false || stripos($toastMsg, 'remove') !== false || $toastType === 'danger' || $toastType === 'warning') {
+                $toastTitle = 'Record Deleted';
+                $toastIcon  = 'fa-trash-alt';
+                $toastBadge = 'Deleted';
+                $toastClass = 'erp-toast-danger';
+            } elseif (stripos($toastMsg, 'add') !== false || stripos($toastMsg, 'create') !== false || $toastType === 'success') {
+                $toastTitle = 'Successfully Processed';
+                $toastIcon  = 'fa-check-circle';
+                $toastBadge = 'Success';
+                $toastClass = 'erp-toast-success';
+            } elseif (stripos($toastMsg, 'status') !== false || stripos($toastMsg, 'toggle') !== false) {
+                $toastTitle = 'Status Updated';
+                $toastIcon  = 'fa-toggle-on';
+                $toastBadge = 'Status';
+                $toastClass = 'erp-toast-info';
+            } elseif (stripos($toastMsg, 'update') !== false) {
+                $toastTitle = 'Successfully Updated';
+                $toastIcon  = 'fa-pen-to-square';
+                $toastBadge = 'Updated';
+                $toastClass = 'erp-toast-info';
+            }
+        ?>
+        <div class="erp-toast-wrapper" id="erpToastWrapper" role="region" aria-label="Notifications">
+            <div class="erp-toast-card <?= $toastClass ?>" id="erpToastCard" role="alert" aria-live="assertive">
+                <div class="erp-toast-icon">
+                    <i class="fas <?= $toastIcon ?>"></i>
+                </div>
+                <div class="erp-toast-content">
+                    <div class="erp-toast-header">
+                        <span class="erp-toast-title"><?= $toastTitle ?></span>
+                        <span class="erp-toast-badge"><?= $toastBadge ?></span>
+                    </div>
+                    <div class="erp-toast-msg"><?= $toastMsg ?></div>
+                </div>
+                <button type="button" class="erp-toast-close" onclick="dismissErpToast()" aria-label="Close notification">&times;</button>
+                <div class="erp-toast-progress"><div class="erp-toast-progress-bar"></div></div>
+            </div>
         </div>
+        <script>
+            function dismissErpToast() {
+                var el = document.getElementById('erpToastCard');
+                if (el) {
+                    el.classList.add('hide');
+                    setTimeout(function() {
+                        var wr = document.getElementById('erpToastWrapper');
+                        if (wr) wr.remove();
+                    }, 400);
+                }
+            }
+            setTimeout(dismissErpToast, 4500);
+        </script>
         <?php endif; ?>
 
-        <?php if($mode === 'add' || $mode === 'edit'): ?>
-        
-        <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-bill-wave me-2"></i><?= $mode === 'edit' ? 'Edit Currency' : 'Add New Currency' ?></h4>
-            <a href="currency_master.php" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
-            </a>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <form method="post" autocomplete="off" id="currencyForm" onsubmit="return validateForm()">
-                    <input type="hidden" name="action" value="<?= $mode ?>">
-                    <?php if($mode === 'edit'): ?>
-                    <input type="hidden" name="currency_id" value="<?= (int)($editCurrency['currency_id'] ?? 0) ?>">
-                    <?php endif; ?>
-
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label for="currency_code" class="form-label required-field">Currency Code</label>
-                                <input type="text" class="form-control text-uppercase" id="currency_code" 
-                                       name="currency_code" maxlength="3" 
-                                       value="<?= h($editCurrency['currency_code'] ?? '') ?>" 
-                                       placeholder="USD" required
-                                       oninput="this.value = this.value.toUpperCase()">
-                                <div class="form-text">3-letter ISO code (e.g., USD, EUR, GBP)</div>
-                                <div class="invalid-feedback" id="currency_code_error">Currency Code must be exactly 3 characters</div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="currency_name" class="form-label required-field">Currency Name</label>
-                                <input type="text" class="form-control" id="currency_name" name="currency_name" 
-                                       value="<?= h($editCurrency['currency_name'] ?? '') ?>" 
-                                       placeholder="US Dollar" required>
-                                <div class="form-text">Full currency name</div>
-                                <div class="invalid-feedback" id="currency_name_error">Currency Name is required</div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label for="currency_symbol" class="form-label required-field">Symbol</label>
-                                <input type="text" class="form-control" id="currency_symbol" name="currency_symbol" 
-                                       value="<?= h($editCurrency['currency_symbol'] ?? '') ?>" 
-                                       placeholder="$" required>
-                                <div class="form-text">Currency symbol (e.g., $, €, £)</div>
-                                <div class="invalid-feedback" id="currency_symbol_error">Currency Symbol is required</div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label for="exchange_rate" class="form-label required-field">Exchange Rate</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" id="exchange_rate" name="exchange_rate" 
-                                           step="0.0001" min="0.0001"
-                                           value="<?= h($editCurrency['exchange_rate'] ?? 1.0) ?>" 
-                                           placeholder="1.0000" required>
-                                </div>
-                                <div class="form-text">Rate relative to base currency (USD)</div>
-                                <div class="invalid-feedback" id="exchange_rate_error">Exchange Rate must be greater than 0</div>
-                            </div>
-                        </div>
+        <!-- TOP BAR: TITLE & ACTIONS -->
+        <div class="row align-items-center mb-4 gy-2">
+            <div class="col-md-7 col-12">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="header-icon-box shadow-sm" style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-coins text-success fs-5"></i>
                     </div>
-                    
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="auto_update" name="auto_update" 
-                                       value="1" <?= ($editCurrency['auto_update'] ?? 0) ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="auto_update">
-                                    <strong>Enable auto-update from exchange rate sources</strong>
-                                </label>
-                                <div class="form-text">
-                                    When checked, exchange rate will be periodically updated from external sources.
-                                </div>
-                            </div>
-                        </div>
+                    <div>
+                        <h4 class="fw-bold mb-0 text-dark" style="letter-spacing: -0.3px;">Currency Master</h4>
+                        <div class="text-muted small">Manage international currencies, symbols, and exchange rates</div>
                     </div>
-
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <i class="fas fa-save me-1"></i>
-                            <?= $mode === 'edit' ? 'Update Currency' : 'Save Currency' ?>
-                        </button>
-                        <a href="currency_master.php" class="btn btn-outline-secondary">Cancel</a>
-                    </div>
-                </form>
+                </div>
+            </div>
+            <div class="col-md-5 col-12 text-md-end text-start">
+                <button type="button" 
+                        class="btn btn-primary px-3 py-2 shadow-sm erp-btn-add d-inline-flex align-items-center gap-2"
+                        onclick="openAddCurrencyModal()"
+                        style="border-radius: 8px; font-weight: 600;">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Currency</span>
+                </button>
             </div>
         </div>
 
-        <?php else: ?>
-
-        <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-bill-wave me-2"></i>Currency Master</h4>
-            <a href="currency_master.php?mode=add" class="btn btn-success btn-sm">
-                <i class="fas fa-plus me-1"></i> Add Currency
-            </a>
-        </div>
-
-        <!-- Search and Filter Form -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-4">
-                        <input type="text" name="q" class="form-control form-control-sm" 
-                               placeholder="Search by code, name or symbol..." value="<?= h($q) ?>">
+        <!-- KPI SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Total Currencies</div>
+                            <div class="fs-4 fw-bold text-dark mt-1"><?= (int)($metrics['total'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-light text-primary" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-globe fs-5"></i>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <select name="status" class="form-select form-select-sm">
-                            <option value="">All Status</option>
-                            <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active</option>
-                            <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <select name="sort" class="form-select form-select-sm">
-                            <option value="currency_code" <?= $sort === 'currency_code' ? 'selected' : '' ?>>Sort by Code</option>
-                            <option value="currency_name" <?= $sort === 'currency_name' ? 'selected' : '' ?>>Sort by Name</option>
-                            <option value="exchange_rate" <?= $sort === 'exchange_rate' ? 'selected' : '' ?>>Sort by Exchange Rate</option>
-                            <option value="created_date" <?= $sort === 'created_date' ? 'selected' : '' ?>>Sort by Date</option>
-                        </select>
-                    </div>
-                    <!-- <div class="col-md-2">
-                        <select name="dir" class="form-select form-select-sm">
-                            <option value="asc" <?= $dir === 'asc' ? 'selected' : '' ?>>Ascending</option>
-                            <option value="desc" <?= $dir === 'desc' ? 'selected' : '' ?>>Descending</option>
-                        </select>
-                    </div> -->
-                    <div class="col-md-12 mt-2">
-                        <button type="submit" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-search me-1"></i> Search
-                        </button>
-                        <a href="currency_master.php" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </a>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <!-- Currencies Table -->
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="50">S.No</th>
-                                <th width="100">Code</th>
-                                <th>Currency Name</th>
-                                <th width="80">Symbol</th>
-                                <th width="120">Exchange Rate</th>
-                                <th width="100">Status</th>
-                                <th width="120">Created Date</th>
-                                <th width="150" class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if($currencies && $currencies->num_rows > 0): ?>
-                                <?php while($row = $currencies->fetch_assoc()): ?>
-                                <tr>
-                                    <td class="fw-bold"><?= (int)$row['currency_id'] ?></td>
-                                    <td>
-                                        <span class="currency-code"><?= h($row['currency_code']) ?></span>
-                                        <?php if ($row['auto_update']): ?>
-                                        <span class="badge bg-info auto-update-badge" title="Auto-updates enabled">Auto</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="fw-semibold"><?= h($row['currency_name']) ?></span>
-                                    </td>
-                                    <td>
-                                        <span class="currency-symbol"><?= h($row['currency_symbol']) ?></span>
-                                    </td>
-                                    <td>
-                                        <span class="exchange-rate"><?= number_format($row['exchange_rate'], 4) ?></span>
-                                    </td>
-                                    <td>
-                                        <form method="post" style="display:inline;">
-                                            <input type="hidden" name="action" value="toggle">
-                                            <input type="hidden" name="currency_id" value="<?= (int)$row['currency_id'] ?>">
-                                            <button type="submit" class="btn btn-sm <?= $row['status'] === 'Active' ? 'btn-success' : 'btn-danger' ?>">
-                                                <?= h($row['status']) ?>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted"><?= date('d-m-Y', strtotime($row['created_date'])) ?></small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <!-- Edit Button -->
-                                            <a href="currency_master.php?mode=edit&id=<?= (int)$row['currency_id'] ?>" 
-                                               class="btn btn-warning" title="Edit Currency">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            
-                                            <!-- Delete Button -->
-                                            <form method="post" style="display:inline;" 
-                                                  onsubmit="return confirm('Are you sure you want to delete <?= h($row['currency_name']) ?>? This action cannot be undone.')">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="currency_id" value="<?= (int)$row['currency_id'] ?>">
-                                                <button type="submit" class="btn btn-danger" title="Delete Currency">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="8" class="text-center py-5">
-                                        <div class="text-muted">
-                                            <i class="fas fa-money-bill-wave fa-3x mb-3"></i>
-                                            <h5>No currencies found</h5>
-                                            <p class="mb-0">Get started by adding your first currency.</p>
-                                            <a href="currency_master.php?mode=add" class="btn btn-primary mt-2">
-                                                <i class="fas fa-plus me-1"></i> Add Currency
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Active Currencies</div>
+                            <div class="fs-4 fw-bold text-success mt-1"><?= (int)($metrics['active'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-success-subtle text-success" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-check-circle fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Inactive Currencies</div>
+                            <div class="fs-4 fw-bold text-danger mt-1"><?= (int)($metrics['inactive'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-danger-subtle text-danger" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-ban fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Auto Sync</div>
+                            <div class="fs-4 fw-bold text-info mt-1"><?= (int)($metrics['auto_sync'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-info-subtle text-info" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-sync-alt fs-5"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <?php endif; ?>
+        <!-- SEARCH AND FILTER TOOLBAR -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4 filter-card">
+            <div class="card-body p-3">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-lg-5 col-md-4 col-12">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                            <input type="text" name="q" value="<?= h($q) ?>" placeholder="Search currency code, name, or symbol..." class="form-control border-start-0" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-3 col-6">
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active Only</option>
+                            <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive Only</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-3 col-6">
+                        <select name="sort" class="form-select">
+                            <option value="currency_code" <?= $sort === 'currency_code' ? 'selected' : '' ?>>Code (A-Z)</option>
+                            <option value="currency_name" <?= $sort === 'currency_name' ? 'selected' : '' ?>>Name</option>
+                            <option value="exchange_rate" <?= $sort === 'exchange_rate' ? 'selected' : '' ?>>Rate</option>
+                            <option value="created_date" <?= $sort === 'created_date' ? 'selected' : '' ?>>Created Date</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-2 col-12 d-flex gap-2">
+                        <button type="submit" class="btn btn-dark w-100 py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                            <i class="fas fa-filter fs-6"></i> <span>Filter</span>
+                        </button>
+                        <?php if ($q !== '' || $fstatus !== '' || $sort !== 'currency_code'): ?>
+                            <a href="currency_master.php" class="btn btn-outline-secondary px-3 py-2" title="Reset Filters">
+                                <i class="fas fa-rotate-left"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- DATA TABLE CARD -->
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden table-container">
+            <div class="table-responsive m-0 p-0">
+                <table class="table table-hover align-middle mb-0 erp-modern-table" style="font-size: var(--erp-table-text-size, 13px); white-space: nowrap;">
+                    <thead>
+                        <tr>
+                            <th class="text-center py-3" style="width: 50px;">S.NO</th>
+                            <th class="py-3">CURRENCY CODE</th>
+                            <th class="py-3">CURRENCY NAME</th>
+                            <th class="text-center py-3">SYMBOL</th>
+                            <th class="text-end py-3">EXCHANGE RATE</th>
+                            <th class="text-center py-3">AUTO SYNC</th>
+                            <th class="text-center py-3">STATUS</th>
+                            <th class="py-3">LAST UPDATED</th>
+                            <th class="text-center py-3" style="width: 120px;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $i = 1;
+                        if ($currencies && $currencies->num_rows > 0):
+                            while ($row = $currencies->fetch_assoc()):
+                                $currJson = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                        ?>
+                            <tr>
+                                <td class="text-center fw-semibold text-secondary"><?= $i++ ?></td>
+                                <td>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold fs-7">
+                                        <?= h($row['currency_code']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark"><?= h($row['currency_name']) ?></strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="fs-6 fw-bold text-dark"><?= h($row['currency_symbol']) ?></span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="font-monospace fw-semibold"><?= number_format((float)$row['exchange_rate'], 4) ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <?php if (!empty($row['auto_update'])): ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2">
+                                            <i class="fas fa-check me-1"></i> Auto
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-light text-muted border px-2">Manual</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
+                                    <form method="post" class="d-inline m-0 p-0">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="currency_id" value="<?= (int)$row['currency_id'] ?>">
+                                        <button type="submit" 
+                                                class="badge-status-pill <?= $row['status'] === 'Active' ? 'status-active-pill' : 'status-inactive-pill' ?>" 
+                                                onclick="return confirm('Change status of <?= addslashes(h($row['currency_code'])) ?>?')" 
+                                                title="Click to toggle status">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.55rem;"></i>
+                                            <?= h($row['status']) ?>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <span class="text-muted small"><?= formatDate($row['last_updated'] ?? $row['created_date']) ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-1 action-btn-group">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-light action-btn btn-edit-currency" 
+                                                onclick='openEditCurrencyModal(<?= $currJson ?>)' 
+                                                title="Edit Currency">
+                                            <i class="fas fa-edit text-warning"></i>
+                                        </button>
+                                        <form method="post" class="d-inline m-0 p-0" onsubmit="return confirm('Are you sure you want to delete currency: <?= addslashes(h($row['currency_code'])) ?> (<?= addslashes(h($row['currency_name'])) ?>)?')">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="currency_id" value="<?= (int)$row['currency_id'] ?>">
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-light action-btn btn-delete-currency" 
+                                                    title="Delete Currency">
+                                                <i class="fas fa-trash-alt text-danger"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endwhile; else: ?>
+                            <tr>
+                                <td colspan="9" class="text-center py-5">
+                                    <div class="py-4">
+                                        <i class="fas fa-coins text-muted opacity-25 fa-3x mb-3"></i>
+                                        <h6 class="text-secondary fw-bold">No Currencies Found</h6>
+                                        <p class="text-muted small mb-0">No records match your search or filter criteria.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
+</main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function validateForm() {
-            let isValid = true;
-            const currencyCode = document.getElementById('currency_code');
-            const currencyName = document.getElementById('currency_name');
-            const currencySymbol = document.getElementById('currency_symbol');
-            const exchangeRate = document.getElementById('exchange_rate');
-            
-            // Reset validation states
-            [currencyCode, currencyName, currencySymbol, exchangeRate].forEach(field => {
-                field.classList.remove('is-invalid');
-            });
-            
-            // Validate currency code
-            if (currencyCode.value.trim() === '' || currencyCode.value.length !== 3) {
-                currencyCode.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            // Validate currency name
-            if (currencyName.value.trim() === '') {
-                currencyName.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            // Validate currency symbol
-            if (currencySymbol.value.trim() === '') {
-                currencySymbol.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            // Validate exchange rate
-            if (exchangeRate.value <= 0 || isNaN(exchangeRate.value)) {
-                exchangeRate.classList.add('is-invalid');
-                isValid = false;
-            }
-            
-            if (isValid) {
-                // Disable submit button to prevent double submission
-                document.getElementById('submitBtn').disabled = true;
-                document.getElementById('submitBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving...';
-            }
-            
-            return isValid;
-        }
+<!-- =========================================================================
+     MODAL: ADD / EDIT CURRENCY
+     Strict Rule: Minimal header with Icon + Title + Subtitle + (X) close.
+     Save/Update buttons strictly placed in modal footer.
+========================================================================== -->
+<div class="modal fade" id="currencyModal" tabindex="-1" aria-labelledby="currencyModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content erp-modal-content border-0 shadow">
+            <div class="modal-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-badge" style="width: 40px; height: 40px; border-radius: 10px; background: #e8f5e9; color: #2e7d32; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-coins fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="currencyModalLabel">Add New Currency</h5>
+                        <p class="text-muted small mb-0">Configure international currency and exchange rate</p>
+                    </div>
+                </div>
+                <!-- MINIMAL HEADER: CLOSE BUTTON ONLY -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="currencyForm" class="needs-validation">
+                <input type="hidden" name="action" id="currency_action" value="add">
+                <input type="hidden" name="currency_id" id="currency_id" value="">
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-dismiss alerts after 5 seconds
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    if (alert.isConnected) {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    }
-                }, 5000);
-            });
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Currency Code <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   name="currency_code" 
+                                   id="currency_code" 
+                                   class="form-control form-control-sm text-uppercase" 
+                                   maxlength="5" 
+                                   placeholder="e.g. USD, EUR, INR" 
+                                   required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Currency Symbol <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   name="currency_symbol" 
+                                   id="currency_symbol" 
+                                   class="form-control form-control-sm" 
+                                   placeholder="e.g. $, €, ₹, £" 
+                                   required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-secondary">Currency Name <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   name="currency_name" 
+                                   id="currency_name" 
+                                   class="form-control form-control-sm" 
+                                   placeholder="e.g. US Dollar, Euro, Indian Rupee" 
+                                   required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Exchange Rate <span class="text-danger">*</span></label>
+                            <input type="number" 
+                                   step="0.0001" 
+                                   min="0.0001" 
+                                   name="exchange_rate" 
+                                   id="exchange_rate" 
+                                   class="form-control form-control-sm" 
+                                   value="1.0000" 
+                                   required>
+                            <div class="form-text small" style="font-size: 0.72rem;">Relative conversion multiplier</div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center mt-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="auto_update" id="auto_update" value="1">
+                                <label class="form-check-label small fw-semibold text-secondary" for="auto_update">
+                                    Enable Auto Rate Sync
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-3 px-4 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary px-3 py-2 btn-sm" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 py-2 btn-sm shadow-sm" id="btnSubmitCurrency">
+                        <i class="fas fa-save me-1"></i> Save Currency
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-            // Auto-submit form on filter changes
-            const filterSelects = document.querySelectorAll('select[name="status"], select[name="sort"]');
-            // select[name="dir"]
-            filterSelects.forEach(select => {
-                select.addEventListener('change', function() {
-                    this.form.submit();
-                });
-            });
-            
-            // Auto-uppercase currency code input
-            const currencyCodeInput = document.getElementById('currency_code');
-            if (currencyCodeInput) {
-                currencyCodeInput.addEventListener('input', function(e) {
-                    this.value = this.value.toUpperCase();
-                    if (this.value.length === 3) {
-                        this.classList.remove('is-invalid');
-                    }
-                });
-            }
-            
-            // Real-time validation
-            const formFields = document.querySelectorAll('#currencyForm input[required]');
-            formFields.forEach(field => {
-                field.addEventListener('blur', function() {
-                    if (this.value.trim() === '') {
-                        this.classList.add('is-invalid');
-                    } else {
-                        this.classList.remove('is-invalid');
-                    }
-                });
-            });
-            
-            // Prevent form resubmission on page refresh
-            if (window.history.replaceState) {
-                window.history.replaceState(null, null, window.location.href);
-            }
-        });
-    </script>
-</body>
-</html>
+<script>
+let currencyModalInstance = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('currencyModal');
+    if (el && typeof bootstrap !== 'undefined') {
+        currencyModalInstance = new bootstrap.Modal(el);
+    }
+});
+
+function openAddCurrencyModal() {
+    document.getElementById('currencyForm').reset();
+    document.getElementById('currency_action').value = 'add';
+    document.getElementById('currency_id').value = '';
+    document.getElementById('currencyModalLabel').innerText = 'Add New Currency';
+    document.getElementById('btnSubmitCurrency').innerHTML = '<i class="fas fa-save me-1"></i> Save Currency';
+    document.getElementById('exchange_rate').value = '1.0000';
+    document.getElementById('auto_update').checked = false;
+
+    if (!currencyModalInstance) {
+        currencyModalInstance = new bootstrap.Modal(document.getElementById('currencyModal'));
+    }
+    currencyModalInstance.show();
+}
+
+function openEditCurrencyModal(data) {
+    if (!data) return;
+    document.getElementById('currency_action').value = 'edit';
+    document.getElementById('currency_id').value = data.currency_id || '';
+    document.getElementById('currency_code').value = data.currency_code || '';
+    document.getElementById('currency_name').value = data.currency_name || '';
+    document.getElementById('currency_symbol').value = data.currency_symbol || '';
+    document.getElementById('exchange_rate').value = data.exchange_rate || '1.0000';
+    document.getElementById('auto_update').checked = (parseInt(data.auto_update) === 1);
+
+    document.getElementById('currencyModalLabel').innerText = 'Edit Currency (' + (data.currency_code || '') + ')';
+    document.getElementById('btnSubmitCurrency').innerHTML = '<i class="fas fa-save me-1"></i> Update Currency';
+
+    if (!currencyModalInstance) {
+        currencyModalInstance = new bootstrap.Modal(document.getElementById('currencyModal'));
+    }
+    currencyModalInstance.show();
+}
+</script>

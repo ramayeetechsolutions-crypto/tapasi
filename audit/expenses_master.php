@@ -1,441 +1,552 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-require 'db.php';
 if (session_status() === PHP_SESSION_NONE) { 
     session_start(); 
 }
 
-// Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+$db_paths = [__DIR__ . '/../db.php', __DIR__ . '/db.php', 'db.php'];
+$connected = false;
+foreach ($db_paths as $p) {
+    if (file_exists($p)) {
+        require_once $p;
+        $connected = true;
+        break;
+    }
+}
+if (!$connected) {
+    die("Database connection failed.");
 }
 
-function formatDate($d) {
-    if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
-    return date('d-m-Y', strtotime($d));
+// ---------- Helpers ----------
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
-function redirect_with($params = []) {
-    $base = 'expenses_master.php';
-    if (!empty($params)) $base .= '?' . http_build_query($params);
-    header("Location: $base");
-    exit;
+if (!function_exists('formatDate')) {
+    function formatDate($d) {
+        if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
+        return date('d M, Y', strtotime($d));
+    }
 }
 
-// Handle POST actions
+if (!function_exists('redirect_with')) {
+    function redirect_with($params = []) {
+        $base = 'expenses_master.php';
+        if (!empty($params)) $base .= '?' . http_build_query($params);
+        header("Location: $base");
+        exit;
+    }
+}
+
+// ---------- Handle POST actions ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'add' || $action === 'edit') {
         $expense_name = trim($_POST['expense_name'] ?? '');
-        
-        // Basic validation
+
         if ($expense_name === '') {
             redirect_with(['msg' => 'Expense Name is required.', 'type' => 'danger']);
         }
-        
+
         if ($action === 'add') {
-            // Check if expense already exists
-            $check_stmt = $mysqli->prepare("SELECT expense_id FROM expense_master WHERE expense_name = ?");
-            $check_stmt->bind_param("s", $expense_name);
-            $check_stmt->execute();
-            $check_stmt->store_result();
-            
-            if ($check_stmt->num_rows > 0) {
-                $check_stmt->close();
-                redirect_with(['msg' => 'Expense already exists.', 'type' => 'danger']);
-            }
-            $check_stmt->close();
-            
-            // Insert new expense
-            $stmt = $mysqli->prepare("INSERT INTO expense_master (expense_name, status, created_date) VALUES (?, 'Active', NOW())");
-            $stmt->bind_param("s", $expense_name);
-            
-            if ($stmt->execute()) {
-                redirect_with(['msg' => "Expense '$expense_name' added successfully", 'type' => 'success']);
-            } else {
-                redirect_with(['msg' => 'Error adding expense: ' . $stmt->error, 'type' => 'danger']);
-            }
-            $stmt->close();
-        }
-        
-        if ($action === 'edit') {
-            $expense_id = (int)($_POST['expense_id'] ?? 0);
-            
-            if ($expense_id > 0) {
-                // Check if expense already exists (excluding current one)
-                $check_stmt = $mysqli->prepare("SELECT expense_id FROM expense_master WHERE expense_name = ? AND expense_id != ?");
-                $check_stmt->bind_param("si", $expense_name, $expense_id);
-                $check_stmt->execute();
-                $check_stmt->store_result();
-                
-                if ($check_stmt->num_rows > 0) {
-                    $check_stmt->close();
-                    redirect_with(['msg' => 'Expense already exists.', 'type' => 'danger']);
+            $chk = $mysqli->prepare("SELECT expense_id FROM expense_master WHERE expense_name = ?");
+            if ($chk) {
+                $chk->bind_param("s", $expense_name);
+                $chk->execute();
+                $chk->store_result();
+                if ($chk->num_rows > 0) {
+                    $chk->close();
+                    redirect_with(['msg' => "Expense category '$expense_name' already exists.", 'type' => 'warning']);
                 }
-                $check_stmt->close();
-                
-                // Update expense
-                $stmt = $mysqli->prepare("UPDATE expense_master SET expense_name = ? WHERE expense_id = ?");
-                $stmt->bind_param("si", $expense_name, $expense_id);
-                
+                $chk->close();
+            }
+
+            $stmt = $mysqli->prepare("INSERT INTO expense_master (expense_name, status, created_date) VALUES (?, 'Active', NOW())");
+            if ($stmt) {
+                $stmt->bind_param("s", $expense_name);
                 if ($stmt->execute()) {
-                    redirect_with(['msg' => "Expense updated successfully", 'type' => 'success']);
+                    redirect_with(['msg' => "Expense category '$expense_name' added successfully", 'type' => 'success']);
                 } else {
-                    redirect_with(['msg' => 'Error updating expense: ' . $stmt->error, 'type' => 'danger']);
+                    redirect_with(['msg' => 'Error adding expense: ' . $stmt->error, 'type' => 'danger']);
                 }
                 $stmt->close();
+            } else {
+                redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
+            }
+        }
+
+        if ($action === 'edit') {
+            $expense_id = (int)($_POST['expense_id'] ?? 0);
+            if ($expense_id > 0) {
+                $chk = $mysqli->prepare("SELECT expense_id FROM expense_master WHERE expense_name = ? AND expense_id != ?");
+                if ($chk) {
+                    $chk->bind_param("si", $expense_name, $expense_id);
+                    $chk->execute();
+                    $chk->store_result();
+                    if ($chk->num_rows > 0) {
+                        $chk->close();
+                        redirect_with(['msg' => "Another expense category with name '$expense_name' already exists.", 'type' => 'warning']);
+                    }
+                    $chk->close();
+                }
+
+                $stmt = $mysqli->prepare("UPDATE expense_master SET expense_name = ? WHERE expense_id = ?");
+                if ($stmt) {
+                    $stmt->bind_param("si", $expense_name, $expense_id);
+                    if ($stmt->execute()) {
+                        redirect_with(['msg' => "Expense category '$expense_name' updated successfully", 'type' => 'success']);
+                    } else {
+                        redirect_with(['msg' => 'Error updating expense: ' . $stmt->error, 'type' => 'danger']);
+                    }
+                    $stmt->close();
+                } else {
+                    redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
+                }
             }
         }
     }
-    
+
     if ($action === 'delete') {
         $expense_id = (int)($_POST['expense_id'] ?? 0);
-        $expense_name = '';
-        
         if ($expense_id > 0) {
-            // Get expense name for message
-            $res = $mysqli->prepare("SELECT expense_name FROM expense_master WHERE expense_id = ?");
-            $res->bind_param("i", $expense_id);
-            $res->execute();
-            $res->bind_result($expense_name);
-            $res->fetch();
-            $res->close();
-            
-            // Delete expense
+            $name = '';
+            $q = $mysqli->prepare("SELECT expense_name FROM expense_master WHERE expense_id = ?");
+            if ($q) {
+                $q->bind_param("i", $expense_id);
+                $q->execute();
+                $res = $q->get_result()->fetch_assoc();
+                $q->close();
+                if ($res) $name = $res['expense_name'];
+            }
+
             $del = $mysqli->prepare("DELETE FROM expense_master WHERE expense_id = ?");
-            $del->bind_param("i", $expense_id);
-            $del->execute();
-            $del->close();
-            
-            redirect_with(['msg' => "Expense '$expense_name' deleted", 'type' => 'warning']);
-        }
-    }
-    
-    if ($action === 'toggle') {
-        $expense_id = (int)($_POST['expense_id'] ?? 0);
-        
-        if ($expense_id > 0) {
-            $res = $mysqli->prepare("SELECT status, expense_name FROM expense_master WHERE expense_id = ?");
-            $res->bind_param("i", $expense_id);
-            $res->execute();
-            $res->bind_result($current_status, $expense_name);
-            $res->fetch();
-            $res->close();
-            
-            if ($expense_name) {
-                $newStatus = ($current_status === 'Active') ? 'Inactive' : 'Active';
-                
-                $upd = $mysqli->prepare("UPDATE expense_master SET status = ? WHERE expense_id = ?");
-                $upd->bind_param("si", $newStatus, $expense_id);
-                $upd->execute();
-                $upd->close();
-                
-                redirect_with(['msg' => "Expense '$expense_name' status changed to $newStatus", 'type' => 'info']);
+            if ($del) {
+                $del->bind_param("i", $expense_id);
+                $del->execute();
+                $del->close();
+                redirect_with(['msg' => "Expense category '$name' deleted successfully", 'type' => 'warning']);
             }
         }
     }
-    
+
+    if ($action === 'toggle') {
+        $expense_id = (int)($_POST['expense_id'] ?? 0);
+        if ($expense_id > 0) {
+            $q = $mysqli->prepare("SELECT status, expense_name FROM expense_master WHERE expense_id = ?");
+            if ($q) {
+                $q->bind_param("i", $expense_id);
+                $q->execute();
+                $res = $q->get_result()->fetch_assoc();
+                $q->close();
+                if ($res) {
+                    $newStatus = ($res['status'] === 'Active') ? 'Inactive' : 'Active';
+                    $upd = $mysqli->prepare("UPDATE expense_master SET status = ? WHERE expense_id = ?");
+                    if ($upd) {
+                        $upd->bind_param("si", $newStatus, $expense_id);
+                        $upd->execute();
+                        $upd->close();
+                        redirect_with(['msg' => "Expense '{$res['expense_name']}' status changed to $newStatus", 'type' => 'info']);
+                    }
+                }
+            }
+        }
+    }
+
     redirect_with();
 }
 
-// Get mode
-$mode = $_GET['mode'] ?? 'view';
-$editExpense = null;
+// ---------- Data Fetching & Filtering ----------
+$q       = trim($_GET['q'] ?? '');
+$fstatus = trim($_GET['status'] ?? '');
+$sort    = trim($_GET['sort'] ?? 'created_date');
+$dir     = strtolower(trim($_GET['dir'] ?? 'desc'));
 
-if ($mode === 'edit') {
-    $id = (int)($_GET['id'] ?? 0);
-    if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT expense_id, expense_name, status, created_date FROM expense_master WHERE expense_id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $editExpense = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-    }
-    if (!$editExpense) $mode = 'view';
-}
+$sortable = ['expense_id', 'expense_name', 'status', 'created_date'];
+if (!in_array($sort, $sortable, true)) $sort = 'created_date';
+$dir = ($dir === 'asc') ? 'asc' : 'desc';
 
-// Get search and filter parameters
-$q = trim($_GET['q'] ?? '');
-$fstatus = $_GET['status'] ?? '';
-$sort = $_GET['sort'] ?? 'created_date';
-$dir = strtolower($_GET['dir'] ?? 'desc');
-
-// Build query
-$sql = "SELECT expense_id, expense_name, status, created_date FROM expense_master";
-$cond = [];
+$sql = "SELECT * FROM expense_master WHERE 1=1";
 $params = [];
 $types = '';
 
 if ($q !== '') {
-    $cond[] = "expense_name LIKE ?";
+    $sql .= " AND expense_name LIKE ?";
     $like = "%$q%";
     $params[] = $like;
     $types .= 's';
 }
 
 if ($fstatus === 'Active' || $fstatus === 'Inactive') {
-    $cond[] = "status = ?";
+    $sql .= " AND status = ?";
     $params[] = $fstatus;
     $types .= 's';
 }
 
-if (!empty($cond)) {
-    $sql .= " WHERE " . implode(" AND ", $cond);
-}
-
 $sql .= " ORDER BY $sort $dir";
 
-// Execute query
+$expenses = false;
 if (!empty($types)) {
     $stmt = $mysqli->prepare($sql);
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-    $expenses = $stmt->get_result();
+    if ($stmt) {
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $expenses = $stmt->get_result();
+    }
 } else {
     $expenses = $mysqli->query($sql);
 }
 
-// If query fails, show empty result
-if (!$expenses) {
-    $expenses = false;
+// KPI Metrics
+$metricsQuery = $mysqli->query("SELECT 
+    COUNT(*) as total, 
+    SUM(status='Active') as active, 
+    SUM(status='Inactive') as inactive 
+    FROM expense_master");
+$metrics = $metricsQuery ? $metricsQuery->fetch_assoc() : ['total' => 0, 'active' => 0, 'inactive' => 0];
+
+$pageTitle = "Expense Master";
+$currentPage = "expenses_master.php";
+
+$header_paths = [__DIR__ . '/header.php', 'header.php'];
+foreach ($header_paths as $hp) {
+    if (file_exists($hp)) {
+        require_once $hp;
+        break;
+    }
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Master</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .main-content {
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .table th {
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-        }
-        .table td {
-            vertical-align: middle;
-        }
-        .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border: 1px solid rgba(0, 0, 0, 0.125);
-        }
-        .btn-group-sm > .btn {
-            padding: 0.25rem 0.5rem;
-        }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
-    
-    <div class="main-content">
-        <?php if (!empty($_GET['msg'])): ?>
-        <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show" role="alert">
-            <?= h($_GET['msg']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<main class="main-content" style="padding-top: 85px; padding-bottom: 50px;">
+    <div class="container-fluid px-lg-4 px-md-3 px-2">
+
+        <!-- FLOATING ERP TOAST NOTIFICATION -->
+        <?php if (!empty($_GET['msg'])): 
+            $toastMsg  = h($_GET['msg']);
+            $toastType = strtolower(trim($_GET['type'] ?? 'info'));
+            
+            $toastTitle = 'Notification';
+            $toastIcon  = 'fa-info-circle';
+            $toastBadge = 'Notice';
+            $toastClass = 'erp-toast-info';
+            
+            if (stripos($toastMsg, 'delete') !== false || stripos($toastMsg, 'remove') !== false || $toastType === 'danger' || $toastType === 'warning') {
+                $toastTitle = 'Record Deleted';
+                $toastIcon  = 'fa-trash-alt';
+                $toastBadge = 'Deleted';
+                $toastClass = 'erp-toast-danger';
+            } elseif (stripos($toastMsg, 'add') !== false || stripos($toastMsg, 'create') !== false || $toastType === 'success') {
+                $toastTitle = 'Successfully Processed';
+                $toastIcon  = 'fa-check-circle';
+                $toastBadge = 'Success';
+                $toastClass = 'erp-toast-success';
+            } elseif (stripos($toastMsg, 'status') !== false || stripos($toastMsg, 'toggle') !== false) {
+                $toastTitle = 'Status Updated';
+                $toastIcon  = 'fa-toggle-on';
+                $toastBadge = 'Status';
+                $toastClass = 'erp-toast-info';
+            } elseif (stripos($toastMsg, 'update') !== false) {
+                $toastTitle = 'Successfully Updated';
+                $toastIcon  = 'fa-pen-to-square';
+                $toastBadge = 'Updated';
+                $toastClass = 'erp-toast-info';
+            }
+        ?>
+        <div class="erp-toast-wrapper" id="erpToastWrapper" role="region" aria-label="Notifications">
+            <div class="erp-toast-card <?= $toastClass ?>" id="erpToastCard" role="alert" aria-live="assertive">
+                <div class="erp-toast-icon">
+                    <i class="fas <?= $toastIcon ?>"></i>
+                </div>
+                <div class="erp-toast-content">
+                    <div class="erp-toast-header">
+                        <span class="erp-toast-title"><?= $toastTitle ?></span>
+                        <span class="erp-toast-badge"><?= $toastBadge ?></span>
+                    </div>
+                    <div class="erp-toast-msg"><?= $toastMsg ?></div>
+                </div>
+                <button type="button" class="erp-toast-close" onclick="dismissErpToast()" aria-label="Close notification">&times;</button>
+                <div class="erp-toast-progress"><div class="erp-toast-progress-bar"></div></div>
+            </div>
         </div>
+        <script>
+            function dismissErpToast() {
+                var el = document.getElementById('erpToastCard');
+                if (el) {
+                    el.classList.add('hide');
+                    setTimeout(function() {
+                        var wr = document.getElementById('erpToastWrapper');
+                        if (wr) wr.remove();
+                    }, 400);
+                }
+            }
+            setTimeout(dismissErpToast, 4500);
+        </script>
         <?php endif; ?>
 
-        <?php if($mode === 'add' || $mode === 'edit'): ?>
-        
-        <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-bill me-2"></i><?= $mode === 'edit' ? 'Edit Expense' : 'Add New Expense' ?></h4>
-            <a href="expenses_master.php" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
-            </a>
+        <!-- TOP BAR: TITLE & ACTIONS -->
+        <div class="row align-items-center mb-4 gy-2">
+            <div class="col-md-7 col-12">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="header-icon-box shadow-sm" style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #e3f2fd, #bbdefb); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-money-bill-wave text-primary fs-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0 text-dark" style="letter-spacing: -0.3px;">Expense Master</h4>
+                        <div class="text-muted small">Manage organizational expense categories, overheads, and ledger accounts</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5 col-12 text-md-end text-start">
+                <button type="button" 
+                        class="btn btn-primary px-3 py-2 shadow-sm erp-btn-add d-inline-flex align-items-center gap-2"
+                        onclick="openAddExpenseModal()"
+                        style="border-radius: 8px; font-weight: 600;">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Expense</span>
+                </button>
+            </div>
         </div>
 
-        <div class="card">
-            <div class="card-body">
-                <form method="post" autocomplete="off">
-                    <input type="hidden" name="action" value="<?= $mode ?>">
-                    <?php if($mode === 'edit'): ?>
-                    <input type="hidden" name="expense_id" value="<?= (int)($editExpense['expense_id'] ?? 0) ?>">
-                    <?php endif; ?>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="expense_name" class="form-label">Expense Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="expense_name" name="expense_name" 
-                                       value="<?= h($editExpense['expense_name'] ?? '') ?>" 
-                                       placeholder="Enter expense name" required>
-                                <div class="form-text">Enter the name of the expense (e.g., Office Rent, Internet Bill, Travel Expense)</div>
-                            </div>
+        <!-- KPI SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Total Categories</div>
+                            <div class="fs-4 fw-bold text-dark mt-1"><?= (int)($metrics['total'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-light text-primary" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-tags fs-5"></i>
                         </div>
                     </div>
-
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>
-                            <?= $mode === 'edit' ? 'Update Expense' : 'Save Expense' ?>
-                        </button>
-                        <a href="expenses_master.php" class="btn btn-outline-secondary">Cancel</a>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <?php else: ?>
-
-        <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-bill me-2"></i>Expense Master</h4>
-            <a href="expenses_master.php?mode=add" class="btn btn-success btn-sm">
-                <i class="fas fa-plus me-1"></i> Add Expense
-            </a>
-        </div>
-
-        <!-- Search and Filter Form -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-4">
-                        <input type="text" name="q" class="form-control form-control-sm" 
-                               placeholder="Search expenses..." value="<?= h($q) ?>">
+            <div class="col-md-4 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Active Categories</div>
+                            <div class="fs-4 fw-bold text-success mt-1"><?= (int)($metrics['active'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-success-subtle text-success" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-check-circle fs-5"></i>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <select name="status" class="form-select form-select-sm">
-                            <option value="">All Status</option>
-                            <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active</option>
-                            <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select name="sort" class="form-select form-select-sm">
-                            <option value="expense_name" <?= $sort === 'expense_name' ? 'selected' : '' ?>>Sort by Name</option>
-                            <option value="created_date" <?= $sort === 'created_date' ? 'selected' : '' ?>>Sort by Date</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select name="dir" class="form-select form-select-sm">
-                            <option value="asc" <?= $dir === 'asc' ? 'selected' : '' ?>>Ascending</option>
-                            <option value="desc" <?= $dir === 'desc' ? 'selected' : '' ?>>Descending</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12 mt-2">
-                        <button type="submit" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-search me-1"></i> Search
-                        </button>
-                        <a href="expenses_master.php" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </a>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-
-        <!-- Expenses Table -->
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="50">ID</th>
-                                <th>Expense Name</th>
-                                <th width="100">Status</th>
-                                <th width="120">Created Date</th>
-                                <th width="150" class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if($expenses && $expenses->num_rows > 0): $i=0;?>
-                                <?php while($row = $expenses->fetch_assoc()): $i=$i+1;?>
-                                <tr>
-                                    <td class="fw-bold"><?= $i ?></td>
-                                    <td>
-                                        <span class="fw-semibold"><?= h($row['expense_name']) ?></span>
-                                    </td>
-                                    <td>
-                                        <form method="post" style="display:inline;">
-                                            <input type="hidden" name="action" value="toggle">
-                                            <input type="hidden" name="expense_id" value="<?= (int)$row['expense_id'] ?>">
-                                            <button type="submit" class="btn btn-sm <?= $row['status'] === 'Active' ? 'btn-success' : 'btn-danger' ?>">
-                                                <?= h($row['status']) ?>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted"><?= h(formatDate($row['created_date'])) ?></small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="expenses_master.php?mode=edit&id=<?= (int)$row['expense_id'] ?>" 
-                                               class="btn btn-warning" title="Edit Expense">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form method="post" style="display:inline;" 
-                                                  onsubmit="return confirm('Are you sure you want to delete <?= h($row['expense_name']) ?>?')">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="expense_id" value="<?= (int)$row['expense_id'] ?>">
-                                                <button type="submit" class="btn btn-danger" title="Delete Expense">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="5" class="text-center py-5">
-                                        <div class="text-muted">
-                                            <i class="fas fa-money-bill fa-3x mb-3"></i>
-                                            <h5>No expenses found</h5>
-                                            <p class="mb-0">Get started by adding your first expense.</p>
-                                            <a href="expenses_master.php?mode=add" class="btn btn-primary mt-2">
-                                                <i class="fas fa-plus me-1"></i> Add Expense
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+            <div class="col-md-4 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Inactive Categories</div>
+                            <div class="fs-4 fw-bold text-danger mt-1"><?= (int)($metrics['inactive'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-danger-subtle text-danger" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-ban fs-5"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <?php endif; ?>
+        <!-- SEARCH AND FILTER TOOLBAR -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4 filter-card">
+            <div class="card-body p-3">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-lg-6 col-md-5 col-12">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                            <input type="text" name="q" value="<?= h($q) ?>" placeholder="Search expense category name..." class="form-control border-start-0" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-3 col-6">
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active Only</option>
+                            <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive Only</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-4 col-6 d-flex gap-2">
+                        <button type="submit" class="btn btn-dark w-100 py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                            <i class="fas fa-filter fs-6"></i> <span>Filter</span>
+                        </button>
+                        <?php if ($q !== '' || $fstatus !== ''): ?>
+                            <a href="expenses_master.php" class="btn btn-outline-secondary px-3 py-2" title="Reset Filters">
+                                <i class="fas fa-rotate-left"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- DATA TABLE CARD -->
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden table-container">
+            <div class="table-responsive m-0 p-0">
+                <table class="table table-hover align-middle mb-0 erp-modern-table" style="font-size: var(--erp-table-text-size, 13px); white-space: nowrap;">
+                    <thead>
+                        <tr>
+                            <th class="text-center py-3" style="width: 55px;">S.NO</th>
+                            <th class="py-3">EXPENSE CATEGORY NAME</th>
+                            <th class="text-center py-3" style="width: 140px;">STATUS</th>
+                            <th class="py-3" style="width: 160px;">CREATED DATE</th>
+                            <th class="text-center py-3" style="width: 120px;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $i = 1;
+                        if ($expenses && $expenses->num_rows > 0):
+                            while ($row = $expenses->fetch_assoc()):
+                                $expJson = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                        ?>
+                            <tr>
+                                <td class="text-center fw-semibold text-secondary"><?= $i++ ?></td>
+                                <td>
+                                    <strong class="text-dark fs-6"><?= h($row['expense_name']) ?></strong>
+                                </td>
+                                <td class="text-center">
+                                    <form method="post" class="d-inline m-0 p-0">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="expense_id" value="<?= (int)$row['expense_id'] ?>">
+                                        <button type="submit" 
+                                                class="badge-status-pill <?= $row['status'] === 'Active' ? 'status-active-pill' : 'status-inactive-pill' ?>" 
+                                                onclick="return confirm('Change status of <?= addslashes(h($row['expense_name'])) ?>?')" 
+                                                title="Click to toggle status">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.55rem;"></i>
+                                            <?= h($row['status']) ?>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <span class="text-muted small"><?= formatDate($row['created_date']) ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-1 action-btn-group">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-light action-btn btn-edit-expense" 
+                                                onclick='openEditExpenseModal(<?= $expJson ?>)' 
+                                                title="Edit Expense">
+                                            <i class="fas fa-edit text-warning"></i>
+                                        </button>
+                                        <form method="post" class="d-inline m-0 p-0" onsubmit="return confirm('Are you sure you want to delete expense category: <?= addslashes(h($row['expense_name'])) ?>?')">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="expense_id" value="<?= (int)$row['expense_id'] ?>">
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-light action-btn btn-delete-expense" 
+                                                    title="Delete Expense">
+                                                <i class="fas fa-trash-alt text-danger"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endwhile; else: ?>
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="py-4">
+                                        <i class="fas fa-money-bill-wave text-muted opacity-25 fa-3x mb-3"></i>
+                                        <h6 class="text-secondary fw-bold">No Expense Categories Found</h6>
+                                        <p class="text-muted small mb-0">No records match your search or filter criteria.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
+</main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Auto-dismiss alerts after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    if (alert.isConnected) {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    }
-                }, 5000);
-            });
+<!-- =========================================================================
+     MODAL: ADD / EDIT EXPENSE
+     Minimal header: Icon + Title + Subtitle + (X) close.
+     Save/Update button strictly in modal footer.
+========================================================================== -->
+<div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content erp-modal-content border-0 shadow">
+            <div class="modal-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-badge" style="width: 40px; height: 40px; border-radius: 10px; background: #e3f2fd; color: #1976d2; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-money-bill-wave fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="expenseModalLabel">Add New Expense</h5>
+                        <p class="text-muted small mb-0">Define an expense head or ledger category</p>
+                    </div>
+                </div>
+                <!-- MINIMAL HEADER: CLOSE BUTTON ONLY -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="expenseForm" class="needs-validation">
+                <input type="hidden" name="action" id="expense_action" value="add">
+                <input type="hidden" name="expense_id" id="expense_id" value="">
 
-            // Auto-submit form on filter changes
-            const filterSelects = document.querySelectorAll('select[name="status"], select[name="sort"], select[name="dir"]');
-            filterSelects.forEach(select => {
-                select.addEventListener('change', function() {
-                    this.form.submit();
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Expense Category Name <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               name="expense_name" 
+                               id="expense_name" 
+                               class="form-control" 
+                               placeholder="e.g. Office Rent, Cloud Server, Internet Broadband, Travel" 
+                               required>
+                        <div class="form-text small" style="font-size: 0.75rem;">Enter a descriptive name for this expense account head.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-3 px-4 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary px-3 py-2 btn-sm" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 py-2 btn-sm shadow-sm" id="btnSubmitExpense">
+                        <i class="fas fa-save me-1"></i> Save Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let expenseModalInstance = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('expenseModal');
+    if (el && typeof bootstrap !== 'undefined') {
+        expenseModalInstance = new bootstrap.Modal(el);
+    }
+});
+
+function openAddExpenseModal() {
+    document.getElementById('expenseForm').reset();
+    document.getElementById('expense_action').value = 'add';
+    document.getElementById('expense_id').value = '';
+    document.getElementById('expenseModalLabel').innerText = 'Add New Expense';
+    document.getElementById('btnSubmitExpense').innerHTML = '<i class="fas fa-save me-1"></i> Save Expense';
+
+    if (!expenseModalInstance) {
+        expenseModalInstance = new bootstrap.Modal(document.getElementById('expenseModal'));
+    }
+    expenseModalInstance.show();
+}
+
+function openEditExpenseModal(data) {
+    if (!data) return;
+    document.getElementById('expense_action').value = 'edit';
+    document.getElementById('expense_id').value = data.expense_id || '';
+    document.getElementById('expense_name').value = data.expense_name || '';
+
+    document.getElementById('expenseModalLabel').innerText = 'Edit Expense Category';
+    document.getElementById('btnSubmitExpense').innerHTML = '<i class="fas fa-save me-1"></i> Update Expense';
+
+    if (!expenseModalInstance) {
+        expenseModalInstance = new bootstrap.Modal(document.getElementById('expenseModal'));
+    }
+    expenseModalInstance.show();
+}
+</script>

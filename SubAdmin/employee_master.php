@@ -1,20 +1,19 @@
 <?php
 // -------------------------------------------------------------
-// FILE: employee_import.php
-// PURPOSE: Employee Management Navigation Hub (Import functionality removed)
+// FILE: employee_master.php
+// PURPOSE: Employee Management Enterprise Hub & Navigation Center
 // -------------------------------------------------------------
 
-// 1. ENABLE ERROR REPORTING
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// 2. CONNECT TO DATABASE
+// Connect to Database
 $db_paths = ['db.php', '../db.php'];
 $db_connected = false;
 foreach ($db_paths as $path) {
     if (file_exists($path)) {
-        require $path;
+        require_once $path;
         $db_connected = true;
         break;
     }
@@ -23,167 +22,289 @@ if (!$db_connected) {
     die("<div style='margin-top:100px; color:red; text-align:center;'>CRITICAL ERROR: db.php not found.</div>");
 }
 
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+if (session_status() === PHP_SESSION_NONE) { 
+    session_start(); 
+}
 
-// 3. INCLUDE HEADER
+// Fetch Live Metrics for the Hub
+$kpi_query = $mysqli->query("SELECT 
+    COUNT(*) as total,
+    SUM(status = 'Active') as active_count,
+    SUM(salary) as total_payroll,
+    SUM(aadhar_doc IS NOT NULL AND aadhar_doc != '') as aadhar_count,
+    COUNT(DISTINCT team_id) as total_teams
+    FROM employee_master");
+$kpi = $kpi_query ? $kpi_query->fetch_assoc() : [
+    'total' => 0, 'active_count' => 0, 'total_payroll' => 0,
+    'aadhar_count' => 0, 'total_teams' => 0
+];
+
+$pageTitle = "Employee Hub";
+$currentPage = "employee_master.php";
+
 $header_paths = ['header.php', '../header.php'];
 foreach ($header_paths as $path) {
     if (file_exists($path)) {
-        include $path;
+        include_once $path;
         break;
     }
 }
 ?>
 
-<!-- HTML CONTENT -->
-<div class="container py-5" style="margin-top: 120px; position: relative; z-index: 1;">
-    
-    <!-- Main Card -->
-    <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
-        <!-- Header Section -->
-        <div class="card-header bg-gradient-primary text-white py-4">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <h2 class="mb-1 fw-bold"><i class="fas fa-users me-2"></i>Employee Management</h2>
-                    <p class="mb-0 opacity-75">Central hub for all employee operations</p>
+<style>
+    .hub-container {
+        margin-top: 95px;
+        margin-bottom: 60px;
+        position: relative;
+        z-index: 1;
+    }
+    .hero-card {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        border: 1px solid #edf2f7;
+        overflow: hidden;
+    }
+    .hero-banner {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: #ffffff;
+        padding: 40px 45px;
+        position: relative;
+    }
+    .hero-banner::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 35%;
+        background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 70%);
+        pointer-events: none;
+    }
+    .nav-card {
+        border-radius: 16px;
+        border: 1px solid #f1f5f9;
+        background: #ffffff;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    .nav-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+    }
+    .nav-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        transition: opacity 0.3s ease;
+    }
+    .card-general::before { background: linear-gradient(90deg, #38bdf8, #0284c7); }
+    .card-official::before { background: linear-gradient(90deg, #4ade80, #16a34a); }
+    .card-salary::before { background: linear-gradient(90deg, #fbbf24, #d97706); }
+
+    .icon-wrapper-hub {
+        width: 68px;
+        height: 68px;
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    .nav-card:hover .icon-wrapper-hub {
+        transform: scale(1.1);
+    }
+    .hub-metric-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.12);
+        color: #f8fafc;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 24px 0;
+        text-align: left;
+    }
+    .feature-list li {
+        font-size: 0.84rem;
+        color: #64748b;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .feature-list li i {
+        font-size: 0.72rem;
+    }
+</style>
+
+<div class="container hub-container">
+    <div class="hero-card">
+        
+        <!-- Enterprise Hero Banner -->
+        <div class="hero-banner">
+            <div class="row align-items-center gy-3">
+                <div class="col-lg-7 col-12">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="hub-metric-badge">
+                            <i class="fas fa-layer-group text-info"></i> Enterprise Directory
+                        </span>
+                        <span class="hub-metric-badge">
+                            <i class="fas fa-circle-check text-success"></i> System v2.4
+                        </span>
+                    </div>
+                    <h2 class="fw-bold mb-2 text-white" style="font-size: 2rem; letter-spacing: -0.5px;">
+                        Employee Management Hub
+                    </h2>
+                    <p class="text-white-50 mb-0" style="font-size: 0.95rem; max-width: 580px;">
+                        Centralized administrative workspace for workforce records, official employment contracts, compensation governance, and compliance.
+                    </p>
                 </div>
-                <div class="bg-white rounded-circle p-3 shadow">
-                    <!-- <i class="fas fa-user-cog text-primary fa-2x"></i> -->
-                     <i class="fas fa-user-cog fa-2x" style="color: #707981 !important;"></i>
+                <div class="col-lg-5 col-12 text-lg-end text-start">
+                    <div class="d-inline-flex flex-wrap gap-3 justify-content-lg-end">
+                        <div class="bg-white bg-opacity-10 rounded-3 p-3 text-start border border-white border-opacity-10" style="min-width: 140px;">
+                            <div class="text-white-50 small text-uppercase fw-semibold" style="font-size: 0.7rem;">Active Workforce</div>
+                            <div class="fs-4 fw-bold text-white mt-1"><?= (int)$kpi['active_count'] ?> <span class="fs-6 fw-normal text-white-50">/ <?= (int)$kpi['total'] ?></span></div>
+                        </div>
+                        <div class="bg-white bg-opacity-10 rounded-3 p-3 text-start border border-white border-opacity-10" style="min-width: 150px;">
+                            <div class="text-white-50 small text-uppercase fw-semibold" style="font-size: 0.7rem;">Monthly Payroll</div>
+                            <div class="fs-4 fw-bold text-success mt-1">&#8377;<?= number_format((float)$kpi['total_payroll'], 2) ?></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Body Section -->
-        <div class="card-body p-5">
-            <!-- Welcome Message -->
+
+        <!-- Portal Navigation Cards Grid -->
+        <div class="p-4 p-md-5 bg-light bg-opacity-50">
             <div class="text-center mb-5">
-                <h3 class="text-dark mb-3">Employee Data Management Portal</h3>
-                <p class="text-muted">Select an option below to manage employee information</p>
+                <h4 class="fw-bold text-dark mb-1">Select a Functional Module</h4>
+                <p class="text-muted small mb-0">Navigate to specialized dashboards to view or update workforce records</p>
             </div>
-            
-            <!-- Navigation Cards Grid -->
-            <div class="row g-4">
-                <!-- Employee General Info Card -->
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
-                        <div class="card-body text-center p-4">
-                            <div class="icon-wrapper bg-info bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                                <i class="fas fa-id-card fa-3x text-info"></i>
+
+            <div class="row g-4 justify-content-center">
+                <!-- 1. General Information Card -->
+                <div class="col-lg-4 col-md-6 col-12">
+                    <div class="nav-card card-general p-4 text-center">
+                        <div>
+                            <div class="icon-wrapper-hub" style="background: rgba(56, 189, 248, 0.12); color: #0284c7;">
+                                <i class="fas fa-id-card"></i>
                             </div>
-                            <h4 class="card-title mb-3">General Information</h4>
-                            <p class="card-text text-muted mb-4">
-                                View and manage personal details, contact information, and basic employee data
+                            <h4 class="fw-bold text-dark mb-2">General Information</h4>
+                            <p class="text-muted small mb-3">
+                                Personal records, contact directories, identity documentation, and addresses.
                             </p>
-                            <a href="employee_general_info.php" class="btn btn-info px-4 py-2 rounded-pill">
-                                <i class="fas fa-external-link-alt me-2"></i>Access Module
+                            <ul class="feature-list">
+                                <li><i class="fas fa-check text-info"></i> Full Personal Profiles & Age Computation</li>
+                                <li><i class="fas fa-check text-info"></i> Aadhar Documentation & Identity Verification</li>
+                                <li><i class="fas fa-check text-info"></i> Contact Directory & Address Records</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <a href="employee_general_info.php" class="btn btn-info text-white w-100 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <span>Access Directory</span>
+                                <i class="fas fa-arrow-right fs-7"></i>
                             </a>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Employee Official Info Card -->
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
-                        <div class="card-body text-center p-4">
-                            <div class="icon-wrapper bg-success bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                                <i class="fas fa-briefcase fa-3x text-success"></i>
+
+                <!-- 2. Official Information Card -->
+                <div class="col-lg-4 col-md-6 col-12">
+                    <div class="nav-card card-official p-4 text-center">
+                        <div>
+                            <div class="icon-wrapper-hub" style="background: rgba(74, 222, 128, 0.12); color: #16a34a;">
+                                <i class="fas fa-briefcase"></i>
                             </div>
-                            <h4 class="card-title mb-3">Official Information</h4>
-                            <p class="card-text text-muted mb-4">
-                                Manage work details, designation, reporting structure, and employment information
+                            <h4 class="fw-bold text-dark mb-2">Official Information</h4>
+                            <p class="text-muted small mb-3">
+                                Employment agreements, banking parameters, PAN records, and statutory compliance.
                             </p>
-                            <a href="employee_official_info.php" class="btn btn-success px-4 py-2 rounded-pill">
-                                <i class="fas fa-external-link-alt me-2"></i>Access Module
+                            <ul class="feature-list">
+                                <li><i class="fas fa-check text-success"></i> Employment Dates & Work Shifts</li>
+                                <li><i class="fas fa-check text-success"></i> Bank Accounts, IFSC & PAN Compliance</li>
+                                <li><i class="fas fa-check text-success"></i> UAN Numbers & TDS Withholdings</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <a href="employee_official_info.php" class="btn btn-success text-white w-100 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <span>Access Official</span>
+                                <i class="fas fa-arrow-right fs-7"></i>
                             </a>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Edit Salary Card -->
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm hover-shadow transition-all">
-                        <div class="card-body text-center p-4">
-                            <div class="icon-wrapper bg-warning bg-opacity-10 rounded-circle p-4 d-inline-flex mb-3">
-                                <i class="fas fa-money-bill-wave fa-3x text-warning"></i>
+
+                <!-- 3. Compensation & Hierarchy Card -->
+                <div class="col-lg-4 col-md-6 col-12">
+                    <div class="nav-card card-salary p-4 text-center">
+                        <div>
+                            <div class="icon-wrapper-hub" style="background: rgba(251, 191, 36, 0.15); color: #d97706;">
+                                <i class="fas fa-users-gear"></i>
                             </div>
-                            <h4 class="card-title mb-3">Edit Employee</h4>
-                            <p class="card-text text-muted mb-4">
-                                Update and manage employee salary details, allowances, and compensation structure
+                            <h4 class="fw-bold text-dark mb-2">Employee & Salary Master</h4>
+                            <p class="text-muted small mb-3">
+                                Manage organizational hierarchy, role assignments, compensation, and shifts.
                             </p>
-                            <a href="employee_master-old.php" class="btn btn-warning px-4 py-2 rounded-pill">
-                                <i class="fas fa-external-link-alt me-2"></i>Access Module
+                            <ul class="feature-list">
+                                <li><i class="fas fa-check text-warning"></i> Team, Designation & Role Assignments</li>
+                                <li><i class="fas fa-check text-warning"></i> Reporting Lines & Operational Shifts</li>
+                                <li><i class="fas fa-check text-warning"></i> In-Page Modal Updates & CSV Export</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <a href="employee_master-old.php" class="btn btn-warning text-dark w-100 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <span>Manage Directory</span>
+                                <i class="fas fa-arrow-right fs-7"></i>
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Quick Stats Section -->
-            <!--div class="row mt-5 pt-4">
+
+            <!-- Bottom Quick Info -->
+            <div class="row mt-5">
                 <div class="col-12">
-                    <div class="card border-0 bg-light">
-                        <div class="card-body p-4">
-                            <h5 class="mb-3"><i class="fas fa-chart-line me-2 text-primary"></i>Quick Actions</h5>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="#" class="btn btn-outline-primary rounded-pill px-4">
-                                    <i class="fas fa-search me-2"></i>Search Employee
-                                </a>
-                                <a href="#" class="btn btn-outline-secondary rounded-pill px-4">
-                                    <i class="fas fa-file-export me-2"></i>Export Data
-                                </a>
-                                <a href="#" class="btn btn-outline-info rounded-pill px-4">
-                                    <i class="fas fa-chart-bar me-2"></i>View Reports
-                                </a>
-                                <a href="#" class="btn btn-outline-success rounded-pill px-4">
-                                    <i class="fas fa-user-plus me-2"></i>Add New Employee
-                                </a>
+                    <div class="p-3 rounded-3 bg-white border d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-light p-2 text-primary">
+                                <i class="fas fa-shield-halved fs-5"></i>
                             </div>
+                            <div>
+                                <h6 class="mb-0 fw-semibold text-dark">Data Security & Compliance</h6>
+                                <p class="text-muted small mb-0">All employee modifications are tracked with strict authorization controls.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="employee_master-old.php?export=true" class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-pill fw-medium">
+                                <i class="fas fa-download me-1"></i> Export Master CSV
+                            </a>
                         </div>
                     </div>
                 </div>
-            </div-->
-        </div>
-        
-        <!-- Footer Section -->
-        <!--div class="card-footer bg-light py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">
-                    <i class="fas fa-info-circle me-1"></i> Last updated: <?php echo date('F j, Y'); ?>
-                </small>
-                <small class="text-muted">
-                    <i class="fas fa-database me-1"></i> Employee Management System v2.0
-                </small>
             </div>
-        </div-->
+
+        </div>
     </div>
 </div>
-
-<!-- Custom CSS for hover effects -->
-<style>
-.hover-shadow {
-    transition: all 0.3s ease;
-}
-.hover-shadow:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
-}
-.icon-wrapper {
-    transition: all 0.3s ease;
-}
-.hover-shadow:hover .icon-wrapper {
-    transform: scale(1.1);
-}
-.bg-gradient-primary {
-    /* background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); */
-    background-color: #707981 !important;
-}
-.rounded-4 {
-    border-radius: 20px !important;
-}
-.rounded-pill {
-    border-radius: 50rem !important;
-}
-</style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

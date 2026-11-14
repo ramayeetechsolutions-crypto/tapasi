@@ -548,6 +548,31 @@ if ($row = $result->fetch_assoc()) {
     </style>
     <!-- Tapasi Global Typography & Font Stylesheet -->
     <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
+    <!-- Tapasi Global Pop Confirm & Deletion Modal System -->
+    <script src="../pop_confirm.js?v=<?= file_exists(__DIR__ . '/../pop_confirm.js') ? filemtime(__DIR__ . '/../pop_confirm.js') : 1 ?>" defer></script>
+    <script src="../erp_toast.js?v=<?= file_exists(__DIR__ . '/../erp_toast.js') ? filemtime(__DIR__ . '/../erp_toast.js') : 1 ?>" defer></script>
+<?php
+// Global Flash Message Toast Interceptor
+$__erpToast = null;
+if (!empty($_SESSION['toast'])) {
+    $__erpToast = $_SESSION['toast'];
+    unset($_SESSION['toast']);
+} elseif (!empty($_SESSION['message'])) {
+    $__erpToast = ['message' => $_SESSION['message'], 'type' => 'info'];
+    unset($_SESSION['message']);
+} elseif (!empty($_SESSION['success'])) {
+    $__erpToast = ['message' => $_SESSION['success'], 'type' => 'success'];
+    unset($_SESSION['success']);
+} elseif (!empty($_SESSION['error'])) {
+    $__erpToast = ['message' => $_SESSION['error'], 'type' => 'danger'];
+    unset($_SESSION['error']);
+} elseif (!empty($_SESSION['msg'])) {
+    $__erpToast = ['message' => $_SESSION['msg'], 'type' => $_SESSION['msg_type'] ?? 'info'];
+    unset($_SESSION['msg'], $_SESSION['msg_type']);
+}
+if ($__erpToast): ?>
+<script>window.__ERP_FLASH_TOAST = <?= json_encode($__erpToast, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;</script>
+<?php endif; ?>
 </head>
 <body>
     <header>
@@ -561,7 +586,7 @@ if ($row = $result->fetch_assoc()) {
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
                 <ul class="nav-menu">
-                    <li><a href="dashboard_tl.php" class="<?php echo ($currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="dashboard_tl.php" class="<?php echo ($currentPage == 'dashboard_tl.php' || $currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
 
                     <li>
                         <a href="#"><i class="fas fa-sitemap"></i> Master</a>
@@ -842,6 +867,34 @@ if ($row = $result->fetch_assoc()) {
                     mainNav.classList.remove('active');
                 }
             });
+
+            // Dynamic active navbar link highlighter
+            try {
+                const currentPath = window.location.pathname;
+                const currentFile = currentPath.substring(currentPath.lastIndexOf('/') + 1).split('?')[0].split('#')[0] || 'dashboard_tl.php';
+                
+                document.querySelectorAll('.nav-menu a[href]').forEach(function(link) {
+                    const href = link.getAttribute('href');
+                    if (!href || href === '#' || href.startsWith('javascript:')) return;
+                    
+                    const linkFile = href.substring(href.lastIndexOf('/') + 1).split('?')[0].split('#')[0];
+                    if (linkFile && linkFile === currentFile) {
+                        link.classList.add('active');
+                        
+                        const parentDropdown = link.closest('.nav-dropdown');
+                        if (parentDropdown) {
+                            const parentLi = parentDropdown.closest('li');
+                            if (parentLi) {
+                                parentLi.classList.add('active');
+                                const topLink = parentLi.querySelector(':scope > a');
+                                if (topLink) topLink.classList.add('active');
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.warn('Navbar highlight:', err);
+            }
         });
     </script>
 </body>

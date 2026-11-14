@@ -338,15 +338,19 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif; }
         .main-content { padding: 20px; margin: 0 auto; }
-        .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); margin-bottom: 20px; }
-        .table th { background-color: #5e6b77 !important;  color: #ffffff !important; position: sticky; top: 0; z-index: 10; }
+        .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); margin-bottom: 20px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .table { font-variant-numeric: tabular-nums; }
+        .table tbody tr { transition: background-color 0.15s ease; }
+        .table tbody tr:hover { background-color: rgba(52, 152, 219, 0.04) !important; }
+        .table th { background-color: #5e6b77 !important; color: #ffffff !important; position: sticky; top: 0; z-index: 10; font-size: 0.82rem; }
         .employee-name { font-weight: 600; color: #2c3e50; }
         .total-cell { background-color: #e3f2fd; }
         .daily-total { background-color: #f1f8e9; }
         .sticky-col { position: sticky; left: 0; background-color: white; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-        .summary-card { color: white; border-radius: 10px; }
+        .summary-card { color: white; border-radius: 10px; transition: transform 0.2s ease; }
+        .summary-card:hover { transform: translateY(-3px); }
         .stat-number { font-size: 2rem; font-weight: bold; }
         .filter-box { background-color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
         .table-container { width: 100%; } 

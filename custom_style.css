@@ -2,26 +2,116 @@
  * =========================================================================
  * TAPASI ERP - GLOBAL FONT & TYPOGRAPHY CONFIGURATION
  * =========================================================================
- * To change fonts or sizes across ALL pages in the application,
- * simply change the numbers / values below in this file.
+ * Enhanced typography, animations, and table data arrangement.
+ * Colors remain 100% true to existing brand scheme.
  * =========================================================================
  */
 
 :root {
     /* 1. Global Font Family (Applied to all pages) */
-    --erp-font-family: Arial, Helvetica, sans-serif;
+    --erp-font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 
     /* 2. Headings (Page titles, card headers, h1-h6) */
     --erp-heading-font-size: 16px;
 
-    /* 3. Table Column Headers (<th> and thead) - matched to 0.85rem across all tables */
-    --erp-table-header-font-size: 0.85rem;
+    /* 3. Table Column Headers (<th> and thead) */
+    --erp-table-header-font-size: 0.82rem;
 
     /* 4. Table Body Text (<td> cells, rates, dates, table text) */
-    --erp-table-text-size: 10px;
+    --erp-table-text-size: 12.5px;
 
     /* 5. General Controls (Inputs, selects, buttons, badges) */
-    --erp-general-text-size: 11px;
+    --erp-general-text-size: 12px;
+}
+
+/* =========================================================================
+   ANIMATIONS & MICRO-INTERACTIONS (UI Enhancement)
+   ========================================================================= */
+@keyframes erpFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes erpSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth Entrance for Cards, Tables & Panels */
+.card,
+.stat-card,
+.table-responsive,
+.filter-box,
+.table-container {
+    animation: erpFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Table Row Hover & Interactive Transitions */
+table tbody tr,
+.table tbody tr {
+    transition: background-color 0.18s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+table.table-hover tbody tr:hover,
+.table-hover tbody tr:hover {
+    background-color: rgba(52, 152, 219, 0.05) !important;
+}
+
+/* Buttons Hover & Click Micro-Interactions */
+.btn,
+button:not(.navbar-toggler) {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:hover,
+button:not(.navbar-toggler):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.btn:active,
+button:not(.navbar-toggler):active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Form Controls Focus Transition */
+.form-control,
+.form-select {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.18);
+}
+
+/* Stat Cards Elevation on Hover */
+.stat-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+/* Navigation Links Smooth Hover */
+.nav-menu a,
+.nav-dropdown a {
+    transition: all 0.2s ease;
 }
 
 /* =========================================================================
@@ -96,6 +186,25 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
 .ap-header *,
 .form-card-header,
 .form-card-header *,
+.card-header-ash,
+.card-header-ash h1,
+.card-header-ash h2,
+.card-header-ash h3,
+.card-header-ash h4,
+.card-header-ash h5,
+.card-header-ash h6,
+.card-header-ash .card-title,
+.card-header-ash .header-title,
+.card-header-ash span:not(.badge):not(.text-dark),
+.card-header-ash p:not(.badge),
+.modal-header-ash,
+.modal-header-ash h1,
+.modal-header-ash h2,
+.modal-header-ash h3,
+.modal-header-ash h4,
+.modal-header-ash h5,
+.modal-header-ash h6,
+.modal-header-ash .modal-title,
 .modal-header.text-white,
 .modal-header.text-white *,
 .modal-header[style*="background"],
@@ -104,7 +213,19 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
 .modal-header.bg-dark *,
 .modal-header.bg-secondary,
 .modal-header.bg-secondary *,
-/* Grey Page Header Banners across all dashboards */
+/* Grey & Hero Page Header Banners across all dashboards */
+.dashboard-hero-banner,
+.dashboard-hero-banner *,
+.dashboard-hero-banner h1,
+.dashboard-hero-banner h2,
+.dashboard-hero-banner h3,
+.dashboard-hero-banner .hero-title,
+.dashboard-hero-banner .hero-subtitle,
+.dashboard-hero-banner .hero-subtitle *,
+.dashboard-hero-banner i,
+.hero-title,
+.hero-title *,
+.hero-title i,
 .page-title-container,
 .page-title-container *,
 .page-title-container h1,
@@ -137,10 +258,20 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     color: #ffffff !important;
 }
 
+.hero-title,
+.dashboard-hero-banner h1,
+.dashboard-hero-banner .hero-title,
+.dashboard-hero-banner h1 i,
+.dashboard-hero-banner .hero-title i {
+    font-size: 1.65rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
 /* =========================================================================
    2. TABLE COLUMN HEADERS (<th>, <thead>)
    Table headers in all pages (OT approvals, reports, masters, grey/dark tables)
-   Must be BOLD, WHITE (#ffffff), UPPERCASE, and 0.85rem size
+   Must be BOLD, WHITE (#ffffff), UPPERCASE, and 0.82rem size
    ========================================================================= */
 table th,
 .table th,
@@ -162,6 +293,8 @@ table.table-dark th,
 thead.table-grey th,
 table.table-grey th,
 .table-grey th,
+.table-targets thead th,
+.table-targets th,
 #jobsTable thead.table-grey th {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-table-header-font-size) !important;
@@ -169,8 +302,9 @@ table.table-grey th,
     color: #ffffff !important;
     background-color: #707981 !important;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.03em;
     vertical-align: middle;
+    padding: 9px 10px !important;
 }
 
 /* Table-dark headers keep their darker background but match size and font */
@@ -187,8 +321,14 @@ th.select-checkbox,
 }
 
 /* =========================================================================
-   3. TABLE BODY CELLS (<td>, <tbody>)
+   3. TABLE BODY CELLS (<td>, <tbody>) & DATA ARRANGEMENT
    ========================================================================= */
+table,
+.table {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
 table td,
 .table td,
 .table tbody td,
@@ -199,6 +339,9 @@ tbody tr td,
 td {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-table-text-size) !important;
+    padding: 8px 10px !important;
+    vertical-align: middle !important;
+    line-height: 1.45;
 }
 
 /* Table rate/data inputs and selects */
@@ -207,6 +350,17 @@ table td select,
 .table td input,
 .table td select,
 .table td span {
+    font-size: var(--erp-table-text-size) !important;
+}
+
+/* Table compact controls */
+table td input.form-control,
+table td select.form-select,
+.table td input.form-control,
+.table td select.form-select {
+    height: 30px;
+    padding: 3px 8px;
+    border-radius: 4px;
     font-size: var(--erp-table-text-size) !important;
 }
 
@@ -266,8 +420,657 @@ table td select,
     font-family: "Font Awesome 6 Free", "FontAwesome", "bootstrap-icons" !important;
 }
 
-/* Preserve badge text readability inside card headers */
+/* =========================================================================
+   PRESERVE BADGE TEXT READABILITY INSIDE CARD HEADERS & BANNERS
+   ========================================================================= */
 .card-header .badge.bg-light,
-.card-header .badge.bg-light * {
-    color: #212529 !important;
+.card-header .badge.bg-light *,
+.card-header .badge.bg-white,
+.card-header .badge.bg-white *,
+.card-header .badge.text-dark,
+.card-header .badge.text-dark *,
+.card-header .badge.text-secondary,
+.card-header .badge.text-secondary *,
+.card-header-ash .badge.bg-light,
+.card-header-ash .badge.bg-light *,
+.card-header-ash .badge.bg-white,
+.card-header-ash .badge.bg-white *,
+.card-header-ash .badge.text-dark,
+.card-header-ash .badge.text-dark *,
+.card-header-ash .badge.text-secondary,
+.card-header-ash .badge.text-secondary *,
+.card-header-ash .target-count-pill,
+.card-header-ash .target-count-pill *,
+.target-count-pill,
+.target-count-pill * {
+    color: #1e293b !important;
 }
+
+.target-count-pill,
+.card-header-ash .target-count-pill,
+.card-header .target-count-pill {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    padding: 5px 14px !important;
+    border-radius: 50rem !important;
+    border: 1px solid rgba(226, 232, 240, 0.95) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.target-count-pill i,
+.card-header-ash .target-count-pill i {
+    color: #3498db !important;
+}
+
+/* =========================================================================
+   WEEK & DATE RANGE READABILITY (Prevents awkward wrapping of date ranges)
+   ========================================================================= */
+.week-date-range {
+    font-size: 0.76rem !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    color: #475569 !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+}
+
+.week-date-range i {
+    color: #3498db !important;
+    font-size: 0.78rem !important;
+    flex-shrink: 0 !important;
+}
+
+/* =========================================================================
+   7. DASHBOARD ERP STAT CARDS & METRIC BADGES (Senior Developer Style)
+   ========================================================================= */
+.stat-pill-badge {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    padding: 2px 8px !important;
+    border-radius: 20px !important;
+    line-height: 1.2 !important;
+    display: inline-block !important;
+    letter-spacing: 0.2px !important;
+}
+
+.stat-top-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.kpi-micro-progress {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+.kpi-micro-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease-in-out;
+}
+
+/* =========================================================================
+   8. NAVBAR ACTIVE LINK & DROPDOWN HIGHLIGHTING (Enterprise ERP Grade)
+   ========================================================================= */
+.nav-menu > li > a.active,
+.nav-menu > li.active > a,
+.main-nav .nav-menu > li > a.active {
+    background-color: #4b545c !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border-bottom: 3.5px solid #3498db !important;
+    box-shadow: inset 0 -3px 0 0 #3498db, 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+    position: relative;
+}
+
+.nav-menu > li > a.active i,
+.nav-menu > li.active > a i,
+.main-nav .nav-menu > li > a.active i {
+    color: #38bdf8 !important;
+}
+
+/* Hover on active item keeps prominent indicator */
+.nav-menu > li > a.active:hover,
+.nav-menu > li.active > a:hover {
+    background-color: #424a52 !important;
+    border-bottom-color: #3498db !important;
+}
+
+/* Dropdown Menu Active Sub-item Highlighting */
+.nav-dropdown li a.active,
+.nav-dropdown a.active {
+    background-color: #eef7ff !important;
+    color: #0984e3 !important;
+    font-weight: 700 !important;
+    border-left: 4px solid #0984e3 !important;
+    padding-left: 18px !important;
+}
+
+.nav-dropdown li a.active i,
+.nav-dropdown a.active i {
+    color: #0984e3 !important;
+}
+
+/* =========================================================================
+   9. TABLE ACTION BUTTONS (Always in Same Horizontal Line)
+   ========================================================================= */
+.table td .action-buttons-group,
+.table td .actions-wrapper,
+.action-buttons-group,
+.actions-wrapper {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+.table td.actions-cell,
+.table th.actions-cell,
+.actions-cell,
+.table td.text-end:has(.action-btn),
+.table td:has(.action-btn) {
+    white-space: nowrap !important;
+    width: 110px !important;
+    min-width: 110px !important;
+}
+
+.table td:has(.action-btn) form,
+.table td.actions-cell form,
+.action-buttons-group form {
+    display: inline-flex !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.action-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    vertical-align: middle !important;
+}
+.action-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* =========================================================================
+   10. ERP FLOATING TOAST NOTIFICATIONS (Senior Developer UI)
+   ========================================================================= */
+.erp-toast-wrapper {
+    position: fixed;
+    top: 85px;
+    right: 24px;
+    z-index: 999999;
+    max-width: 420px;
+    width: calc(100vw - 48px);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.erp-toast-card:hover .erp-toast-progress-fill {
+    animation-play-state: paused !important;
+}
+
+.erp-toast-card {
+    pointer-events: auto;
+    position: relative;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px 16px 16px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.14), 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    animation: erpToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.erp-toast-card.erp-toast-hiding {
+    animation: erpToastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+}
+
+@keyframes erpToastSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(80px) scale(0.92);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes erpToastSlideOut {
+    0% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(80px) scale(0.92);
+    }
+}
+
+/* Toast Color Themes */
+.erp-toast-success {
+    border-left: 4px solid #10b981 !important;
+}
+.erp-toast-success .erp-toast-icon-box {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+.erp-toast-success .erp-toast-badge {
+    background: rgba(16, 185, 129, 0.15);
+    color: #065f46;
+}
+.erp-toast-success .erp-toast-progress-fill {
+    background: #10b981;
+}
+
+.erp-toast-danger {
+    border-left: 4px solid #ef4444 !important;
+}
+.erp-toast-danger .erp-toast-icon-box {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+.erp-toast-danger .erp-toast-badge {
+    background: rgba(239, 68, 68, 0.15);
+    color: #991b1b;
+}
+.erp-toast-danger .erp-toast-progress-fill {
+    background: #ef4444;
+}
+
+.erp-toast-warning {
+    border-left: 4px solid #f59e0b !important;
+}
+.erp-toast-warning .erp-toast-icon-box {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+}
+.erp-toast-warning .erp-toast-badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #92400e;
+}
+.erp-toast-warning .erp-toast-progress-fill {
+    background: #f59e0b;
+}
+
+.erp-toast-info {
+    border-left: 4px solid #3b82f6 !important;
+}
+.erp-toast-info .erp-toast-icon-box {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+.erp-toast-info .erp-toast-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: #1e40af;
+}
+.erp-toast-info .erp-toast-progress-fill {
+    background: #3b82f6;
+}
+
+/* Icon Box */
+.erp-toast-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* Content */
+.erp-toast-content {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.erp-toast-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.erp-toast-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.erp-toast-title {
+    font-size: 0.88rem;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.erp-toast-time {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-left: auto;
+}
+
+.erp-toast-body {
+    font-size: 0.82rem;
+    color: #475569;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+/* Close Button */
+.erp-toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.85rem;
+    margin-left: 4px;
+    line-height: 1;
+}
+
+.erp-toast-close:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+/* Progress Timer Bar */
+.erp-toast-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+
+.erp-toast-progress-fill {
+    height: 100%;
+    width: 100%;
+    animation: erpToastProgress 4.5s linear forwards;
+}
+
+@keyframes erpToastProgress {
+    0% {
+        width: 100%;
+    }
+    100% {
+        width: 0%;
+    }
+}
+
+/* =========================================================================
+   GLOBAL ERP POP CONFIRM & DELETION MODAL SYSTEM (SENIOR DEV UX)
+   ========================================================================= */
+.erp-popconfirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 10600; /* Above Bootstrap modal backdrop */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.erp-popconfirm-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.erp-popconfirm-card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 440px;
+    border-radius: 18px;
+    box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.85);
+    overflow: hidden;
+    transform: scale(0.92) translateY(10px);
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    opacity: 0;
+    position: relative;
+    font-family: var(--erp-font-family, 'Segoe UI', system-ui, sans-serif);
+}
+
+.erp-popconfirm-overlay.show .erp-popconfirm-card {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Header */
+.erp-popconfirm-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 16px 0 16px;
+}
+
+.erp-popconfirm-close-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.15s ease;
+}
+
+.erp-popconfirm-close-btn:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+/* Body */
+.erp-popconfirm-body {
+    padding: 4px 28px 20px 28px;
+    text-align: center;
+}
+
+/* Hero Pulsing Icon */
+.erp-popconfirm-icon-box {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    margin: 0 auto 16px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    position: relative;
+    transition: transform 0.25s ease;
+}
+
+.erp-popconfirm-icon-box.danger {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 4px solid #fee2e2;
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.08);
+}
+
+.erp-popconfirm-icon-box.warning {
+    background: #fffbeb;
+    color: #d97706;
+    border: 4px solid #fef3c7;
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.08);
+}
+
+.erp-popconfirm-icon-box.info {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 4px solid #dbeafe;
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.08);
+}
+
+.erp-popconfirm-icon-box.success {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 4px solid #dcfce7;
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.08);
+}
+
+.erp-popconfirm-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+    line-height: 1.35;
+}
+
+.erp-popconfirm-desc {
+    font-size: 0.88rem;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 6px;
+    word-break: break-word;
+}
+
+.erp-popconfirm-target {
+    display: inline-block;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 8px;
+    margin: 4px 0;
+    font-size: 0.88rem;
+    word-break: break-all;
+}
+
+.erp-popconfirm-note {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 8px;
+}
+
+/* Footer Actions */
+.erp-popconfirm-footer {
+    display: flex;
+    gap: 12px;
+    padding: 0 28px 24px 28px;
+    justify-content: center;
+}
+
+.erp-popconfirm-btn {
+    flex: 1;
+    padding: 10px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.18s ease;
+}
+
+.erp-popconfirm-btn-cancel {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.erp-popconfirm-btn-cancel:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.erp-popconfirm-btn-confirm.danger {
+    background: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+}
+
+.erp-popconfirm-btn-confirm.danger:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 38, 38, 0.45);
+}
+
+.erp-popconfirm-btn-confirm.warning {
+    background: #f59e0b;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+
+.erp-popconfirm-btn-confirm.warning:hover {
+    background: #d97706;
+}
+
+.erp-popconfirm-btn-confirm.info {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.erp-popconfirm-btn-confirm.info:hover {
+    background: #2563eb;
+}
+
+.erp-popconfirm-btn-confirm.success {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.erp-popconfirm-btn-confirm.success:hover {
+    background: #059669;
+}
+
+
+
+

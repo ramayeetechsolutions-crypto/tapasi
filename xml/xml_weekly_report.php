@@ -31,6 +31,7 @@ function calculateExperience($joining_date) {
 // Get current team leader's team_id
 $team_leader_team = null;
 $team_leader_name = ''; // Added to store TL name
+$team_leader_team_name = ''; // Added to store Team name
 if ($current_username) {
     $stmt = $mysqli->prepare("SELECT e.team_id, e.employee_name, t.team_name FROM employee_master e, team_master t WHERE e.employee_username = ? AND e.team_id=t.team_id AND e.status = 'Active'");
     $stmt->bind_param("s", $current_username);
@@ -332,7 +333,7 @@ foreach ($employees_res as $emp) {
     $username = $emp['employee_username'];
     
     // Convert comma-separated IDs (e.g., 5,45,46) to actual Process Names
-    $raw_processes = explode(',', $emp['process']);
+    $raw_processes = explode(',', (string)($emp['process'] ?? ''));
     $mapped_names = [];
     foreach($raw_processes as $pid) {
         $pid = trim($pid);
@@ -439,38 +440,192 @@ if ($team_stats['avg_production'] > 0) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .main-content { padding: 20px; max-width: 1600px; margin: 0 auto; }
-        .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); margin-bottom: 20px; }
-        .stat-card { border-radius: 10px; padding: 20px; text-align: center; color: white; }
-        .stat-card.employees { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .stat-card.target { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .stat-card.achieved { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .stat-card.errors { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .stat-card h3 { font-size: 2.5rem; margin: 10px 0; }
-        /* ADDED: Scrollable container for the table */
-        .table-responsive {
-            max-height: 65vh; /* Sets height so table scrolls internally */
-            overflow-y: auto;
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif; 
+        }
+        .main-content { 
+            padding: 20px; 
+            max-width: 1650px; 
+            margin: 75px auto 0 auto; 
         }
 
-        .table thead th {
-            background-color: #707981 !important;
-            font-weight: bold;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.025em;
-            color: white !important;
-            padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
-            white-space: nowrap;
-            /* ADDED: Sticky properties to freeze the header */
+        /* Smooth Entrance Animations */
+        @keyframes erpFadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes statPop {
+            0% {
+                opacity: 0;
+                transform: translateY(14px) scale(0.98);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .card { 
+            box-shadow: 0 0.125rem 0.35rem rgba(0, 0, 0, 0.06); 
+            margin-bottom: 20px; 
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            animation: erpFadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+            overflow: hidden;
+        }
+
+        /* Stat Cards with Hover Lift Animation (Colors Unchanged) */
+        .stat-card { 
+            border-radius: 10px; 
+            padding: 20px; 
+            text-align: center; 
+            color: white; 
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            animation: statPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .stat-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14); 
+        }
+        .stat-card.employees { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); animation-delay: 0.04s; }
+        .stat-card.target { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); animation-delay: 0.08s; }
+        .stat-card.achieved { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); animation-delay: 0.12s; }
+        .stat-card.errors { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); animation-delay: 0.16s; }
+        .stat-card h3 { font-size: 2.2rem; font-weight: 700; margin: 8px 0; letter-spacing: -0.02em; }
+        .stat-card p { font-size: 13.5px; opacity: 0.92; margin-bottom: 0; font-weight: 500; }
+
+        /* Scrollable Container with Smooth Scrollbar */
+        .table-responsive {
+            max-height: 65vh;
+            overflow-y: auto;
+            overflow-x: auto;
+            border-radius: 8px;
+            scroll-behavior: smooth;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Enhanced Table Architecture */
+        .report-table {
+            border-collapse: separate !important;
+            border-spacing: 0;
+            width: 100%;
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 0;
+        }
+
+        /* Sticky Headers for Row 1 and Row 2 */
+        .report-table thead tr:first-child th {
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 12;
+            background-color: #707981 !important;
+            color: #ffffff !important;
+            font-weight: 700;
+            font-size: 0.81rem;
+            text-transform: uppercase;
+            letter-spacing: 0.035em;
+            padding: 9px 8px;
+            border: 1px solid #5a6268 !important;
+            white-space: nowrap;
+            vertical-align: middle;
         }
+
+        .report-table thead tr:nth-child(2) th {
+            position: sticky;
+            top: 36px;
+            z-index: 11;
+            background-color: #5e676e !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            padding: 6px 8px;
+            border: 1px solid #50585f !important;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        /* Table Data Cells */
+        .report-table tbody td {
+            font-size: 12.5px;
+            padding: 8px 10px;
+            vertical-align: middle;
+            border-color: #e2e8f0;
+            line-height: 1.4;
+        }
+
+        /* Table Row Interactive Hover Animation */
+        .report-table tbody tr.data-row {
+            transition: background-color 0.16s ease, transform 0.12s ease;
+        }
+        .report-table tbody tr.data-row:hover {
+            background-color: rgba(52, 152, 219, 0.06) !important;
+        }
+
+        /* Sticky Team Summary Row */
+        .report-table tbody tr.summary-row {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            background-color: #e2e6ea !important;
+            font-weight: 700;
+            border-top: 2px solid #5a6268 !important;
+            box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.07);
+        }
+        .report-table tbody tr.summary-row td {
+            font-size: 12.5px;
+            padding: 10px 10px;
+            background-color: #e2e6ea !important;
+        }
+
+        /* Table Inline Inputs */
+        .table-input {
+            height: 28px;
+            font-size: 12px;
+            padding: 2px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .table-input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Controls & Micro-Interactions */
+        .btn-filter {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-filter:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(13, 110, 253, 0.25);
+        }
+        .chart-container { height: 380px; }
         .team-badge { font-size: 1.2em; padding: 10px 20px; }
-        .chart-container { height: 400px; }
         .download-btn { font-size: 1.1em; }
         .metric-badge { font-size: 0.85em; }
     </style>
@@ -495,7 +650,7 @@ if ($team_stats['avg_production'] > 0) {
                         <input type="number" name="year" class="form-control form-control-sm" value="<?= $year ?>" min="2020" max="2030" style="width: 100px;" placeholder="Year">
                     </div>
                     <div class="col-auto">
-                        <button type="submit" class="btn btn-primary btn-sm">
+                        <button type="submit" class="btn btn-primary btn-sm btn-filter">
                             <i class="fas fa-filter me-1"></i> Filter
                         </button>
                     </div>
@@ -556,81 +711,85 @@ if ($team_stats['avg_production'] > 0) {
             <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0"><i class="fas fa-table me-2"></i>Weekly Production Details</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
+                    <table class="table table-bordered table-hover report-table">
                         <thead>
                             <tr>
-                                <th>S.No</th>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Exp</th>
-                                <th>Process</th>
-                                <th>Target Pages</th>
-                                <th>Achieved Pages</th>
-                                <th>Production %</th>
-                                <th>Internal Error</th>
-                                <th>Error Points</th>
-                                <th>External Error</th>
-                                <th>Error Points</th>
-                                <th>NET Prod %</th>
-                                <th>Accuracy %</th>
-                                <th>Leave</th>
-                                <th>Remarks</th>
+                                <th rowspan="2" class="text-center align-middle" style="width: 45px;">S.No</th>
+                                <th rowspan="2" class="text-center align-middle" style="width: 85px;">ID</th>
+                                <th rowspan="2" class="text-start align-middle" style="min-width: 170px;">Name</th>
+                                <th rowspan="2" class="text-center align-middle" style="width: 85px;">Exp</th>
+                                <th rowspan="2" class="text-center align-middle" style="min-width: 130px;">Process</th>
+                                <th rowspan="2" class="text-end align-middle" style="min-width: 105px;">Target Pages</th>
+                                <th rowspan="2" class="text-end align-middle" style="min-width: 110px;">Achieved Pages</th>
+                                <th rowspan="2" class="text-end align-middle" style="min-width: 95px;">Production %</th>
+                                <th colspan="2" class="text-center align-middle">Internal Error</th>
+                                <th colspan="2" class="text-center align-middle">External Error</th>
+                                <th rowspan="2" class="text-end align-middle" style="min-width: 95px;">NET Prod %</th>
+                                <th rowspan="2" class="text-end align-middle" style="min-width: 95px;">Accuracy %</th>
+                                <th rowspan="2" class="text-center align-middle" style="width: 70px;">Leave</th>
+                                <th rowspan="2" class="text-start align-middle" style="min-width: 160px;">Remarks</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center align-middle" style="width: 65px;">Errors</th>
+                                <th class="text-center align-middle" style="width: 75px;">Points (×2)</th>
+                                <th class="text-center align-middle" style="width: 65px;">Errors</th>
+                                <th class="text-center align-middle" style="width: 75px;">Points (×4)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if(!empty($performance_data)): ?>
                                 <?php $counter = 1; ?>
                                 <?php foreach($performance_data as $emp): ?>
-                                <tr class="text-center align-middle">
-                                    <td class="fw-bold"><?= $counter++ ?></td>
-                                    <td><?= h($emp['employee_username']) ?></td>
+                                <tr class="data-row align-middle">
+                                    <td class="text-center fw-bold"><?= $counter++ ?></td>
+                                    <td class="text-center fw-semibold"><?= h($emp['employee_username']) ?></td>
                                     <td class="text-start text-nowrap"><?= h($emp['employee_name']) ?></td>
-                                    <td><?= h($emp['experience']) ?></td>
-                                    <td class="fw-bold"><?= h($emp['process_display_name'] ?? 'Unassigned') ?></td>
-                                    <td><?= number_format($emp['target_pages']) ?></td>
-                                    <td><?= number_format($emp['achieved_pages']) ?></td>
-                                    <td><?= number_format($emp['production_percentage'], 1) ?>%</td>
+                                    <td class="text-center text-nowrap"><?= h($emp['experience']) ?></td>
+                                    <td class="text-center fw-semibold"><?= h($emp['process_display_name'] ?? 'Unassigned') ?></td>
+                                    <td class="text-end"><?= number_format($emp['target_pages']) ?></td>
+                                    <td class="text-end fw-semibold"><?= number_format($emp['achieved_pages']) ?></td>
+                                    <td class="text-end fw-semibold"><?= number_format($emp['production_percentage'], 1) ?>%</td>
                                     
                                     <!-- Colors based on excel logic: yellow for int error, red for ext error -->
-                                    <td class="<?= $emp['internal_errors'] > 0 ? 'bg-warning text-dark fw-bold' : '' ?>"><?= $emp['internal_errors'] ?></td>
-                                    <td class="<?= $emp['internal_error_points'] > 0 ? 'bg-warning text-dark' : '' ?>"><?= $emp['internal_error_points'] ?></td>
+                                    <td class="text-center <?= $emp['internal_errors'] > 0 ? 'bg-warning text-dark fw-bold' : '' ?>"><?= $emp['internal_errors'] ?></td>
+                                    <td class="text-center <?= $emp['internal_error_points'] > 0 ? 'bg-warning text-dark' : '' ?>"><?= $emp['internal_error_points'] ?></td>
                                     
-                                    <td class="<?= $emp['external_errors'] > 0 ? 'bg-danger text-white fw-bold' : '' ?>"><?= $emp['external_errors'] ?></td>
-                                    <td class="<?= $emp['external_error_points'] > 0 ? 'bg-danger text-white' : '' ?>"><?= $emp['external_error_points'] ?></td>
+                                    <td class="text-center <?= $emp['external_errors'] > 0 ? 'bg-danger text-white fw-bold' : '' ?>"><?= $emp['external_errors'] ?></td>
+                                    <td class="text-center <?= $emp['external_error_points'] > 0 ? 'bg-danger text-white' : '' ?>"><?= $emp['external_error_points'] ?></td>
                                     
-                                    <td class="fw-bold"><?= number_format($emp['net_prod_percentage'], 1) ?></td>
-                                    <td><?= number_format($emp['accuracy_percentage'], 2) ?>%</td>
-                                    <td class="p-1">
-                                        <input type="text" class="form-control form-control-sm text-center" name="leave[<?= h($emp['employee_username']) ?>]" value="0" style="min-width: 60px;">
+                                    <td class="text-end fw-bold"><?= number_format($emp['net_prod_percentage'], 1) ?>%</td>
+                                    <td class="text-end fw-semibold"><?= number_format($emp['accuracy_percentage'], 2) ?>%</td>
+                                    <td class="p-1 text-center">
+                                        <input type="text" class="form-control form-control-sm text-center table-input" name="leave[<?= h($emp['employee_username']) ?>]" value="0" style="max-width: 65px; margin: 0 auto;">
                                     </td>
-                                    <td class="p-1">
-                                        <input type="text" class="form-control form-control-sm" name="remarks[<?= h($emp['employee_username']) ?>]" placeholder="Enter remarks..." style="min-width: 150px;">
+                                    <td class="p-1 text-start">
+                                        <input type="text" class="form-control form-control-sm table-input" name="remarks[<?= h($emp['employee_username']) ?>]" placeholder="Enter remarks..." style="min-width: 140px;">
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                                 
                                 <!-- Team Summary Row -->
-                                <tr class="table-secondary fw-bold text-center">
-                                    <td colspan="5" class="text-end">TEAM SUMMARY:</td>
-                                    <td><?= number_format($team_stats['total_target']) ?></td>
-                                    <td><?= number_format($team_stats['total_achieved']) ?></td>
-                                    <td><?= number_format($team_stats['avg_production'], 1) ?></td>
-                                    <td><?= $team_stats['total_internal_errors'] ?></td>
-                                    <td><?= $team_stats['total_internal_errors'] * 2 ?></td>
-                                    <td><?= $team_stats['total_external_errors'] ?></td>
-                                    <td><?= $team_stats['total_external_errors'] * 4 ?></td>
-                                    <td><?= number_format($team_stats['avg_net_prod'], 1) ?></td>
-                                    <td><?= number_format($team_stats['avg_accuracy'], 2) ?>%</td>
-                                    <td></td>
+                                <tr class="table-secondary fw-bold align-middle summary-row">
+                                    <td colspan="5" class="text-end pe-3">TEAM SUMMARY:</td>
+                                    <td class="text-end"><?= number_format($team_stats['total_target']) ?></td>
+                                    <td class="text-end"><?= number_format($team_stats['total_achieved']) ?></td>
+                                    <td class="text-end"><?= number_format($team_stats['avg_production'], 1) ?>%</td>
+                                    <td class="text-center"><?= $team_stats['total_internal_errors'] ?></td>
+                                    <td class="text-center"><?= $team_stats['total_internal_errors'] * 2 ?></td>
+                                    <td class="text-center"><?= $team_stats['total_external_errors'] ?></td>
+                                    <td class="text-center"><?= $team_stats['total_external_errors'] * 4 ?></td>
+                                    <td class="text-end"><?= number_format($team_stats['avg_net_prod'], 1) ?>%</td>
+                                    <td class="text-end"><?= number_format($team_stats['avg_accuracy'], 2) ?>%</td>
+                                    <td class="text-center"></td>
                                     <td></td>
                                 </tr>
                             <?php else: ?>
                                 <tr>
                                     <td colspan="16" class="text-center py-4">
                                         <div class="text-muted">
-                                            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                                             <i class="fas fa-clipboard-list fa-3x mb-3"></i>
                                             <h5>No production data available</h5>
                                             <p>No team members found or no data for Week <?= $week ?>, <?= $year ?></p>
                                         </div>

@@ -1,767 +1,675 @@
 <?php
-require 'db.php';
 if (session_status() === PHP_SESSION_NONE) { 
     session_start(); 
 }
 
-// Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+$db_paths = [__DIR__ . '/../db.php', __DIR__ . '/db.php', 'db.php'];
+$connected = false;
+foreach ($db_paths as $p) {
+    if (file_exists($p)) {
+        require_once $p;
+        $connected = true;
+        break;
+    }
+}
+if (!$connected) {
+    die("Database connection failed.");
 }
 
-function formatDate($d) {
-    if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
-    return date('d-m-Y', strtotime($d));
+// ---------- Helpers ----------
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
-function formatCurrency($amount) {
-    return '₹' . number_format($amount, 2);
+if (!function_exists('formatDate')) {
+    function formatDate($d) {
+        if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
+        return date('d M, Y', strtotime($d));
+    }
 }
 
-function redirect_with($params = []) {
-    $base = 'tds_master.php';
-    if (!empty($params)) $base .= '?' . http_build_query($params);
-    header("Location: $base");
-    exit;
+if (!function_exists('formatCurrency')) {
+    function formatCurrency($amount) {
+        return '₹' . number_format((float)$amount, 2);
+    }
 }
 
-// Handle POST actions
+if (!function_exists('redirect_with')) {
+    function redirect_with($params = []) {
+        $base = 'tds_master.php';
+        if (!empty($params)) $base .= '?' . http_build_query($params);
+        header("Location: $base");
+        exit;
+    }
+}
+
+// ---------- Handle POST actions ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-    
+
     if ($action === 'add' || $action === 'edit') {
-        $member_id = trim($_POST['member_id'] ?? '');
-        $full_name = trim($_POST['full_name'] ?? '');
-        $mobile = trim($_POST['mobile'] ?? '');
-        $category = $_POST['category'] ?? '';
-        $address = trim($_POST['address'] ?? '');
-        $email_id = trim($_POST['email_id'] ?? '');
-        $registration_date = $_POST['registration_date'] ?? '';
-        $salary = !empty($_POST['salary']) ? (float)$_POST['salary'] : 0;
-        $tds_per = !empty($_POST['tds_per']) ? (float)$_POST['tds_per'] : 0;
-        
-        // Basic validation
+        $member_id         = trim($_POST['member_id'] ?? '');
+        $full_name         = trim($_POST['full_name'] ?? '');
+        $mobile            = trim($_POST['mobile'] ?? '');
+        $category          = trim($_POST['category'] ?? '');
+        $address           = trim($_POST['address'] ?? '');
+        $email_id          = trim($_POST['email_id'] ?? '');
+        $registration_date = trim($_POST['registration_date'] ?? '');
+        $salary            = !empty($_POST['salary']) ? (float)$_POST['salary'] : 0.0;
+        $tds_per           = !empty($_POST['tds_per']) ? (float)$_POST['tds_per'] : 0.0;
+
         $errors = [];
         if (empty($member_id)) $errors[] = 'Member ID is required';
         if (empty($full_name)) $errors[] = 'Full Name is required';
         if (empty($mobile)) $errors[] = 'Mobile is required';
         if (empty($category)) $errors[] = 'Category is required';
         if (empty($address)) $errors[] = 'Address is required';
-        if (empty($email_id)) $errors[] = 'Email ID is required';
+        if (empty($email_id) || !filter_var($email_id, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid Email ID is required';
         if (empty($registration_date)) $errors[] = 'Registration Date is required';
-        
-        // Mobile validation
-        if (!empty($mobile) && !preg_match('/^[0-9]{10}$/', $mobile)) {
-            $errors[] = 'Mobile must be 10 digits';
-        }
-        
-        // Email validation
-        if (!empty($email_id) && !filter_var($email_id, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Invalid email format';
-        }
-        
-        // Salary validation
-        if ($salary < 0) {
-            $errors[] = 'Salary cannot be negative';
-        }
-        
-        // TDS Percentage validation
-        if ($tds_per < 0 || $tds_per > 100) {
-            $errors[] = 'TDS Percentage must be between 0 and 100';
-        }
-        
+        if ($salary < 0) $errors[] = 'Salary cannot be negative';
+        if ($tds_per < 0 || $tds_per > 100) $errors[] = 'TDS Percentage must be between 0 and 100';
+
         if (!empty($errors)) {
-            $_SESSION['form_data'] = [
-                'member_id' => $member_id,
-                'full_name' => $full_name,
-                'mobile' => $mobile,
-                'category' => $category,
-                'address' => $address,
-                'email_id' => $email_id,
-                'registration_date' => $registration_date,
-                'salary' => $salary,
-                'tds_per' => $tds_per
-            ];
             redirect_with(['msg' => implode(', ', $errors), 'type' => 'danger']);
         }
-        
+
         if ($action === 'add') {
-            // Check if member_id or email already exists
-            $check_stmt = $mysqli->prepare("SELECT id FROM tds_members WHERE member_id = ? OR email_id = ?");
-            if ($check_stmt) {
-                $check_stmt->bind_param("ss", $member_id, $email_id);
-                $check_stmt->execute();
-                $check_stmt->store_result();
-                
-                if ($check_stmt->num_rows > 0) {
-                    $check_stmt->close();
-                    $_SESSION['form_data'] = [
-                        'member_id' => $member_id,
-                        'full_name' => $full_name,
-                        'mobile' => $mobile,
-                        'category' => $category,
-                        'address' => $address,
-                        'email_id' => $email_id,
-                        'registration_date' => $registration_date,
-                        'salary' => $salary,
-                        'tds_per' => $tds_per
-                    ];
-                    redirect_with(['msg' => 'Member ID or Email already exists.', 'type' => 'danger']);
+            $chk = $mysqli->prepare("SELECT id FROM tds_members WHERE member_id = ? OR email_id = ?");
+            if ($chk) {
+                $chk->bind_param("ss", $member_id, $email_id);
+                $chk->execute();
+                $chk->store_result();
+                if ($chk->num_rows > 0) {
+                    $chk->close();
+                    redirect_with(['msg' => "Member ID '$member_id' or Email '$email_id' already exists.", 'type' => 'warning']);
                 }
-                $check_stmt->close();
+                $chk->close();
             }
-            
-            // Insert new member
-            $stmt = $mysqli->prepare("INSERT INTO tds_members (member_id, full_name, mobile, category, address, email_id, registration_date, salary, tds_per, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
+
+            $stmt = $mysqli->prepare("INSERT INTO tds_members (member_id, full_name, mobile, category, address, email_id, registration_date, salary, tds_per, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
             if ($stmt) {
                 $stmt->bind_param("sssssssdd", $member_id, $full_name, $mobile, $category, $address, $email_id, $registration_date, $salary, $tds_per);
-                
                 if ($stmt->execute()) {
-                    unset($_SESSION['form_data']);
                     redirect_with(['msg' => "Member '$full_name' added successfully", 'type' => 'success']);
                 } else {
                     redirect_with(['msg' => 'Error adding member: ' . $stmt->error, 'type' => 'danger']);
                 }
                 $stmt->close();
             } else {
-                redirect_with(['msg' => 'Database preparation error', 'type' => 'danger']);
+                redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
             }
         }
-        
+
         if ($action === 'edit') {
             $id = (int)($_POST['id'] ?? 0);
-            
             if ($id > 0) {
-                // Check if member_id or email already exists (excluding current one)
-                $check_stmt = $mysqli->prepare("SELECT id FROM tds_members WHERE (member_id = ? OR email_id = ?) AND id != ?");
-                if ($check_stmt) {
-                    $check_stmt->bind_param("ssi", $member_id, $email_id, $id);
-                    $check_stmt->execute();
-                    $check_stmt->store_result();
-                    
-                    if ($check_stmt->num_rows > 0) {
-                        $check_stmt->close();
-                        redirect_with(['msg' => 'Member ID or Email already exists.', 'type' => 'danger']);
+                $chk = $mysqli->prepare("SELECT id FROM tds_members WHERE (member_id = ? OR email_id = ?) AND id != ?");
+                if ($chk) {
+                    $chk->bind_param("ssi", $member_id, $email_id, $id);
+                    $chk->execute();
+                    $chk->store_result();
+                    if ($chk->num_rows > 0) {
+                        $chk->close();
+                        redirect_with(['msg' => 'Member ID or Email already registered to another member.', 'type' => 'warning']);
                     }
-                    $check_stmt->close();
+                    $chk->close();
                 }
-                
-                // Update member
-                $stmt = $mysqli->prepare("UPDATE tds_members SET member_id = ?, full_name = ?, mobile = ?, category = ?, address = ?, email_id = ?, registration_date = ?, salary = ?, tds_per = ? WHERE id = ?");
+
+                $stmt = $mysqli->prepare("UPDATE tds_members SET member_id=?, full_name=?, mobile=?, category=?, address=?, email_id=?, registration_date=?, salary=?, tds_per=? WHERE id=?");
                 if ($stmt) {
                     $stmt->bind_param("sssssssddi", $member_id, $full_name, $mobile, $category, $address, $email_id, $registration_date, $salary, $tds_per, $id);
-                    
                     if ($stmt->execute()) {
-                        redirect_with(['msg' => "Member updated successfully", 'type' => 'success']);
+                        redirect_with(['msg' => "Member '$full_name' updated successfully", 'type' => 'success']);
                     } else {
                         redirect_with(['msg' => 'Error updating member: ' . $stmt->error, 'type' => 'danger']);
                     }
                     $stmt->close();
                 } else {
-                    redirect_with(['msg' => 'Database preparation error', 'type' => 'danger']);
+                    redirect_with(['msg' => 'Database error: ' . $mysqli->error, 'type' => 'danger']);
                 }
             }
         }
     }
-    
+
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
-        $full_name = '';
-        
         if ($id > 0) {
-            // Get member name for message
-            $res = $mysqli->prepare("SELECT full_name FROM tds_members WHERE id = ?");
-            if ($res) {
-                $res->bind_param("i", $id);
-                $res->execute();
-                $res->bind_result($full_name);
-                $res->fetch();
-                $res->close();
-                
-                // Delete member
-                $del = $mysqli->prepare("DELETE FROM tds_members WHERE id = ?");
-                if ($del) {
-                    $del->bind_param("i", $id);
-                    $del->execute();
-                    $del->close();
-                    
-                    redirect_with(['msg' => "Member '$full_name' deleted", 'type' => 'warning']);
-                }
+            $name = '';
+            $q = $mysqli->prepare("SELECT full_name FROM tds_members WHERE id = ?");
+            if ($q) {
+                $q->bind_param("i", $id);
+                $q->execute();
+                $res = $q->get_result()->fetch_assoc();
+                $q->close();
+                if ($res) $name = $res['full_name'];
+            }
+
+            $del = $mysqli->prepare("DELETE FROM tds_members WHERE id = ?");
+            if ($del) {
+                $del->bind_param("i", $id);
+                $del->execute();
+                $del->close();
+                redirect_with(['msg' => "Member '$name' deleted successfully", 'type' => 'warning']);
             }
         }
     }
-    
+
     if ($action === 'toggle') {
         $id = (int)($_POST['id'] ?? 0);
-        
         if ($id > 0) {
-            $res = $mysqli->prepare("SELECT status, full_name FROM tds_members WHERE id = ?");
-            if ($res) {
-                $res->bind_param("i", $id);
-                $res->execute();
-                $res->bind_result($current_status, $full_name);
-                $res->fetch();
-                $res->close();
-                
-                if ($full_name) {
-                    $newStatus = ($current_status === 'Active') ? 'Inactive' : 'Active';
-                    
+            $q = $mysqli->prepare("SELECT status, full_name FROM tds_members WHERE id = ?");
+            if ($q) {
+                $q->bind_param("i", $id);
+                $q->execute();
+                $res = $q->get_result()->fetch_assoc();
+                $q->close();
+                if ($res) {
+                    $newStatus = ($res['status'] === 'Active') ? 'Inactive' : 'Active';
                     $upd = $mysqli->prepare("UPDATE tds_members SET status = ? WHERE id = ?");
                     if ($upd) {
                         $upd->bind_param("si", $newStatus, $id);
                         $upd->execute();
                         $upd->close();
-                        
-                        redirect_with(['msg' => "Member '$full_name' status changed to $newStatus", 'type' => 'info']);
+                        redirect_with(['msg' => "Member '{$res['full_name']}' status changed to $newStatus", 'type' => 'info']);
                     }
                 }
             }
         }
     }
-    
+
     redirect_with();
 }
 
-// Get mode
-$mode = $_GET['mode'] ?? 'view';
-$editMember = null;
+// ---------- Data Fetching & Filtering ----------
+$q         = trim($_GET['q'] ?? '');
+$fcategory = trim($_GET['category'] ?? '');
+$fstatus   = trim($_GET['status'] ?? '');
+$sort      = trim($_GET['sort'] ?? 'created_at');
+$dir       = strtolower(trim($_GET['dir'] ?? 'desc'));
 
-if ($mode === 'edit') {
-    $id = (int)($_GET['id'] ?? 0);
-    if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT id, member_id, full_name, mobile, category, address, email_id, registration_date, salary, tds_per, status, created_at FROM tds_members WHERE id = ?");
-        if ($stmt) {
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-            $editMember = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-        }
-    }
-    if (!$editMember) $mode = 'view';
-}
+$sortable = ['id', 'member_id', 'full_name', 'salary', 'tds_per', 'category', 'status', 'registration_date', 'created_at'];
+if (!in_array($sort, $sortable, true)) $sort = 'created_at';
+$dir = ($dir === 'asc') ? 'asc' : 'desc';
 
-// Get search and filter parameters
-$q = trim($_GET['q'] ?? '');
-$fcategory = $_GET['category'] ?? '';
-$fstatus = $_GET['status'] ?? '';
-$sort = $_GET['sort'] ?? 'created_at';
-$dir = strtolower($_GET['dir'] ?? 'desc');
-
-// Build query
-$sql = "SELECT id, member_id, full_name, mobile, category, address, email_id, registration_date, salary, tds_per, status, created_at FROM tds_members";
-$cond = [];
+$sql = "SELECT * FROM tds_members WHERE 1=1";
 $params = [];
 $types = '';
 
 if ($q !== '') {
-    $cond[] = "(full_name LIKE ? OR member_id LIKE ? OR mobile LIKE ? OR email_id LIKE ?)";
+    $sql .= " AND (member_id LIKE ? OR full_name LIKE ? OR mobile LIKE ? OR email_id LIKE ?)";
     $like = "%$q%";
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
+    $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
     $types .= 'ssss';
 }
 
-if ($fcategory === 'Audit' || $fcategory === 'Consultant') {
-    $cond[] = "category = ?";
+if ($fcategory !== '') {
+    $sql .= " AND category = ?";
     $params[] = $fcategory;
     $types .= 's';
 }
 
 if ($fstatus === 'Active' || $fstatus === 'Inactive') {
-    $cond[] = "status = ?";
+    $sql .= " AND status = ?";
     $params[] = $fstatus;
     $types .= 's';
 }
 
-if (!empty($cond)) {
-    $sql .= " WHERE " . implode(" AND ", $cond);
-}
-
 $sql .= " ORDER BY $sort $dir";
 
-// Execute query
+$members = false;
 if (!empty($types)) {
     $stmt = $mysqli->prepare($sql);
     if ($stmt) {
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $members = $stmt->get_result();
-    } else {
-        $members = false;
     }
 } else {
     $members = $mysqli->query($sql);
 }
 
-// If query fails, show empty result
-if (!$members) {
-    $members = false;
-}
+// KPI Metrics
+$metricsQuery = $mysqli->query("SELECT 
+    COUNT(*) as total, 
+    SUM(status='Active') as active, 
+    SUM(status='Inactive') as inactive,
+    SUM(category='Audit') as audit_count,
+    SUM(category='Consultant') as consultant_count
+    FROM tds_members");
+$metrics = $metricsQuery ? $metricsQuery->fetch_assoc() : ['total' => 0, 'active' => 0, 'inactive' => 0, 'audit_count' => 0, 'consultant_count' => 0];
 
-// Get form data from session if exists (for repopulating after validation errors)
-$formData = $_SESSION['form_data'] ?? [];
-unset($_SESSION['form_data']);
+$pageTitle = "TDS Master";
+$currentPage = "tds_master.php";
+
+$header_paths = [__DIR__ . '/header.php', 'header.php'];
+foreach ($header_paths as $hp) {
+    if (file_exists($hp)) {
+        require_once $hp;
+        break;
+    }
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TDS Members Master</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .main-content {
-            padding: 20px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        .table th {
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-        }
-        .table td {
-            vertical-align: middle;
-        }
-        .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border: 1px solid rgba(0, 0, 0, 0.125);
-        }
-        .btn-group-sm > .btn {
-            padding: 0.25rem 0.5rem;
-        }
-        .address-cell {
-            max-width: 200px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .salary-cell {
-            text-align: right;
-            font-weight: 500;
-        }
-        .tds-cell {
-            text-align: center;
-            font-weight: 500;
-        }
-        .tds-amount {
-            font-size: 0.85em;
-            color: #6c757d;
-        }
-        .form-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-    <?php if (file_exists('header.php')) require 'header.php'; ?>
-    
-    <div class="main-content">
-        <?php if (!empty($_GET['msg'])): ?>
-        <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show" role="alert">
-            <?= h($_GET['msg']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<main class="main-content" style="padding-top: 85px; padding-bottom: 50px;">
+    <div class="container-fluid px-lg-4 px-md-3 px-2">
+
+        <!-- FLOATING ERP TOAST NOTIFICATION -->
+        <?php if (!empty($_GET['msg'])): 
+            $toastMsg  = h($_GET['msg']);
+            $toastType = strtolower(trim($_GET['type'] ?? 'info'));
+            
+            $toastTitle = 'Notification';
+            $toastIcon  = 'fa-info-circle';
+            $toastBadge = 'Notice';
+            $toastClass = 'erp-toast-info';
+            
+            if (stripos($toastMsg, 'delete') !== false || stripos($toastMsg, 'remove') !== false || $toastType === 'danger' || $toastType === 'warning') {
+                $toastTitle = 'Record Deleted';
+                $toastIcon  = 'fa-trash-alt';
+                $toastBadge = 'Deleted';
+                $toastClass = 'erp-toast-danger';
+            } elseif (stripos($toastMsg, 'add') !== false || stripos($toastMsg, 'create') !== false || $toastType === 'success') {
+                $toastTitle = 'Successfully Processed';
+                $toastIcon  = 'fa-check-circle';
+                $toastBadge = 'Success';
+                $toastClass = 'erp-toast-success';
+            } elseif (stripos($toastMsg, 'status') !== false || stripos($toastMsg, 'toggle') !== false) {
+                $toastTitle = 'Status Updated';
+                $toastIcon  = 'fa-toggle-on';
+                $toastBadge = 'Status';
+                $toastClass = 'erp-toast-info';
+            } elseif (stripos($toastMsg, 'update') !== false) {
+                $toastTitle = 'Successfully Updated';
+                $toastIcon  = 'fa-pen-to-square';
+                $toastBadge = 'Updated';
+                $toastClass = 'erp-toast-info';
+            }
+        ?>
+        <div class="erp-toast-wrapper" id="erpToastWrapper" role="region" aria-label="Notifications">
+            <div class="erp-toast-card <?= $toastClass ?>" id="erpToastCard" role="alert" aria-live="assertive">
+                <div class="erp-toast-icon">
+                    <i class="fas <?= $toastIcon ?>"></i>
+                </div>
+                <div class="erp-toast-content">
+                    <div class="erp-toast-header">
+                        <span class="erp-toast-title"><?= $toastTitle ?></span>
+                        <span class="erp-toast-badge"><?= $toastBadge ?></span>
+                    </div>
+                    <div class="erp-toast-msg"><?= $toastMsg ?></div>
+                </div>
+                <button type="button" class="erp-toast-close" onclick="dismissErpToast()" aria-label="Close notification">&times;</button>
+                <div class="erp-toast-progress"><div class="erp-toast-progress-bar"></div></div>
+            </div>
         </div>
+        <script>
+            function dismissErpToast() {
+                var el = document.getElementById('erpToastCard');
+                if (el) {
+                    el.classList.add('hide');
+                    setTimeout(function() {
+                        var wr = document.getElementById('erpToastWrapper');
+                        if (wr) wr.remove();
+                    }, 400);
+                }
+            }
+            setTimeout(dismissErpToast, 4500);
+        </script>
         <?php endif; ?>
 
-        <?php if($mode === 'add' || $mode === 'edit'): ?>
-        
-        <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-users me-2"></i><?= $mode === 'edit' ? 'Edit TDS Member' : 'Add New TDS Member' ?></h4>
-            <a href="tds_master.php" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
-            </a>
-        </div>
-
-        <div class="card">
-            <div class="card-body">
-                <form method="post" autocomplete="off" id="memberForm">
-                    <input type="hidden" name="action" value="<?= $mode ?>">
-                    <?php if($mode === 'edit'): ?>
-                    <input type="hidden" name="id" value="<?= (int)($editMember['id'] ?? 0) ?>">
-                    <?php endif; ?>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="member_id" class="form-label">Member ID <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="member_id" name="member_id" 
-                                       value="<?= h($editMember['member_id'] ?? $formData['member_id'] ?? '') ?>" 
-                                       placeholder="Enter member ID" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="full_name" name="full_name" 
-                                       value="<?= h($editMember['full_name'] ?? $formData['full_name'] ?? '') ?>" 
-                                       placeholder="Enter full name" required>
-                            </div>
-                        </div>
+        <!-- TOP BAR: TITLE & ACTIONS -->
+        <div class="row align-items-center mb-4 gy-2">
+            <div class="col-md-7 col-12">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="header-icon-box shadow-sm" style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #e0f2f1, #b2dfdb); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-file-invoice-dollar text-teal fs-5" style="color: #00796b;"></i>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="mobile" class="form-label">Mobile <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="mobile" name="mobile" 
-                                       value="<?= h($editMember['mobile'] ?? $formData['mobile'] ?? '') ?>" 
-                                       placeholder="Enter 10-digit mobile number" 
-                                       pattern="[0-9]{10}" maxlength="10" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-                                <select class="form-select" id="category" name="category" required>
-                                    <option value="">Select Category</option>
-                                    <option value="Audit" <?= (($editMember['category'] ?? $formData['category'] ?? '') === 'Audit') ? 'selected' : '' ?>>Audit</option>
-                                    <option value="Consultant" <?= (($editMember['category'] ?? $formData['category'] ?? '') === 'Consultant') ? 'selected' : '' ?>>Consultant</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="registration_date" class="form-label">Registration Date <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="registration_date" name="registration_date" 
-                                       value="<?= h($editMember['registration_date'] ?? $formData['registration_date'] ?? '') ?>" required>
-                            </div>
-                        </div>
+                    <div>
+                        <h4 class="fw-bold mb-0 text-dark" style="letter-spacing: -0.3px;">TDS Members Master</h4>
+                        <div class="text-muted small">Manage TDS registered personnel, consultant compensation, and withholding rates</div>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="email_id" class="form-label">Email ID <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" id="email_id" name="email_id" 
-                                       value="<?= h($editMember['email_id'] ?? $formData['email_id'] ?? '') ?>" 
-                                       placeholder="Enter email address" required>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="salary" class="form-label">Salary (₹) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="salary" name="salary" 
-                                       value="<?= h($editMember['salary'] ?? $formData['salary'] ?? '0') ?>" 
-                                       placeholder="Enter salary" step="0.01" min="0" required>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label for="tds_per" class="form-label">TDS Percentage (%) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="tds_per" name="tds_per" 
-                                       value="<?= h($editMember['tds_per'] ?? $formData['tds_per'] ?? '0') ?>" 
-                                       placeholder="Enter TDS %" step="0.01" min="0" max="100" required>
-                                <div class="form-text">0 to 100%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="address" class="form-label">Address <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="address" name="address" rows="3" 
-                                  placeholder="Enter complete address" required><?= h($editMember['address'] ?? $formData['address'] ?? '') ?></textarea>
-                    </div>
-
-                    <?php if($mode === 'edit' && isset($editMember['salary']) && isset($editMember['tds_per'])): ?>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="alert alert-info">
-                                <strong>TDS Calculation:</strong><br>
-                                Salary: ₹<?= number_format($editMember['salary'], 2) ?><br>
-                                TDS Percentage: <?= $editMember['tds_per'] ?>%<br>
-                                <strong>TDS Amount: ₹<?= number_format(($editMember['salary'] * $editMember['tds_per']) / 100, 2) ?></strong>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="d-flex gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>
-                            <?= $mode === 'edit' ? 'Update Member' : 'Save Member' ?>
-                        </button>
-                        <a href="tds_master.php" class="btn btn-outline-secondary">Cancel</a>
-                    </div>
-                </form>
+                </div>
+            </div>
+            <div class="col-md-5 col-12 text-md-end text-start">
+                <button type="button" 
+                        class="btn btn-primary px-3 py-2 shadow-sm erp-btn-add d-inline-flex align-items-center gap-2"
+                        onclick="openAddTdsModal()"
+                        style="border-radius: 8px; font-weight: 600;">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Member</span>
+                </button>
             </div>
         </div>
 
-        <?php else: ?>
-
-        <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-users me-2"></i>TDS Members Master</h4>
-            <a href="tds_master.php?mode=add" class="btn btn-success">
-                <i class="fas fa-plus me-1"></i> Add Member
-            </a>
+        <!-- KPI SUMMARY CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Total Members</div>
+                            <div class="fs-4 fw-bold text-dark mt-1"><?= (int)($metrics['total'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-light text-primary" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-users fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Active Members</div>
+                            <div class="fs-4 fw-bold text-success mt-1"><?= (int)($metrics['active'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-success-subtle text-success" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-user-check fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Audit Members</div>
+                            <div class="fs-4 fw-bold text-info mt-1"><?= (int)($metrics['audit_count'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-info-subtle text-info" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-clipboard-check fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="card stat-card border-0 shadow-sm p-3 rounded-3 h-100">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.72rem;">Consultants</div>
+                            <div class="fs-4 fw-bold text-warning mt-1"><?= (int)($metrics['consultant_count'] ?? 0) ?></div>
+                        </div>
+                        <div class="stat-icon-circle bg-warning-subtle text-warning" style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-user-tie fs-5"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Search and Filter Form -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-3">
-                        <input type="text" name="q" class="form-control" 
-                               placeholder="Search by name, ID, mobile, email..." value="<?= h($q) ?>">
+        <!-- SEARCH AND FILTER TOOLBAR -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4 filter-card">
+            <div class="card-body p-3">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-lg-4 col-md-4 col-12">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                            <input type="text" name="q" value="<?= h($q) ?>" placeholder="Search name, ID, phone, email..." class="form-control border-start-0" autocomplete="off">
+                        </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-3 col-md-3 col-6">
                         <select name="category" class="form-select">
                             <option value="">All Categories</option>
                             <option value="Audit" <?= $fcategory === 'Audit' ? 'selected' : '' ?>>Audit</option>
                             <option value="Consultant" <?= $fcategory === 'Consultant' ? 'selected' : '' ?>>Consultant</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-2 col-md-2 col-6">
                         <select name="status" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active</option>
-                            <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
+                            <option value="">All Statuses</option>
+                            <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active Only</option>
+                            <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive Only</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <select name="sort" class="form-select">
-                            <option value="full_name" <?= $sort === 'full_name' ? 'selected' : '' ?>>Sort by Name</option>
-                            <option value="member_id" <?= $sort === 'member_id' ? 'selected' : '' ?>>Sort by ID</option>
-                            <option value="salary" <?= $sort === 'salary' ? 'selected' : '' ?>>Sort by Salary</option>
-                            <option value="created_at" <?= $sort === 'created_at' ? 'selected' : '' ?>>Sort by Date</option>
-                        </select>
-                    </div>
-                    <!-- <div class="col-md-2">
-                        <select name="dir" class="form-select">
-                            <option value="asc" <?= $dir === 'asc' ? 'selected' : '' ?>>Ascending</option>
-                            <option value="desc" <?= $dir === 'desc' ? 'selected' : '' ?>>Descending</option>
-                        </select>
-                    </div> -->
-                    <div class="col-md-12 mt-2">
-                        <button type="submit" class="btn btn-primary me-2">
-                            <i class="fas fa-search me-1"></i> Search
+                    <div class="col-lg-3 col-md-3 col-12 d-flex gap-2">
+                        <button type="submit" class="btn btn-dark w-100 py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm">
+                            <i class="fas fa-filter fs-6"></i> <span>Filter</span>
                         </button>
-                        <a href="tds_master.php" class="btn btn-secondary">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </a>
+                        <?php if ($q !== '' || $fcategory !== '' || $fstatus !== ''): ?>
+                            <a href="tds_master.php" class="btn btn-outline-secondary px-3 py-2" title="Reset Filters">
+                                <i class="fas fa-rotate-left"></i>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Members Table -->
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+        <!-- DATA TABLE CARD -->
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden table-container">
+            <div class="table-responsive m-0 p-0">
+                <table class="table table-hover align-middle mb-0 erp-modern-table" style="font-size: var(--erp-table-text-size, 12.5px); white-space: nowrap;">
+                    <thead>
+                        <tr>
+                            <th class="text-center py-3" style="width: 50px;">S.NO</th>
+                            <th class="py-3">MEMBER ID</th>
+                            <th class="py-3">FULL NAME</th>
+                            <th class="py-3">CATEGORY</th>
+                            <th class="py-3">CONTACT INFO</th>
+                            <th class="text-end py-3">SALARY</th>
+                            <th class="text-center py-3">TDS %</th>
+                            <th class="text-center py-3">STATUS</th>
+                            <th class="py-3">REG. DATE</th>
+                            <th class="text-center py-3" style="width: 110px;">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $i = 1;
+                        if ($members && $members->num_rows > 0):
+                            while ($row = $members->fetch_assoc()):
+                                $tdsJson = json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                        ?>
                             <tr>
-                                <th width="60">S.No</th>
-                                <th>Member ID</th>
-                                <th>Full Name</th>
-                                <th>Mobile</th>
-                                <th>Category</th>
-                                <th>Email ID</th>
-                                <th>Address</th>
-                                <th width="100">Salary (₹)</th>
-                                <th width="120">TDS % & Amount</th>
-                                <th width="100">Reg Date</th>
-                                <th width="100">Status</th>
-                                <th width="150" class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if($members && $members->num_rows > 0): ?>
-                                <?php while($row = $members->fetch_assoc()): 
-                                    $tds_amount = ($row['salary'] * $row['tds_per']) / 100;
-                                ?>
-                                <tr>
-                                    <td class="fw-bold"><?= (int)$row['id'] ?></td>
-                                    <td>
-                                        <span class="badge bg-primary"><?= h($row['member_id']) ?></span>
-                                    </td>
-                                    <td>
-                                        <span class="fw-semibold"><?= h($row['full_name']) ?></span>
-                                    </td>
-                                    <td><?= h($row['mobile']) ?></td>
-                                    <td>
-                                        <span class="badge <?= $row['category'] === 'Audit' ? 'bg-warning' : 'bg-info' ?>">
-                                            <?= h($row['category']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <small><?= h($row['email_id']) ?></small>
-                                    </td>
-                                    <td class="address-cell" title="<?= h($row['address']) ?>">
-                                        <?= h($row['address']) ?>
-                                    </td>
-                                    <td class="salary-cell">
-                                        ₹<?= number_format($row['salary'], 2) ?>
-                                    </td>
-                                    <td class="tds-cell">
-                                        <span class="badge bg-danger"><?= $row['tds_per'] ?>%</span>
-                                        <div class="tds-amount">₹<?= number_format($tds_amount, 2) ?></div>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted"><?= h(formatDate($row['registration_date'])) ?></small>
-                                    </td>
-                                    <td>
-                                        <form method="post" style="display:inline;">
-                                            <input type="hidden" name="action" value="toggle">
+                                <td class="text-center fw-semibold text-secondary"><?= $i++ ?></td>
+                                <td>
+                                    <span class="badge bg-light text-dark border px-2 py-1 font-monospace">
+                                        <?= h($row['member_id']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark fs-6"><?= h($row['full_name']) ?></strong>
+                                </td>
+                                <td>
+                                    <span class="badge <?= $row['category'] === 'Audit' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-warning-subtle text-dark border border-warning-subtle' ?> px-2 py-1">
+                                        <?= h($row['category']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div><i class="fas fa-envelope text-muted me-1 small"></i><?= h($row['email_id']) ?></div>
+                                    <div class="text-muted small"><i class="fas fa-phone text-muted me-1 small"></i><?= h($row['mobile']) ?></div>
+                                </td>
+                                <td class="text-end font-monospace fw-semibold text-dark">
+                                    <?= formatCurrency($row['salary']) ?>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                                        <?= number_format((float)$row['tds_per'], 2) ?>%
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <form method="post" class="d-inline m-0 p-0">
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+                                        <button type="submit" 
+                                                class="badge-status-pill <?= $row['status'] === 'Active' ? 'status-active-pill' : 'status-inactive-pill' ?>" 
+                                                onclick="return confirm('Change status of <?= addslashes(h($row['full_name'])) ?>?')" 
+                                                title="Click to toggle status">
+                                            <i class="fas fa-circle me-1" style="font-size: 0.55rem;"></i>
+                                            <?= h($row['status']) ?>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <span class="text-muted small"><?= formatDate($row['registration_date']) ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-1 action-btn-group">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-light action-btn btn-edit-tds" 
+                                                onclick='openEditTdsModal(<?= $tdsJson ?>)' 
+                                                title="Edit Member">
+                                            <i class="fas fa-edit text-warning"></i>
+                                        </button>
+                                        <form method="post" class="d-inline m-0 p-0" onsubmit="return confirm('Are you sure you want to delete member: <?= addslashes(h($row['full_name'])) ?>?')">
+                                            <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                            <button type="submit" class="btn btn-sm <?= $row['status'] === 'Active' ? 'btn-success' : 'btn-danger' ?>">
-                                                <?= h($row['status']) ?>
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-light action-btn btn-delete-tds" 
+                                                    title="Delete Member">
+                                                <i class="fas fa-trash-alt text-danger"></i>
                                             </button>
                                         </form>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="tds_master.php?mode=edit&id=<?= (int)$row['id'] ?>" 
-                                               class="btn btn-warning" title="Edit Member">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form method="post" style="display:inline;" 
-                                                  onsubmit="return confirm('Are you sure you want to delete <?= h($row['full_name']) ?>?')">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                                <button type="submit" class="btn btn-danger" title="Delete Member">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endwhile; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="12" class="text-center py-5">
-                                        <div class="text-muted">
-                                            <i class="fas fa-users fa-3x mb-3"></i>
-                                            <h5>No TDS members found</h5>
-                                            <p class="mb-0">Get started by adding your first TDS member.</p>
-                                            <a href="tds_master.php?mode=add" class="btn btn-primary mt-2">
-                                                <i class="fas fa-plus me-1"></i> Add Member
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endwhile; else: ?>
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+                                    <div class="py-4">
+                                        <i class="fas fa-file-invoice-dollar text-muted opacity-25 fa-3x mb-3"></i>
+                                        <h6 class="text-secondary fw-bold">No TDS Members Found</h6>
+                                        <p class="text-muted small mb-0">No records match your search or filter criteria.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Summary Card -->
-        <?php if($members && $members->num_rows > 0): ?>
-        <?php
-            // Reset pointer and calculate totals
-            $members->data_seek(0);
-            $total_members = 0;
-            $total_salary = 0;
-            $total_tds = 0;
-            
-            while($row = $members->fetch_assoc()) {
-                $total_members++;
-                $total_salary += $row['salary'];
-                $total_tds += ($row['salary'] * $row['tds_per']) / 100;
-            }
-        ?>
-        <div class="card mt-4">
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <h5 class="text-primary"><?= $total_members ?></h5>
-                        <small class="text-muted">Total Members</small>
-                    </div>
-                    <div class="col-md-3">
-                        <h5 class="text-success">₹<?= number_format($total_salary, 2) ?></h5>
-                        <small class="text-muted">Total Salary</small>
-                    </div>
-                    <div class="col-md-3">
-                        <h5 class="text-danger">₹<?= number_format($total_tds, 2) ?></h5>
-                        <small class="text-muted">Total TDS</small>
-                    </div>
-                    <div class="col-md-3">
-                        <h5 class="text-info">₹<?= number_format($total_salary - $total_tds, 2) ?></h5>
-                        <small class="text-muted">Net Amount</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-
-        <?php endif; ?>
     </div>
+</main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-dismiss alerts after 5 seconds
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    if (alert.isConnected) {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    }
-                }, 5000);
-            });
+<!-- =========================================================================
+     MODAL: ADD / EDIT TDS MEMBER
+     Minimal header: Icon + Title + Subtitle + (X) close.
+     Save/Update button strictly in modal footer.
+========================================================================== -->
+<div class="modal fade" id="tdsModal" tabindex="-1" aria-labelledby="tdsModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content erp-modal-content border-0 shadow">
+            <div class="modal-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="modal-icon-badge" style="width: 40px; height: 40px; border-radius: 10px; background: #e0f2f1; color: #00796b; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-file-invoice-dollar fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="tdsModalLabel">Add New TDS Member</h5>
+                        <p class="text-muted small mb-0">Configure member details, compensation, and TDS tax rate</p>
+                    </div>
+                </div>
+                <!-- MINIMAL HEADER: CLOSE BUTTON ONLY -->
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="tdsForm" class="needs-validation">
+                <input type="hidden" name="action" id="tds_action" value="add">
+                <input type="hidden" name="id" id="tds_id" value="">
 
-            // Mobile number validation
-            const mobileInput = document.getElementById('mobile');
-            if (mobileInput) {
-                mobileInput.addEventListener('input', function() {
-                    this.value = this.value.replace(/[^0-9]/g, '');
-                    if (this.value.length > 10) {
-                        this.value = this.value.slice(0, 10);
-                    }
-                });
-            }
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Member ID <span class="text-danger">*</span></label>
+                            <input type="text" name="member_id" id="tds_member_id" class="form-control form-control-sm" placeholder="e.g. TDS-001" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" id="tds_full_name" class="form-control form-control-sm" placeholder="e.g. John Doe" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Category <span class="text-danger">*</span></label>
+                            <select name="category" id="tds_category" class="form-select form-select-sm" required>
+                                <option value="">Select Category</option>
+                                <option value="Audit">Audit</option>
+                                <option value="Consultant">Consultant</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Mobile Number <span class="text-danger">*</span></label>
+                            <input type="text" name="mobile" id="tds_mobile" pattern="[0-9]{10}" maxlength="10" class="form-control form-control-sm" placeholder="10-digit mobile number" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" name="email_id" id="tds_email_id" class="form-control form-control-sm" placeholder="e.g. name@domain.com" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Registration Date <span class="text-danger">*</span></label>
+                            <input type="date" name="registration_date" id="tds_registration_date" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Gross Salary / Retainer (₹) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0" name="salary" id="tds_salary" class="form-control form-control-sm" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">TDS Percentage (%) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" min="0" max="100" name="tds_per" id="tds_tds_per" class="form-control form-control-sm" placeholder="e.g. 10.00" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-secondary">Physical Address <span class="text-danger">*</span></label>
+                            <textarea name="address" id="tds_address" class="form-control form-control-sm" rows="2" placeholder="Full residential/office address" required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-3 px-4 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary px-3 py-2 btn-sm" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4 py-2 btn-sm shadow-sm" id="btnSubmitTds">
+                        <i class="fas fa-save me-1"></i> Save Member
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-            // Form validation
-            const form = document.getElementById('memberForm');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    const category = document.getElementById('category').value;
-                    if (!category) {
-                        e.preventDefault();
-                        alert('Please select a category');
-                        return false;
-                    }
-                    return true;
-                });
-            }
+<script>
+let tdsModalInstance = null;
 
-            // Real-time TDS calculation
-            const salaryInput = document.getElementById('salary');
-            const tdsPerInput = document.getElementById('tds_per');
-            
-            function calculateTDS() {
-                if (salaryInput && tdsPerInput) {
-                    const salary = parseFloat(salaryInput.value) || 0;
-                    const tdsPer = parseFloat(tdsPerInput.value) || 0;
-                    const tdsAmount = (salary * tdsPer) / 100;
-                    
-                    // Update TDS amount display if exists
-                    const tdsDisplay = document.getElementById('tdsAmountDisplay');
-                    if (tdsDisplay) {
-                        tdsDisplay.textContent = '₹' + tdsAmount.toFixed(2);
-                    }
-                }
-            }
-            
-            if (salaryInput) salaryInput.addEventListener('input', calculateTDS);
-            if (tdsPerInput) tdsPerInput.addEventListener('input', calculateTDS);
-        });
-    </script>
-</body>
-</html>
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('tdsModal');
+    if (el && typeof bootstrap !== 'undefined') {
+        tdsModalInstance = new bootstrap.Modal(el);
+    }
+});
+
+function openAddTdsModal() {
+    document.getElementById('tdsForm').reset();
+    document.getElementById('tds_action').value = 'add';
+    document.getElementById('tds_id').value = '';
+    document.getElementById('tds_registration_date').value = '<?= date('Y-m-d') ?>';
+    document.getElementById('tdsModalLabel').innerText = 'Add New TDS Member';
+    document.getElementById('btnSubmitTds').innerHTML = '<i class="fas fa-save me-1"></i> Save Member';
+
+    if (!tdsModalInstance) {
+        tdsModalInstance = new bootstrap.Modal(document.getElementById('tdsModal'));
+    }
+    tdsModalInstance.show();
+}
+
+function openEditTdsModal(data) {
+    if (!data) return;
+    document.getElementById('tdsForm').reset();
+    document.getElementById('tds_action').value = 'edit';
+    document.getElementById('tds_id').value = data.id || '';
+    document.getElementById('tds_member_id').value = data.member_id || '';
+    document.getElementById('tds_full_name').value = data.full_name || '';
+    document.getElementById('tds_category').value = data.category || '';
+    document.getElementById('tds_mobile').value = data.mobile || '';
+    document.getElementById('tds_email_id').value = data.email_id || '';
+    document.getElementById('tds_registration_date').value = data.registration_date || '';
+    document.getElementById('tds_salary').value = data.salary || '';
+    document.getElementById('tds_tds_per').value = data.tds_per || '';
+    document.getElementById('tds_address').value = data.address || '';
+
+    document.getElementById('tdsModalLabel').innerText = 'Edit TDS Member: ' + (data.full_name || '');
+    document.getElementById('btnSubmitTds').innerHTML = '<i class="fas fa-save me-1"></i> Update Member';
+
+    if (!tdsModalInstance) {
+        tdsModalInstance = new bootstrap.Modal(document.getElementById('tdsModal'));
+    }
+    tdsModalInstance.show();
+}
+</script>

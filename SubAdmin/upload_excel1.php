@@ -45,7 +45,7 @@ if (isset($_POST['save_excel_data'])) {
     $imported_rows = 0;
     $mysqli->begin_transaction();
     $is_error = false;
-    **$db_error_message = ""; // New variable to store the specific DB error**
+    $db_error_message = ""; // New variable to store the specific DB error
    
     // --- 1. PREPARE STATEMENTS (Assuming SQL structure is correct from previous fix) ---
 
@@ -155,7 +155,7 @@ if (isset($_POST['save_excel_data'])) {
       );
       if (!$stmt_jobs->execute()) { 
                 $is_error = true; 
-                **$db_error_message = "jobs table error: " . $stmt_jobs->error;**
+                $db_error_message = "jobs table error: " . $stmt_jobs->error;
                 break; 
             }
 
@@ -167,7 +167,7 @@ if (isset($_POST['save_excel_data'])) {
       );
       if (!$stmt_ce->execute()) { 
                 $is_error = true; 
-                **$db_error_message = "ce table error: " . $stmt_ce->error;**
+                $db_error_message = "ce table error: " . $stmt_ce->error;
                 break; 
             }
 
@@ -179,7 +179,7 @@ if (isset($_POST['save_excel_data'])) {
       );
       if (!$stmt_le->execute()) { 
                 $is_error = true; 
-                **$db_error_message = "le table error: " . $stmt_le->error;**
+                $db_error_message = "le table error: " . $stmt_le->error;
                 break; 
             }
 
@@ -191,7 +191,7 @@ if (isset($_POST['save_excel_data'])) {
       );
       if (!$stmt_pag->execute()) { 
                 $is_error = true; 
-                **$db_error_message = "pag table error: " . $stmt_pag->error;**
+                $db_error_message = "pag table error: " . $stmt_pag->error;
                 break; 
             }
      
@@ -204,7 +204,7 @@ if (isset($_POST['save_excel_data'])) {
       );
       if (!$stmt_qc->execute()) { 
                 $is_error = true; 
-                **$db_error_message = "qc table error: " . $stmt_qc->error;**
+                $db_error_message = "qc table error: " . $stmt_qc->error;
                 break; 
             }
 

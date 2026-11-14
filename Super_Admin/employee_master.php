@@ -417,7 +417,7 @@ if (isset($_POST['import_btn'])) {
     }
     
     body {
-        overflow: hidden;
+        overflow-y: auto;
     }
     
     .card-body.d-flex {

@@ -13,9 +13,11 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Prevent caching
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+if (!headers_sent()) {
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+}
 
 require 'db.php'; // Ensure db connection is available
 
@@ -419,6 +421,31 @@ if ($result && $row = $result->fetch_assoc()) {
     </style>
     <!-- Tapasi Global Typography & Font Stylesheet -->
     <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
+    <!-- Tapasi Global Pop Confirm & Deletion Modal System -->
+    <script src="../pop_confirm.js?v=<?= file_exists(__DIR__ . '/../pop_confirm.js') ? filemtime(__DIR__ . '/../pop_confirm.js') : 1 ?>" defer></script>
+    <script src="../erp_toast.js?v=<?= file_exists(__DIR__ . '/../erp_toast.js') ? filemtime(__DIR__ . '/../erp_toast.js') : 1 ?>" defer></script>
+<?php
+// Global Flash Message Toast Interceptor
+$__erpToast = null;
+if (!empty($_SESSION['toast'])) {
+    $__erpToast = $_SESSION['toast'];
+    unset($_SESSION['toast']);
+} elseif (!empty($_SESSION['message'])) {
+    $__erpToast = ['message' => $_SESSION['message'], 'type' => 'info'];
+    unset($_SESSION['message']);
+} elseif (!empty($_SESSION['success'])) {
+    $__erpToast = ['message' => $_SESSION['success'], 'type' => 'success'];
+    unset($_SESSION['success']);
+} elseif (!empty($_SESSION['error'])) {
+    $__erpToast = ['message' => $_SESSION['error'], 'type' => 'danger'];
+    unset($_SESSION['error']);
+} elseif (!empty($_SESSION['msg'])) {
+    $__erpToast = ['message' => $_SESSION['msg'], 'type' => $_SESSION['msg_type'] ?? 'info'];
+    unset($_SESSION['msg'], $_SESSION['msg_type']);
+}
+if ($__erpToast): ?>
+<script>window.__ERP_FLASH_TOAST = <?= json_encode($__erpToast, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;</script>
+<?php endif; ?>
 </head>
 <body>
     <header>
