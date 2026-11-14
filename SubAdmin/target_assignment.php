@@ -1,4 +1,5 @@
 <?php
+ob_start();
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -139,7 +140,7 @@ if ($current_user_role > 0) {
 }
 
 // Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'assign_target') {
@@ -425,17 +426,17 @@ require_once __DIR__ . '/header.php';
 <style>
         /* =========================================================================
            SENIOR DEVELOPER STYLING - EMPLOYEE TARGET MANAGEMENT
-           Brand Palette: Ash Slate (#2c3e50 / #34495e) & Action Blue (#3498db)
+           Brand Palette: Ash Grey (#707981) & Action Blue (#3498db)
            ========================================================================= */
         :root {
             --primary: #3498db;
             --primary-hover: #2980b9;
             --primary-light: #ebf5fb;
             --primary-border: #aed6f1;
-            --ash-dark: #2c3e50;
-            --ash-medium: #34495e;
-            --ash-deep: #243342;
-            --ash-slate: #5a6a7a;
+            --ash-dark: #707981;
+            --ash-medium: #707981;
+            --ash-deep: #5e666d;
+            --ash-slate: #64748b;
             --ash-bg: #f8fafc;
             --ash-border: #e2e8f0;
             --emerald: #10b981;
@@ -474,20 +475,20 @@ require_once __DIR__ . '/header.php';
             width: 48px;
             height: 48px;
             border-radius: 12px;
-            background: linear-gradient(135deg, var(--ash-dark) 0%, var(--ash-medium) 100%);
+            background: #707981;
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.35rem;
-            box-shadow: 0 4px 12px rgba(44, 62, 80, 0.2);
+            box-shadow: 0 4px 12px rgba(112, 121, 129, 0.25);
             flex-shrink: 0;
         }
 
         .hero-title {
             font-size: 1.45rem;
             font-weight: 800;
-            color: var(--ash-dark);
+            color: #1e293b;
             letter-spacing: -0.02em;
         }
 
@@ -597,10 +598,11 @@ require_once __DIR__ . '/header.php';
         }
 
         .card-header-ash {
-            background: linear-gradient(135deg, var(--ash-dark) 0%, var(--ash-medium) 100%) !important;
+            background-color: #707981 !important;
+            background: #707981 !important;
             color: #ffffff !important;
-            padding: 16px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
         }
 
         .card-header-ash h5,
@@ -885,10 +887,11 @@ require_once __DIR__ . '/header.php';
         }
 
         .modal-header-ash {
-            background: linear-gradient(135deg, var(--ash-dark) 0%, var(--ash-medium) 100%);
-            color: #ffffff;
+            background-color: #707981 !important;
+            background: #707981 !important;
+            color: #ffffff !important;
             padding: 16px 22px;
-            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
         }
     </style>
     

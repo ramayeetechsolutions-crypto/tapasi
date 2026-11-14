@@ -258,6 +258,27 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     color: #ffffff !important;
 }
 
+/* Brand Table Card Headers & Ash Styling - Solid #707981 */
+.card-header-ash,
+.card-header-grey,
+.card-header[style*="#707981"],
+.card-header[style*="707981"],
+.card-header[style*="#5e6b77"],
+.card-header[style*="5e6b77"],
+.form-card-header {
+    background: #707981 !important;
+    background-color: #707981 !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.modal-header-ash {
+    background: #707981 !important;
+    background-color: #707981 !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
 .hero-title,
 .dashboard-hero-banner h1,
 .dashboard-hero-banner .hero-title,
@@ -273,6 +294,7 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
    Table headers in all pages (OT approvals, reports, masters, grey/dark tables)
    Must be BOLD, WHITE (#ffffff), UPPERCASE, and 0.82rem size
    ========================================================================= */
+/* All Table Headers Across Entire Site use Brand Ash Grey #707981 */
 table th,
 .table th,
 .table thead th,
@@ -295,22 +317,26 @@ table.table-grey th,
 .table-grey th,
 .table-targets thead th,
 .table-targets th,
+#jobsTable thead th,
 #jobsTable thead.table-grey th {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-table-header-font-size) !important;
     font-weight: 700 !important;
     color: #ffffff !important;
     background-color: #707981 !important;
+    background: #707981 !important;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     vertical-align: middle;
-    padding: 9px 10px !important;
+    padding: 10px 12px !important;
+    border-color: #5e666d !important;
 }
 
-/* Table-dark headers keep their darker background but match size and font */
 thead.table-dark th,
 .table-dark th {
-    background-color: #2b3035 !important;
+    background-color: #707981 !important;
+    background: #707981 !important;
+    color: #ffffff !important;
 }
 
 /* Checkbox column header centering & sizing */
