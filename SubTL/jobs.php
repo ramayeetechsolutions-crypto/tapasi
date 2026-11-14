@@ -20,6 +20,10 @@ $check_issue = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
 if ($check_issue && $check_issue->num_rows == 0) {
     $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
 }
+$check_ap_job = $mysqli->query("SHOW COLUMNS FROM ap_assign LIKE 'job_id'");
+if ($check_ap_job && $check_ap_job->num_rows == 0) {
+    $mysqli->query("ALTER TABLE ap_assign ADD COLUMN job_id INT(11) NULL DEFAULT NULL AFTER id");
+}
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);

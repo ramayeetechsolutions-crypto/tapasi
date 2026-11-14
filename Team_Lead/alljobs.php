@@ -1188,13 +1188,15 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 10px; width: 100%; height: 21px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le', this.value)">
+                                                    onfocus="this.setAttribute('data-previous', this.value)"
+                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le', this.value, this)">
                                                 <option value="Need to Assign" <?= ($le_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($le_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($le_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
                                             </select>
                                         </div>
 
+                                        <div class="member-info-container">
                                         <?php if (!empty($row['assigned_to_le'])): ?>
                                             <div class="le-badge <?= $le_badge_cls ?> mb-1" title="LE TM">
                                                 <i class="fas fa-file-alt"></i> <?= h($row['assigned_to_le']) ?>
@@ -1207,6 +1209,7 @@ require 'header.php';
                                                 ?>
                                             </small>
                                         <?php endif; ?>
+                                        </div>
                                         
                                         <select class="assign-select mt-1 le-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
                                             <option value=""><?= !empty($row['assigned_to_le']) ? 'Change LE TM' : 'Assign LE' ?></option>
@@ -1243,13 +1246,15 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 10px; width: 100%; height: 21px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le_qc', this.value)">
+                                                    onfocus="this.setAttribute('data-previous', this.value)"
+                                                    onchange="updateStatus(<?= $row['id'] ?>, 'le_qc', this.value, this)">
                                                 <option value="Need to Assign" <?= ($leqc_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($leqc_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($leqc_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
                                             </select>
                                         </div>
 
+                                        <div class="member-info-container">
                                         <?php if (!empty($row['assigned_to_le_qc'])): ?>
                                             <div class="le-badge <?= $leqc_badge_cls ?> mb-1" title="LE QC TM">
                                                 <i class="fas fa-search"></i> <?= h($row['assigned_to_le_qc']) ?>
@@ -1262,8 +1267,16 @@ require 'header.php';
                                                 ?>
                                             </small>
                                         <?php endif; ?>
+                                        </div>
                                         
                                         <select class="assign-select mt-1 le-qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
+                                            <option value=""><?= !empty($row['assigned_to_le_qc']) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
+                                            <?php foreach ($les as $le): ?>
+                                                <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= (($row['assigned_to_le_qc'] ?? '') == $le['employee_username']) ? 'selected' : '' ?>>
+                                                    <?= h($le['employee_name']) ?> (<?= h($le['employee_username']) ?>)
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                             <option value=""><?= !empty($row['assigned_to_le_qc']) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
                                             <?php foreach ($les as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= (($row['assigned_to_le_qc'] ?? '') == $le['employee_username']) ? 'selected' : '' ?>>
@@ -1391,11 +1404,58 @@ require 'header.php';
             document.getElementById('loadingOverlay').classList.remove('active');
         }
         
-        // Status Update Function
-        function updateStatus(leId, type, newStatus) {
+        // Helper to safely escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Scroll Position Preservation
+        function saveScrollPositions() {
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                sessionStorage.setItem('tl_alljobs_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('tl_alljobs_table_y', tableResp.scrollTop);
+            }
+            sessionStorage.setItem('tl_alljobs_win_x', window.scrollX || 0);
+            sessionStorage.setItem('tl_alljobs_win_y', window.scrollY || 0);
+        }
+
+        function restoreScrollPositions() {
+            const tableX = sessionStorage.getItem('tl_alljobs_table_x');
+            const tableY = sessionStorage.getItem('tl_alljobs_table_y');
+            const winX = sessionStorage.getItem('tl_alljobs_win_x');
+            const winY = sessionStorage.getItem('tl_alljobs_win_y');
+            
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp && tableX !== null) {
+                tableResp.scrollLeft = parseFloat(tableX);
+                if (tableY !== null) tableResp.scrollTop = parseFloat(tableY);
+            }
+            if (winX !== null || winY !== null) {
+                window.scrollTo(parseFloat(winX || 0), parseFloat(winY || 0));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreScrollPositions();
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                tableResp.addEventListener('scroll', () => {
+                    sessionStorage.setItem('tl_alljobs_table_x', tableResp.scrollLeft);
+                }, { passive: true });
+            }
+        });
+        window.addEventListener('beforeunload', saveScrollPositions);
+
+        // Status Update Function (In-Place, No Reload)
+        function updateStatus(leId, type, newStatus, selectElement = null) {
+            let row = document.getElementById('row-' + leId);
+            const prevValue = selectElement ? (selectElement.getAttribute('data-previous') || 'Need to Assign') : 'Need to Assign';
+
             // Frontend validation to enforce time completion
             if (newStatus === 'Completed') {
-                let row = document.getElementById('row-' + leId);
                 if (row) {
                     // Check if LE is Completed before allowing LE-QC Completed
                     if (type === 'le_qc') {
@@ -1407,7 +1467,7 @@ require 'header.php';
 
                         if (!leDone) {
                             showNotification('danger', 'Please complete LE Assignment before marking LE-QC Assignment as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500);
+                            if (selectElement) selectElement.value = prevValue;
                             return;
                         }
                     }
@@ -1421,14 +1481,13 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500); // reload to revert the dropdown change
+                            if (selectElement) selectElement.value = prevValue;
                             return; 
                         }
                     }
                 }
             }
 
-            showLoading();
             fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1436,18 +1495,29 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
-                    setTimeout(() => { window.location.reload(); }, 500);
+                    if (selectElement) selectElement.setAttribute('data-previous', newStatus);
+
+                    if (row) {
+                        const cell = selectElement ? selectElement.closest('td') : null;
+                        if (cell) {
+                            const badge = cell.querySelector('.le-badge');
+                            if (badge) {
+                                badge.classList.remove('completed', 'in-progress', 'pending');
+                                if (newStatus === 'Completed') badge.classList.add('completed');
+                                else if (newStatus === 'In Progress') badge.classList.add('in-progress');
+                                else badge.classList.add('pending');
+                            }
+                        }
+                    }
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
+                    if (selectElement) selectElement.value = prevValue;
                 }
             }).catch(error => { 
-                hideLoading(); 
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
+                if (selectElement) selectElement.value = prevValue;
             });
         }
 
@@ -1464,7 +1534,6 @@ require 'header.php';
                 }
             }
 
-            showLoading();
             fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1472,7 +1541,6 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) { 
                     if (field === 'status_button' && value === 'Moved') {
                         showNotification('success', 'Job moved to LE Report & Input/Output successfully!');
@@ -1482,6 +1550,7 @@ require 'header.php';
                             rowEl.style.opacity = '0';
                             setTimeout(() => { 
                                 rowEl.remove(); 
+                                saveScrollPositions();
                                 window.location.reload(); 
                             }, 400);
                         }
@@ -1490,10 +1559,10 @@ require 'header.php';
                     }
                 } 
                 else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+            }).catch(error => { console.error('Error:', error); });
         }
         
-        // Quick assign function
+        // Quick assign function (In-Place, No Reload)
         function quickAssign(leId, jobId, type, selectElement) {
             const selectedValue = selectElement.value;
             if (!selectedValue) return;
@@ -1505,28 +1574,56 @@ require 'header.php';
             
             selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
-            showLoading();
             
-            fetch('le_assign_tm.php', {
+            fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'ajax=quick_assign&le_id=' + leId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
                 selectElement.disabled = false;
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${leName} successfully!`);
-                    document.getElementById('row-' + leId).classList.add('assigned');
-                    setTimeout(() => { window.location.reload(); }, 800);
+                    
+                    const row = document.getElementById('row-' + leId);
+                    if (row) {
+                        row.classList.add('assigned');
+                        const cell = selectElement.closest('td');
+                        if (cell) {
+                            let infoContainer = cell.querySelector('.member-info-container');
+                            if (!infoContainer) {
+                                infoContainer = document.createElement('div');
+                                infoContainer.className = 'member-info-container';
+                                cell.insertBefore(infoContainer, selectElement);
+                            }
+                            const iconClass = (type === 'le_qc') ? 'fa-search' : 'fa-file-alt';
+                            const titleText = (type === 'le_qc') ? 'LE QC TM' : 'LE TM';
+                            infoContainer.innerHTML = `
+                                <div class="le-badge in-progress mb-1" title="${titleText}">
+                                    <i class="fas ${iconClass}"></i> ${escapeHtml(selectedValue)}
+                                </div>
+                                <small class="text-muted d-block mb-1">${escapeHtml(leName)}</small>
+                            `;
+
+                            if (selectElement.options.length > 0) {
+                                selectElement.options[0].text = (type === 'le_qc') ? 'Change LE-QC TM' : 'Change LE TM';
+                            }
+
+                            const statusSelect = cell.querySelector('select.form-select');
+                            if (statusSelect && (statusSelect.value === 'Need to Assign' || statusSelect.value === '')) {
+                                statusSelect.value = 'In Progress';
+                                statusSelect.setAttribute('data-previous', 'In Progress');
+                            }
+                        }
+                    }
                 } else {
                     showNotification('danger', 'Error: ' + data.message);
                     selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
-                hideLoading(); selectElement.disabled = false;
+                selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 selectElement.value = selectElement.getAttribute('data-previous') || '';
             });
