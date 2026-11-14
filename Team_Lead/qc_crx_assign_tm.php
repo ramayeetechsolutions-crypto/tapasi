@@ -1160,6 +1160,44 @@ require 'header.php';
         function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
         function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
 
+        // Scroll Position Preservation
+        function saveScrollPositions() {
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                sessionStorage.setItem('tl_qc_crx_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('tl_qc_crx_assign_table_y', tableResp.scrollTop);
+            }
+            sessionStorage.setItem('tl_qc_crx_assign_win_x', window.scrollX || 0);
+            sessionStorage.setItem('tl_qc_crx_assign_win_y', window.scrollY || 0);
+        }
+
+        function restoreScrollPositions() {
+            const tableX = sessionStorage.getItem('tl_qc_crx_assign_table_x');
+            const tableY = sessionStorage.getItem('tl_qc_crx_assign_table_y');
+            const winX = sessionStorage.getItem('tl_qc_crx_assign_win_x');
+            const winY = sessionStorage.getItem('tl_qc_crx_assign_win_y');
+            
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp && tableX !== null) {
+                tableResp.scrollLeft = parseFloat(tableX);
+                if (tableY !== null) tableResp.scrollTop = parseFloat(tableY);
+            }
+            if (winX !== null || winY !== null) {
+                window.scrollTo(parseFloat(winX || 0), parseFloat(winY || 0));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreScrollPositions();
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                tableResp.addEventListener('scroll', () => {
+                    sessionStorage.setItem('tl_qc_crx_assign_table_x', tableResp.scrollLeft);
+                }, { passive: true });
+            }
+        });
+        window.addEventListener('beforeunload', saveScrollPositions);
+
         // Status Update Function
         function updateStatus(qcId, newStatus) {
             if (newStatus === 'Completed') {

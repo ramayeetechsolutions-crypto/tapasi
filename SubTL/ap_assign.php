@@ -10,6 +10,7 @@ require 'db.php';
 // Auto-create table if not already created
 $mysqli->query("CREATE TABLE IF NOT EXISTS `ap_assign` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `job_id` INT(11) DEFAULT NULL,
   `date` DATE DEFAULT NULL,
   `client` VARCHAR(150) DEFAULT NULL,
   `mail_subject` VARCHAR(255) DEFAULT NULL,
@@ -37,6 +38,11 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `ap_assign` (
   `last_updated` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+$check_ap_job = $mysqli->query("SHOW COLUMNS FROM ap_assign LIKE 'job_id'");
+if ($check_ap_job && $check_ap_job->num_rows == 0) {
+    $mysqli->query("ALTER TABLE ap_assign ADD COLUMN job_id INT(11) NULL DEFAULT NULL AFTER id");
+}
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
