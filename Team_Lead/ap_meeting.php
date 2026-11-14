@@ -223,10 +223,18 @@ if (!empty($user_employee_name)) {
             // Experience Calculation
             $exp_str = '-';
             if (!empty($row['joining_date']) && $row['joining_date'] != '0000-00-00') {
-                $doj_date = new DateTime($row['joining_date']);
-                $today = new DateTime();
-                $diff = $today->diff($doj_date);
-                $exp_str = $diff->y . ' Y ' . $diff->m . ' M';
+                try {
+                    $doj_date = new DateTime($row['joining_date']);
+                    $today = new DateTime('today');
+                    if ($doj_date > $today) {
+                        $exp_str = '0 Y 0 M';
+                    } else {
+                        $diff = $today->diff($doj_date);
+                        $exp_str = $diff->y . ' Y ' . $diff->m . ' M';
+                    }
+                } catch (Exception $e) {
+                    $exp_str = '-';
+                }
             }
             
             // Get Target & Leave
@@ -279,31 +287,21 @@ if (!empty($user_employee_name)) {
                 $errors = $res_error['error_count'] ?? 0;
             }
 
-            // Calculations (Using exactly your formulas)
-            
-            // 1. Production points = Production / (Target / 100)
-            $production_points = $target > 0 ? round($production / ($target / 100), 2) : 0;
-            
-            // 2. Errors points = Errors * 2
+            // Calculations
+            $production_points = $production;
             $errors_points = $errors * 2;
-            
-            // 3. Production % = (Production Points / Target)
-            // (Note: $production_points is mathematically already the percentage out of 100, so mathematically $prod_pct = $production_points. 
-            // Aana neenga ketta exact format padi kela koduthurukken, ithu romba chinnatha (0.01) varum naala, % format kaga * 100 potruken).
-            $prod_pct = $target > 0 ? round(($production_points / $target) * 100, 2) : 0;
-            if ($prod_pct == 0 && $production_points > 0) { $prod_pct = $production_points; } // Fallback to normal if formula output is too small.
+            $prod_pct = ($target > 0) ? round(($production / $target) * 100, 2) : 0;
 
-            // 4. Accuracy % = (Production points - Errors points) / Production points
-            $accuracy = 100;
-            if ($production_points > 0) {
-                $accuracy = round((($production_points - $errors_points) / $production_points) * 100, 2);
+            $accuracy = 0;
+            if ($production > 0) {
+                $accuracy = round((($production - $errors_points) / $production) * 100, 2);
                 if ($accuracy < 0) $accuracy = 0;
-            } else if ($errors_points > 0) {
-                $accuracy = 0;
+                if ($accuracy > 100) $accuracy = 100;
             }
 
-            // 5. Net Production = Production - (Errors points / 100)
-            $net_prod_pct = round($production - ($errors_points / 100), 2);
+            // --- NET PRODUCTION %: matches Production % when 0 errors, accounts for error impact against target ---
+            $net_prod_pct = ($target > 0) ? round((($production - $errors_points) / $target) * 100, 2) : 0;
+            if ($net_prod_pct < 0) $net_prod_pct = 0;
             $net_prod_decimal = $net_prod_pct / 100;
             
             $team_data[] = [
@@ -625,7 +623,7 @@ if(isset($stmt_prod) && $stmt_prod) $stmt_prod->close();
                             <tr>
                                 <td class="fw-500"><?= h($emp['id']) ?></td>
                                 <td class="text-start fw-500"><?= h($emp['name']) ?></td>
-                                <td><?= h($emp['exp']) ?></td>
+                                <td style="white-space: nowrap;"><?= h($emp['exp']) ?></td>
                                 <td><span class="badge bg-light text-dark border"><?= h($emp['process']) ?></span></td>
                                 <td class="text-danger-fw"><?= h($emp['target']) ?></td>
                                 <td><?= h($emp['production']) ?></td>
