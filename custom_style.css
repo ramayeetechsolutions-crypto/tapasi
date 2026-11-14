@@ -32,6 +32,7 @@
         opacity: 0;
         transform: translateY(6px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -43,6 +44,7 @@
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -128,7 +130,12 @@ table,
 th,
 td,
 p,
-h1, h2, h3, h4, h5, h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
 span:not([class*="fa-"]):not([class*="bi-"]),
 a,
 label {
@@ -139,13 +146,33 @@ label {
    1. PAGE & SECTION HEADINGS (Page Titles, Card Headers, h1 - h6)
    Must be BOLD and BLACK (#000000)
    ========================================================================= */
-h1, h2, h3, h4, h5, h6,
-.h1, .h2, .h3, .h4, .h5, .h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6,
 .page-title,
 .card-title,
 .section-title,
-h1.text-secondary, h2.text-secondary, h3.text-secondary, h4.text-secondary, h5.text-secondary, h6.text-secondary,
-h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.text-muted {
+h1.text-secondary,
+h2.text-secondary,
+h3.text-secondary,
+h4.text-secondary,
+h5.text-secondary,
+h6.text-secondary,
+h1.text-muted,
+h2.text-muted,
+h3.text-muted,
+h4.text-muted,
+h5.text-muted,
+h6.text-muted {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-heading-font-size) !important;
     font-weight: 700 !important;
@@ -153,10 +180,24 @@ h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.te
 }
 
 /* Card banners, modal headers, and grey/dark layout cards retain white text for headers */
-h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.text-white,
-.card-title.text-white, .page-title.text-white, .section-title.text-white,
-.text-white h1, .text-white h2, .text-white h3, .text-white h4, .text-white h5, .text-white h6,
-.text-white .card-title, .text-white .page-title, .text-white .section-title,
+h1.text-white,
+h2.text-white,
+h3.text-white,
+h4.text-white,
+h5.text-white,
+h6.text-white,
+.card-title.text-white,
+.page-title.text-white,
+.section-title.text-white,
+.text-white h1,
+.text-white h2,
+.text-white h3,
+.text-white h4,
+.text-white h5,
+.text-white h6,
+.text-white .card-title,
+.text-white .page-title,
+.text-white .section-title,
 .card-header.text-white,
 .card-header.text-white *,
 .card-header[style*="background"],
@@ -237,24 +278,68 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
 .page-title-container i,
 /* Grey / Dark layout card headers & titles */
 .weekly-target-card .card-title,
-.weekly-target-card h1, .weekly-target-card h2, .weekly-target-card h3,
-.weekly-target-card h4, .weekly-target-card h5, .weekly-target-card h6,
+.weekly-target-card h1,
+.weekly-target-card h2,
+.weekly-target-card h3,
+.weekly-target-card h4,
+.weekly-target-card h5,
+.weekly-target-card h6,
 .filter-card .card-title,
-.filter-card h1, .filter-card h2, .filter-card h3,
-.filter-card h4, .filter-card h5, .filter-card h6,
-.card.bg-dark .card-title, .card.bg-secondary .card-title,
-.card.bg-dark h1, .card.bg-dark h2, .card.bg-dark h3, .card.bg-dark h4, .card.bg-dark h5, .card.bg-dark h6,
-.card.bg-secondary h1, .card.bg-secondary h2, .card.bg-secondary h3, .card.bg-secondary h4, .card.bg-secondary h5, .card.bg-secondary h6,
+.filter-card h1,
+.filter-card h2,
+.filter-card h3,
+.filter-card h4,
+.filter-card h5,
+.filter-card h6,
+.card.bg-dark .card-title,
+.card.bg-secondary .card-title,
+.card.bg-dark h1,
+.card.bg-dark h2,
+.card.bg-dark h3,
+.card.bg-dark h4,
+.card.bg-dark h5,
+.card.bg-dark h6,
+.card.bg-secondary h1,
+.card.bg-secondary h2,
+.card.bg-secondary h3,
+.card.bg-secondary h4,
+.card.bg-secondary h5,
+.card.bg-secondary h6,
 .card.text-white .card-title,
-.card.text-white h1, .card.text-white h2, .card.text-white h3, .card.text-white h4, .card.text-white h5, .card.text-white h6,
+.card.text-white h1,
+.card.text-white h2,
+.card.text-white h3,
+.card.text-white h4,
+.card.text-white h5,
+.card.text-white h6,
 .card[style*="#5e6b77"] .card-title,
-.card[style*="#5e6b77"] h1, .card[style*="#5e6b77"] h2, .card[style*="#5e6b77"] h3, .card[style*="#5e6b77"] h4, .card[style*="#5e6b77"] h5, .card[style*="#5e6b77"] h6,
+.card[style*="#5e6b77"] h1,
+.card[style*="#5e6b77"] h2,
+.card[style*="#5e6b77"] h3,
+.card[style*="#5e6b77"] h4,
+.card[style*="#5e6b77"] h5,
+.card[style*="#5e6b77"] h6,
 .card[style*="5e6b77"] .card-title,
-.card[style*="5e6b77"] h1, .card[style*="5e6b77"] h2, .card[style*="5e6b77"] h3, .card[style*="5e6b77"] h4, .card[style*="5e6b77"] h5, .card[style*="5e6b77"] h6,
+.card[style*="5e6b77"] h1,
+.card[style*="5e6b77"] h2,
+.card[style*="5e6b77"] h3,
+.card[style*="5e6b77"] h4,
+.card[style*="5e6b77"] h5,
+.card[style*="5e6b77"] h6,
 [style*="#5e6b77"] .card-title,
-[style*="#5e6b77"] h1, [style*="#5e6b77"] h2, [style*="#5e6b77"] h3, [style*="#5e6b77"] h4, [style*="#5e6b77"] h5, [style*="#5e6b77"] h6,
+[style*="#5e6b77"] h1,
+[style*="#5e6b77"] h2,
+[style*="#5e6b77"] h3,
+[style*="#5e6b77"] h4,
+[style*="#5e6b77"] h5,
+[style*="#5e6b77"] h6,
 [style*="#707981"] .card-title,
-[style*="#707981"] h1, [style*="#707981"] h2, [style*="#707981"] h3, [style*="#707981"] h4, [style*="#707981"] h5, [style*="#707981"] h6 {
+[style*="#707981"] h1,
+[style*="#707981"] h2,
+[style*="#707981"] h3,
+[style*="#707981"] h4,
+[style*="#707981"] h5,
+[style*="#707981"] h6 {
     color: #ffffff !important;
 }
 
@@ -419,6 +504,7 @@ table td select.form-select,
     color: #000000 !important;
     font-weight: 600 !important;
 }
+
 .status-filter .nav-link.active {
     color: #0d6efd !important;
     font-weight: 700 !important;
@@ -440,9 +526,18 @@ table td select.form-select,
 /* =========================================================================
    6. PROTECT ICON FONTS (FontAwesome & Bootstrap Icons)
    ========================================================================= */
-.fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands,
-[class^="fa-"], [class*=" fa-"],
-.bi, [class^="bi-"], [class*=" bi-"] {
+.fa,
+.fas,
+.far,
+.fab,
+.fa-solid,
+.fa-regular,
+.fa-brands,
+[class^="fa-"],
+[class*=" fa-"],
+.bi,
+[class^="bi-"],
+[class*=" bi-"] {
     font-family: "Font Awesome 6 Free", "FontAwesome", "bootstrap-icons" !important;
 }
 
@@ -551,9 +646,9 @@ table td select.form-select,
 /* =========================================================================
    8. NAVBAR ACTIVE LINK & DROPDOWN HIGHLIGHTING (Enterprise ERP Grade)
    ========================================================================= */
-.nav-menu > li > a.active,
-.nav-menu > li.active > a,
-.main-nav .nav-menu > li > a.active {
+.nav-menu>li>a.active,
+.nav-menu>li.active>a,
+.main-nav .nav-menu>li>a.active {
     background-color: #4b545c !important;
     color: #ffffff !important;
     font-weight: 700 !important;
@@ -562,15 +657,15 @@ table td select.form-select,
     position: relative;
 }
 
-.nav-menu > li > a.active i,
-.nav-menu > li.active > a i,
-.main-nav .nav-menu > li > a.active i {
+.nav-menu>li>a.active i,
+.nav-menu>li.active>a i,
+.main-nav .nav-menu>li>a.active i {
     color: #38bdf8 !important;
 }
 
 /* Hover on active item keeps prominent indicator */
-.nav-menu > li > a.active:hover,
-.nav-menu > li.active > a:hover {
+.nav-menu>li>a.active:hover,
+.nav-menu>li.active>a:hover {
     background-color: #424a52 !important;
     border-bottom-color: #3498db !important;
 }
@@ -637,6 +732,7 @@ table td select.form-select,
     transition: all 0.2s ease !important;
     vertical-align: middle !important;
 }
+
 .action-btn:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08) !important;
@@ -687,6 +783,7 @@ table td select.form-select,
         opacity: 0;
         transform: translateX(80px) scale(0.92);
     }
+
     100% {
         opacity: 1;
         transform: translateX(0) scale(1);
@@ -698,6 +795,7 @@ table td select.form-select,
         opacity: 1;
         transform: translateX(0) scale(1);
     }
+
     100% {
         opacity: 0;
         transform: translateX(80px) scale(0.92);
@@ -708,14 +806,17 @@ table td select.form-select,
 .erp-toast-success {
     border-left: 4px solid #10b981 !important;
 }
+
 .erp-toast-success .erp-toast-icon-box {
     background: rgba(16, 185, 129, 0.12);
     color: #10b981;
 }
+
 .erp-toast-success .erp-toast-badge {
     background: rgba(16, 185, 129, 0.15);
     color: #065f46;
 }
+
 .erp-toast-success .erp-toast-progress-fill {
     background: #10b981;
 }
@@ -723,14 +824,17 @@ table td select.form-select,
 .erp-toast-danger {
     border-left: 4px solid #ef4444 !important;
 }
+
 .erp-toast-danger .erp-toast-icon-box {
     background: rgba(239, 68, 68, 0.12);
     color: #ef4444;
 }
+
 .erp-toast-danger .erp-toast-badge {
     background: rgba(239, 68, 68, 0.15);
     color: #991b1b;
 }
+
 .erp-toast-danger .erp-toast-progress-fill {
     background: #ef4444;
 }
@@ -738,14 +842,17 @@ table td select.form-select,
 .erp-toast-warning {
     border-left: 4px solid #f59e0b !important;
 }
+
 .erp-toast-warning .erp-toast-icon-box {
     background: rgba(245, 158, 11, 0.12);
     color: #f59e0b;
 }
+
 .erp-toast-warning .erp-toast-badge {
     background: rgba(245, 158, 11, 0.15);
     color: #92400e;
 }
+
 .erp-toast-warning .erp-toast-progress-fill {
     background: #f59e0b;
 }
@@ -753,14 +860,17 @@ table td select.form-select,
 .erp-toast-info {
     border-left: 4px solid #3b82f6 !important;
 }
+
 .erp-toast-info .erp-toast-icon-box {
     background: rgba(59, 130, 246, 0.12);
     color: #3b82f6;
 }
+
 .erp-toast-info .erp-toast-badge {
     background: rgba(59, 130, 246, 0.15);
     color: #1e40af;
 }
+
 .erp-toast-info .erp-toast-progress-fill {
     background: #3b82f6;
 }
@@ -859,6 +969,7 @@ table td select.form-select,
     0% {
         width: 100%;
     }
+
     100% {
         width: 0%;
     }
@@ -876,7 +987,8 @@ table td select.form-select,
     background: rgba(15, 23, 42, 0.52);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
-    z-index: 10600; /* Above Bootstrap modal backdrop */
+    z-index: 10600;
+    /* Above Bootstrap modal backdrop */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1096,7 +1208,3 @@ table td select.form-select,
 .erp-popconfirm-btn-confirm.success:hover {
     background: #059669;
 }
-
-
-
-

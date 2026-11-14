@@ -1,11 +1,14 @@
 <?php
+ob_start();
 // -------------------------------------------------------------
 // FILE: teamleader_ot_approval.php
 // PURPOSE: Team Leader interface to Approve/Reject OT claims
 // -------------------------------------------------------------
 
 require 'db.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in and is a Team Leader
 $teamleader_username = $_SESSION['username'] ?? '';
@@ -14,11 +17,11 @@ $teamleader_id = $_SESSION['uid'] ?? 0;
 // Get team leader's team
 $tl_query = "SELECT team_id FROM employee_master WHERE employee_username = '$teamleader_username'";
 $tl_result = $mysqli->query($tl_query);
-$teamleader_data = $tl_result->fetch_assoc();
+$teamleader_data = $tl_result ? $tl_result->fetch_assoc() : null;
 $teamleader_team_id = $teamleader_data['team_id'] ?? 0;
 
 // --- 1. HANDLE APPROVAL/REJECTION ---
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if (isset($_POST['action']) && isset($_POST['ot_id'])) {
         $ot_id = $_POST['ot_id'];
         $action = $_POST['action'];
@@ -34,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                          AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
         $verify_result = $mysqli->query($verify_query);
         
-        if ($verify_result->num_rows > 0) {
+        if ($verify_result && $verify_result->num_rows > 0) {
             $status = ($action == 'approve') ? 'Approved' : 'Rejected';
             
             $update_sql = "UPDATE leave_applications 
@@ -60,42 +63,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Handle bulk actions (only for pending claims)
     if (isset($_POST['bulk_action']) && isset($_POST['selected_claims'])) {
         $bulk_action = $_POST['bulk_action'];
-        $selected_ids = $_POST['selected_claims'];
+        $selected_ids = is_array($_POST['selected_claims']) ? $_POST['selected_claims'] : explode(',', (string)$_POST['selected_claims']);
         $bulk_remarks = $mysqli->real_escape_string($_POST['bulk_remarks'] ?? '');
         
         $status = ($bulk_action == 'approve') ? 'Approved' : 'Rejected';
-        $ids_str = implode(',', array_map('intval', $selected_ids));
+        $ids_str = implode(',', array_map('intval', array_filter($selected_ids)));
         
-        // Verify all selected claims belong to team members AND are pending
-        $verify_query = "SELECT la.id 
-                         FROM leave_applications la
-                         JOIN employee_master em ON la.employee_username = em.employee_username
-                         WHERE la.id IN ($ids_str) 
-                         AND em.team_id = '$teamleader_team_id' 
-                         AND em.user_role_id IN (4, 11) 
-                         AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
-                         AND la.status = 'Pending'";
-        $verify_result = $mysqli->query($verify_query);
-        
-        if ($verify_result->num_rows > 0) {
-            $update_sql = "UPDATE leave_applications 
-                          SET status = '$status', 
-                              admin_remarks = CONCAT(COALESCE(admin_remarks, ''), ' [Bulk: $bulk_remarks]'),
-                              approved_by = '$teamleader_username',
-                              approved_at = NOW()
-                          WHERE id IN ($ids_str) 
-                          AND status = 'Pending'";
+        if (!empty($ids_str)) {
+            // Verify all selected claims belong to team members AND are pending
+            $verify_query = "SELECT la.id 
+                             FROM leave_applications la
+                             JOIN employee_master em ON la.employee_username = em.employee_username
+                             WHERE la.id IN ($ids_str) 
+                             AND em.team_id = '$teamleader_team_id' 
+                             AND em.user_role_id IN (4, 11) 
+                             AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
+                             AND la.status = 'Pending'";
+            $verify_result = $mysqli->query($verify_query);
             
-            if ($mysqli->query($update_sql)) {
-                $msg = "Bulk action completed! " . $verify_result->num_rows . " claims " . strtolower($status);
-                $msg_type = "success";
+            if ($verify_result && $verify_result->num_rows > 0) {
+                $update_sql = "UPDATE leave_applications 
+                              SET status = '$status', 
+                                  admin_remarks = CONCAT(COALESCE(admin_remarks, ''), ' [Bulk: $bulk_remarks]'),
+                                  approved_by = '$teamleader_username',
+                                  approved_at = NOW()
+                              WHERE id IN ($ids_str) 
+                              AND status = 'Pending'";
+                
+                if ($mysqli->query($update_sql)) {
+                    $msg = "Bulk action completed! " . $verify_result->num_rows . " claims " . strtolower($status);
+                    $msg_type = "success";
+                } else {
+                    $msg = "Error in bulk update: " . $mysqli->error;
+                    $msg_type = "danger";
+                }
             } else {
-                $msg = "Error in bulk update: " . $mysqli->error;
-                $msg_type = "danger";
+                $msg = "No valid pending claims found for bulk action!";
+                $msg_type = "warning";
             }
-        } else {
-            $msg = "No valid pending claims found for bulk action!";
-            $msg_type = "warning";
         }
     }
 }
@@ -134,7 +139,7 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     header('Content-Disposition: attachment; filename="OT_Claims_Team_' . $teamleader_team_id . '_' . date('Y-m-d') . '.xls"');
     
     echo '<table border="1">';
-    echo '<tr><th colspan="15" style="background-color:#4CAF50;color:white;font-size:16px;">OT CLAIMS REPORT - TEAM ' . $teamleader_team_id . '</th></tr>';
+    echo '<tr><th colspan="15" style="background-color:#707981;color:white;font-size:16px;">OT CLAIMS REPORT - TEAM ' . $teamleader_team_id . '</th></tr>';
     echo '<tr><th colspan="15">Generated on: ' . date('d-M-Y H:i:s') . ' | Generated by: ' . $teamleader_username . '</th></tr>';
     echo '<tr>';
     
@@ -175,136 +180,508 @@ if ($status_filter == 'pending') {
     $status_condition = "AND la.status = 'Rejected'";
 }
 
+// Helpers
+if (!function_exists('getEmpInitials')) {
+    function getEmpInitials($name) {
+        $words = preg_split('/[\s\.\-_]+/', trim((string)$name));
+        $initials = '';
+        foreach ($words as $w) {
+            if (!empty($w)) {
+                $initials .= strtoupper($w[0]);
+            }
+            if (strlen($initials) >= 2) break;
+        }
+        return $initials ?: 'EM';
+    }
+}
+
+if (!function_exists('getEmpAvatarStyle')) {
+    function getEmpAvatarStyle($string) {
+        $palettes = [
+            ['bg' => '#e0f2fe', 'border' => '#bae6fd', 'text' => '#0369a1'], // sky
+            ['bg' => '#ecfdf5', 'border' => '#a7f3d0', 'text' => '#047857'], // emerald
+            ['bg' => '#fef3c7', 'border' => '#fde68a', 'text' => '#b45309'], // amber
+            ['bg' => '#ede9fe', 'border' => '#ddd6fe', 'text' => '#6d28d9'], // violet
+            ['bg' => '#fce7f3', 'border' => '#fbcfe8', 'text' => '#be185d'], // pink
+            ['bg' => '#e0e7ff', 'border' => '#c7d2fe', 'text' => '#4338ca'], // indigo
+            ['bg' => '#f1f5f9', 'border' => '#e2e8f0', 'text' => '#334155'], // slate
+        ];
+        $hash = abs(crc32((string)$string));
+        return $palettes[$hash % count($palettes)];
+    }
+}
+
 include 'header.php';
 ?>
 
 <style>
-    /* Status Badges */
-    .status-Pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-    .status-Approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-    .status-Rejected { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-    
-    /* Type Badges */
-    .badge-ot { background-color: #6f42c1; color: white; }
-    .badge-comp { background-color: #198754; color: white; }
-    .badge-permission { background-color: #0dcaf0; color: #000; }
+    /* =========================================================================
+       SENIOR DEVELOPER STYLING - OT APPROVALS MANAGEMENT
+       Preserving Exact Brand Palette: Solid Ash Grey #707981
+       ========================================================================= */
+    :root {
+        --brand-ash: #707981;
+        --brand-ash-dark: #5e666d;
+        --brand-ash-light: #f1f5f9;
+        --accent-blue: #0284c7;
+        --accent-emerald: #10b981;
+        --accent-amber: #f59e0b;
+        --accent-rose: #ef4444;
+    }
 
-    /* Highlight rows */
-    .table-hover tbody tr:hover { background-color: rgba(0,123,255,0.1); }
-    
-    /* Checkbox column */
-    .select-checkbox { width: 30px; }
-    
-    /* Action buttons */
-    .btn-approve { background-color: #28a745; color: white; }
-    .btn-reject { background-color: #dc3545; color: white; }
-    
-    /* Disabled action buttons */
-    .btn-disabled { 
-        background-color: #6c757d; 
-        color: white;
-        cursor: not-allowed;
-        opacity: 0.6;
+    .ot-main-container {
+        padding: 90px 24px 40px 24px;
+        max-width: 1560px;
+        margin: 0 auto;
     }
-    
-    /* Bulk action panel */
-    .bulk-panel {
-        /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-        background-color: #707981 !important;
-        color: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 20px;
+
+    /* 1. Page Hero Banner */
+    .page-hero-banner {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 20px 24px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 16px rgba(112, 121, 129, 0.06);
     }
-    
-    /* Team stats cards */
-    .stat-card {
-        background: white;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
+
+    .hero-icon-pill {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: var(--brand-ash);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        box-shadow: 0 4px 12px rgba(112, 121, 129, 0.25);
+        flex-shrink: 0;
     }
-    
-    .stat-card .stat-number {
-        font-size: 24px;
-        font-weight: bold;
-        color: #2196F3;
+
+    .hero-title {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1e293b;
+        letter-spacing: -0.02em;
     }
-    
-    .stat-card .stat-label {
-        font-size: 12px;
-        color: #666;
+
+    .hero-subtitle {
+        font-size: 0.86rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .team-badge-pill {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 50rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* 2. Senior Developer Stat Cards */
+    .stat-card-modern {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-card-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+    }
+
+    .stat-card-modern.stat-pending::before { background-color: var(--accent-amber); }
+    .stat-card-modern.stat-approved::before { background-color: var(--accent-emerald); }
+    .stat-card-modern.stat-rejected::before { background-color: var(--accent-rose); }
+    .stat-card-modern.stat-hours::before { background-color: var(--accent-blue); }
+
+    .stat-label {
+        font-size: 0.72rem;
+        font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: #64748b;
+        margin-bottom: 6px;
+        display: block;
     }
-    
-    /* Status filter tabs */
-    .status-filter .nav-link {
-        color: #6c757d;
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1e293b;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+    }
+
+    .stat-subtext {
+        font-size: 0.76rem;
+        font-weight: 600;
+        margin-top: 6px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .stat-icon-wrapper {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    /* 3. Modern Filter Tabs */
+    .filter-tab-container {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        padding: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+
+    .tab-pill-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.84rem;
+        font-weight: 600;
+        color: #475569;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .tab-pill-btn:hover {
+        background-color: #f1f5f9;
+        color: #0f172a;
+    }
+
+    .tab-pill-btn.active {
+        background-color: var(--brand-ash);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(112, 121, 129, 0.3);
+    }
+
+    .tab-pill-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 50rem;
+        background-color: #e2e8f0;
+        color: #334155;
+    }
+
+    .tab-pill-btn.active .tab-pill-badge {
+        background-color: #ffffff;
+        color: #1e293b;
+    }
+
+    /* 4. Bulk Action Floating Bar */
+    .bulk-action-bar {
+        background: #707981;
+        border-radius: 12px;
+        color: #ffffff;
+        box-shadow: 0 8px 24px rgba(112, 121, 129, 0.28);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .bulk-icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    /* 5. Master Table Card */
+    .card-modern {
+        background: #ffffff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 18px rgba(112, 121, 129, 0.05);
+        overflow: hidden;
+    }
+
+    .card-header-ash {
+        background-color: var(--brand-ash) !important;
+        background: var(--brand-ash) !important;
+        color: #ffffff !important;
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .header-icon-box {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        color: #ffffff;
+        flex-shrink: 0;
+    }
+
+    .target-count-pill {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        font-weight: 700 !important;
+        font-size: 0.8rem !important;
+        padding: 5px 14px !important;
+        border-radius: 50rem !important;
+        border: 1px solid rgba(226, 232, 240, 0.95) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    /* Table Structure */
+    .table-modern-ot {
+        width: 100%;
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table-modern-ot thead th {
+        background-color: var(--brand-ash) !important;
+        background: var(--brand-ash) !important;
+        color: #ffffff !important;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 11px 12px;
         border: none;
-        border-bottom: 2px solid transparent;
+        vertical-align: middle;
+        white-space: nowrap;
     }
-    
-    .status-filter .nav-link:hover {
-        color: #495057;
+
+    .table-modern-ot tbody td {
+        padding: 12px 14px;
+        vertical-align: middle;
+        border-top: 1px solid #f1f5f9;
+        font-size: 0.86rem;
     }
-    
-    .status-filter .nav-link.active {
-        color: #0d6efd;
-        border-bottom: 2px solid #0d6efd;
-        font-weight: bold;
+
+    .table-modern-ot tbody tr:hover {
+        background-color: #f8fafc;
     }
-    
-    /* Approved row styling */
+
     .row-approved {
-        background-color: #f8fff9;
+        background-color: #fcfdfc;
     }
-    
-    /* Rejected row styling */
+
     .row-rejected {
-        background-color: #fff8f8;
+        background-color: #fefcfc;
     }
-    
-    /* Readonly remarks for non-pending */
-    .remarks-readonly {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 0.25rem;
-        padding: 0.375rem 0.75rem;
-        font-size: 0.875rem;
-        min-height: calc(1.5em + 0.75rem);
+
+    /* Avatars */
+    .emp-avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+    }
+
+    /* Modern Type Badges */
+    .badge-type-pill {
+        font-size: 0.73rem;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .badge-ot {
+        background-color: #ede9fe;
+        color: #6366f1;
+        border: 1px solid #ddd6fe;
+    }
+
+    .badge-comp {
+        background-color: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+
+    .badge-permission {
+        background-color: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+    }
+
+    /* Modern Status Badges */
+    .badge-status-pill {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 50rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .status-Pending {
+        background-color: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+
+    .status-Approved {
+        background-color: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+
+    .status-Rejected {
+        background-color: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    /* Remarks Card */
+    .remarks-readonly-card {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        line-height: 1.35;
         word-break: break-word;
+        max-width: 220px;
+    }
+
+    /* Action Buttons */
+    .btn-action-approve {
+        background-color: #10b981;
+        color: #ffffff;
+        border: none;
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-action-approve:hover {
+        background-color: #059669;
+        color: #ffffff;
+    }
+
+    .btn-action-reject {
+        background-color: #ef4444;
+        color: #ffffff;
+        border: none;
+        font-size: 0.76rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-action-reject:hover {
+        background-color: #dc2626;
+        color: #ffffff;
+    }
+
+    /* Empty State Circle */
+    .empty-icon-circle {
+        width: 68px;
+        height: 68px;
+        border-radius: 50%;
+        background-color: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.85rem;
+        color: #94a3b8;
     }
 </style>
 
-<div class="container-fluid main-content py-4" style="margin-top: 60px;">
+<div class="ot-main-container">
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="text-secondary"><i class="fa fa-check-circle"></i> OT Approvals</h4>
-            <p class="text-muted small mb-0">Review and manage OT claims from your team members.</p>
-        </div>
-        <div class="d-flex gap-2">
-            <!-- Excel Download Button -->
-            <!-- <a href="?download=excel" class="btn btn-success shadow-sm">
-                <i class="fa fa-file-excel-o"></i> Download Excel
-            </a> -->
+    <!-- 1. Page Hero Banner -->
+    <div class="page-hero-banner mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="hero-icon-pill">
+                    <i class="fas fa-business-time"></i>
+                </div>
+                <div>
+                    <h3 class="hero-title mb-1">OT Approvals</h3>
+                    <p class="hero-subtitle mb-0">Review and manage overtime claims, comp-off requests, and permissions from your team members.</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="team-badge-pill">
+                    <i class="fas fa-users-gear text-primary me-1"></i>
+                    <span>Team <strong><?= htmlspecialchars((string)$teamleader_team_id) ?></strong></span>
+                </div>
+                <!-- Excel Download Button (Functionality Preserved) -->
+                <!-- <a href="?download=excel" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    <i class="fa fa-file-excel-o"></i> Download Excel
+                </a> -->
+            </div>
         </div>
     </div>
 
-    <!-- Feedback Message -->
+    <!-- Feedback Message Alert -->
     <?php if(isset($msg)): ?>
-        <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show" role="alert">
+        <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+            <i class="fas <?= $msg_type === 'success' ? 'fa-check-circle' : ($msg_type === 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle') ?> me-2"></i>
             <?= $msg ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
 
-    <!-- Team Statistics -->
-    <div class="row mb-4">
+    <!-- 2. Team Statistics Cards -->
+    <div class="row g-3 mb-4">
         <?php
-        // Get team statistics
+        // Get team statistics (Functionality & Query 100% Preserved)
         $stats_query = "SELECT 
                         COUNT(CASE WHEN la.status = 'Pending' THEN 1 END) as pending_count,
                         COUNT(CASE WHEN la.status = 'Approved' THEN 1 END) as approved_count,
@@ -318,132 +695,188 @@ include 'header.php';
                        AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
         
         $stats_result = $mysqli->query($stats_query);
-        $stats = $stats_result->fetch_assoc();
+        $stats = $stats_result ? $stats_result->fetch_assoc() : [];
         ?>
         
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= $stats['pending_count'] ?? 0 ?></div>
-                <div class="stat-label">Pending Claims</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= $stats['approved_count'] ?? 0 ?></div>
-                <div class="stat-label">Approved Claims</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= $stats['rejected_count'] ?? 0 ?></div>
-                <div class="stat-label">Rejected Claims</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= round($stats['total_approved_hours'] ?? 0, 1) ?></div>
-                <div class="stat-label">Total Approved Hours</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Status Filter Tabs -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body py-2">
-            <div class="status-filter">
-                <ul class="nav nav-tabs border-0">
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'all' ? 'active' : '' ?>" href="?status=all">
-                            All Claims (<?= ($stats['pending_count'] + $stats['approved_count'] + $stats['rejected_count']) ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'pending' ? 'active' : '' ?>" href="?status=pending">
-                            Pending (<?= $stats['pending_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'approved' ? 'active' : '' ?>" href="?status=approved">
-                            Approved (<?= $stats['approved_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'rejected' ? 'active' : '' ?>" href="?status=rejected">
-                            Rejected (<?= $stats['rejected_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bulk Action Panel (Only shown for pending claims) -->
-    <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
-    <div class="bulk-panel" id="bulkPanel" style="display: none;">
-        <form method="POST" action="" id="bulkForm">
-            <div class="row align-items-center">
-                <div class="col-md-3">
-                    <strong>Bulk Action for <span id="selectedCount">0</span> pending claims:</strong>
+        <!-- Pending Claims -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card-modern stat-pending">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="stat-label">Pending Claims</span>
+                        <div class="stat-number"><?= number_format($stats['pending_count'] ?? 0) ?></div>
+                        <span class="stat-subtext text-warning"><i class="far fa-clock me-1"></i>Awaiting Review</span>
+                    </div>
+                    <div class="stat-icon-wrapper bg-warning-subtle text-warning-emphasis">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <select name="bulk_action" class="form-select" required>
+            </div>
+        </div>
+
+        <!-- Approved Claims -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card-modern stat-approved">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="stat-label">Approved Claims</span>
+                        <div class="stat-number"><?= number_format($stats['approved_count'] ?? 0) ?></div>
+                        <span class="stat-subtext text-success"><i class="far fa-check-circle me-1"></i>Approved to Date</span>
+                    </div>
+                    <div class="stat-icon-wrapper bg-success-subtle text-success">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rejected Claims -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card-modern stat-rejected">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="stat-label">Rejected Claims</span>
+                        <div class="stat-number"><?= number_format($stats['rejected_count'] ?? 0) ?></div>
+                        <span class="stat-subtext text-danger"><i class="far fa-times-circle me-1"></i>Declined Requests</span>
+                    </div>
+                    <div class="stat-icon-wrapper bg-danger-subtle text-danger">
+                        <i class="fas fa-circle-xmark"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Approved Hours -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card-modern stat-hours">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="stat-label">Total Approved Hours</span>
+                        <div class="stat-number">
+                            <?= round((float)($stats['total_approved_hours'] ?? 0), 1) ?>
+                            <span style="font-size: 0.9rem; font-weight: 600; color: #64748b;">hrs</span>
+                        </div>
+                        <span class="stat-subtext text-primary"><i class="fas fa-calculator me-1"></i>Recorded Time</span>
+                    </div>
+                    <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Status Filter Tabs -->
+    <div class="filter-tab-container mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex flex-wrap gap-2">
+                <a class="tab-pill-btn <?= $status_filter == 'all' ? 'active' : '' ?>" href="?status=all">
+                    <i class="fas fa-list"></i>
+                    <span>All Claims</span>
+                    <span class="tab-pill-badge"><?= (($stats['pending_count'] ?? 0) + ($stats['approved_count'] ?? 0) + ($stats['rejected_count'] ?? 0)) ?></span>
+                </a>
+                <a class="tab-pill-btn <?= $status_filter == 'pending' ? 'active' : '' ?>" href="?status=pending">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span>Pending</span>
+                    <span class="tab-pill-badge"><?= $stats['pending_count'] ?? 0 ?></span>
+                </a>
+                <a class="tab-pill-btn <?= $status_filter == 'approved' ? 'active' : '' ?>" href="?status=approved">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Approved</span>
+                    <span class="tab-pill-badge"><?= $stats['approved_count'] ?? 0 ?></span>
+                </a>
+                <a class="tab-pill-btn <?= $status_filter == 'rejected' ? 'active' : '' ?>" href="?status=rejected">
+                    <i class="fas fa-times-circle"></i>
+                    <span>Rejected</span>
+                    <span class="tab-pill-badge"><?= $stats['rejected_count'] ?? 0 ?></span>
+                </a>
+            </div>
+            <div class="text-muted small px-2">
+                <i class="fas fa-filter me-1 text-primary"></i> Current Filter: <strong class="text-dark"><?= ucfirst($status_filter) ?></strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Bulk Action Panel (Shown dynamically for pending claims) -->
+    <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
+    <div class="bulk-action-bar mb-4" id="bulkPanel" style="display: none;">
+        <form method="POST" action="" id="bulkForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="bulk-icon-box"><i class="fas fa-layer-group"></i></span>
+                <div>
+                    <div class="fw-bold fs-6">Bulk Review on Selected Claims</div>
+                    <small class="text-white-50"><span id="selectedCount" class="badge bg-white text-dark fw-bold px-2 py-1 me-1">0</span> claim(s) selected</small>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1 justify-content-md-end">
+                <div style="min-width: 175px;">
+                    <select name="bulk_action" class="form-select form-select-sm" required>
                         <option value="" selected disabled>-- Select Action --</option>
                         <option value="approve">Approve Selected</option>
                         <option value="reject">Reject Selected</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" name="bulk_remarks" class="form-control" placeholder="Remarks for bulk action" required>
+                <div style="min-width: 240px;" class="flex-grow-1 flex-md-grow-0">
+                    <input type="text" name="bulk_remarks" class="form-control form-control-sm" placeholder="Enter remarks for bulk action" required>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-light w-100">Apply</button>
-                    <button type="button" class="btn btn-outline-light w-100 mt-1" onclick="clearSelection()">Cancel</button>
-                </div>
+                <button type="submit" class="btn btn-sm btn-light fw-bold px-3">
+                    <i class="fas fa-bolt text-primary me-1"></i> Apply
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-light px-3" onclick="clearSelection()">
+                    Cancel
+                </button>
             </div>
             <input type="hidden" name="selected_claims[]" id="selectedClaims">
         </form>
     </div>
     <?php endif; ?>
 
-    <!-- OT CLAIMS TABLE -->
-    <div class="card border-0 shadow-sm rounded-3">
-        <!-- <div class="card-header bg-primary text-white py-3"> -->
-            <div class="card-header text-white py-3" style="background-color: #707981 !important;">
-            <h6 class="mb-0 fw-bold">
-                OT Approvals - Team <?= $teamleader_team_id ?> 
-                <span class="float-end">
-                    <small>Showing: <?= ucfirst($status_filter) ?></small>
+    <!-- 5. OT CLAIMS MASTER TABLE -->
+    <div class="card card-modern border-0 shadow-sm rounded-3">
+        <div class="card-header card-header-ash d-flex justify-content-between align-items-center py-3 px-4">
+            <div class="d-flex align-items-center gap-2">
+                <div class="header-icon-box">
+                    <i class="fas fa-user-clock"></i>
+                </div>
+                <h5 class="mb-0 fw-bold text-white">
+                    OT Approvals &bull; Team <?= htmlspecialchars((string)$teamleader_team_id) ?>
+                </h5>
+            </div>
+            <div>
+                <span class="target-count-pill">
+                    <i class="fas fa-eye text-primary"></i>
+                    Showing: <?= ucfirst($status_filter) ?>
                 </span>
-            </h6>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
+                <table class="table table-hover align-middle mb-0 table-modern-ot">
+                    <thead>
                         <tr>
                             <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
-                            <th class="select-checkbox">
-                                <input type="checkbox" id="selectAll" onclick="toggleAllSelection()">
+                            <th class="select-checkbox text-center" style="width: 45px;">
+                                <input type="checkbox" class="form-check-input" id="selectAll" onclick="toggleAllSelection()" title="Select All">
                             </th>
                             <?php else: ?>
-                            <th class="select-checkbox" style="width: 30px;"></th>
+                            <th class="select-checkbox text-center" style="width: 45px;"></th>
                             <?php endif; ?>
-                            <th>Date</th>
-                            <th>Employee</th>
-                            <th>Type</th>
-                            <th>Process</th>
-                            <th>Article</th>
-                            <th>Time & Duration</th>
-                            <th>Count</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Remarks</th>
-                            <th>Actions</th>
+                            <th style="min-width: 105px;">Date</th>
+                            <th style="min-width: 175px;">Employee</th>
+                            <th style="min-width: 120px;">Type</th>
+                            <th style="min-width: 115px;">Process</th>
+                            <th style="min-width: 100px;">Article</th>
+                            <th style="min-width: 160px;">Time & Duration</th>
+                            <th style="min-width: 85px;" class="text-center">Count</th>
+                            <th style="min-width: 170px;">Reason</th>
+                            <th style="min-width: 115px;" class="text-center">Status</th>
+                            <th style="min-width: 190px;">Remarks</th>
+                            <th style="min-width: 155px;" class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        // Fetch OT claims from same team with status filter
+                        // Fetch OT claims from same team with status filter (Query 100% Preserved)
                         $query = "SELECT 
                                 la.*,
                                 em.employee_name,
@@ -462,101 +895,143 @@ include 'header.php';
 
                         if ($result && $result->num_rows > 0) {
                             while ($row = $result->fetch_assoc()) {
-                                $type_label = str_replace('_', ' ', $row['request_type']);
-                                $ot_date = date('d-M-Y', strtotime($row['from_date']));
-                                $process_display = !empty($row['process_name']) ? $row['process_name'] : $row['emp_process'];
+                                $type_label = str_replace('_', ' ', (string)($row['request_type'] ?? ''));
+                                $ot_date = !empty($row['from_date']) ? date('d-M-Y', strtotime($row['from_date'])) : '—';
+                                $process_display = !empty($row['process_name']) ? $row['process_name'] : ($row['emp_process'] ?? '');
                                 $is_pending = ($row['status'] == 'Pending');
                                 $row_class = $is_pending ? '' : ($row['status'] == 'Approved' ? 'row-approved' : 'row-rejected');
+                                $avatarStyle = getEmpAvatarStyle($row['employee_username'] ?? $row['employee_name'] ?? '');
+                                $initials = getEmpInitials($row['employee_name'] ?? $row['employee_username'] ?? '');
                                 ?>
                                 <tr id="row-<?= $row['id'] ?>" class="<?= $row_class ?>">
-    <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
-    <td class="select-checkbox">
-        <?php if ($is_pending): ?>
-            <input type="checkbox" class="claim-checkbox" value="<?= $row['id'] ?>" onchange="updateSelection()">
-        <?php else: ?>
-            <!-- Empty cell for non-pending claims -->
-        <?php endif; ?>
-    </td>
-    <?php else: ?>
-    <td class="select-checkbox"></td>
-    <?php endif; ?>
-    
-    <td class="fw-bold"><?= $ot_date ?></td>
-    <td>
-        <div class="fw-bold"><?= htmlspecialchars((string)($row['employee_name'] ?? '')) ?></div>
-        <div class="small text-muted"><?= htmlspecialchars((string)($row['employee_username'] ?? '')) ?></div>
-    </td>
-    <td>
-        <span class="badge <?= $row['request_type'] == 'OT_Claim' ? 'badge-ot' : ($row['request_type'] == 'Permission' ? 'badge-permission' : 'badge-comp') ?>">
-            <?= $type_label ?>
-        </span>
-    </td>
-    <td>
-        <span class="badge bg-info"><?= htmlspecialchars((string)($process_display ?? '')) ?></span>
-    </td>
-    <td>
-        <?php if (!empty($row['article'])): ?>
-            <span class="badge bg-success"><?= htmlspecialchars((string)($row['article'] ?? '')) ?></span>
-        <?php else: ?>
-            <span class="text-muted">-</span>
-        <?php endif; ?>
-    </td>
-    <td>
-        <div class="small">
-            <?php if (!empty($row['start_time']) && !empty($row['end_time'])): ?>
-                <?= date('g:i A', strtotime($row['start_time'])) ?> to 
-                <?= date('g:i A', strtotime($row['end_time'])) ?>
-            <?php endif; ?>
-        </div>
-        <?php if (!empty($row['total_hours'])): ?>
-            <span class="badge bg-warning text-dark"><?= $row['total_hours'] ?> hrs</span>
-        <?php endif; ?>
-    </td>
-    <td class="fw-bold"><?= !empty($row['count']) ? number_format($row['count']) : '-' ?></td>
-    <td class="small text-secondary" style="max-width: 200px;">
-        <?= htmlspecialchars((string)($row['reason'] ?? '')) ?>
-    </td>
-    <td>
-        <span class="badge status-<?= $row['status'] ?>">
-            <?= $row['status'] ?>
-        </span>
-    </td>
-    <td>
-        <?php if ($is_pending): ?>
-            <input type="text" 
-                   class="form-control form-control-sm remarks-input" 
-                   id="remarks-<?= $row['id'] ?>" 
-                   placeholder="Enter remarks">
-        <?php else: ?>
-            <div class="remarks-readonly small">
-                <?= !empty($row['admin_remarks']) ? htmlspecialchars((string)($row['admin_remarks'] ?? '')) : '-' ?>
-                <?php if (!empty($row['approved_by'])): ?>
-                    <div class="text-muted mt-1">
-                        <small>By: <?= $row['approved_by'] ?></small>
-                        <?php if (!empty($row['approved_at'])): ?>
-                            <br><small><?= date('d-M-y H:i', strtotime($row['approved_at'])) ?></small>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-    </td>
+                                    <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
+                                    <td class="select-checkbox text-center">
+                                        <?php if ($is_pending): ?>
+                                            <input type="checkbox" class="claim-checkbox form-check-input" value="<?= $row['id'] ?>" onchange="updateSelection()">
+                                        <?php else: ?>
+                                            <span class="text-muted"><i class="fas fa-minus small opacity-25"></i></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <?php else: ?>
+                                    <td class="select-checkbox text-center">
+                                        <span class="text-muted"><i class="fas fa-minus small opacity-25"></i></span>
+                                    </td>
+                                    <?php endif; ?>
+                                    
+                                    <td class="fw-bold text-dark text-nowrap">
+                                        <i class="far fa-calendar-alt text-muted me-1 small"></i><?= $ot_date ?>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="emp-avatar-circle" style="background-color: <?= $avatarStyle['bg'] ?>; color: <?= $avatarStyle['text'] ?>; border: 1px solid <?= $avatarStyle['border'] ?>;">
+                                                <?= htmlspecialchars($initials) ?>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark text-truncate" style="max-width: 160px;"><?= htmlspecialchars((string)($row['employee_name'] ?? '')) ?></div>
+                                                <span class="badge bg-light text-muted border font-monospace py-0 px-1" style="font-size: 0.72rem;">
+                                                    <?= htmlspecialchars((string)($row['employee_username'] ?? '')) ?>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php if ($row['request_type'] == 'OT_Claim'): ?>
+                                            <span class="badge-type-pill badge-ot">
+                                                <i class="fas fa-clock me-1"></i><?= $type_label ?>
+                                            </span>
+                                        <?php elseif ($row['request_type'] == 'Permission'): ?>
+                                            <span class="badge-type-pill badge-permission">
+                                                <i class="fas fa-door-open me-1"></i><?= $type_label ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge-type-pill badge-comp">
+                                                <i class="fas fa-calendar-check me-1"></i><?= $type_label ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-secondary border font-monospace">
+                                            <?= htmlspecialchars((string)($process_display ?: 'General')) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($row['article'])): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <?= htmlspecialchars((string)$row['article']) ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted small">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="small fw-semibold text-dark text-nowrap">
+                                            <?php if (!empty($row['start_time']) && !empty($row['end_time'])): ?>
+                                                <?= date('g:i A', strtotime($row['start_time'])) ?> &rarr; <?= date('g:i A', strtotime($row['end_time'])) ?>
+                                            <?php else: ?>
+                                                <span class="text-muted">—</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if (!empty($row['total_hours'])): ?>
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-0 px-1 mt-1" style="font-size: 0.74rem;">
+                                                <i class="fas fa-stopwatch me-1"></i><?= $row['total_hours'] ?> hrs
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="fw-bold text-center">
+                                        <?= !empty($row['count']) ? number_format((float)$row['count']) : '<span class="text-muted">—</span>' ?>
+                                    </td>
+                                    <td class="small text-secondary" style="max-width: 200px;">
+                                        <div class="text-truncate" title="<?= htmlspecialchars((string)($row['reason'] ?? '')) ?>">
+                                            <?= htmlspecialchars((string)($row['reason'] ?? '—')) ?>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge-status-pill status-<?= htmlspecialchars((string)$row['status']) ?>">
+                                            <?php if ($row['status'] == 'Approved'): ?>
+                                                <i class="fas fa-check-circle"></i>
+                                            <?php elseif ($row['status'] == 'Rejected'): ?>
+                                                <i class="fas fa-times-circle"></i>
+                                            <?php else: ?>
+                                                <i class="far fa-clock"></i>
+                                            <?php endif; ?>
+                                            <?= htmlspecialchars((string)$row['status']) ?>
+                                        </span>
+                                    </td>
                                     <td>
                                         <?php if ($is_pending): ?>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-approve" onclick="approveClaim(<?= $row['id'] ?>)">
-                                                    <i class="fa fa-check"></i> Approve
+                                            <input type="text" 
+                                                   class="form-control form-control-sm remarks-input shadow-none" 
+                                                   id="remarks-<?= $row['id'] ?>" 
+                                                   placeholder="Enter review remarks..."
+                                                   style="font-size: 0.82rem; border-radius: 6px;">
+                                        <?php else: ?>
+                                            <div class="remarks-readonly-card">
+                                                <div class="text-dark"><?= !empty($row['admin_remarks']) ? htmlspecialchars((string)$row['admin_remarks']) : '<span class="text-muted">No remarks</span>' ?></div>
+                                                <?php if (!empty($row['approved_by'])): ?>
+                                                    <div class="text-muted mt-1 pt-1 border-top" style="font-size: 0.72rem;">
+                                                        <span><i class="far fa-user me-1"></i><?= htmlspecialchars((string)$row['approved_by']) ?></span>
+                                                        <?php if (!empty($row['approved_at'])): ?>
+                                                            <span class="ms-1 text-nowrap">&bull; <?= date('d-M-y H:i', strtotime($row['approved_at'])) ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <?php if ($is_pending): ?>
+                                            <div class="d-inline-flex gap-1">
+                                                <button type="button" class="btn btn-action-approve" onclick="approveClaim(<?= $row['id'] ?>)" title="Approve Claim">
+                                                    <i class="fas fa-check"></i> Approve
                                                 </button>
-                                                <button class="btn btn-reject" onclick="rejectClaim(<?= $row['id'] ?>)">
-                                                    <i class="fa fa-times"></i> Reject
+                                                <button type="button" class="btn btn-action-reject" onclick="rejectClaim(<?= $row['id'] ?>)" title="Reject Claim">
+                                                    <i class="fas fa-times"></i> Reject
                                                 </button>
                                             </div>
                                         <?php else: ?>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-disabled" disabled>
-                                                    <i class="fa fa-check"></i> Approved
-                                                </button>
-                                            </div>
+                                            <span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 0.76rem;">
+                                                <i class="fas fa-lock me-1"></i> <?= $row['status'] == 'Approved' ? 'Approved' : 'Rejected' ?>
+                                            </span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -564,7 +1039,19 @@ include 'header.php';
                             }
                         } else {
                             $colspan = ($status_filter == 'all' || $status_filter == 'pending') ? 12 : 11;
-                            echo '<tr><td colspan="' . $colspan . '" class="text-center py-4 text-muted">No OT claims found.</td></tr>';
+                            ?>
+                            <tr>
+                                <td colspan="<?= $colspan ?>" class="text-center py-5">
+                                    <div class="py-4">
+                                        <div class="empty-icon-circle mx-auto mb-3">
+                                            <i class="far fa-folder-open"></i>
+                                        </div>
+                                        <h6 class="fw-bold text-dark mb-1">No OT Claims Found</h6>
+                                        <p class="text-muted small mb-0">There are currently no <?= $status_filter !== 'all' ? htmlspecialchars($status_filter) : '' ?> overtime or permission requests for Team <?= htmlspecialchars((string)$teamleader_team_id) ?>.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php
                         }
                         ?>
                     </tbody>
@@ -574,7 +1061,7 @@ include 'header.php';
     </div>
 </div>
 
-<!-- Hidden form for single actions -->
+<!-- Hidden form for single actions (Functionality 100% Preserved) -->
 <form method="POST" action="" id="actionForm" style="display: none;">
     <input type="hidden" name="ot_id" id="otId">
     <input type="hidden" name="action" id="actionType">
@@ -584,9 +1071,10 @@ include 'header.php';
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Single claim approval/rejection (only for pending claims)
+    // Single claim approval/rejection (only for pending claims - 100% Preserved)
     function approveClaim(otId) {
-        const remarks = document.getElementById('remarks-' + otId).value;
+        const remarksInput = document.getElementById('remarks-' + otId);
+        const remarks = remarksInput ? remarksInput.value : '';
         if (confirm('Are you sure you want to approve this OT claim?')) {
             document.getElementById('otId').value = otId;
             document.getElementById('actionType').value = 'approve';
@@ -596,10 +1084,11 @@ include 'header.php';
     }
     
     function rejectClaim(otId) {
-        const remarks = document.getElementById('remarks-' + otId).value;
+        const remarksInput = document.getElementById('remarks-' + otId);
+        const remarks = remarksInput ? remarksInput.value.trim() : '';
         if (!remarks) {
             alert('Please enter remarks for rejection');
-            document.getElementById('remarks-' + otId).focus();
+            if (remarksInput) remarksInput.focus();
             return;
         }
         if (confirm('Are you sure you want to reject this OT claim?')) {
@@ -610,7 +1099,7 @@ include 'header.php';
         }
     }
     
-    // Bulk selection functions (only for pending claims)
+    // Bulk selection functions (only for pending claims - 100% Preserved)
     let selectedClaims = [];
     
     function updateSelection() {
@@ -621,21 +1110,22 @@ include 'header.php';
             selectedClaims.push(checkbox.value);
         });
         
-        document.getElementById('selectedCount').textContent = selectedClaims.length;
-        document.getElementById('selectedClaims').value = selectedClaims.join(',');
+        const countEl = document.getElementById('selectedCount');
+        if (countEl) countEl.textContent = selectedClaims.length;
+        
+        const claimsEl = document.getElementById('selectedClaims');
+        if (claimsEl) claimsEl.value = selectedClaims.join(',');
         
         // Show/hide bulk panel
         const bulkPanel = document.getElementById('bulkPanel');
-        if (bulkPanel && selectedClaims.length > 0) {
-            bulkPanel.style.display = 'block';
-        } else if (bulkPanel) {
-            bulkPanel.style.display = 'none';
+        if (bulkPanel) {
+            bulkPanel.style.display = selectedClaims.length > 0 ? 'block' : 'none';
         }
         
         // Update select all checkbox
         const allCheckboxes = document.querySelectorAll('.claim-checkbox');
         const selectAll = document.getElementById('selectAll');
-        if (selectAll) {
+        if (selectAll && allCheckboxes.length > 0) {
             selectAll.checked = (selectedClaims.length === allCheckboxes.length);
         }
     }
@@ -645,7 +1135,6 @@ include 'header.php';
         if (!selectAll) return;
         
         const checkboxes = document.querySelectorAll('.claim-checkbox');
-        
         checkboxes.forEach(checkbox => {
             checkbox.checked = selectAll.checked;
         });
@@ -677,18 +1166,18 @@ include 'header.php';
         }
     }
     
-    // Initialize
+    // Auto-dismiss alerts
     document.addEventListener('DOMContentLoaded', function() {
-        // Set today's date max for filters if any
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Auto-hide alerts after 5 seconds
         setTimeout(() => {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
+                if (alert.isConnected) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
             });
         }, 5000);
     });
 </script>
+</body>
+</html>
