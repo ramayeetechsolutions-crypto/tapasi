@@ -489,8 +489,9 @@ $filter_types = $types;
 // Get count statistics (matches the exact dataset and filters of this page)
 $stats_query = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN ce.status = 'Need to Assign' OR (ce.assigned_to_content IS NULL OR ce.assigned_to_content = '') OR (ce.assigned_to_img IS NULL OR ce.assigned_to_img = '') THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN ce.status = 'Need to Assign' OR (ce.status NOT IN ('Completed', 'Done') AND (COALESCE(ce.assigned_to_content, '') = '' AND COALESCE(ce.assigned_to_img, '') = '')) THEN 1 ELSE 0 END) as need_assign,
                     SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN ce.status IN ('Completed', 'Done') THEN 1 ELSE 0 END) as completed,
                     SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND ce.assigned_to_content != '' THEN 1 ELSE 0 END) as content_assigned,
                     SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND ce.assigned_to_img != '' THEN 1 ELSE 0 END) as images_assigned
                 FROM ce 
@@ -698,7 +699,8 @@ require 'header.php';
         .stats-card.card-total { background: #e0f2fe; border-color: #bae6fd; }
         .stats-card.card-need { background: #fef3c7; border-color: #fde68a; }
         .stats-card.card-progress { background: #dbeafe; border-color: #bfdbfe; }
-        .stats-card.card-content { background: #dcfce7; border-color: #bbf7d0; }
+        .stats-card.card-completed { background: #dcfce7; border-color: #bbf7d0; }
+        .stats-card.card-content { background: #e0e7ff; border-color: #c7d2fe; }
         .stats-card.card-images { background: #fae8ff; border-color: #fbcfe8; }
         
         .stats-icon {
@@ -1084,9 +1086,20 @@ require 'header.php';
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <div class="stats-card card-completed">
+                    <div class="stats-icon completed" style="background: rgba(16, 185, 129, 0.2); color: #059669;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stats-info">
+                        <h3 id="stat-completed"><?= $stats['completed'] ?? 0 ?></h3>
+                        <p>Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
                 <div class="stats-card card-content">
-                    <div class="stats-icon content">
+                    <div class="stats-icon content" style="background: rgba(99, 102, 241, 0.2); color: #4f46e5;">
                         <i class="fas fa-file-alt"></i>
                     </div>
                     <div class="stats-info">
@@ -1095,7 +1108,7 @@ require 'header.php';
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stats-card card-images">
                     <div class="stats-icon images">
                         <i class="fas fa-image"></i>
@@ -1625,12 +1638,13 @@ require 'header.php';
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
-        // Update 5 Summary Cards immediately after any AJAX update
+        // Update Summary Cards immediately after any AJAX update
         function updateStatsCards(stats) {
             if (!stats) return;
             if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total ?? 0;
             if (document.getElementById('stat-need')) document.getElementById('stat-need').textContent = stats.need_assign ?? 0;
             if (document.getElementById('stat-progress')) document.getElementById('stat-progress').textContent = stats.in_progress ?? 0;
+            if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = stats.completed ?? 0;
             if (document.getElementById('stat-content')) document.getElementById('stat-content').textContent = stats.content_assigned ?? 0;
             if (document.getElementById('stat-images')) document.getElementById('stat-images').textContent = stats.images_assigned ?? 0;
         }
@@ -1704,6 +1718,7 @@ require 'header.php';
                             }
                         }
                     }
+                    setTimeout(() => { window.location.reload(); }, 600);
                 } else { 
                     if (select) { select.value = prevValue; }
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
