@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 require 'db.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -624,7 +623,7 @@ $stmt->close();
             <div class="card-body p-0">
                 <?php if ($employee_data): 
                     $process_name = "";
-                    $process_ids = explode(",", $employee_data['process']);
+                    $process_ids = !empty($employee_data['process']) ? explode(",", (string)$employee_data['process']) : [];
                     if (!empty($process_ids)) {
                         $names = [];
                         foreach ($process_ids as $pid) {

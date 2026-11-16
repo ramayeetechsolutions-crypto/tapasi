@@ -667,7 +667,7 @@ if($up_res) $today_uq_uploaded_pages = (int)$up_res->fetch_row()[0];
 }
 
 .page-title-container {
-  background: var(--ash-dark);
+  background: var(--ash, #6c757d);
     color: white;
     padding: 10px;
     border-radius: 12px;
@@ -717,7 +717,7 @@ if($up_res) $today_uq_uploaded_pages = (int)$up_res->fetch_row()[0];
 .stat-info small { font-size: 0.8rem; }
 
 .page-title-container {
-    background: #5e6b77; color: white; padding: 12px 20px; border-radius: 12px; margin-bottom: 10px;
+    background: var(--ash, #6c757d); color: white; padding: 12px 20px; border-radius: 12px; margin-bottom: 10px;
 }
 .page-title-container h1 { margin: 0; font-size: 2.2rem; font-weight: 700; }
 </style>

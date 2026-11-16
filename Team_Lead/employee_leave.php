@@ -5,7 +5,9 @@
 // -------------------------------------------------------------
 
 require 'db.php'; // Ensure your DB connection is here
-session_start();
+if (session_status() === PHP_SESSION_NONE) { 
+    session_start(); 
+}
 
 // [IMPORTANT] Replace with your actual session variable for logged-in employee
 $employee_username = $_SESSION['username'] ?? '';
@@ -67,10 +69,155 @@ if ($process_result && $process_result->num_rows > 0) {
     }
 }
 
+// Function to calculate available OT credits
+function getOTCredits($mysqli, $employee_username) {
+    if (!$employee_username) return 0;
+    // 1. Calculate Earned OT hours (Approved OT Claims)
+    $ot_query = "SELECT SUM(total_hours) as total_ot FROM leave_applications 
+                 WHERE employee_username = '$employee_username' 
+                 AND request_type = 'OT_Claim' 
+                 AND status = 'Approved'";
+    $ot_result = $mysqli->query($ot_query);
+    $ot_hours = ($ot_result && $ot_row = $ot_result->fetch_assoc()) ? ($ot_row['total_ot'] ?? 0) : 0;
+    
+    // 2. Calculate Used hours (Approved Comp-Off Leaves + Approved Permissions)
+    $used_query = "SELECT SUM(total_hours) as total_used FROM leave_applications 
+                   WHERE employee_username = '$employee_username' 
+                   AND request_type IN ('Comp_Off_Leave', 'Permission') 
+                   AND status = 'Approved'";
+    $used_result = $mysqli->query($used_query);
+    $used_hours = ($used_result && $used_row = $used_result->fetch_assoc()) ? ($used_row['total_used'] ?? 0) : 0;
+    
+    // 3. Deduct used hours from total OT hours
+    $available = (float)$ot_hours - (float)$used_hours;
+    return $available > 0 ? round($available, 2) : 0;
+}
+
+$pageTitle = "My OT & Permissions";
 include 'header.php'; 
 ?>
 
 <style>
+    body {
+        background-color: var(--light, #f5f7fa);
+    }
+
+    /* Ash Page Header Banner (Matching Dashboard) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-title-container h1 {
+        margin: 0;
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* OT Credits Badge in Header */
+    .ot-credits-card {
+        background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 6px 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: left;
+    }
+    
+    .ot-credits-card .ot-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        opacity: 0.95;
+        line-height: 1.2;
+    }
+    
+    .ot-credits-card .ot-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    /* Header Action Button (+ New Request) */
+    .btn-header-action {
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        border: 1px solid #ced4da !important;
+        font-weight: 600 !important;
+        padding: 8px 18px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-size: 14px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .btn-header-action:hover {
+        background-color: #f8f9fa !important;
+        color: #0d6efd !important;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12) !important;
+    }
+    
+    .btn-header-action i {
+        color: #0d6efd !important;
+        margin-right: 6px !important;
+    }
+    .btn-header-action span {
+        color: #212529 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Table Styling & Sticky Header */
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+        border: 1px solid #6c757d !important;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        padding: 12px 14px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    }
+    .table tbody td {
+        font-size: 13.5px;
+        padding: 12px 14px;
+        vertical-align: middle;
+        color: #333333;
+        background-color: #ffffff;
+    }
+    .table-container {
+        overflow: visible;
+    }
+
     /* Status Badges */
     .status-Pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .status-Approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
@@ -141,60 +288,62 @@ include 'header.php';
     }
 </style>
 
-<div class="container-fluid main-content py-4" style="margin-top: 60px;">
+<main class="main-content">
+    <div class="container-fluid p-0">
 
-    <!-- Page Header & Buttons -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="text-secondary"><i class="fa fa-clock-o"></i> My OT & Permissions</h4>
-            <p class="text-muted small mb-0">Submit and track your requests. Manage your OT credits.</p>
-        </div>
-        <div class="d-flex gap-2">
-            
-            <!-- OT Credits Summary -->
-            <div class="card border-0 shadow-sm bg-gradient-primary text-white" style="background: linear-gradient(45deg, #2196F3, #21CBF3);">
-                <div class="card-body py-2 px-3">
-                    <small class="d-block">Available OT Credits</small>
-                    <h5 class="mb-0"><?php echo getOTCredits($mysqli, $employee_username); ?> hours</h5>
-                </div>
+        <!-- Page Header with Ash Color Background like Dashboard -->
+        <div class="page-title-container">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fas fa-clock"></i> My OT & Permissions
+                </h1>
+                <p class="mb-0 text-white-50 small mt-1">Submit and track your requests. Manage your OT credits.</p>
             </div>
-            
-            <!-- Button to Open Modal -->
-            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#applyOTModal">
-                <i class="fa fa-plus-circle"></i> New Request
-            </button>
+            <div class="d-flex align-items-center gap-3">
+                
+                <!-- OT Credits Summary -->
+                <div class="ot-credits-card">
+                    <span class="ot-label">Available OT Credits</span>
+                    <span class="ot-value"><?php echo getOTCredits($mysqli, $employee_username); ?> hours</span>
+                </div>
+                
+                <!-- Button to Open Modal -->
+                <button type="button" class="btn btn-header-action" data-bs-toggle="modal" data-bs-target="#applyOTModal">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Request</span>
+                </button>
+            </div>
         </div>
-    </div>
 
-    <!-- Feedback Message -->
-    <?php if(isset($msg)): ?>
-        <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show" role="alert">
-            <?= $msg ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
+        <!-- Feedback Message -->
+        <?php if(isset($msg)): ?>
+            <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <?= $msg ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
-    <!-- CLAIMS HISTORY TABLE -->
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-secondary py-3">
-            <h6 class="mb-0 fw-bold text-white">Request History</h6>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-3">Date</th>
-                            <th>Type</th>
-                            <th>Process</th>
-                            <th>Article</th>
-                            <th>Time & Duration</th>
-                            <th>Count</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
+        <!-- CLAIMS HISTORY TABLE -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4" style="overflow: visible;">
+            <div class="card-header bg-secondary py-3">
+                <h6 class="mb-0 fw-bold text-white">Request History</h6>
+            </div>
+            <div class="card-body p-0" style="overflow: visible;">
+                <div class="table-container" style="overflow: visible;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Date</th>
+                                <th>Type</th>
+                                <th>Process</th>
+                                <th>Article</th>
+                                <th>Time & Duration</th>
+                                <th>Count</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
                     <tbody>
                         <?php
                         $query = "SELECT la.*, 
@@ -262,7 +411,8 @@ include 'header.php';
             </div>
         </div>
     </div>
-</div>
+    </div>
+</main>
 
 <!-- ======================================== -->
 <!-- APPLY OT/PERMISSION MODAL -->
@@ -301,7 +451,7 @@ include 'header.php';
                                 <option value="">-- Select Process --</option>
                                 <?php foreach($all_processes as $proc): ?>
                                     <option value="<?= $proc['process_id'] ?>" 
-                                        <?= ($employee_details['process'] == $proc['process_id']) ? 'selected' : '' ?>>
+                                        <?= (($employee_details['process'] ?? null) == $proc['process_id']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($proc['process_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -420,28 +570,3 @@ include 'header.php';
     document.getElementById('start_time').addEventListener('change', function() { calculateTotalHours('start_time', 'end_time', 'total_hours'); });
     document.getElementById('end_time').addEventListener('change', function() { calculateTotalHours('start_time', 'end_time', 'total_hours'); });
 </script>
-
-<?php
-// Function to calculate available OT credits
-function getOTCredits($mysqli, $employee_username) {
-    // 1. Calculate Earned OT hours (Approved OT Claims)
-    $ot_query = "SELECT SUM(total_hours) as total_ot FROM leave_applications 
-                 WHERE employee_username = '$employee_username' 
-                 AND request_type = 'OT_Claim' 
-                 AND status = 'Approved'";
-    $ot_result = $mysqli->query($ot_query);
-    $ot_hours = $ot_result->fetch_assoc()['total_ot'] ?? 0;
-    
-    // 2. Calculate Used hours (Approved Comp-Off Leaves + Approved Permissions)
-    $used_query = "SELECT SUM(total_hours) as total_used FROM leave_applications 
-                   WHERE employee_username = '$employee_username' 
-                   AND request_type IN ('Comp_Off_Leave', 'Permission') 
-                   AND status = 'Approved'";
-    $used_result = $mysqli->query($used_query);
-    $used_hours = $used_result->fetch_assoc()['total_used'] ?? 0;
-    
-    // 3. Deduct used hours from total OT hours
-    $available = $ot_hours - $used_hours;
-    return $available > 0 ? round($available, 2) : 0;
-}
-?>
