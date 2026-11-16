@@ -317,10 +317,10 @@ if ($mode === 'edit') {
 // Filters
 $q = trim($_GET['q'] ?? '');
 $fstatus = $_GET['status'] ?? '';
-$sort = $_GET['sort'] ?? 'employee_id';
+$sort = $_GET['sort'] ?? 'employee_username';
 $dir = strtolower($_GET['dir'] ?? 'desc');
-$sortable = ['employee_id','employee_name','employee_username','date_of_birth','joining_date','process','status'];
-if (!in_array($sort,$sortable,true)) $sort='employee_id';
+$sortable = ['employee_username','employee_id','employee_name','date_of_birth','joining_date','process','status'];
+if (!in_array($sort,$sortable,true)) $sort='employee_username';
 $dir = ($dir=='asc')?'asc':'desc';
 
 // TL can only see their team members
@@ -570,10 +570,10 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-users me-2"></i>Employee Profile</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Employee Profile</h5>
+            <a href="employee_add.php?mode=add" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i> Add Employee</a>
         </div>
-<div class="d-flex justify-content-between mb-3"><a href="employee_add.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
         <!-- Search and Filter -->
         <div class="card mb-4">
             <div class="card-body">

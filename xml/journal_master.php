@@ -9,8 +9,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
 function formatDate($d) {
@@ -38,10 +40,10 @@ function getClients($mysqli) {
     return $clients;
 }
 
-// Fetch team list from team_master
+// Fetch team list from team_master (Only WK and UQ)
 function getTeams($mysqli) {
-    $teams =[];
-    $sql = "SELECT team_id, team_name FROM team_master WHERE status = 'Active' ORDER BY team_name";
+    $teams = [];
+    $sql = "SELECT team_id, team_name FROM team_master WHERE status = 'Active' AND team_name IN ('WK', 'UQ') ORDER BY FIELD(team_name, 'WK', 'UQ')";
     $result = $mysqli->query($sql);
     if ($result) {
         while ($row = $result->fetch_assoc()) {
@@ -60,7 +62,7 @@ function getMonths() {
 }
 
 // Handle POST actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $action = $_POST['action'] ?? '';
     
     // ---------------------------------------------------------
@@ -209,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action === 'add' || $action === 'edit') {
-        $client_id = (int)trim($_POST['client_id'] ?? '');
+        $client_name_input = trim($_POST['client_name'] ?? '');
         $team_id = (int)trim($_POST['team_id'] ?? '');
         $wk_new_journals = trim($_POST['wk_new_journals'] ?? '');
         $year_volume_issue = trim($_POST['year_volume_issue'] ?? '');
@@ -218,8 +220,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $month = trim($_POST['month'] ?? '');
         $status = trim($_POST['status'] ?? 'Active');
         
+        if (empty($client_name_input)) {
+            redirect_with(['msg' => 'Client Name is required.', 'type' => 'danger']);
+        }
+        
+        // Find or create client_id by client_name
+        $client_id = 0;
+        $c_stmt = $mysqli->prepare("SELECT client_id FROM client_master WHERE client_name = ? OR team_client_name = ? LIMIT 1");
+        $c_stmt->bind_param("ss", $client_name_input, $client_name_input);
+        $c_stmt->execute();
+        $c_res = $c_stmt->get_result();
+        if ($c_res->num_rows > 0) {
+            $client_id = (int)$c_res->fetch_assoc()['client_id'];
+        } else {
+            $ins_c = $mysqli->prepare("INSERT INTO client_master (client_name, team_client_name, status, created_date) VALUES (?, ?, 'Active', NOW())");
+            $ins_c->bind_param("ss", $client_name_input, $client_name_input);
+            if ($ins_c->execute()) {
+                $client_id = (int)$mysqli->insert_id;
+            }
+            $ins_c->close();
+        }
+        $c_stmt->close();
+        
         if ($client_id === 0) {
-            redirect_with(['msg' => 'Client selection is required.', 'type' => 'danger']);
+            redirect_with(['msg' => 'Unable to process Client Name.', 'type' => 'danger']);
         }
         
         if (empty($wk_new_journals)) {
@@ -227,14 +251,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($action === 'add') {
-            $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ? AND pubcode = ?");
-            $check_stmt->bind_param("iss", $client_id, $wk_new_journals, $pubcode);
+            $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ?");
+            $check_stmt->bind_param("is", $client_id, $wk_new_journals);
             $check_stmt->execute();
             $check_stmt->store_result();
             
             if ($check_stmt->num_rows > 0) {
                 $check_stmt->close();
-                redirect_with(['msg' => 'Journal entry already exists for this client with same journal and pubcode.', 'type' => 'danger']);
+                redirect_with(['msg' => 'Journal entry already exists for this client with same journal name.', 'type' => 'danger']);
             }
             $check_stmt->close();
             
@@ -242,14 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("iissssss", $client_id, $team_id, $wk_new_journals, $year_volume_issue, $pubcode, $issn, $month, $status);
             
             if ($stmt->execute()) {
-                $client_stmt = $mysqli->prepare("SELECT client_name FROM client_master WHERE client_id = ?");
-                $client_stmt->bind_param("i", $client_id);
-                $client_stmt->execute();
-                $client_stmt->bind_result($client_name);
-                $client_stmt->fetch();
-                $client_stmt->close();
-                
-                redirect_with(['msg' => "Journal entry for '$client_name' added successfully", 'type' => 'success']);
+                redirect_with(['msg' => "Journal entry for '$client_name_input' added successfully", 'type' => 'success']);
             } else {
                 redirect_with(['msg' => 'Error adding journal entry: ' . $stmt->error, 'type' => 'danger']);
             }
@@ -260,14 +277,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['id'] ?? 0);
             
             if ($id > 0) {
-                $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ? AND pubcode = ? AND id != ?");
-                $check_stmt->bind_param("issi", $client_id, $wk_new_journals, $pubcode, $id);
+                $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ? AND id != ?");
+                $check_stmt->bind_param("isi", $client_id, $wk_new_journals, $id);
                 $check_stmt->execute();
                 $check_stmt->store_result();
                 
                 if ($check_stmt->num_rows > 0) {
                     $check_stmt->close();
-                    redirect_with(['msg' => 'Journal entry already exists for this client with same journal and pubcode.', 'type' => 'danger']);
+                    redirect_with(['msg' => 'Journal entry already exists for this client with same journal name.', 'type' => 'danger']);
                 }
                 $check_stmt->close();
                 
@@ -515,30 +532,25 @@ $months = getMonths();
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="client_id" class="form-label">Client Name <span class="text-danger">*</span></label>
-                                <select class="form-control" id="client_id" name="client_id" required <?= $mode === 'edit' ? 'disabled' : '' ?>>
-                                    <option value="">-- Select Client --</option>
+                                <label for="client_name" class="form-label">Client Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="client_name" name="client_name" list="client_datalist" 
+                                       value="<?= isset($editEntry['team_client_name']) && !empty($editEntry['team_client_name']) ? h($editEntry['team_client_name']) : (isset($editEntry['client_name']) ? h($editEntry['client_name']) : '') ?>" 
+                                       placeholder="Enter client name" required>
+                                <datalist id="client_datalist">
                                     <?php 
                                     $displayed_clients = [];
                                     foreach($clients as $client): 
                                         $display_name = !empty($client['team_client_name']) ? $client['team_client_name'] : $client['client_name'];
-                                        
-                                        if (($mode === 'edit' && isset($editEntry['client_id']) && $editEntry['client_id'] == $client['client_id']) || !in_array($display_name, $displayed_clients)):
+                                        if (!in_array($display_name, $displayed_clients)):
                                             $displayed_clients[] = $display_name;
                                     ?>
-                                        <option value="<?= $client['client_id'] ?>" 
-                                            <?= ($mode === 'edit' && isset($editEntry['client_id']) && $editEntry['client_id'] == $client['client_id']) ? 'selected' : '' ?>>
-                                            <?= h($display_name) ?>
-                                        </option>
+                                        <option value="<?= h($display_name) ?>">
                                     <?php 
                                         endif;
                                     endforeach; 
                                     ?>
-                                </select>
-                                <?php if($mode === 'edit'): ?>
-                                    <input type="hidden" name="client_id" value="<?= isset($editEntry['client_id']) ? $editEntry['client_id'] : '' ?>">
-                                <?php endif; ?>
-                                <div class="form-text">Select the client for this journal entry</div>
+                                </datalist>
+                                <div class="form-text">Enter client name for this journal entry</div>
                             </div>
                         </div>
                         
@@ -579,36 +591,10 @@ $months = getMonths();
                         
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="pubcode" class="form-label">Pubcode</label>
-                                <input type="text" class="form-control" id="pubcode" name="pubcode" 
-                                       value="<?= isset($editEntry['pubcode']) ? h($editEntry['pubcode']) : '' ?>" 
-                                       placeholder="Enter publication code">
-                                <div class="form-text">Enter the publication code</div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="issn" class="form-label">ISSN</label>
-                                <input type="text" class="form-control" id="issn" name="issn" 
-                                       value="<?= isset($editEntry['issn']) ? h($editEntry['issn']) : '' ?>" 
-                                       placeholder="e.g., 1234-5678">
-                                <div class="form-text">Enter the International Standard Serial Number</div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="month" class="form-label">Month</label>
-                                <select class="form-control" id="month" name="month">
-                                    <option value="">-- Select Month --</option>
-                                    <?php foreach($months as $month_option): ?>
-                                        <option value="<?= h($month_option) ?>" <?= (isset($editEntry['month']) && $editEntry['month'] === $month_option) ? 'selected' : '' ?>>
-                                            <?= h($month_option) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <div class="form-text">Select the publication month</div>
+                                <label for="month" class="form-label">Date / Month</label>
+                                <input type="date" class="form-control" id="month" name="month" 
+                                       value="<?= isset($editEntry['month']) ? h($editEntry['month']) : '' ?>">
+                                <div class="form-text">Choose date, month, and year</div>
                             </div>
                         </div>
                         

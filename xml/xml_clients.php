@@ -9,8 +9,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
 function formatDate($d) {
@@ -58,16 +60,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         require_once $libPath;
 
-        $xlsx = null;
-        if (class_exists('Shuchkin\SimpleXLSX')) {
-            $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
-        } elseif (class_exists('SimpleXLSX')) {
-            $xlsx = SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+        $tmpFile = $_FILES['excel_file']['tmp_name'];
+        $fileName = $_FILES['excel_file']['name'];
+        $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        $rows = null;
+
+        // 1. Try SimpleXLSX for .xlsx files
+        if ($ext === 'xlsx' || $ext === '') {
+            if (class_exists('Shuchkin\SimpleXLSX')) {
+                $xlsx = Shuchkin\SimpleXLSX::parse($tmpFile);
+                if ($xlsx) {
+                    $rows = $xlsx->rows();
+                }
+            }
         }
 
-        if ($xlsx) {
-            $rows = $xlsx->rows();
-            
+        // 2. If not parsed and ext is xls, try SimpleXLS
+        if (!$rows && ($ext === 'xls' || $ext === '')) {
+            $xlsLib = dirname(__DIR__) . '/simplexls-master/src/SimpleXLS.php';
+            if (!file_exists($xlsLib)) $xlsLib = 'simplexls-master/src/SimpleXLS.php';
+            if (file_exists($xlsLib)) {
+                require_once $xlsLib;
+                if (class_exists('Shuchkin\SimpleXLS')) {
+                    $xls = Shuchkin\SimpleXLS::parse($tmpFile);
+                    if ($xls) {
+                        $rows = $xls->rows();
+                    }
+                }
+            }
+        }
+
+        // 3. Fallback: Parse as CSV or text format
+        if (!$rows) {
+            $csvRows = [];
+            if (($handle = fopen($tmpFile, "r")) !== FALSE) {
+                while (($data = fgetcsv($handle, 10000, ",")) !== FALSE) {
+                    if (count($data) === 1 && strpos($data[0], ';') !== false) {
+                        $data = str_getcsv($data[0], ';');
+                    } elseif (count($data) === 1 && strpos($data[0], "\t") !== false) {
+                        $data = str_getcsv($data[0], "\t");
+                    }
+                    $csvRows[] = $data;
+                }
+                fclose($handle);
+            }
+            if (!empty($csvRows) && count($csvRows) > 1) {
+                $rows = $csvRows;
+            }
+        }
+
+        // 4. Final attempt with SimpleXLSX if not yet parsed
+        if (!$rows && class_exists('Shuchkin\SimpleXLSX')) {
+            $xlsx = Shuchkin\SimpleXLSX::parse($tmpFile);
+            if ($xlsx) {
+                $rows = $xlsx->rows();
+            }
+        }
+
+        if ($rows && is_array($rows)) {
             // Pre-fetch all clients to map Name to ID
             $clientMap =[];
             $c_res = $mysqli->query("SELECT client_id, client_name FROM client_master");
@@ -111,12 +162,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                 $c_key = strtolower($client_name);
                 if (!isset($clientMap[$c_key])) {
-                    $skipped_count++;
-                    $error_details[] = "Row " . ($k + 1) . ": Client '$client_name' not found in Client Master";
-                    continue;
+                    // Auto-create client in client_master if not existing!
+                    $company_name = trim($r[4] ?? '');
+                    $prod_email = trim($r[6] ?? '');
+                    $insClient = $mysqli->prepare("INSERT INTO client_master (client_name, company_name, production_email, status, created_date, template, tds_percentage, igst) VALUES (?, ?, ?, 'Active', NOW(), '', 0.00, 0.00)");
+                    if ($insClient) {
+                        $insClient->bind_param("sss", $client_name, $company_name, $prod_email);
+                        if ($insClient->execute()) {
+                            $client_id = $insClient->insert_id;
+                            $clientMap[$c_key] = $client_id;
+                        }
+                        $insClient->close();
+                    }
+                    if (!isset($clientMap[$c_key])) {
+                        $insClient2 = $mysqli->prepare("INSERT INTO client_master (client_name, status, created_date) VALUES (?, 'Active', NOW())");
+                        if ($insClient2) {
+                            $insClient2->bind_param("s", $client_name);
+                            if ($insClient2->execute()) {
+                                $client_id = $insClient2->insert_id;
+                                $clientMap[$c_key] = $client_id;
+                            }
+                            $insClient2->close();
+                        }
+                    }
+                    if (!isset($clientMap[$c_key])) {
+                        $skipped_count++;
+                        $error_details[] = "Row " . ($k + 1) . ": Client '$client_name' could not be added to Client Master";
+                        continue;
+                    }
                 }
                 
                 $client_id = $clientMap[$c_key];
+
+                // Sync company_name and production_email if provided in Excel
+                $company_name = trim($r[4] ?? '');
+                $prod_email = trim($r[6] ?? '');
+                if (!empty($company_name) || !empty($prod_email)) {
+                    $updC = $mysqli->prepare("UPDATE client_master SET company_name = COALESCE(NULLIF(?, ''), company_name), production_email = COALESCE(NULLIF(?, ''), production_email) WHERE client_id = ?");
+                    if ($updC) {
+                        $updC->bind_param("ssi", $company_name, $prod_email, $client_id);
+                        $updC->execute();
+                        $updC->close();
+                    }
+                }
 
                 // Check if entry already exists
                 $checkStmt = $mysqli->prepare("SELECT id FROM xml_clients WHERE client_id = ? AND journal_name = ?");
@@ -169,9 +257,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $season = trim($_POST['season'] ?? '');
         $remarks = trim($_POST['remarks'] ?? '');
         $dtd = trim($_POST['dtd'] ?? '');
+        $production_email = trim($_POST['production_email'] ?? '');
         
         if ($client_id === 0) redirect_with(['msg' => 'Client selection is required.', 'type' => 'danger']);
         if (empty($journal_name)) redirect_with(['msg' => 'Journal Name is required.', 'type' => 'danger']);
+        
+        if ($production_email !== '') {
+            $upd_mail = $mysqli->prepare("UPDATE client_master SET production_email = ? WHERE client_id = ?");
+            $upd_mail->bind_param("si", $production_email, $client_id);
+            $upd_mail->execute();
+            $upd_mail->close();
+        }
         
         if ($action === 'add') {
             $check_stmt = $mysqli->prepare("SELECT id FROM xml_clients WHERE client_id = ? AND journal_name = ?");
@@ -395,10 +491,8 @@ $clients = getClients($mysqli);
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-muted">Mail ID(Production) (Auto-fetched)</label>
-                            <div class="readonly-box text-muted" id="email_display">
-                                <?= $mode === 'edit' ? h($editEntry['production_email']) : 'Select a client first...' ?>
-                            </div>
+                            <label class="form-label fw-bold" for="production_email">Mail ID(Production)</label>
+                            <input type="text" class="form-control form-control-sm" name="production_email" id="production_email" placeholder="Enter production mail ID..." value="<?= $mode === 'edit' ? h($editEntry['production_email'] ?? '') : '' ?>">
                         </div>
                     </div>
 
@@ -538,8 +632,8 @@ $clients = getClients($mysqli);
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-8">
-                                <label class="form-label fw-bold">Select Excel File (.xlsx)</label>
-                                <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
+                                <label class="form-label fw-bold">Select Excel or CSV File (.xlsx, .xls, .csv)</label>
+                                <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Download Format</label>
@@ -580,7 +674,7 @@ $clients = getClients($mysqli);
         document.addEventListener('DOMContentLoaded', function() {
             const clientSelect = document.getElementById('client_id');
             const companyDisplay = document.getElementById('company_display');
-            const emailDisplay = document.getElementById('email_display');
+            const emailInput = document.getElementById('production_email');
             
             if (clientSelect) {
                 clientSelect.addEventListener('change', function() {
@@ -589,9 +683,16 @@ $clients = getClients($mysqli);
                     const email = opt.getAttribute('data-email');
                     
                     companyDisplay.textContent = comp || 'N/A';
-                    emailDisplay.textContent = email || 'N/A';
+                    if (emailInput && (clientSelect.getAttribute('data-user-selected') === 'true' || !emailInput.value)) {
+                        emailInput.value = email || '';
+                    }
                 });
-                if (clientSelect.value) clientSelect.dispatchEvent(new Event('change'));
+                clientSelect.addEventListener('click', function() {
+                    this.setAttribute('data-user-selected', 'true');
+                });
+                if (clientSelect.value && emailInput && !emailInput.value) {
+                    clientSelect.dispatchEvent(new Event('change'));
+                }
             }
         });
 
