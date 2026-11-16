@@ -528,7 +528,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_job_details') {
 }
 
 // 4. Save Updated Details
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_job_details') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_job_details') {
     header('Content-Type: application/json');
     $response = ['success' => false, 'message' => ''];
     $record_id = (int)$_POST['job_id'];
@@ -664,27 +664,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     echo json_encode($response);
     exit;
 }
-// 5. Fetch ALL Original Clients directly from client_master table for Dropdown
+// 5. Fetch ALL Original Clients for Dropdown
 if (isset($_GET['action']) && $_GET['action'] === 'get_all_clients') {
     header('Content-Type: application/json');
     try {
-        // We use the same COALESCE logic you used in main query so the filter matches perfectly
-        $query = "SELECT DISTINCT COALESCE(NULLIF(team_client_name, ''), NULLIF(client_name, '')) as c_name 
-                  FROM client_master 
-                  WHERE client_name IS NOT NULL AND client_name != '' 
-                  ORDER BY c_name ASC";
-                  
-        $result = $mysqli->query($query);
         $clients = [];
         
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                if (!empty($row['c_name']) && $row['c_name'] !== '-') {
-                    $clients[] = $row['c_name'];
+        // 1. From client_master
+        $res1 = $mysqli->query("SELECT DISTINCT COALESCE(NULLIF(team_client_name, ''), NULLIF(client_name, '')) as c_name FROM client_master WHERE client_name IS NOT NULL AND client_name != ''");
+        if ($res1) {
+            while ($row = $res1->fetch_assoc()) {
+                $name = trim($row['c_name'] ?? '');
+                if (!empty($name) && $name !== '-') {
+                    $clients[$name] = true;
                 }
             }
         }
-        echo json_encode(['success' => true, 'clients' => $clients]);
+
+        // 2. From unique_xml_jobs journal_name_client
+        $res2 = $mysqli->query("SELECT DISTINCT journal_name_client FROM unique_xml_jobs WHERE journal_name_client IS NOT NULL AND journal_name_client != '' AND journal_name_client != '-'");
+        if ($res2) {
+            while ($row = $res2->fetch_assoc()) {
+                $name = trim($row['journal_name_client'] ?? '');
+                if (!empty($name) && $name !== '-') {
+                    $clients[$name] = true;
+                }
+            }
+        }
+        
+        $client_list = array_keys($clients);
+        sort($client_list, SORT_NATURAL | SORT_FLAG_CASE);
+        echo json_encode(['success' => true, 'clients' => $client_list]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// 6. Fetch ALL Original Issues for Dropdown
+if (isset($_GET['action']) && $_GET['action'] === 'get_all_issues') {
+    header('Content-Type: application/json');
+    try {
+        $client = isset($_GET['client']) ? trim($_GET['client']) : '';
+        $sql = "
+            SELECT DISTINCT 
+                CASE 
+                    WHEN j.journal_name_client IS NOT NULL AND j.journal_name_client != '' AND j.issue IS NOT NULL AND j.issue != '' 
+                    THEN CONCAT(j.journal_name_client, '-', j.issue)
+                    ELSE COALESCE(NULLIF(jb.journal_issue, ''), NULLIF(j.issue, ''), NULLIF(j.journal_name_client, ''), '-')
+                END as issue_display
+            FROM unique_xml_jobs j
+            LEFT JOIN jobs jb ON j.job_id = jb.job_id
+            LEFT JOIN client_master c ON jb.client_id = c.client_id
+            WHERE j.job_status = 'Despatched'
+        ";
+        if (!empty($client)) {
+            $sql .= " AND (c.team_client_name = ? OR c.client_name = ? OR j.journal_name_client = ?)";
+            $stmt = $mysqli->prepare($sql . " ORDER BY issue_display ASC");
+            $stmt->bind_param("sss", $client, $client, $client);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $stmt->close();
+        } else {
+            $sql .= " ORDER BY issue_display ASC";
+            $result = $mysqli->query($sql);
+        }
+        
+        $issues = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $iss = trim($row['issue_display']);
+                if (!empty($iss) && $iss !== '-') {
+                    $issues[] = $iss;
+                }
+            }
+        }
+        echo json_encode(['success' => true, 'issues' => array_values(array_unique($issues))]);
     } catch (Exception $e) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
@@ -850,14 +905,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Add this just before </head> -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style>
-        /* Making Select2 match Bootstrap small input size */
-        .select2-container .select2-selection--single { height: 31px !important; border: 1px solid #dee2e6 !important; border-radius: 0.25rem !important; }
-        .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 29px !important; font-size: 0.875rem !important; color: #334155; }
-        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 29px !important; }
-    </style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Despatched Jobs Delivery & Articles</title>
@@ -867,21 +914,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
-        body { 
+        html, body { 
             background-color: #f8fafc; 
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
             font-size: 12.5px; 
             color: #334155; 
+            overflow-x: hidden !important;
+            max-width: 100vw;
         }
-        .card { border: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-radius: 0.75rem; }
+        .container-fluid {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        .card { 
+            border: none; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+            border-radius: 0.75rem; 
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .card-body {
+            max-width: 100%;
+        }
         .card-header { background: #ffffff; border-bottom: 1px solid #e2e8f0; border-radius: 0.75rem 0.75rem 0 0 !important; }
         
-        /* Table scroll container for vertical freezing */
-        .dataTables_wrapper .dataTables_scrollBody { max-height: 65vh; overflow-y: auto; }
+        /* Dedicated scroll container keeping sheet inside the page */
+        .table-scroll-container {
+            width: 100%;
+            max-width: 100%;
+            max-height: 65vh;
+            overflow-x: auto;
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid #dee2e6;
+        }
+
+        /* 1. Single Table Styling */
+        table.dataTable { 
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            white-space: nowrap;
+        } 
         
-        table.dataTable { white-space: nowrap; width: 100% !important; } 
-        
-        /* HEADER STICKY & GREY BACKGROUND */
+        /* 2. STICKY HEADERS (Top Layer) */
         table.dataTable thead th { 
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
@@ -891,51 +968,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             font-size: 12.5px;
             position: sticky !important; 
             top: 0; 
-            z-index: 20; 
+            z-index: 20 !important; 
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            padding: 8px 10px !important;
         }
-
-        /* 1. Force Border Collapse to Remove ALL Gaps */
-        table.dataTable {
-            border-collapse: collapse !important; /
-            border-spacing: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-        }
-
-        /* 2. STICKY HEADERS (Top Layer) */
-        table.dataTable thead th {
-            position: sticky !important;
-            top: 0;
-            z-index: 100 !important; 
-            background-color: #5e6b77 !important;
-            border: 1px solid #dee2e6 !important;
+        table.dataTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
 
         /* 3. STICKY COLUMNS (First 3 Columns Locked with Exact Widths) */
-        table.dataTable tbody td:nth-child(1), table.dataTable thead th:nth-child(1) { 
-            position: sticky !important; left: 0; z-index: 50 !important; border: 1px solid #dee2e6 !important;
+        table.dataTable thead th:nth-child(1), table.dataTable tbody td:nth-child(1) { 
+            position: sticky !important; left: 0;
             width: 110px !important; min-width: 110px !important; max-width: 110px !important; box-sizing: border-box !important;
             overflow: hidden; text-overflow: ellipsis;
         }
-        table.dataTable tbody td:nth-child(2), table.dataTable thead th:nth-child(2) { 
-            position: sticky !important; left: 110px; z-index: 50 !important; border: 1px solid #dee2e6 !important;
+        table.dataTable thead th:nth-child(2), table.dataTable tbody td:nth-child(2) { 
+            position: sticky !important; left: 110px;
             width: 200px !important; min-width: 200px !important; max-width: 200px !important; box-sizing: border-box !important;
             overflow: hidden; text-overflow: ellipsis;
         }
-        table.dataTable tbody td:nth-child(3), table.dataTable thead th:nth-child(3) { 
-            position: sticky !important; left: 310px; z-index: 50 !important; border: 1px solid #dee2e6 !important; border-right: 2px solid #a0a5ab !important;
+        table.dataTable thead th:nth-child(3), table.dataTable tbody td:nth-child(3) { 
+            position: sticky !important; left: 310px;
+            border-right: 1px solid #dee2e6 !important;
             width: 180px !important; min-width: 180px !important; max-width: 180px !important; box-sizing: border-box !important;
             overflow: hidden; text-overflow: ellipsis;
         }
         
-        table.dataTable thead th:nth-child(-n+3) { z-index: 110 !important; background-color: #5e6b77 !important; }
+        table.dataTable tbody td:nth-child(-n+3) {
+            z-index: 10 !important;
+        }
+        table.dataTable thead th:nth-child(-n+3) { 
+            z-index: 30 !important; 
+            background-color: #5e6b77 !important; 
+        }
 
         /* 4. Group differentiation styling (Issue-wise colors) */
         .job-group-even td { background-color: #ffffff !important; }
         .job-group-odd td { background-color: #f1f5f9 !important; }
         
-        /* Thick line between different Issues */
-        .job-group-start td { border-top: 2px solid #475569 !important; }
+        /* Normal 1px border between different Issues (No bold lines) */
+        .job-group-start td { border-top: 1px solid #dee2e6 !important; }
         
         /* Fixed colors for sticky columns */
         .job-group-even td:nth-child(-n+3) { background-color: #ffffff !important; }
@@ -946,19 +1020,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             background-color: #c4cbd3 !important; 
             cursor: pointer;
         }
+        table.dataTable tbody tr:hover td:nth-child(-n+3) {
+            background-color: #c4cbd3 !important;
+        }
 
         /* 6. Base Cell Controls */
         table.dataTable tbody td { 
             font-size: 12.5px !important; 
             padding: 8px 10px !important;
-            border: 1px solid #dee2e6 !important; /* All borders enabled to fill gaps */
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
             white-space: nowrap;
+        }
+        table.dataTable tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
 
         textarea.excel-paste { font-family: monospace; font-size: 0.85rem; white-space: pre; overflow-x: auto; border: 2px dashed #cbd5e1; }
         textarea.excel-paste:focus { border-color: #3b82f6; box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25); }
         #notificationContainer { position: fixed; top: 20px; right: 20px; z-index: 2000; min-width: 300px; }
         .process-grid .form-check { margin-bottom: 0.5rem; }
+
     </style>
 </head>
 <body>
@@ -980,13 +1062,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="row g-2 mb-4 bg-light p-3 rounded border shadow-sm">
                 <div class="col-md-2">
                     <label class="form-label text-muted small fw-bold mb-1">Client Name</label>
-                    <select id="clientFilter" class="form-select form-select-sm" style="width: 100%;">
+                    <select id="clientFilter" class="form-select form-select-sm">
                         <option value="">All Clients</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label text-muted small fw-bold mb-1">Issue</label>
-                    <input type="text" id="issueFilter" class="form-control form-control-sm" placeholder="Search Issue...">
+                    <select id="issueFilter" class="form-select form-select-sm">
+                        <option value="">All Issues</option>
+                    </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label text-muted small fw-bold mb-1">Process</label>
@@ -1057,42 +1141,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
             <!-- FILTER BAR END -->
             
-            <div class="card-body p-4">
-                <table id="completedJobsTable" class="table table-hover w-100 mb-0 border-top">
-                    <thead>
-                        <tr>
-                            <!-- Removed Job ID column from display so it perfectly matches your screenshot format -->
-                            <th>Rec. Date</th>
-                            <th>Client Name</th>
-                            <th>Issue</th>
-                            <th>Article Name</th>
-                            <th>NLM</th>
-                            <th>JATS</th>
-                            <th>Clockss</th>
-                            <th>Scielo</th>
-                            <th>EBSCO</th>
-                            <th>PubMed</th>
-                            <th>Biblat</th>
-                            <th>DOAJ</th>
-                            <th>HTML</th>
-                            <th>New HTML</th>
-                            <th>Direct HTML</th>
-                            <th>Dispatch Date</th>
-                            <!--th>Table</th>
-                            <th>WP</th>
-                            <th>Content</th>
-                            <th>HTML 2</th>
-                            <th>Scielo 2</th>
-                            <th>QC</th-->
-                            <th>Remarks</th>
-                            <th>Billed</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
+            <table id="completedJobsTable" class="table table-hover w-100 mb-0 border-top">
+                <thead>
+                    <tr>
+                        <!-- Removed Job ID column from display so it perfectly matches your screenshot format -->
+                        <th>Rec. Date</th>
+                        <th>Client Name</th>
+                        <th>Issue</th>
+                        <th>Article Name</th>
+                        <th>NLM</th>
+                        <th>JATS</th>
+                        <th>Clockss</th>
+                        <th>Scielo</th>
+                        <th>EBSCO</th>
+                        <th>PubMed</th>
+                        <th>Biblat</th>
+                        <th>DOAJ</th>
+                        <th>HTML</th>
+                        <th>New HTML</th>
+                        <th>Direct HTML</th>
+                        <th>Dispatch Date</th>
+                        <!--th>Table</th>
+                        <th>WP</th>
+                        <th>Content</th>
+                        <th>HTML 2</th>
+                        <th>Scielo 2</th>
+                        <th>QC</th-->
+                        <th>Remarks</th>
+                        <th>Billed</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+            </table>
         </div>
     </div>
+</div>
 
     <!-- Update Job Modal -->
     <div class="modal fade" id="jobModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -1203,7 +1286,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         let table;
@@ -1221,10 +1303,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             table = $('#completedJobsTable').DataTable({
                 ajax: '?action=fetch_jobs',
-                scrollX: true, 
                 autoWidth: false,
                 ordering: false,
                 pageLength: 50,
+                dom: '<"table-scroll-container"t><"d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2"ip>',
                 columnDefs: [
                     { targets: "_all", className: "text-center" }
                 ],
@@ -1333,35 +1415,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 ]
             });
 
-            // --- NEW MULTI-FILTER LOGIC START ---
-
-            // 1. Initialize Searchable Dropdown for Client
-            $('#clientFilter').select2({
-                placeholder: "Search Client...",
-                allowClear: true
+            // Keep horizontal scrollbar fixed at starting position on page change, search, or order
+            table.on('page.dt search.dt order.dt', function () {
+                $('.table-scroll-container').scrollLeft(0);
             });
 
-            // 2. Fetch ALL original clients directly from client_master database
-            $.ajax({
-                url: '?action=get_all_clients',
-                type: 'GET',
-                dataType: 'json',
-                success: function(res) {
-                    if (res.success && res.clients) {
-                        var clientSelect = $('#clientFilter');
-                        var currentVal = clientSelect.val();
-                        
-                        clientSelect.empty().append('<option value="">All Clients</option>');
-                        res.clients.forEach(function(clientName) {
-                            clientSelect.append('<option value="' + clientName + '">' + clientName + '</option>');
-                        });
-                        
-                        if(currentVal) clientSelect.val(currentVal).trigger('change');
+            // --- NEW MULTI-FILTER LOGIC START ---
+
+            // 1. Fetch ALL clients for Dropdown
+            function loadClients() {
+                $.ajax({
+                    url: '?action=get_all_clients',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.success && res.clients) {
+                            var clientSelect = $('#clientFilter');
+                            var currentVal = clientSelect.val();
+                            
+                            clientSelect.empty().append('<option value="">All Clients</option>');
+                            res.clients.forEach(function(clientName) {
+                                clientSelect.append('<option value="' + clientName + '">' + clientName + '</option>');
+                            });
+                            
+                            if (currentVal) clientSelect.val(currentVal);
+                        }
+                    },
+                    error: function() {
+                        console.error("Failed to load clients from database.");
                     }
-                },
-                error: function() {
-                    console.error("Failed to load clients from database.");
+                });
+            }
+            loadClients();
+
+            // 2. Fetch and populate Issue dropdown (optionally filtered by selected client)
+            function loadIssues(selectedClient) {
+                var url = '?action=get_all_issues';
+                if (selectedClient) {
+                    url += '&client=' + encodeURIComponent(selectedClient);
                 }
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.success && res.issues) {
+                            var issueSelect = $('#issueFilter');
+                            var currentVal = issueSelect.val();
+                            
+                            issueSelect.empty().append('<option value="">All Issues</option>');
+                            res.issues.forEach(function(issueName) {
+                                issueSelect.append('<option value="' + issueName + '">' + issueName + '</option>');
+                            });
+                            
+                            if (currentVal && res.issues.indexOf(currentVal) !== -1) {
+                                issueSelect.val(currentVal);
+                            }
+                        }
+                    },
+                    error: function() {
+                        console.error("Failed to load issues from database.");
+                    }
+                });
+            }
+            loadIssues();
+
+            // When Client filter changes, dynamically update Issue dropdown
+            $('#clientFilter').on('change', function() {
+                loadIssues($(this).val());
             });
 
             // 3. Custom search condition for Month, Year, and Billed Status
@@ -1394,8 +1515,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     table.column(1).search('');
                 }
 
-                // Search Issue
-                table.column(2).search(issueVal);
+                // Search exact Issue
+                if (issueVal) {
+                    table.column(2).search('^' + $.fn.dataTable.util.escapeRegex(issueVal) + '$', true, false);
+                } else {
+                    table.column(2).search('');
+                }
 
                 // Search Process
                 table.columns([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]).search(''); // Reset old
@@ -1409,12 +1534,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             // 5. Clear ALL Filters when "Clear" button is clicked
             $('#clearFilterBtn').on('click', function() {
-                $('#clientFilter').val('').trigger('change'); // reset select2
+                $('#clientFilter').val('');
                 $('#issueFilter').val('');
                 $('#processFilterDropdown').val('');
                 $('#billedFilter').val('');
                 $('#monthFilter').val('');
                 $('#yearFilter').val('');
+                loadIssues();
                 
                 // Clear datatable internal searches
                 table.search('').columns().search('');
@@ -1521,8 +1647,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         });
         
     </script>
-    <!-- Add this below your datatables.min.js script tag -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    
 </body>
 </html>

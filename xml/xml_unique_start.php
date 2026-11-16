@@ -496,7 +496,7 @@ if ($results && $results->num_rows > 0) {
         .table th.sticky-col-1, .table td.sticky-col-1 { position: sticky; left: 0; z-index: 10; min-width: 45px; max-width: 45px; }
         .table th.sticky-col-2, .table td.sticky-col-2 { position: sticky; left: 45px; z-index: 10; min-width: 130px; max-width: 130px; }
         .table th.sticky-col-3, .table td.sticky-col-3 { position: sticky; left: 175px; z-index: 10; min-width: 200px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-        .table th.sticky-col-4, .table td.sticky-col-4 { position: sticky; left: 375px; z-index: 10; border-right: 2px solid #a0a5ab; min-width: 180px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+        .table th.sticky-col-4, .table td.sticky-col-4 { position: sticky; left: 375px; z-index: 10; border-right: 1px solid #dee2e6; min-width: 180px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 
         /* 2. Header Colors (Dark Grey) */
         .table thead th.sticky-col-1, 
@@ -554,7 +554,7 @@ if ($results && $results->num_rows > 0) {
         .bg-cell-completed { background-color: #198754 !important; color: #fff !important; font-weight: bold; }
         
         /* Status Badges */
-        .badge-cyan { background-color: #0dcaf0; color: #000; font-weight: 700; padding: 3px 8px; border-radius: 12px; font-size: 10px; }
+        .badge-cyan { color: #000; font-weight: 700; font-size: 12px; }
         .badge-blue { background-color: #0d6efd; color: #fff; font-weight: 700; padding: 3px 10px; border-radius: 12px; font-size: 10px; }
         .badge-grey { background-color: #6c757d; color: #fff; font-weight: 700; padding: 3px 8px; border-radius: 12px; font-size: 10px; }
         /* Job Status */
@@ -867,11 +867,7 @@ if ($results && $results->num_rows > 0) {
                                 <td class="sticky-col-2"><?= $is_tracked ? formatDateTime($row['rec_date'], 'd-M-Y H:i') : '-' ?></td>
                                 <td class="text-primary fw-bold text-start sticky-col-3" title="<?= h($row['team_client_name'] ?: $row['client_name']) ?>"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
                                 <td class="text-start sticky-col-4" title="<?= h($row['journal_issue']) ?>"><?= h($row['journal_issue']) ?: '-' ?></td>
-                                <td><span style="background-color: #28a745; /* standard green */
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;"><?= h($row['article']) ?: '-' ?></span></td>
+                                <td><span class="fw-bold text-dark" style="font-size: 12px;"><?= h($row['article']) ?: '-' ?></span></td>
                                 
                                 
                                                                                             

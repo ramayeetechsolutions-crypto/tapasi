@@ -694,9 +694,6 @@ if (!$entries) {
                     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#importExcelModal">
                         <i class="fas fa-file-import me-1"></i> Import Excel
                     </button>
-                    <button type="button" class="btn btn-success btn-sm" onclick="exportToExcel()">
-                        <i class="fas fa-file-excel me-1"></i> Export Excel
-                    </button>
                     <a href="error_entry_team.php?mode=add" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus me-1"></i> Add New
                     </a>

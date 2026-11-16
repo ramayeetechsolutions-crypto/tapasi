@@ -11,8 +11,10 @@ if (session_status() === PHP_SESSION_NONE) {
 $current_username = $_SESSION['username'] ?? ''; // Adjust based on your session variable
 
 // Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
 function calculateExperience($joining_date) {
@@ -31,6 +33,7 @@ function calculateExperience($joining_date) {
 // Get current team leader's team_id
 $team_leader_team = null;
 $team_leader_name = ''; // Added to store TL name
+$team_leader_team_name = '';
 if ($current_username) {
     $stmt = $mysqli->prepare("SELECT e.team_id, e.employee_name, t.team_name FROM employee_master e, team_master t WHERE e.employee_username = ? AND e.team_id=t.team_id AND e.status = 'Active'");
     $stmt->bind_param("s", $current_username);
@@ -53,8 +56,36 @@ $days_passed = $fy_start_date->diff($today)->days;
 $default_week = floor($days_passed / 7) + 1;
 
 // Get parameters
-$week = $_GET['week'] ?? $default_week;
-$year = $_GET['year'] ?? date('Y');
+$start_date_param = trim($_GET['start_date'] ?? '');
+$end_date_param = trim($_GET['end_date'] ?? '');
+$employee_id = trim($_GET['employee_id'] ?? '');
+$team_id = trim($_GET['team_id'] ?? '');
+$process = trim($_GET['process'] ?? '');
+
+if (!empty($start_date_param) && !empty($end_date_param)) {
+    $start_date = $start_date_param;
+    $end_date = $end_date_param;
+    $s_dt = new DateTime($start_date);
+    $fy_calc_y = (int)$s_dt->format('Y');
+    if ((int)$s_dt->format('n') < 4) { $fy_calc_y--; }
+    $fy_s = new DateTime("first monday of april $fy_calc_y");
+    $days_p = $fy_s->diff($s_dt)->days;
+    $week = floor($days_p / 7) + 1;
+    $year = $fy_calc_y;
+} else {
+    $week = (int)($_GET['week'] ?? $default_week);
+    $year = (int)($_GET['year'] ?? date('Y'));
+    $dto = new DateTime("first monday of april $year");
+    $week_offset = $week - 1;
+    if ($week_offset > 0) {
+        $dto->modify("+$week_offset weeks");
+    }
+    $start_date = $dto->format('Y-m-d');
+    $dto->modify('+5 days'); // Monday to Saturday (6 days)
+    $end_date = $dto->format('Y-m-d');
+}
+
+$week_str = "Week " . (int)$week . ", " . (int)$year;
 
 
 // Handle Excel Download - Simple .xls without libraries
@@ -122,7 +153,7 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     
     // Title
     echo '<table>';
-    echo '<tr><td colspan="14" class="title">WEEKLY PRODUCTION REPORT</td></tr>';
+    echo '<tr><td colspan="14" class="title">PRODUCTION REPORT</td></tr>';
     echo '<tr><td colspan="14" class="subtitle">Week: ' . $week . ', Year: ' . $year . '</td></tr>';
     echo '<tr><td colspan="14" class="subtitle">Team: ' . $team_leader_team_name . '</td></tr>';
     echo '<tr><td colspan="14">&nbsp;</td></tr>';
@@ -226,18 +257,24 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     exit();
 }
 
-// Get start and end dates for the selected week to fetch XML data (Starting from April First Monday)
-$dto = new DateTime("first monday of april $year");
-
-$week_offset = (int)$week - 1;
-if ($week_offset > 0) {
-    $dto->modify("+$week_offset weeks");
+// Master tables for filter dropdowns
+$teams_filter_res = $mysqli->query("SELECT team_id, team_name FROM team_master WHERE status = 'Active' ORDER BY team_name");
+$teams_filter_list = [];
+if ($teams_filter_res) {
+    while ($t = $teams_filter_res->fetch_assoc()) { $teams_filter_list[] = $t; }
 }
 
-$start_date = $dto->format('Y-m-d');
-$dto->modify('+5 days'); // Monday to Saturday (6 days)
-$end_date = $dto->format('Y-m-d');
-$week_str = "Week " . (int)$week . ", " . (int)$year;
+$all_emp_filter_res = $mysqli->query("SELECT employee_id, employee_name, employee_username FROM employee_master WHERE status = 'Active' AND employee_name NOT LIKE '%Selvarani%' ORDER BY employee_username ASC, employee_name ASC");
+$all_emp_filter_list = [];
+if ($all_emp_filter_res) {
+    while ($e = $all_emp_filter_res->fetch_assoc()) { $all_emp_filter_list[] = $e; }
+}
+
+$all_proc_filter_res = $mysqli->query("SELECT process_id, process_name FROM process_master WHERE status = 'Active' ORDER BY process_name");
+$all_proc_filter_list = [];
+if ($all_proc_filter_res) {
+    while ($p = $all_proc_filter_res->fetch_assoc()) { $all_proc_filter_list[] = $p; }
+}
 
 // 1. Fetch Process Master Mapping (To convert IDs like 5,45 to Names)
 $pm_sql = "SELECT process_id, process_name FROM process_master";
@@ -251,16 +288,36 @@ if ($pm_result) {
     }
 }
 
-// Fetch Employees (Filtered by reporting_manager to match Assignment Page)
+// Fetch Employees (Filtered by reporting_manager to match Assignment Page, or filtered by selection)
+$emp_conds = ["em.status = 'Active'"];
+
+$safe_name = $mysqli->real_escape_string($team_leader_name);
+$is_tl = false;
+if (!empty($safe_name)) {
+    $tl_check = $mysqli->query("SELECT 1 FROM employee_master WHERE reporting_manager='$safe_name' AND status='Active' LIMIT 1");
+    if ($tl_check && $tl_check->num_rows > 0) {
+        $is_tl = true;
+    }
+}
+
+if (!empty($employee_id)) {
+    $emp_conds[] = "em.employee_id = " . (int)$employee_id;
+} elseif (!empty($team_id)) {
+    $emp_conds[] = "em.team_id = " . (int)$team_id;
+} elseif ($is_tl) {
+    $emp_conds[] = "em.reporting_manager = '$safe_name'";
+}
+
+if (!empty($process)) {
+    $p_esc = $mysqli->real_escape_string($process);
+    $emp_conds[] = "(em.process LIKE '%$p_esc%' OR em.process1 LIKE '%$p_esc%')";
+}
+
 $employees_sql = "SELECT em.employee_id, em.employee_name, em.employee_username, em.team_id, em.joining_date, em.process
                   FROM employee_master em
-                  WHERE em.status = 'Active' AND em.reporting_manager = ?
+                  WHERE " . implode(" AND ", $emp_conds) . "
                   ORDER BY em.employee_username ASC";
-$stmt = $mysqli->prepare($employees_sql);
-$stmt->bind_param("s", $team_leader_name);
-$stmt->execute();
-$employees_res = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+$employees_res = $mysqli->query($employees_sql)->fetch_all(MYSQLI_ASSOC);
 
 // 2. Fetch Latest Targets per employee from daily_targets_xml
 $targets_sql = "SELECT t1.tm_id, SUM(t1.target_limit) as total_daily_target
@@ -294,7 +351,7 @@ $error_sql = "SELECT error_made_by,
                      SUM(CASE WHEN internal_external = 'Internal' THEN 1 ELSE 0 END) as internal_errors,
                      SUM(CASE WHEN internal_external = 'External' THEN 1 ELSE 0 END) as external_errors
               FROM error_log
-              WHERE (week = '$week_str' OR week LIKE '%$week%' OR week LIKE '%$formatted_week%') AND status = 'Active'
+              WHERE ((week = '$week_str' OR week LIKE '%$week%' OR week LIKE '%$formatted_week%') OR (error_date BETWEEN '$start_date' AND '$end_date')) AND status = 'Active'
               GROUP BY error_made_by";
 $error_res = $mysqli->query($error_sql);
 $employee_errors = [];
@@ -332,7 +389,7 @@ foreach ($employees_res as $emp) {
     $username = $emp['employee_username'];
     
     // Convert comma-separated IDs (e.g., 5,45,46) to actual Process Names
-    $raw_processes = explode(',', $emp['process']);
+    $raw_processes = explode(',', (string)($emp['process'] ?? ''));
     $mapped_names = [];
     foreach($raw_processes as $pid) {
         $pid = trim($pid);
@@ -434,7 +491,7 @@ if ($team_stats['avg_production'] > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Production Report - Team <?= h($team_leader_team_name) ?></title>
+    <title>Production Report - Team <?= h($team_leader_team_name) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -442,12 +499,15 @@ if ($team_stats['avg_production'] > 0) {
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { padding: 20px; max-width: 1600px; margin: 0 auto; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); margin-bottom: 20px; }
-        .stat-card { border-radius: 10px; padding: 20px; text-align: center; color: white; }
+        .stat-card { border-radius: 10px; padding: 20px; text-align: center; color: white !important; }
         .stat-card.employees { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .stat-card.target { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .stat-card.achieved { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
         .stat-card.errors { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .stat-card h3 { font-size: 2.5rem; margin: 10px 0; }
+        .stat-card h3 { font-size: 2.5rem; margin: 10px 0; color: #ffffff !important; font-weight: bold; }
+        .stat-card p { color: #ffffff !important; margin: 0; }
+        .stat-card i { color: #ffffff !important; }
+        .filter-box { background-color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
         /* ADDED: Scrollable container for the table */
         .table-responsive {
             max-height: 65vh; /* Sets height so table scrolls internally */
@@ -479,35 +539,15 @@ if ($team_stats['avg_production'] > 0) {
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <!-- Header with Title, Week Selector, and Download Button -->
+        <!-- Header with Title -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4><i class="fas fa-file-alt me-2"></i>WEEKLY PRODUCTION REPORT</h4>
-                <p class="text-muted mb-0">Team: <?= h($team_leader_team_name) ?> | Week <?= $week ?>, <?= $year ?></p>
+                <h4><i class="fas fa-file-alt me-2"></i>PRODUCTION REPORT</h4>
+                <p class="text-muted mb-0">Team: <?= h($team_leader_team_name) ?> | Week <?= $week ?>, <?= $year ?> (<?= date('d-m-Y', strtotime($start_date)) ?> to <?= date('d-m-Y', strtotime($end_date)) ?>)</p>
             </div>
-            <div class="d-flex align-items-center gap-3">
-                <!-- Week Selector Form -->
-                <form method="get" class="row g-2">
-                    <div class="col-auto">
-                        <input type="number" name="week" class="form-control form-control-sm" value="<?= $week ?>" min="1" max="53" style="width: 80px;" placeholder="Week">
-                    </div>
-                    <div class="col-auto">
-                        <input type="number" name="year" class="form-control form-control-sm" value="<?= $year ?>" min="2020" max="2030" style="width: 100px;" placeholder="Year">
-                    </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fas fa-filter me-1"></i> Filter
-                        </button>
-                    </div>
-                </form>
-                
-                <!-- Download Excel Button -->
-              <!--a href="?week=<?= $week ?>&year=<?= $year ?>&download=excel" class="btn btn-success download-btn">
-    <i class="fas fa-file-excel excel-icon me-2"></i> Download Excel
-</a-->            </div>
         </div>
 
-        <!-- Team Statistics -->
+        <!-- Team Statistics Cards -->
         <div class="row mb-4">
             <div class="col-md-3">
                 <div class="stat-card employees">
@@ -539,22 +579,86 @@ if ($team_stats['avg_production'] > 0) {
             </div>
         </div>
 
-        <!-- Performance Chart -->
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Chart - Week <?= $week ?>, <?= $year ?></h5>
-            </div>
-            <div class="card-body">
-                <div class="chart-container">
-                    <canvas id="performanceChart"></canvas>
+        <!-- Filter Form Below Dashboard Cards (Like in Team Report) -->
+        <div class="filter-box">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Start Date</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="<?= h($start_date) ?>">
                 </div>
-            </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">End Date</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="<?= h($end_date) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Select Week</label>
+                    <select id="week_selector" class="form-select form-select-sm">
+                        <option value="">Custom Date</option>
+                        <?php
+                        $current_month = date('n');
+                        $fy_yr = date('Y');
+                        if ($current_month < 4) { $fy_yr--; }
+                        $dto_filter = new DateTime("first monday of april $fy_yr");
+                        for ($w = 1; $w <= 52; $w++) {
+                            $w_start = $dto_filter->format('Y-m-d');
+                            $w_start_dmy = $dto_filter->format('d-m-Y');
+                            $end_dto = clone $dto_filter;
+                            $end_dto->modify('+5 days');
+                            $w_end = $end_dto->format('Y-m-d');
+                            $val = "{$w_start}|{$w_end}";
+                            $selected = ($val === "$start_date|$end_date" || ((int)$week === $w && empty($start_date_param))) ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected} data-week='{$w}' data-year='{$fy_yr}'>Week {$w} ({$w_start_dmy})</option>";
+                            $dto_filter->modify('+1 week');
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Employee</label>
+                    <select name="employee_id" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        <?php foreach($all_emp_filter_list as $emp_opt): ?>
+                            <option value="<?= $emp_opt['employee_id'] ?>" <?= (string)$employee_id === (string)$emp_opt['employee_id'] ? 'selected' : '' ?>>
+                                <?= !empty($emp_opt['employee_username']) ? h($emp_opt['employee_username']) . ' - ' : '' ?><?= h($emp_opt['employee_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Team</label>
+                    <select name="team_id" class="form-select form-select-sm">
+                        <option value="">All Teams</option>
+                        <?php foreach($teams_filter_list as $team_opt): ?>
+                            <option value="<?= $team_opt['team_id'] ?>" <?= (string)$team_id === (string)$team_opt['team_id'] ? 'selected' : '' ?>>
+                                <?= h($team_opt['team_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Process</label>
+                    <select name="process" class="form-select form-select-sm">
+                        <option value="">All Processes</option>
+                        <?php foreach($all_proc_filter_list as $proc_opt): ?>
+                            <option value="<?= h($proc_opt['process_name']) ?>" <?= $process === $proc_opt['process_name'] ? 'selected' : '' ?>>
+                                <?= h($proc_opt['process_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <input type="hidden" name="week" id="hidden_week" value="<?= h($week) ?>">
+                <input type="hidden" name="year" id="hidden_year" value="<?= h($year) ?>">
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="xml_weekly_report.php" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> Clear Filters</a>
+                </div>
+            </form>
         </div>
 
-        <!-- Weekly Report Table -->
-        <div class="card">
+        <!-- Weekly Report Table (TABLE FIRST) -->
+        <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Weekly Production Details</h5>
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Production Details</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -642,11 +746,48 @@ if ($team_stats['avg_production'] > 0) {
                 </div>
             </div>
         </div>
+
+        <!-- Performance Chart (CHART NEXT) -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Chart - Week <?= $week ?>, <?= $year ?></h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Auto-fill Start and End dates when a Week is selected
+        $('#week_selector').change(function() {
+            var val = $(this).val();
+            if (val) {
+                var dates = val.split('|');
+                $('input[name="start_date"]').val(dates[0]);
+                $('input[name="end_date"]').val(dates[1]);
+                var selectedWeek = $(this).find('option:selected').data('week');
+                var selectedYear = $(this).find('option:selected').data('year');
+                if (selectedWeek) {
+                    $('#hidden_week').val(selectedWeek);
+                }
+                if (selectedYear) {
+                    $('#hidden_year').val(selectedYear);
+                }
+            }
+        });
+
+        // Calculate dynamic maximum for Y axis so values like 121.5% have proper headroom
+        const netProdData = <?= json_encode($chart_net_prod) ?>;
+        const accuracyData = <?= json_encode($chart_accuracy) ?>;
+        const allValues = [...netProdData, ...accuracyData].map(Number).filter(v => !isNaN(v));
+        const maxVal = allValues.length ? Math.max(...allValues) : 100;
+        const computedYMax = Math.max(120, Math.ceil((maxVal + 10) / 20) * 20);
+
         // Performance Chart
         const ctx = document.getElementById('performanceChart').getContext('2d');
         const performanceChart = new Chart(ctx, {
@@ -655,19 +796,19 @@ if ($team_stats['avg_production'] > 0) {
                 labels: <?= json_encode($chart_labels) ?>,
                 datasets: [{
                     label: 'NET Prod %',
-                    data: <?= json_encode($chart_net_prod) ?>,
+                    data: netProdData,
                     backgroundColor: 'rgba(54, 162, 235, 0.7)',
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1,
                     yAxisID: 'y'
                 }, {
                     label: 'Accuracy %',
-                    data: <?= json_encode($chart_accuracy) ?>,
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    data: accuracyData,
+                    backgroundColor: '#198754',
+                    borderColor: '#146c43',
                     borderWidth: 1,
-                    type: 'line',
-                    yAxisID: 'y1'
+                    type: 'bar',
+                    yAxisID: 'y'
                 }]
             },
             options: {
@@ -682,22 +823,13 @@ if ($team_stats['avg_production'] > 0) {
                     },
                     y: {
                         beginAtZero: true,
-                        max: 120,
-                        title: {
-                            display: true,
-                            text: 'NET Prod %'
-                        }
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        max: 120,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Accuracy %'
+                        max: computedYMax,
+                        ticks: {
+                            stepSize: 20
                         },
-                        grid: {
-                            drawOnChartArea: false
+                        title: {
+                            display: true,
+                            text: 'Percentage (%)'
                         }
                     }
                 },
