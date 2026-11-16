@@ -69,7 +69,7 @@ function getWeekDates($week_number, $year = null) {
 // Get TLs for dropdown (only if current user is Manager/Admin)
 $tls = [];
 if ($current_user_role == 3) {
-    $stmt = $mysqli->prepare("SELECT employee_id, employee_name FROM employee_master 
+    $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master 
                              WHERE user_role_id = 3 AND status = 'Active' 
                              ORDER BY employee_name");
     $stmt->execute();
@@ -370,195 +370,189 @@ foreach ($targets as &$target) {
         $target['achieved_percentage'] = 0;
     }
 }
+unset($target); // FIX: Breaks the reference to prevent overwriting the array in the next loop
+
+$pageTitle = "Weekly Target Assignment";
+require 'header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Target Assignment</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background-color: var(--light, #f5f7fa);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .main-content {
-            padding: 20px 3%;
-            margin: 0 auto;
-            margin-top: 70px;
-        }
 
-        /* Ash Page Header Banner (Matching Navbar Color) */
-        .page-title-container {
-            background: var(--ash, #6c757d);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        .page-title-container h1, .page-title-container h4 {
-            margin: 0;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+<style>
+    body {
+        background-color: var(--light, #f5f7fa);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .main-content {
+        padding: 20px 3%;
+        margin: 0 auto;
+        margin-top: 70px;
+    }
 
-        /* Sticky Table Header */
-        .table thead th {
-            position: sticky;
-            top: 70px;
-            z-index: 900;
-            background-color: var(--ash, #6c757d) !important;
-            font-weight: 600;
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: white !important;
-            padding: 0.75rem 0.5rem;
-            border: 1px solid #6c757d !important;
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
-        }
-        .table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .card, .card-body, .table-responsive, .table-container {
-            overflow: visible !important;
-        }
+    /* Ash Page Header Banner (Matching Navbar Color) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .page-title-container h1, .page-title-container h4 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-        .table td {
-            vertical-align: middle;
-        }
-        .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border: 1px solid rgba(0, 0, 0, 0.125);
-            margin-bottom: 20px;
-        }
-        .card-header {
-            background-color: var(--ash, #6c757d) !important;
-            color: white !important;
-        }
-        .progress {
-            height: 20px;
-        }
-        .bg-target {
-            background-color: #6f42c1;
-        }
-        .filter-section {
-            background-color: #ffffff;
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            border: 1px solid #e9ecef;
-        }
-        .week-badge {
-            font-size: 1.1em;
-            padding: 8px 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .target-cell {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .week-input-container {
-            display: flex;
-            gap: 10px;
-        }
-        .week-input-container input {
-            text-transform: uppercase;
-        }
-        .progress-cell {
-            min-width: 200px;
-        }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
-    
-    <div class="main-content">
-        <div class="page-title-container">
-            <h1 class="mb-0">
-                <i class="fas fa-bullseye"></i> Employee Target
-            </h1>
-        </div>
+    /* Sticky Table Header */
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: white !important;
+        padding: 0.75rem 0.5rem;
+        border: 1px solid #6c757d !important;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+    }
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .card, .card-body, .table-responsive, .table-container {
+        overflow: visible !important;
+    }
 
-        <?php if(isset($success_message)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?= h($success_message) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php endif; ?>
+    .table td {
+        vertical-align: middle;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        margin-bottom: 20px;
+    }
+    .card-header {
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+    }
+    .progress {
+        height: 20px;
+    }
+    .bg-target {
+        background-color: #6f42c1;
+    }
+    .filter-section {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e9ecef;
+    }
+    .week-badge {
+        font-size: 1.1em;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .target-cell {
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+    }
+    .week-input-container {
+        display: flex;
+        gap: 10px;
+    }
+    .week-input-container input {
+        text-transform: uppercase;
+    }
+    .progress-cell {
+        min-width: 200px;
+    }
+</style>
 
-        <?php if(!empty($errors)): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <ul class="mb-0">
-                <?php foreach($errors as $error): ?>
-                <li><?= h($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php endif; ?>
+<div class="main-content">
+    <div class="page-title-container">
+        <h1 class="mb-0">
+            <i class="fas fa-bullseye"></i> Employee Target
+        </h1>
+    </div>
 
-        <!-- Filter Section -->
-        <div class="filter-section">
-            <form method="get" class="row g-2 align-items-end">
-                <?php if($current_user_role == 3): ?>
-                <div class="col-md-3">
-                    <label for="tl_id" class="form-label small fw-semibold">Select Team Leader</label>
-                    <select name="tl_id" id="tl_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">All Team Leaders</option>
-                        <?php foreach($tls as $tl): ?>
-                        <option value="<?= h($tl['employee_username']) ?>" 
-                                <?= $selected_tl_id == $tl['employee_username'] ? 'selected' : '' ?>>
-                            <?= h($tl['employee_name']) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <?php endif; ?>
-                
-                <div class="col-md">
-                    <label for="week_filter" class="form-label small fw-semibold">Week</label>
-                    <input type="text" name="week_filter" id="week_filter" class="form-control form-control-sm" 
-                           placeholder="W1, W2, etc." value="<?= h($_GET['week_filter'] ?? '') ?>">
-                </div>
-                
-                <div class="col-md-2">
-                    <label for="year_filter" class="form-label small fw-semibold">Year</label>
-                    <select name="year_filter" id="year_filter" class="form-select form-select-sm">
-                        <?php for($y = 2023; $y <= 2030; $y++): ?>
-                        <option value="<?= $y ?>" <?= ($_GET['year_filter'] ?? date('Y')) == $y ? 'selected' : '' ?>>
-                            <?= $y ?>
-                        </option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
-                
-                <div class="col-md-auto d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm px-3 text-nowrap">
-                        <i class="fas fa-filter me-1"></i> Filter
-                    </button>
-                    <a href="target_assignment.php" class="btn btn-secondary btn-sm px-3 text-nowrap">
-                        <i class="fas fa-times me-1"></i> Clear
-                    </a>
-                </div>
-            </form>
-        </div>
+    <?php if(isset($success_message)): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <?= h($success_message) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <?php endif; ?>
+
+    <?php if(!empty($errors)): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0">
+            <?php foreach($errors as $error): ?>
+            <li><?= h($error) ?></li>
+            <?php endforeach; ?>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <?php endif; ?>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" class="row g-2 align-items-end">
+            <?php if($current_user_role == 3): ?>
+            <div class="col-md-4">
+                <label for="tl_id" class="form-label small fw-semibold">Select Team Leader</label>
+                <select name="tl_id" id="tl_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Team Leaders</option>
+                    <?php foreach($tls as $tl): ?>
+                    <option value="<?= h($tl['employee_username']) ?>" 
+                            <?= $selected_tl_id == $tl['employee_username'] ? 'selected' : '' ?>>
+                        <?= h($tl['employee_name']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+            
+            <div class="col-md">
+                <label for="week_filter" class="form-label small fw-semibold">Week</label>
+                <input type="text" name="week_filter" id="week_filter" class="form-control form-control-sm" 
+                       placeholder="W1, W2, etc." value="<?= h($_GET['week_filter'] ?? '') ?>">
+            </div>
+            
+            <div class="col-md-3">
+                <label for="year_filter" class="form-label small fw-semibold">Year</label>
+                <select name="year_filter" id="year_filter" class="form-select form-select-sm">
+                    <?php for($y = 2023; $y <= 2030; $y++): ?>
+                    <option value="<?= $y ?>" <?= ($_GET['year_filter'] ?? date('Y')) == $y ? 'selected' : '' ?>>
+                        <?= $y ?>
+                    </option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+            
+            <div class="col-md-auto d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary btn-sm px-3">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+                <a href="target_assignment.php" class="btn btn-secondary btn-sm px-3">
+                    <i class="fas fa-times me-1"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
 
         <div class="row">
             <!-- Assign Target Form -->
@@ -666,15 +660,16 @@ foreach ($targets as &$target) {
 
             <!-- Targets List -->
             <div class="col-md-8">
-                    <div class="card border-0 shadow-sm rounded-3" style="overflow: visible;">
-                        <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="card">
+                    <!-- <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"> -->
+                         <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Assigned Targets</h5>
                         <span class="badge bg-light text-dark">
                             <?= count($targets) ?> Target(s)
                         </span>
                     </div>
-                    <div class="card-body p-0" style="overflow: visible;">
-                        <div class="table-container" style="overflow: visible;">
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="overflow: visible;">
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
