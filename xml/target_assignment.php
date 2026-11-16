@@ -281,7 +281,7 @@ if (!empty($tms) && !empty($processes)) {
         }
         
         .table thead th {
-            background-color: #5e6b77 !important;
+            background-color: var(--ash, #6c757d) !important;
             color: #ffffff !important;
             font-weight: 600;
             font-size: 0.85rem;
@@ -299,7 +299,7 @@ if (!empty($tms) && !empty($processes)) {
         .table thead .col-total, 
         .table thead .col-name {
             z-index: 15;
-            background-color: #5e6b77 !important;
+            background-color: var(--ash, #6c757d) !important;
             color: #ffffff !important;
         }
 
@@ -378,6 +378,28 @@ if (!empty($tms) && !empty($processes)) {
             margin-top: 20px;
         }
         
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .page-title-container h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
@@ -390,10 +412,10 @@ if (!empty($tms) && !empty($processes)) {
     <div class="main-container">
         
         <!-- Header -->
-        <div class="page-header">
-            <h2 class="page-title">
-                <i class="fas fa-bullseye text-primary"></i> Employee Target
-            </h2>
+        <div class="page-title-container">
+            <h1 class="mb-0">
+                <i class="fas fa-bullseye"></i> Employee Target
+            </h1>
         </div>
 
         <?php if(isset($success_message)): ?>
@@ -405,11 +427,11 @@ if (!empty($tms) && !empty($processes)) {
 
         <!-- Filter Panel -->
         <div class="filter-panel">
-            <form method="get" class="row g-3 align-items-end">
+            <form method="get" class="row g-2 align-items-end">
                 <?php if($current_user_role == 3): ?>
-                <div class="col-md-4">
+                <div class="col-md">
                     <label class="filter-label">Team Member</label>
-                    <select name="tm_id" class="form-select" onchange="this.form.submit()">
+                    <select name="tm_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="0">All Team Members (Latest Targets)</option>
                         <?php foreach($tms as $tm): ?>
                             <option value="<?= $tm['employee_id'] ?>" <?= $selected_tm_id == $tm['employee_id'] ? 'selected' : '' ?>>
@@ -420,11 +442,11 @@ if (!empty($tms) && !empty($processes)) {
                 </div>
                 <?php endif; ?>
                 
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                <div class="col-md-auto d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
                         <i class="fas fa-search me-2"></i>Load Grid
                     </button>
-                    <a href="target_assignment.php" class="btn btn-light border px-4 ms-2">Reset</a>
+                    <a href="target_assignment.php" class="btn btn-secondary btn-sm px-4">Reset</a>
                 </div>
             </form>
         </div>

@@ -1,4 +1,3 @@
-<br><br>
 <?php
 // Start session BEFORE any output
 if (session_status() === PHP_SESSION_NONE) { session_start(); }

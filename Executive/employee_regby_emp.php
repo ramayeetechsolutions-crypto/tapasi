@@ -142,28 +142,61 @@ if ($result->num_rows > 0) {
 require 'header.php';
 ?>
 
-<div class="container-fluid py-5" style="margin-top: 50px;">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            
-            <!-- Page Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="fw-bold text-dark"><i class="fas fa-user-edit me-2"></i>Employee Self-Registration</h2>
-                    <p class="text-muted">Complete your profile details for verification.</p>
-                </div>
-                <div>
-                    <?php if(isset($emprow['emp_confirm']) && $emprow['emp_confirm'] == 1): ?>
-                        <span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-2"></i> Submitted by You</span>
-                    <?php else: ?>
-                        <span class="badge bg-primary fs-6 px-3 py-2"><i class="fas fa-pen me-2"></i> Pending Submission</span>
-                    <?php endif; ?>
+<style>
+    body {
+        background-color: var(--light, #f5f7fa);
+    }
+    .main-content {
+        margin-top: 70px;
+        padding: 25px 4%;
+        transition: all 0.3s ease;
+    }
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .page-title-container h2 {
+        margin: 0;
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+    }
+</style>
 
-                    <?php if(isset($emprow['tl_verified']) && $emprow['tl_verified'] == 1): ?>
-                        <span class="badge bg-primary fs-6 px-3 py-2 ms-2"><i class="fas fa-check-double me-2"></i> Verified by TL</span>
-                    <?php endif; ?>
+<main class="main-content">
+    <div class="container-fluid p-0">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                
+                <!-- Page Header with Ash Color Background like Dashboard -->
+                <div class="page-title-container">
+                    <div>
+                        <h2 class="mb-0 text-white">
+                            <i class="fas fa-user-edit me-2"></i>Employee Self-Registration
+                        </h2>
+                        <p class="mb-0 text-white-50 small mt-1">Complete your profile details for verification.</p>
+                    </div>
+                    <div>
+                        <?php if(isset($emprow['emp_confirm']) && $emprow['emp_confirm'] == 1): ?>
+                            <span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-1"></i> Submitted by You</span>
+                        <?php else: ?>
+                            <span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="fas fa-pen me-1"></i> Pending Submission</span>
+                        <?php endif; ?>
+
+                        <?php if(isset($emprow['tl_verified']) && $emprow['tl_verified'] == 1): ?>
+                            <span class="badge bg-primary fs-6 px-3 py-2 ms-2"><i class="fas fa-check-double me-1"></i> Verified by TL</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            </div>
 
             <!-- Messages -->
             <?php if ($msg): ?>
@@ -334,7 +367,7 @@ require 'header.php';
                         <div class="row g-4">
                             <!-- Aadhar -->
                             <div class="col-md-6 border-end">
-                                <h6 class="text-dark fw-bold border-bottom pb-2">Aadhar Details</h6>
+                                <h6 class="text-primary fw-bold border-bottom pb-2">Aadhar Details</h6>
                                 <div class="mb-3">
                                     <label class="form-label">Aadhar Number</label>
                                     <input type="text" name="aadhar_no" class="form-control" value="<?= htmlspecialchars($emprow['aadhar_no'] ?? '') ?>">
@@ -360,7 +393,7 @@ require 'header.php';
                             
                             <!-- PAN -->
                             <div class="col-md-6">
-                                <h6 class="text-dark fw-bold border-bottom pb-2">PAN Details</h6>
+                                <h6 class="text-primary fw-bold border-bottom pb-2">PAN Details</h6>
                                 <div class="mb-3">
                                     <label class="form-label">PAN Number</label>
                                     <input type="text" name="pan_no" class="form-control" value="<?= htmlspecialchars($emprow['pan_no'] ?? '') ?>">
@@ -444,6 +477,7 @@ require 'header.php';
         </div>
     </div>
 </div>
+</main>
 
 <!-- JavaScript for Toggling Form and Image Preview -->
 <script>

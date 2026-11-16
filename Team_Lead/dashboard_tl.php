@@ -813,7 +813,7 @@ $qc_per  = round(($qc_ip / $total_assigned) * 100);
 }
 
 .page-title-container {
-  background: var(--ash-dark);
+  background: var(--ash, #6c757d);
     color: white;
     padding: 10px;
     border-radius: 12px;

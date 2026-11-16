@@ -438,20 +438,60 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: var(--light, #f5f7fa);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .main-content {
-            padding: 20px;
-            max-width: 1400px;
+            padding: 20px 3%;
             margin: 0 auto;
-            margin-top: 80px; /* Added this line to push the content down below the header */
+            margin-top: 70px;
         }
-        .table th {
-            background-color: #2c3e50;
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
             color: white;
-            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
+        .page-title-container h1, .page-title-container h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sticky Table Header */
+        .table thead th {
+            position: sticky;
+            top: 70px;
+            z-index: 900;
+            background-color: var(--ash, #6c757d) !important;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: white !important;
+            padding: 0.75rem 0.5rem;
+            border: 1px solid #6c757d !important;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+        }
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .card, .card-body, .table-responsive, .table-container {
+            overflow: visible !important;
+        }
+
         .table td {
             vertical-align: middle;
         }
@@ -460,6 +500,10 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
             border: 1px solid rgba(0, 0, 0, 0.125);
             margin-bottom: 20px;
         }
+        .card-header {
+            background-color: var(--ash, #6c757d) !important;
+            color: white !important;
+        }
         .progress {
             height: 20px;
         }
@@ -467,10 +511,12 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
             background-color: #6f42c1;
         }
         .filter-section {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 16px 20px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e9ecef;
         }
         .week-badge {
             font-size: 1.1em;
@@ -495,19 +541,16 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
         .progress-cell {
             min-width: 200px;
         }
-        .card-header {
-            background-color: #707981 !important;
-            color: white !important;
-}
-
     </style>
 </head>
 <body>
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-bullseye me-2"></i>Employee Target</h4>
+        <div class="page-title-container">
+            <h1 class="mb-0">
+                <i class="fas fa-bullseye"></i> Employee Target
+            </h1>
         </div>
 
         <?php if(isset($success_message)): ?>
@@ -530,11 +573,11 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
 
         <!-- Filter Section -->
         <div class="filter-section">
-            <form method="get" class="row g-3 align-items-center">
+            <form method="get" class="row g-2 align-items-end">
                 <?php if($current_user_role == 3): ?>
-                <div class="col-md-2">
-                    <label for="tl_id" class="form-label">Select Team Leader</label>
-                    <select name="tl_id" id="tl_id" class="form-select" onchange="this.form.submit()">
+                <div class="col-md-3">
+                    <label for="tl_id" class="form-label small fw-semibold">Select Team Leader</label>
+                    <select name="tl_id" id="tl_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">All Team Leaders</option>
                         <?php foreach($tls as $tl): ?>
                         <option value="<?= h($tl['employee_username']) ?>" 
@@ -546,9 +589,9 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
                 </div>
                 <?php endif; ?>
 
-                <div class="col-md-3">
-                    <label for="tm_filter" class="form-label">Team Member</label>
-                    <select name="tm_filter" id="tm_filter" class="form-select">
+                <div class="col-md">
+                    <label for="tm_filter" class="form-label small fw-semibold">Team Member</label>
+                    <select name="tm_filter" id="tm_filter" class="form-select form-select-sm">
                         <option value="">All UQ Members</option>
                         <?php foreach($tms as $tm): ?>
                         <option value="<?= h($tm['employee_username']) ?>" <?= (isset($_GET['tm_filter']) && $_GET['tm_filter'] == $tm['employee_username']) ? 'selected' : '' ?>>
@@ -559,8 +602,8 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
                 </div>
                 
                 <div class="col-md-2">
-                    <label for="week_filter" class="form-label">Week</label>
-                    <select name="week_filter" id="week_filter" class="form-select">
+                    <label for="week_filter" class="form-label small fw-semibold">Week</label>
+                    <select name="week_filter" id="week_filter" class="form-select form-select-sm">
                         <option value="">All Weeks</option>
                         <?php for($w=1; $w<=53; $w++): ?>
                             <option value="W<?= $w ?>" <?= (isset($_GET['week_filter']) && $_GET['week_filter'] == 'W'.$w) ? 'selected' : '' ?>>W<?= str_pad($w, 2, '0', STR_PAD_LEFT) ?></option>
@@ -569,8 +612,8 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
                 </div>
                 
                 <div class="col-md-2">
-                    <label for="year_filter" class="form-label">Year</label>
-                    <select name="year_filter" id="year_filter" class="form-select">
+                    <label for="year_filter" class="form-label small fw-semibold">Year</label>
+                    <select name="year_filter" id="year_filter" class="form-select form-select-sm">
                         <?php for($y = 2023; $y <= 2030; $y++): ?>
                         <option value="<?= $y ?>" <?= ($_GET['year_filter'] ?? date('Y')) == $y ? 'selected' : '' ?>>
                             <?= $y ?>
@@ -579,18 +622,13 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
                     </select>
                 </div>
                 
-                <div class="col-md-3 d-flex align-items-end gap-2">
-                    <div class="w-100">
-                        <label class="form-label d-block">&nbsp;</label>
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary w-50">
-                                <i class="fas fa-filter me-1"></i> Filter
-                            </button>
-                            <a href="target_assignment.php" class="btn btn-secondary w-50">
-                                <i class="fas fa-times me-1"></i> Clear
-                            </a>
-                        </div>
-                    </div>
+                <div class="col-md-auto d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm px-3 text-nowrap">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                    <a href="target_assignment.php" class="btn btn-secondary btn-sm px-3 text-nowrap">
+                        <i class="fas fa-times me-1"></i> Clear
+                    </a>
                 </div>
             </form>
         </div>
@@ -705,18 +743,17 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
 
             <!-- Targets List -->
             <div class="col-md-8">
-                <div class="card">
-                    <!-- <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"> -->
-                         <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card border-0 shadow-sm rounded-3" style="overflow: visible;">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Assigned Targets</h5>
                         <span class="badge bg-light text-dark">
                             <?= count($targets) ?> Target(s)
                         </span>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
+                    <div class="card-body p-0" style="overflow: visible;">
+                        <div class="table-container" style="overflow: visible;">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                                <thead>
                                     <tr>
                                         <th width="50">ID</th>
                                         <?php if($current_user_role == 3): ?>
@@ -823,15 +860,15 @@ unset($target); // FIX: Breaks the reference to prevent overwriting the array in
             <div class="col-12">
                 <form method="post">
                     <input type="hidden" name="action" value="save_revisions">
-                    <div class="card">
+                    <div class="card border-0 shadow-sm rounded-3" style="overflow: visible;">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Target Revision</h5>
                             <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Save Revisions</button>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
+                        <div class="card-body p-0" style="overflow: visible;">
+                            <div class="table-container" style="overflow: visible;">
                                 <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light">
+                                    <thead>
                                         <tr>
                                             <th>ID</th>
                                             <th width="200">Month with year</th>

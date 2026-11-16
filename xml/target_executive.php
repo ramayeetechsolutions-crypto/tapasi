@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -202,20 +201,50 @@ $stmt_daily->close();
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             border: 1px solid var(--border-light);
-            overflow: hidden;
+            overflow: visible !important;
         }
         
         .table {
             margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         
         .table thead th {
-            background-color: #fafbfc;
-            color: #495057;
+            position: sticky;
+            top: 70px;
+            z-index: 900;
+            background-color: var(--ash, #6c757d) !important;
+            color: #ffffff !important;
             font-weight: 600;
-            font-size: 0.9rem;
-            padding: 16px;
-            border-bottom: 2px solid var(--border-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            padding: 12px 16px;
+            border: 1px solid #6c757d !important;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .page-title-container h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .table tbody td {
@@ -291,10 +320,10 @@ $stmt_daily->close();
     <div class="main-container">
         
         <!-- Header -->
-        <div class="page-header">
-            <h2 class="page-title">
-                <i class="fas fa-clipboard-check text-primary"></i> Daily Production Entry
-            </h2>
+        <div class="page-title-container">
+            <h1 class="mb-0">
+                <i class="fas fa-clipboard-check"></i> Daily Production Entry
+            </h1>
         </div>
 
         <?php if(isset($success_message)): ?>

@@ -1,4 +1,3 @@
-<br><br>
 <?php
 require 'db.php';
 

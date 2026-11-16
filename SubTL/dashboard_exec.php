@@ -630,7 +630,7 @@ $current_ip_count = $ce_ip;
 }
 
 .page-title-container {
-  background: var(--ash-dark);
+  background: var(--ash, #6c757d);
     color: white;
     padding: 10px;
     border-radius: 12px;
@@ -720,7 +720,7 @@ $current_ip_count = $ce_ip;
 
 /* Custom Header Banner */
 .page-title-container {
-    background: #5e6b77; /* Matching Grey Header */
+    background: var(--ash, #6c757d); /* Matching Grey Header */
     color: white;
     padding: 15px 20px;
     border-radius: 12px;

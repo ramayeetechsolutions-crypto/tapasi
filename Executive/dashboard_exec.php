@@ -473,7 +473,7 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 /* Weekly Target Card */
 .weekly-target-card {
     /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-    background: #5e6b77 !important;
+    background: var(--ash, #6c757d) !important;
     color: white;
     border: none;
     border-radius: 12px;
@@ -728,7 +728,7 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 .page-title-container {
     display: block !important;
     visibility: visible !important;
-    background: #5e6b77 !important;
+    background: var(--ash, #6c757d) !important;
     color: white !important;
     padding: 8px 12px;
     border-radius: 12px;
