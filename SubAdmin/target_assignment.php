@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -14,22 +13,29 @@ if (!isset($_SESSION['uid'])) {
     header("Location: ../index.php");
     exit;
 }
-
 $current_user = $_SESSION['username'] ?? '';
 $employee_username = $current_user;
 
-// Get current user details
+// Initialize default values to prevent undefined variable warnings
+$current_user_name = $_SESSION['adminname'] ?? $_SESSION['username'] ?? 'Admin';
+$current_user_id = $_SESSION['uid'] ?? 0;
+$current_user_role = 1; // Default fallback to Admin role (0 or 1 maps to Admin)
+
+// Get current user details if they exist in the employee_master table
 $sql = "SELECT `employee_name`,`employee_id`,`user_role_id` FROM `employee_master` WHERE `employee_username` = ?";
 $stmt = $mysqli->prepare($sql);
-$stmt->bind_param("s", $employee_username);
-$stmt->execute();
-$result = $stmt->get_result();
+if ($stmt) {
+    $stmt->bind_param("s", $employee_username);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $current_user_name = $row['employee_name'];
-    $current_user_id = $row['employee_id'] ?? 0;
-    $current_user_role = $row['user_role_id'] ?? 0;
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $current_user_name = $row['employee_name'];
+        $current_user_id = $row['employee_id'] ?? 0;
+        $current_user_role = $row['user_role_id'] ?? 0;
+    }
+    $stmt->close();
 }
 
 // Helper functions
@@ -37,7 +43,30 @@ function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
 }
 
-// Get TLs for dropdown
+function formatDate($d) {
+    if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
+    return date('d-m-Y', strtotime($d));
+}
+
+function getWeekDates($week_number, $year = null) {
+    if ($year === null) $year = date('Y');
+    
+    $first_day_of_year = date('Y-m-d', strtotime($year . '-01-01'));
+    $day_of_week = date('w', strtotime($first_day_of_year));
+    
+    // Adjust for weeks starting on Monday (ISO week)
+    $first_monday = strtotime($first_day_of_year . ' +' . ((8 - $day_of_week) % 7) . ' days');
+    
+    $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
+    $week_end = strtotime('+4 days', $week_start); // Monday to Friday (5 days)
+    
+    return [
+        'from_date' => date('Y-m-d', $week_start),
+        'to_date' => date('Y-m-d', $week_end)
+    ];
+}
+
+// Get TLs for dropdown (only if current user is Manager/Admin)
 $tls = [];
 if ($current_user_role == 3) {
     $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master 
@@ -51,605 +80,966 @@ if ($current_user_role == 3) {
     $stmt->close();
 }
 
+// Get selected TL
 $selected_tl_id = isset($_GET['tl_id']) ? (int)$_GET['tl_id'] : 0;
-if ($current_user_role == 3 && $selected_tl_id == 0) {
-    $selected_tl_id = $current_user_id; 
-} elseif ($current_user_role < 3) {
+if ($current_user_role == 3) {
     $selected_tl_id = $current_user_id;
 }
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_matrix') {
-    $targets_data = $_POST['targets'] ?? [];
-    
-    $mysqli->begin_transaction();
-    try {
-        foreach ($targets_data as $tm_id => $process_targets) {
-            $tm_id = (int)$tm_id; 
-            foreach ($process_targets as $proc_id => $limit) {
-                $proc_id = (int)$proc_id;
-                $limit = trim($limit);
-                // Empty ah iruntha 0 nu vechikanum, appo thaan history delete aagathu
-                $limit_val = ($limit === '') ? 0 : (int)$limit;
-                
-                if ($limit_val >= 0) {
-                    // Check latest target for this employee and process
-                    $check_stmt = $mysqli->prepare("SELECT id, target_limit FROM daily_targets_xml WHERE tm_id = ? AND process_id = ? ORDER BY id DESC LIMIT 1");
-                    $check_stmt->bind_param("ii", $tm_id, $proc_id);
-                    $check_stmt->execute();
-                    $res = $check_stmt->get_result();
-
-                    if ($res->num_rows > 0) {
-                        $row = $res->fetch_assoc();
-                        // Target number maari iruntha mattum puthu row (R1, R2) insert aagum
-                        if ($row['target_limit'] != $limit_val) {
-                            $ins_stmt = $mysqli->prepare("INSERT INTO daily_targets_xml (tl_id, tm_id, process_id, target_limit, assigned_by, assigned_date, status) VALUES (?, ?, ?, ?, ?, NOW(), 'Active')");
-                            $ins_stmt->bind_param("iiiii", $selected_tl_id, $tm_id, $proc_id, $limit_val, $current_user_id);
-                            $ins_stmt->execute();
-                            $ins_stmt->close();
-                        }
-                    } else {
-                        // First time assign pandrappa, 0 va iruntha insert panna theva illa (> 0 mattum)
-                        if ($limit_val > 0) {
-                            $ins_stmt = $mysqli->prepare("INSERT INTO daily_targets_xml (tl_id, tm_id, process_id, target_limit, assigned_by, assigned_date, status) VALUES (?, ?, ?, ?, ?, NOW(), 'Active')");
-                            $ins_stmt->bind_param("iiiii", $selected_tl_id, $tm_id, $proc_id, $limit_val, $current_user_id);
-                            $ins_stmt->execute();
-                            $ins_stmt->close();
-                        }
-                    }
-                    $check_stmt->close();
-                }
-            }
-        }
-        $mysqli->commit();
-        $success_message = "Fixed targets saved successfully!";
-    } catch (Exception $e) {
-        $mysqli->rollback();
-        $errors[] = "Error saving targets: " . $e->getMessage();
-    }
-}
-
-// Fetch TMs
+// Get TMs for the selected TL
 $tms = [];
-$tl_name_for_query = $current_user_name;
-
-if ($current_user_role == 3 && $selected_tl_id != $current_user_id) {
-    foreach ($tls as $t) {
-        if ($t['employee_id'] == $selected_tl_id) {
-            $tl_name_for_query = $t['employee_name'];
-            break;
-        }
-    }
-}
-
-$stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master WHERE reporting_manager = ? AND status = 'Active' ORDER BY employee_name");
-$stmt->bind_param("s", $tl_name_for_query);
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $tms[] = $row;
-}
-$stmt->close();
-
-// Define Processes
-$processes = [
-    ['process_id' => 1, 'process_name' => 'MK JATS'],
-    ['process_id' => 2, 'process_name' => 'JATS QC'],
-    ['process_id' => 11, 'process_name' => 'PMC JATS'], 
-    ['process_id' => 3, 'process_name' => 'PMC JATS QC'],
-    ['process_id' => 4, 'process_name' => 'AOP'],
-    ['process_id' => 5, 'process_name' => 'AOP QC'],
-    ['process_id' => 6, 'process_name' => 'UQ JATS'], 
-    ['process_id' => 12, 'process_name' => 'DOAJ /Biblat /PubMed'], 
-    ['process_id' => 7, 'process_name' => 'M2'],
-    ['process_id' => 13, 'process_name' => 'HTML'], 
-    ['process_id' => 8, 'process_name' => 'Table'],
-    ['process_id' => 9, 'process_name' => 'Table QC'],
-    ['process_id' => 10, 'process_name' => 'Word']
-];
-
-// Fetch existing fixed target matrix data
-$matrix_data = [];
-$row_totals = [];
-$tm_revisions = [];
-$temp_history = [];
-
-$selected_tm_id = isset($_GET['tm_id']) ? (int)$_GET['tm_id'] : 0;
-
-if (!empty($tms) && !empty($processes)) {
-    // Fetch order by ID for chronological history
-    $target_query = "SELECT tm_id, process_id, target_limit, assigned_date FROM daily_targets_xml WHERE tl_id = ? ORDER BY id ASC";
-    $stmt = $mysqli->prepare($target_query);
-    $stmt->bind_param("i", $selected_tl_id);
+if ($current_user_role > 0) {
+    $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username 
+                             FROM employee_master 
+                             WHERE reporting_manager = ? AND status = 'Active' 
+                             ORDER BY employee_name");
+    $stmt->bind_param("s", $current_user_name);
     $stmt->execute();
-    $res = $stmt->get_result();
-    
-    while ($row = $res->fetch_assoc()) {
-        $tm = $row['tm_id'];
-        $proc = $row['process_id'];
-        $limit = $row['target_limit'];
-        $date = $row['assigned_date'];
-
-        $matrix_data[$tm][$proc] = ['limit' => $limit];
-        $temp_history[$tm][$date][$proc] = $limit;
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $tms[] = $row;
     }
     $stmt->close();
+}
 
-    foreach ($temp_history as $tm => $dates) {
-        $current_state = []; // Maintains all previous targets
-        foreach ($dates as $date => $procs) {
-            foreach ($procs as $p => $l) {
-                $current_state[$p] = $l; // Updates only the changed ones
-            }
-            $tm_revisions[$tm][] = [
-                'date' => $date,
-                'data' => $current_state
-            ]; // Saves the full snapshot along with assigned/revised date
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    
+    if ($action === 'assign_target') {
+        $tm_id = $_POST['tm_id'] ?? '';
+        $target_limit = (int)($_POST['target_limit'] ?? 0);
+        $week_input = $_POST['week_input'] ?? '';
+        $year = (int)($_POST['year'] ?? date('Y'));
+        
+        // Validation
+        $errors = [];
+        
+        if ($tm_id == '') {
+            $errors[] = "Please select a Team Member";
         }
-    }
-
-    foreach ($matrix_data as $tm => $procs) {
-        $row_totals[$tm] = 0;
-        foreach ($procs as $data) {
-            $row_totals[$tm] += $data['limit'];
+        
+        if ($target_limit <= 0) {
+            $errors[] = "Target limit must be greater than 0";
+        }
+        
+        if (empty($week_input)) {
+            $errors[] = "Week is required (e.g., W1, W2)";
+        }
+        
+        // Parse week input (W1, W2, etc.)
+        preg_match('/W(\d+)/i', $week_input, $matches);
+        $week_number = isset($matches[1]) ? (int)$matches[1] : 0;
+        
+        if ($week_number < 1 || $week_number > 53) {
+            $errors[] = "Week number must be between 1 and 53";
+        }
+        
+        if (empty($errors)) {
+            // Get dates for the week
+            $week_dates = getWeekDates($week_number, $year);
+            $from_date = $week_dates['from_date'];
+            $to_date = $week_dates['to_date'];
+            
+            // Check for overlapping targets
+            $check_stmt = $mysqli->prepare("SELECT id FROM weekly_targets 
+                                           WHERE tm_id = ? 
+                                           AND (
+                                               (from_date <= ? AND to_date >= ?) OR
+                                               (from_date <= ? AND to_date >= ?) OR
+                                               (from_date >= ? AND to_date <= ?)
+                                           )");
+            $check_stmt->bind_param("issssss", $tm_id, $to_date, $from_date, $from_date, $to_date, $from_date, $to_date);
+            $check_stmt->execute();
+            $check_stmt->store_result();
+            
+            if ($check_stmt->num_rows > 0) {
+                $errors[] = "Target already exists for this TM in the selected week";
+            }
+            $check_stmt->close();
+        }
+        
+        if (empty($errors)) {
+            // Insert target assignment
+            $stmt = $mysqli->prepare("INSERT INTO weekly_targets 
+                                     (tl_id, tm_id, target_limit, from_date, to_date, week_number, year, assigned_by, assigned_date) 
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $assigned_by = $current_user_id;
+            $stmt->bind_param("isissiii", $selected_tl_id, $tm_id, $target_limit, $from_date, $to_date, $week_number, $year, $assigned_by);
+            
+            if ($stmt->execute()) {
+                $success_message = "Target assigned successfully for Week $week_number!";
+            } else {
+                $errors[] = "Error assigning target: " . $stmt->error;
+            }
+            $stmt->close();
+        }
+    } elseif ($action === 'update_progress') {
+        $target_id = (int)($_POST['target_id'] ?? 0);
+        $status = $_POST['status'] ?? 'Active';
+        
+        if ($target_id > 0) {
+            // Get target details
+            $target_stmt = $mysqli->prepare("SELECT tm_id, from_date, to_date FROM weekly_targets WHERE id = ?");
+            $target_stmt->bind_param("i", $target_id);
+            $target_stmt->execute();
+            $target_result = $target_stmt->get_result();
+            
+            if ($target_row = $target_result->fetch_assoc()) {
+                $tm_id = $target_row['tm_id'];
+                $from_date = $target_row['from_date'];
+                $to_date = $target_row['to_date'];
+                
+                // Get TM's username
+                $tm_stmt = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE employee_username = ?");
+                $tm_stmt->bind_param("i", $tm_id);
+                $tm_stmt->execute();
+                $tm_result = $tm_stmt->get_result();
+                
+                $achieved_target = 0;
+                if ($tm_row = $tm_result->fetch_assoc()) {
+                    $tm_username = $tm_row['employee_username'];
+                    
+                    // Calculate achieved target
+                    $achieved_query = "SELECT COUNT(*) as job_count 
+                                      FROM jobs 
+                                      WHERE (
+                                          job_date BETWEEN ? AND ?
+                                      ) AND (
+                                          assigned_ce = ? OR 
+                                          assigned_le = ? OR 
+                                          assigned_pag = ? OR 
+                                          assigned_qc = ? OR 
+                                          assigned_xml = ?
+                                      )";
+                    
+                    $achieved_stmt = $mysqli->prepare($achieved_query);
+                    $achieved_stmt->bind_param("sssssss", $from_date, $to_date, 
+                                              $tm_username, $tm_username, $tm_username, 
+                                              $tm_username, $tm_username);
+                    $achieved_stmt->execute();
+                    $achieved_result = $achieved_stmt->get_result();
+                    
+                    if ($achieved_row = $achieved_result->fetch_assoc()) {
+                        $achieved_target = $achieved_row['job_count'];
+                    }
+                    $achieved_stmt->close();
+                }
+                $tm_stmt->close();
+                
+                // Update weekly_targets
+                $update_stmt = $mysqli->prepare("UPDATE weekly_targets 
+                                               SET achieved_target = ?, status = ? 
+                                               WHERE id = ?");
+                $update_stmt->bind_param("isi", $achieved_target, $status, $target_id);
+                
+                if ($update_stmt->execute()) {
+                    $success_message = "Progress updated successfully! Achieved target: " . $achieved_target;
+                } else {
+                    $errors[] = "Error updating progress: " . $update_stmt->error;
+                }
+                $update_stmt->close();
+            }
+            $target_stmt->close();
+        }
+    } elseif ($action === 'delete_target') {
+        $target_id = (int)($_POST['target_id'] ?? 0);
+        
+        if ($target_id > 0) {
+            $stmt = $mysqli->prepare("DELETE FROM weekly_targets WHERE id = ?");
+            $stmt->bind_param("i", $target_id);
+            
+            if ($stmt->execute()) {
+                $success_message = "Target deleted successfully!";
+            }
+            $stmt->close();
+        }
+    } elseif ($action === 'update_target') {
+        $target_id = (int)($_POST['target_id'] ?? 0);
+        $target_limit = (int)($_POST['target_limit'] ?? 0);
+        $week_input = $_POST['week_input'] ?? '';
+        $year = (int)($_POST['year'] ?? date('Y'));
+        
+        if ($target_id > 0 && $target_limit > 0 && !empty($week_input)) {
+            preg_match('/W(\d+)/i', $week_input, $matches);
+            $week_number = isset($matches[1]) ? (int)$matches[1] : 0;
+            
+            if ($week_number >= 1 && $week_number <= 53) {
+                $week_dates = getWeekDates($week_number, $year);
+                
+                $stmt = $mysqli->prepare("UPDATE weekly_targets 
+                                         SET target_limit = ?, week_number = ?, year = ?, 
+                                         from_date = ?, to_date = ? 
+                                         WHERE id = ?");
+                $stmt->bind_param("iiissi", $target_limit, $week_number, $year, 
+                                 $week_dates['from_date'], $week_dates['to_date'], $target_id);
+                
+                if ($stmt->execute()) {
+                    $success_message = "Target updated successfully!";
+                }
+                $stmt->close();
+            }
         }
     }
 }
+
+// Get existing targets
+$targets = [];
+$target_query = "SELECT 
+    wt.id,
+    wt.tl_id,
+    wt.tm_id,
+    wt.target_limit,
+    wt.achieved_target,
+    wt.from_date,
+    wt.to_date,
+    wt.week_number,
+    wt.year,
+    wt.status,
+    wt.assigned_date,
+    tl.employee_name as tl_name,
+    tm.employee_name as tm_name,
+    tm.employee_username as tm_username,
+    ass.employee_name as assigned_by_name
+FROM weekly_targets wt
+LEFT JOIN employee_master tl ON wt.tl_id = tl.employee_id
+LEFT JOIN employee_master tm ON wt.tm_id = tm.employee_username
+LEFT JOIN employee_master ass ON wt.assigned_by = ass.employee_id
+WHERE 1=1";
+
+$params = [];
+$types = '';
+
+if ($selected_tl_id > 0) {
+    if ($current_user_role == 2) {
+        $target_query .= " AND wt.tl_id = ?";
+        $params[] = $selected_tl_id;
+        $types .= 'i';
+    } elseif ($current_user_role == 3 && isset($_GET['tl_id'])) {
+        $target_query .= " AND wt.tl_id = ?";
+        $params[] = $selected_tl_id;
+        $types .= 'i';
+    }
+}
+
+// Apply week filter if specified
+if (isset($_GET['week_filter']) && $_GET['week_filter']) {
+    $week_filter = $_GET['week_filter'];
+    if ($week_filter === 'current_week') {
+        $target_query .= " AND wt.week_number = WEEK(CURDATE(), 1) AND wt.year = YEAR(CURDATE())";
+    } elseif ($week_filter === 'next_week') {
+        $target_query .= " AND wt.week_number = WEEK(DATE_ADD(CURDATE(), INTERVAL 1 WEEK), 1) AND wt.year = YEAR(CURDATE())";
+    } elseif ($week_filter === 'previous_week') {
+        $target_query .= " AND wt.week_number = WEEK(DATE_SUB(CURDATE(), INTERVAL 1 WEEK), 1) AND wt.year = YEAR(CURDATE())";
+    } elseif (preg_match('/W(\d+)/i', $week_filter, $matches)) {
+        $week_num = (int)$matches[1];
+        $target_query .= " AND wt.week_number = ?";
+        $params[] = $week_num;
+        $types .= 'i';
+        
+        if (isset($_GET['year_filter']) && $_GET['year_filter']) {
+            $target_query .= " AND wt.year = ?";
+            $params[] = $_GET['year_filter'];
+            $types .= 'i';
+        }
+    }
+}
+
+$target_query .= " ORDER BY wt.year DESC, wt.week_number DESC, tm.employee_name";
+
+if (!empty($params)) {
+    $stmt = $mysqli->prepare($target_query);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $mysqli->query($target_query);
+}
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $targets[] = $row;
+    }
+}
+
+// Calculate percentage achieved
+foreach ($targets as &$target) {
+    if ($target['target_limit'] > 0) {
+        $target['achieved_percentage'] = round(($target['achieved_target'] / $target['target_limit']) * 100, 2);
+    } else {
+        $target['achieved_percentage'] = 0;
+    }
+}
+unset($target); // FIX: Breaks the reference to prevent overwriting the array in the next loop
+
+$pageTitle = "Weekly Target Assignment";
+require 'header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assign Fixed Targets</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --bg-color: #f5f7f9;
-            --card-bg: #ffffff;
-            --text-main: #333333;
-            --text-muted: #6c757d;
-            --border-light: #eaedf1;
-            --border-input: #dce1e7;
-            --accent-blue: #0d6efd;
-            --cell-active-bg: #eef5ff;
-            --cell-active-border: #b6d4fe;
-        }
 
-        body {
-            background-color: var(--bg-color);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-        }
+<style>
+    body {
+        background-color: var(--light, #f5f7fa);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .main-content {
+        padding: 20px 3%;
+        margin: 0 auto;
+        margin-top: 70px;
+    }
 
-        .main-container {
-            padding: 24px;
-            max-width: 100%;
-            margin: 0 auto;
-        }
+    /* Ash Page Header Banner (Matching Navbar Color) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .page-title-container h1, .page-title-container h4 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    /* Sticky Table Header */
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: white !important;
+        padding: 0.75rem 0.5rem;
+        border: 1px solid #6c757d !important;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+    }
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .card, .card-body, .table-responsive, .table-container {
+        overflow: visible !important;
+    }
 
-        .filter-panel {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            margin-bottom: 24px;
-            border-left: 4px solid var(--accent-blue);
-        }
-        .filter-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
-        .form-control, .form-select {
-            border-color: var(--border-input);
-            box-shadow: none !important;
-            font-size: 0.95rem;
-        }
+    .table td {
+        vertical-align: middle;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        margin-bottom: 20px;
+    }
+    .card-header {
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+    }
+    .progress {
+        height: 20px;
+    }
+    .bg-target {
+        background-color: #6f42c1;
+    }
+    .filter-section {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e9ecef;
+    }
+    .week-badge {
+        font-size: 1.1em;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .target-cell {
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+    }
+    .week-input-container {
+        display: flex;
+        gap: 10px;
+    }
+    .week-input-container input {
+        text-transform: uppercase;
+    }
+    .progress-cell {
+        min-width: 200px;
+    }
+</style>
 
-        .table-container {
-            background: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-            overflow-x: auto;
-            overflow-y: auto;
-            max-height: calc(100vh - 280px);
-            border: 1px solid var(--border-light);
-        }
-        
-        .table {
-            margin-bottom: 0;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        
-        .table thead th {
-            background-color: var(--ash, #6c757d) !important;
-            color: #ffffff !important;
-            font-weight: 600;
-            font-size: 0.85rem;
-            border-bottom: 1px solid var(--border-light);
-            border-right: 1px solid var(--border-light);
-            padding: 12px 8px;
-            text-align: center;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+<div class="main-content">
+    <div class="page-title-container">
+        <h1 class="mb-0">
+            <i class="fas fa-bullseye"></i> Employee Target
+        </h1>
+    </div>
 
-        .table thead .col-sno, 
-        .table thead .col-total, 
-        .table thead .col-name {
-            z-index: 15;
-            background-color: var(--ash, #6c757d) !important;
-            color: #ffffff !important;
-        }
+    <?php if(isset($success_message)): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <?= h($success_message) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <?php endif; ?>
 
-        .table tbody td {
-            vertical-align: middle;
-            border-bottom: 1px solid var(--border-light);
-            border-right: 1px solid var(--border-light);
-            padding: 8px;
-        }
+    <?php if(!empty($errors)): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0">
+            <?php foreach($errors as $error): ?>
+            <li><?= h($error) ?></li>
+            <?php endforeach; ?>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <?php endif; ?>
 
-        .sticky-col { position: sticky; background: #fff; z-index: 5; }
-        .col-sno { left: 0; width: 50px; text-align: center; font-weight: 600; color: #555; }
-        .col-total { left: 50px; width: 70px; text-align: center; font-weight: 700; color: #2c3e50; }
-        .col-name { 
-            left: 120px; 
-            min-width: 220px; 
-            box-shadow: 2px 0 5px rgba(0,0,0,0.03);
-            border-right: 2px solid var(--border-light) !important;
-        }
-        
-        .table thead .col-sno, 
-        .table thead .col-total, 
-        .table thead .col-name {
-            z-index: 15;
-            background-color: #fafbfc;
-        }
-
-        .emp-name { font-weight: 600; color: #333; font-size: 0.95rem; line-height: 1.2; }
-        .emp-id { font-size: 0.75rem; color: #888; margin-top: 2px; }
-
-        .target-cell { padding: 6px !important; background: transparent; }
-        
-        .target-input {
-            width: 100%;
-            min-width: 65px;
-            height: 34px;
-            border: 1px solid var(--border-input); 
-            border-radius: 4px;
-            text-align: center;
-            font-size: 0.95rem;
-            color: #333;
-            background-color: #ffffff;
-            transition: all 0.2s ease;
-            outline: none;
-        }
-
-        .target-input:hover { border-color: #adb5bd; }
-        .target-input:focus {
-            background-color: var(--cell-active-bg);
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
-        }
-
-        .target-input.has-value {
-            background-color: var(--cell-active-bg);
-            border-color: var(--cell-active-border);
-            color: #052c65;
-            font-weight: 500;
-        }
-
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type="number"] { -moz-appearance: textfield; }
-
-        .action-footer {
-            background: #fff;
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-        }
-        
-        /* Ash Page Header Banner (Matching Navbar Color) */
-        .page-title-container {
-            background: var(--ash, #6c757d);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        .page-title-container h1 {
-            margin: 0;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
-    
-    <div class="main-container">
-        
-        <!-- Header -->
-        <div class="page-title-container">
-            <h1 class="mb-0">
-                <i class="fas fa-bullseye"></i> Employee Target
-            </h1>
-        </div>
-
-        <?php if(isset($success_message)): ?>
-            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
-                <i class="fas fa-check-circle me-2"></i><?= h($success_message) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" class="row g-2 align-items-end">
+            <?php if($current_user_role == 3): ?>
+            <div class="col-md-4">
+                <label for="tl_id" class="form-label small fw-semibold">Select Team Leader</label>
+                <select name="tl_id" id="tl_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Team Leaders</option>
+                    <?php foreach($tls as $tl): ?>
+                    <option value="<?= h($tl['employee_username']) ?>" 
+                            <?= $selected_tl_id == $tl['employee_username'] ? 'selected' : '' ?>>
+                        <?= h($tl['employee_name']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-        <?php endif; ?>
-
-        <!-- Filter Panel -->
-        <div class="filter-panel">
-            <form method="get" class="row g-2 align-items-end">
-                <?php if($current_user_role == 3): ?>
-                <div class="col-md">
-                    <label class="filter-label">Team Member</label>
-                    <select name="tm_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="0">All Team Members (Latest Targets)</option>
-                        <?php foreach($tms as $tm): ?>
-                            <option value="<?= $tm['employee_id'] ?>" <?= $selected_tm_id == $tm['employee_id'] ? 'selected' : '' ?>>
-                                <?= h($tm['employee_name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <?php endif; ?>
-                
-                <div class="col-md-auto d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
-                        <i class="fas fa-search me-2"></i>Load Grid
-                    </button>
-                    <a href="target_assignment.php" class="btn btn-secondary btn-sm px-4">Reset</a>
-                </div>
-            </form>
-        </div>
-
-        <?php if(empty($tms)): ?>
-            <div class="text-center p-5 bg-white rounded shadow-sm">
-                <i class="fas fa-users-slash fa-3x mb-3 text-muted"></i>
-                <h5 class="text-secondary">No Team Members Found</h5>
+            <?php endif; ?>
+            
+            <div class="col-md">
+                <label for="week_filter" class="form-label small fw-semibold">Week</label>
+                <input type="text" name="week_filter" id="week_filter" class="form-control form-control-sm" 
+                       placeholder="W1, W2, etc." value="<?= h($_GET['week_filter'] ?? '') ?>">
             </div>
-        <?php else: ?>
-            <form method="post" id="matrixForm">
-                <input type="hidden" name="action" value="save_matrix">
-                
-                <!-- Main Data Grid -->
-                <div class="table-container">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th class="sticky-col col-sno">S.No</th>
-                                <th class="sticky-col col-total" title="Total Assigned Targets">Total</th>
-                                <th class="sticky-col col-name text-start ps-3">Team Member</th>
-                                
-                                <?php foreach($processes as $proc): ?>
-                                    <th title="<?= h($proc['process_name']) ?>">
-                                        <?= h($proc['process_name']) ?>
-                                    </th>
-                                <?php endforeach; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php 
-                            $sno = 1; 
+            
+            <div class="col-md-3">
+                <label for="year_filter" class="form-label small fw-semibold">Year</label>
+                <select name="year_filter" id="year_filter" class="form-select form-select-sm">
+                    <?php for($y = 2023; $y <= 2030; $y++): ?>
+                    <option value="<?= $y ?>" <?= ($_GET['year_filter'] ?? date('Y')) == $y ? 'selected' : '' ?>>
+                        <?= $y ?>
+                    </option>
+                    <?php endfor; ?>
+                </select>
+            </div>
+            
+            <div class="col-md-auto d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary btn-sm px-3">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+                <a href="target_assignment.php" class="btn btn-secondary btn-sm px-3">
+                    <i class="fas fa-times me-1"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
 
-                            if ($selected_tm_id > 0) {
-                                // ----- FILTER VIEW: SPECIFIC MEMBER HISTORY -----
-                                $revisions = $tm_revisions[$selected_tm_id] ?? [];
-                                $selected_tm_name = '';
-                                foreach ($tms as $t) {
-                                    if ($t['employee_id'] == $selected_tm_id) {
-                                        $selected_tm_name = $t['employee_name']; break;
-                                    }
-                                }
-
-                                if (empty($revisions)) $revisions[0] = [];
-
-                                foreach ($revisions as $idx => $rev_item):
-                                    $rev_data = isset($rev_item['data']) ? $rev_item['data'] : $rev_item;
-                                    $rev_date = $rev_item['date'] ?? '';
-                                    $label = ($idx == 0) ? "Assigned Target" : "R" . $idx . ": Revised Target " . $idx;
-                                    $is_latest = ($idx == count($revisions) - 1);
-                                    
-                                    $emp_total = 0;
-                                    foreach ($rev_data as $val) $emp_total += (int)$val;
-                            ?>
-                                <tr style="<?= !$is_latest ? 'background-color:#fcfcfc;' : '' ?>">
-                                    <td class="sticky-col col-sno"><?= $sno++ ?></td>
-                                    <td class="sticky-col col-total"><?= $emp_total > 0 ? $emp_total : '-' ?></td>
-                                    <td class="sticky-col col-name ps-3">
-                                        <div class="emp-name"><?= h($selected_tm_name) ?></div>
-                                        <div class="emp-id text-primary fw-bold"><?= $label ?></div>
-                                        <?php if ($idx > 0 && !empty($rev_date)): ?>
-                                            <div class="text-secondary small fw-normal" style="font-size: 11px;">
-                                                <i class="far fa-calendar-alt me-1"></i><?= date('d-M-Y', strtotime($rev_date)) ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
-                                    
-                                    <?php foreach($processes as $proc): 
-                                        $target_val = $rev_data[$proc['process_id']] ?? '';
-                                        $display_val = ($target_val !== '') ? $target_val : '';
-                                        $has_value_class = ($target_val !== '' && $target_val > 0) ? 'has-value' : '';
-                                    ?>
-                                    <td class="target-cell">
-                                        <?php if ($is_latest): ?>
-                                            <input type="number" name="targets[<?= $selected_tm_id ?>][<?= $proc['process_id'] ?>]" value="<?= h($display_val) ?>" class="target-input <?= $has_value_class ?>" min="0" placeholder="-" data-empid="<?= $selected_tm_id ?>">
-                                        <?php else: ?>
-                                            <input type="text" value="<?= h($display_val) ?>" class="target-input" disabled style="background-color: transparent; border: 1px dashed #ccc; color:#888;">
-                                        <?php endif; ?>
-                                    </td>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php 
-                                endforeach; 
-                            } else {
-                                // ----- DEFAULT VIEW: ALL MEMBERS LATEST TARGET -----
-                                foreach($tms as $tm): 
-                                    $emp_total = $row_totals[$tm['employee_id']] ?? 0;
-                            ?>
-                                <tr>
-                                    <td class="sticky-col col-sno"><?= $sno++ ?></td>
-                                    <td class="sticky-col col-total row-total" id="total_<?= $tm['employee_id'] ?>">
-                                        <?= $emp_total > 0 ? $emp_total : '-' ?>
-                                    </td>
-                                    <td class="sticky-col col-name ps-3">
-                                        <div class="emp-name"><?= h($tm['employee_name']) ?></div>
-                                        <div class="emp-id"><?= h($tm['employee_username']) ?></div>
-                                    </td>
-                                    
-                                    <?php foreach($processes as $proc): 
-                                        $cell_data = $matrix_data[$tm['employee_id']][$proc['process_id']] ?? null;
-                                        $target_val = $cell_data ? $cell_data['limit'] : '';
-                                        $display_val = ($target_val !== '') ? $target_val : '';
-                                        $has_value_class = ($target_val !== '' && $target_val > 0) ? 'has-value' : '';
-                                    ?>
-                                    <td class="target-cell">
-                                        <input type="number" name="targets[<?= $tm['employee_id'] ?>][<?= $proc['process_id'] ?>]" value="<?= h($display_val) ?>" class="target-input <?= $has_value_class ?>" min="0" placeholder="-" data-empid="<?= $tm['employee_id'] ?>">
-                                    </td>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php 
-                                endforeach; 
-                            }
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Bottom Action Bar -->
-                <div class="action-footer">
-                    <div class="text-muted small">
-                        <i class="fas fa-info-circle me-1 text-primary"></i> 
-                        Empty cells clear targets. The table updates totals automatically.
+        <div class="row">
+            <!-- Assign Target Form -->
+            <div class="col-md-4">
+                <div class="card">
+                    <!-- <div class="card-header bg-primary text-white"> -->
+                        <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Assign Weekly Target</h5>
                     </div>
-                    <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
-                        <i class="fas fa-save me-2"></i> Save Fixed Assignments
-                    </button>
+                    <div class="card-body">
+                        <form method="post" autocomplete="off">
+                            <input type="hidden" name="action" value="assign_target">
+                            
+                            <div class="mb-3">
+                                <label for="tm_id" class="form-label">Team Member <span class="text-danger">*</span></label>
+                                <select name="tm_id" id="tm_id" class="form-select" required <?= count($tms) == 0 ? 'disabled' : '' ?>>
+                                    <option value="">Select Team Member</option>
+                                    <?php foreach($tms as $tm): ?>
+                                    <option value="<?= h($tm['employee_username']) ?>">
+                                        <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if(count($tms) == 0): ?>
+                                <div class="form-text text-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    No team members found for the selected TL
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="target_limit" class="form-label">Target Limit <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="target_limit" name="target_limit" 
+                                       min="1" required placeholder="Enter target number">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="week_input" class="form-label">Week <span class="text-danger">*</span></label>
+                                <div class="week-input-container">
+                                    <input type="text" class="form-control" id="week_input" name="week_input" 
+                                           required placeholder="W01, W02, etc." >
+                                    <input type="number" class="form-control" id="year" name="year" 
+                                           value="<?= date('Y') ?>" min="2023" max="2030" style="width: 100px;">
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i> Enter week number (W1 to W53)
+                                </div>
+                            </div>
+                            
+                            <div id="weekDates" class="alert alert-info">
+                                <small>Week dates will be calculated automatically</small>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" <?= count($tms) == 0 ? 'disabled' : '' ?>>
+                                    <i class="fas fa-paper-plane me-1"></i> Assign Target
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-            </form>
-        <?php endif; ?>
+                
+                <!-- Quick Stats -->
+                <div class="card mt-3">
+                    <!-- <div class="card-header bg-info text-white"> -->
+                        <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Quick Stats</h6>
+                    </div>
+                    <div class="card-body">
+                        <?php if(!empty($targets)): ?>
+                        <?php 
+                        $total_target = array_sum(array_column($targets, 'target_limit'));
+                        $total_achieved = array_sum(array_column($targets, 'achieved_target'));
+                        $overall_percentage = $total_target > 0 ? round(($total_achieved / $total_target) * 100, 2) : 0;
+                        ?>
+                        <div class="text-center">
+                            <div class="display-6 fw-bold 
+                                <?= $overall_percentage >= 100 ? 'text-success' : 
+                                   ($overall_percentage >= 70 ? 'text-warning' : 'text-danger') ?>">
+                                <?= $overall_percentage ?>%
+                            </div>
+                            <small class="text-muted">Overall Achievement Rate</small>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <div class="h4 fw-bold text-primary"><?= count($targets) ?></div>
+                                <small class="text-muted">Targets</small>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="h4 fw-bold text-success"><?= $total_achieved ?></div>
+                                <small class="text-muted">Achieved</small>
+                            </div>
+                        </div>
+                        <?php else: ?>
+                        <div class="text-center text-muted">
+                            <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                            <p>No data available</p>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Targets List -->
+            <div class="col-md-8">
+                <div class="card">
+                    <!-- <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"> -->
+                         <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Assigned Targets</h5>
+                        <span class="badge bg-light text-dark">
+                            <?= count($targets) ?> Target(s)
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="overflow: visible;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th width="50">ID</th>
+                                        <?php if($current_user_role == 3): ?>
+                                        <th>TL</th>
+                                        <?php endif; ?>
+                                        <th>Team Member</th>
+                                        <th width="80">Week</th>
+                                        <th width="120" class="text-center">Target Limit</th>
+                                        <th width="200">Progress</th>
+                                        <th width="100">Status</th>
+                                        <th width="100" class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if(!empty($targets)): ?>
+                                        <?php foreach($targets as $target): ?>
+                                        <tr>
+                                            <td class="fw-bold"><?= h($target['id']) ?></td>
+                                            <?php if($current_user_role == 3): ?>
+                                            <td>
+                                                <small><?= h($target['tl_name']) ?></small>
+                                            </td>
+                                            <?php endif; ?>
+                                            <td>
+                                                <div class="fw-semibold"><?= h($target['tm_name']) ?></div>
+                                                <small class="text-muted"><?= h($target['tm_username']) ?></small>
+                                            </td>
+                                            <td>
+                                                <span class="badge week-badge">W<?= h($target['week_number']) ?></span>
+                                                <small class="d-block text-muted"><?= h($target['year']) ?></small>
+                                                <small class="d-block"><?= formatDate($target['from_date']) ?> - <?= formatDate($target['to_date']) ?></small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="target-cell">
+                                                    <?= h($target['target_limit']) ?>
+                                                </div>
+                                            </td>
+                                            <td class="progress-cell">
+                                                <div class="d-flex justify-content-between mb-1">
+                                                    <small>Achieved: <?= h($target['achieved_target']) ?></small>
+                                                    <small class="fw-bold 
+                                                        <?= $target['achieved_percentage'] >= 100 ? 'text-success' : 
+                                                           ($target['achieved_percentage'] >= 70 ? 'text-warning' : 'text-danger') ?>">
+                                                        <?= h($target['achieved_percentage']) ?>%
+                                                    </small>
+                                                </div>
+                                                <div class="progress">
+                                                    <div class="progress-bar <?= $target['achieved_percentage'] >= 100 ? 'bg-success' : ($target['achieved_percentage'] >= 70 ? 'bg-warning' : 'bg-danger') ?>" 
+                                                         role="progressbar" 
+                                                         style="width: <?= min($target['achieved_percentage'], 100) ?>%">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    <?= $target['status'] == 'Active' ? 'bg-primary' : 
+                                                       ($target['status'] == 'Completed' ? 'bg-success' : 'bg-danger') ?>">
+                                                    <?= h($target['status']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm">
+                                                    <!--button class="btn btn-info" title="Update Progress"
+                                                            onclick="updateProgress(<?= $target['id'] ?>, '<?= h($target['tm_name']) ?>')">
+                                                        <i class="fas fa-chart-line"></i>
+                                                    </button-->
+                                                    <button class="btn btn-warning" title="Edit Target"
+                                                            onclick="editTarget(<?= $target['id'] ?>, <?= h($target['target_limit']) ?>, 'W<?= h($target['week_number']) ?>', <?= h($target['year']) ?>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <form method="post" style="display:inline;" 
+                                                          onsubmit="return confirm('Delete this target?')">
+                                                        <input type="hidden" name="action" value="delete_target">
+                                                        <input type="hidden" name="target_id" value="<?= h($target['id']) ?>">
+                                                        <button type="submit" class="btn btn-danger" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="<?= $current_user_role == 3 ? 8 : 7 ?>" class="text-center py-5">
+                                                <div class="text-muted">
+                                                    <i class="fas fa-bullseye fa-3x mb-3"></i>
+                                                    <h5>No targets found</h5>
+                                                    <p class="mb-0">Assign your first weekly target using the form.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Update Modal -->
+    <div class="modal fade" id="progressModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Target Progress</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" id="progressForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="update_progress">
+                        <input type="hidden" name="target_id" id="modal_target_id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Team Member</label>
+                            <input type="text" class="form-control" id="modal_tm_name" readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Week</label>
+                            <input type="text" class="form-control" id="modal_week" readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Calculated Achieved Target</label>
+                            <div class="alert alert-info">
+                                <h4 class="text-center" id="achieved_count">Calculating...</h4>
+                                <p class="text-center small mb-0">This is automatically calculated from assigned jobs</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Progress</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Target Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Target</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" id="editForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="update_target">
+                        <input type="hidden" name="target_id" id="edit_target_id">
+                        
+                        <div class="mb-3">
+                            <label for="edit_target_limit" class="form-label">Target Limit</label>
+                            <input type="number" class="form-control" id="edit_target_limit" name="target_limit" min="1" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_week_input" class="form-label">Week</label>
+                            <div class="week-input-container">
+                                <input type="text" class="form-control" id="edit_week_input" name="week_input" 
+                                       required pattern="W\d+" title="Format: W1, W2, etc.">
+                                <input type="number" class="form-control" id="edit_year" name="year" 
+                                       min="2023" max="2030" style="width: 100px;">
+                            </div>
+                        </div>
+                        
+                        <div id="editWeekDates" class="alert alert-info">
+                            <small>Week dates will be calculated automatically</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Target</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Calculate and display week dates when week input changes
         document.addEventListener('DOMContentLoaded', function() {
+            const weekInput = document.getElementById('week_input');
+            const yearInput = document.getElementById('year');
+            const weekDatesDiv = document.getElementById('weekDates');
             
-            // Auto-hide success alerts
-            setTimeout(() => {
-                const alerts = document.querySelectorAll('.alert-success');
-                alerts.forEach(alert => {
-                    if(typeof bootstrap !== 'undefined'){
-                        new bootstrap.Alert(alert).close();
-                    }
-                });
-            }, 4000);
-
-            // Handle Input Visuals and Live Totals
-            const inputs = document.querySelectorAll('.target-input');
+            const editWeekInput = document.getElementById('edit_week_input');
+            const editYearInput = document.getElementById('edit_year');
+            const editWeekDatesDiv = document.getElementById('editWeekDates');
             
-            inputs.forEach(input => {
-                input.addEventListener('input', function() {
-                    // Toggle highlight class based on value
-                    if(this.value !== '' && parseFloat(this.value) > 0) {
-                        this.classList.add('has-value');
-                    } else {
-                        this.classList.remove('has-value');
-                    }
+            function calculateWeekDates(weekInput, yearInput, displayDiv) {
+                const weekMatch = weekInput.value.match(/W(\d+)/i);
+                if (weekMatch) {
+                    const weekNumber = parseInt(weekMatch[1]);
+                    const year = parseInt(yearInput.value);
                     
-                    // Calculate live row totals
-                    const empId = this.getAttribute('data-empid');
-                    const rowInputs = document.querySelectorAll(`.target-input[data-empid="${empId}"]`);
-                    let total = 0;
-                    
-                    rowInputs.forEach(inp => {
-                        const val = parseFloat(inp.value);
-                        if(!isNaN(val)) total += val;
-                    });
-                    
-                    const totalCell = document.getElementById(`total_${empId}`);
-                    if(totalCell) {
-                        totalCell.textContent = total > 0 ? total : '-';
-                    }
-                });
-            });
-        });
-    </script>
-    <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const firstRowInputs = document.querySelectorAll('table tbody tr:first-child input');
-
-    firstRowInputs.forEach(function(input, columnIndex) {
-        
-        // Change from 'input' to 'dblclick'
-        input.addEventListener('dblclick', function() {
-            let valueToCopy = this.value;
-            
-            if(confirm("Copy '" + valueToCopy + "' to all rows in this column?")) {
-                let allRows = document.querySelectorAll('table tbody tr');
-                for (let i = 1; i < allRows.length; i++) {
-                    let targetInput = allRows[i].querySelectorAll('input')[columnIndex];
-                    if (targetInput) {
-                        targetInput.value = valueToCopy;
+                    if (weekNumber >= 1 && weekNumber <= 53) {
+                        // Calculate week dates (Monday to Friday)
+                        const firstDayOfYear = new Date(year, 0, 1);
+                        const dayOfWeek = firstDayOfYear.getDay();
+                        
+                        // Adjust to first Monday (ISO week)
+                        const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                        firstDayOfYear.setDate(firstDayOfYear.getDate() + diffToMonday);
+                        
+                        const weekStart = new Date(firstDayOfYear);
+                        weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
+                        
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday (5 days)
+                        
+                        const formatDate = (date) => {
+                            return date.toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            });
+                        };
+                        
+                        displayDiv.innerHTML = `
+                            <div class="fw-bold">Week ${weekNumber}, ${year}</div>
+                            <small>${formatDate(weekStart)} to ${formatDate(weekEnd)}</small>
+                        `;
                     }
                 }
             }
+            
+            // For new target form
+            weekInput.addEventListener('input', function() {
+                calculateWeekDates(weekInput, yearInput, weekDatesDiv);
+            });
+            
+            yearInput.addEventListener('change', function() {
+                calculateWeekDates(weekInput, yearInput, weekDatesDiv);
+            });
+            
+            // For edit form
+            editWeekInput.addEventListener('input', function() {
+                calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
+            });
+            
+            editYearInput.addEventListener('change', function() {
+                calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
+            });
+            
+            // Auto-format week input
+            weekInput.addEventListener('blur', function() {
+                const value = this.value.trim().toUpperCase();
+                if (value && !value.startsWith('W')) {
+                    this.value = 'W' + value.replace(/\D/g, '');
+                }
+            });
+            
+            editWeekInput.addEventListener('blur', function() {
+                const value = this.value.trim().toUpperCase();
+                if (value && !value.startsWith('W')) {
+                    this.value = 'W' + value.replace(/\D/g, '');
+                }
+            });
+            
+            // Calculate initial week dates
+            calculateWeekDates(weekInput, yearInput, weekDatesDiv);
         });
         
-        // Optional: Add a title tooltip to let users know about this feature
-        input.title = "Double-click to apply this value to all rows below";
-    });
-});
-</script>
+        // Update progress
+        function updateProgress(targetId, tmName) {
+            document.getElementById('modal_target_id').value = targetId;
+            document.getElementById('modal_tm_name').value = tmName;
+            
+            fetch(`calculate_achieved_target.php?target_id=${targetId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        document.getElementById('achieved_count').textContent = data.achieved_target;
+                        document.getElementById('status').value = data.status;
+                        
+                        const achievedEl = document.getElementById('achieved_count');
+                        if (data.achieved_target >= data.target_limit) {
+                            achievedEl.className = "text-center text-success";
+                        } else if (data.achieved_target >= (data.target_limit * 0.7)) {
+                            achievedEl.className = "text-center text-warning";
+                        } else {
+                            achievedEl.className = "text-center text-danger";
+                        }
+                    } else {
+                        document.getElementById('achieved_count').textContent = "Error calculating";
+                        document.getElementById('achieved_count').className = "text-center text-danger";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('achieved_count').textContent = "Error calculating";
+                    document.getElementById('achieved_count').className = "text-center text-danger";
+                });
+            
+            const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+            modal.show();
+        }
+        
+        // Edit target
+        function editTarget(targetId, targetLimit, weekInput, year) {
+            document.getElementById('edit_target_id').value = targetId;
+            document.getElementById('edit_target_limit').value = targetLimit;
+            document.getElementById('edit_week_input').value = weekInput;
+            document.getElementById('edit_year').value = year;
+            
+            // Trigger date calculation
+            const editWeekInput = document.getElementById('edit_week_input');
+            const editYearInput = document.getElementById('edit_year');
+            const editWeekDatesDiv = document.getElementById('editWeekDates');
+            
+            // Calculate and display week dates
+            const weekMatch = weekInput.match(/W(\d+)/i);
+            if (weekMatch) {
+                const weekNumber = parseInt(weekMatch[1]);
+                const firstDayOfYear = new Date(year, 0, 1);
+                const dayOfWeek = firstDayOfYear.getDay();
+                const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                firstDayOfYear.setDate(firstDayOfYear.getDate() + diffToMonday);
+                
+                const weekStart = new Date(firstDayOfYear);
+                weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
+                
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 4);
+                
+                const formatDate = (date) => {
+                    return date.toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                    });
+                };
+                
+                editWeekDatesDiv.innerHTML = `
+                    <div class="fw-bold">Week ${weekNumber}, ${year}</div>
+                    <small>${formatDate(weekStart)} to ${formatDate(weekEnd)}</small>
+                `;
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        }
+        
+        // Auto-dismiss alerts
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert:not(.alert-info)');
+            alerts.forEach(alert => {
+                if (alert.isConnected) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            });
+        }, 5000);
+    </script>
 </body>
 </html>

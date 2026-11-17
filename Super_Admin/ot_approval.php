@@ -5,7 +5,9 @@
 // -------------------------------------------------------------
 
 require 'db.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in and is a Team Leader
 $superadmin_username = $_SESSION['supername'] ?? 'Super Admin';
@@ -199,8 +201,7 @@ include 'header.php';
     
     /* Bulk action panel */
     .bulk-panel {
-        /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-        background-color: #707981 !important;
+        background-color: var(--ash, #6c757d) !important;
         color: white;
         border-radius: 8px;
         padding: 15px;
@@ -211,21 +212,30 @@ include 'header.php';
     .stat-card {
         background: white;
         border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 16px 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         margin-bottom: 15px;
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
     }
     
     .stat-card .stat-number {
         font-size: 24px;
         font-weight: bold;
         color: #2196F3;
+        line-height: 1;
+        margin: 0;
+        flex-shrink: 0;
     }
     
     .stat-card .stat-label {
         font-size: 12px;
         color: #666;
         text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin: 0;
     }
     
     /* Status filter tabs */
@@ -265,15 +275,66 @@ include 'header.php';
         min-height: calc(1.5em + 0.75rem);
         word-break: break-word;
     }
+
+    /* Ash Page Header Banner (Matching Navbar Color) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .page-title-container h1, .page-title-container h4 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Sticky Table Header */
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        font-weight: 600;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: white !important;
+        padding: 0.75rem 0.5rem;
+        border: 1px solid #6c757d !important;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+    }
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .card, .card-body, .table-responsive, .table-container {
+        overflow: visible !important;
+    }
+    .card-header {
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+    }
 </style>
 
-<div class="container-fluid main-content py-4" style="margin-top: 60px;">
+<div class="container-fluid main-content py-4" style="margin-top: 70px;">
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Ash Page Header Banner (Matching Navbar Color) -->
+    <div class="page-title-container">
         <div>
-            <h4 class="text-secondary"><i class="fa fa-check-circle"></i> OT Approvals Management</h4>
-            <p class="text-muted small mb-0">Review and manage OT claims from your team members.</p>
+            <h1 class="mb-0">
+                <i class="fas fa-check-circle"></i> OT Approvals Management
+            </h1>
+            <p class="mb-0 small opacity-75">Review and manage OT claims from your team members.</p>
         </div>
         <div class="d-flex gap-2">
             <!-- Excel Download Button -->
@@ -396,8 +457,7 @@ include 'header.php';
 
     <!-- OT CLAIMS TABLE -->
     <div class="card border-0 shadow-sm rounded-3">
-        <!-- <div class="card-header bg-primary text-white py-3"> -->
-            <div class="card-header text-white py-3" style="background-color: #707981 !important;">
+        <div class="card-header text-white py-3" style="background-color: var(--ash, #6c757d) !important;">
             <h6 class="mb-0 fw-bold">
                 OT Approvals - TL & Admins 
                 <span class="float-end">
@@ -406,9 +466,9 @@ include 'header.php';
             </h6>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive" style="overflow: visible;">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
+                    <thead>
                         <tr>
                             <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
                             <th class="select-checkbox">

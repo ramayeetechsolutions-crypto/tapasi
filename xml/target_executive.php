@@ -134,197 +134,171 @@ while ($row = $res_daily->fetch_assoc()) {
     $my_data[$row['process_id']]['achieved'] = $row['achieved_target'];
 }
 $stmt_daily->close();
+
+$pageTitle = "Daily Production Entry";
+require 'header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Production Entry</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --bg-color: #f5f7f9;
-            --card-bg: #ffffff;
-            --text-main: #333333;
-            --text-muted: #6c757d;
-            --border-light: #eaedf1;
-            --border-input: #dce1e7;
-            --accent-blue: #0d6efd;
-            --cell-active-bg: #eef5ff;
-        }
 
-        body {
-            background-color: var(--bg-color);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: var(--text-main);
-        }
+<style>
+    :root {
+        --bg-color: #f5f7f9;
+        --card-bg: #ffffff;
+        --text-main: #333333;
+        --text-muted: #6c757d;
+        --border-light: #eaedf1;
+        --border-input: #dce1e7;
+        --accent-blue: #0d6efd;
+        --cell-active-bg: #eef5ff;
+    }
 
-        .main-container {
-            padding: 24px;
-            max-width: 900px;
-            margin: 0 auto;
-        }
+    body {
+        background-color: var(--bg-color);
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        color: var(--text-main);
+    }
 
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        
-        .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #2c3e50;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .main-container {
+        padding: 24px;
+        max-width: 900px;
+        margin: 0 auto;
+        margin-top: 70px;
+    }
 
-        .filter-panel {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            margin-bottom: 24px;
-            border-left: 4px solid var(--accent-blue);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+    /* Ash Page Header Banner (Matching Navbar Color) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .page-title-container h1, .page-title-container h4 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-        .table-container {
-            background: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-            border: 1px solid var(--border-light);
-            overflow: visible !important;
-        }
-        
-        .table {
-            margin-bottom: 0;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        
-        .table thead th {
-            position: sticky;
-            top: 70px;
-            z-index: 900;
-            background-color: var(--ash, #6c757d) !important;
-            color: #ffffff !important;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            padding: 12px 16px;
-            border: 1px solid #6c757d !important;
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
-        }
+    .filter-panel {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        margin-bottom: 24px;
+        border-left: 4px solid var(--ash, #6c757d);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-        /* Ash Page Header Banner (Matching Navbar Color) */
-        .page-title-container {
-            background: var(--ash, #6c757d);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        .page-title-container h1 {
-            margin: 0;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .table tbody td {
-            vertical-align: middle;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 0.95rem;
-        }
-
-        .process-name {
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .target-badge {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            color: #495057;
-            display: inline-block;
-            min-width: 60px;
-            text-align: center;
-        }
-
-        .target-input {
-            width: 120px;
-            height: 40px;
-            border: 2px solid var(--border-input); 
-            border-radius: 6px;
-            text-align: center;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #0d6efd;
-            transition: all 0.2s ease;
-            outline: none;
-        }
-
-        .target-input:focus {
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
-            background-color: var(--cell-active-bg);
-        }
-
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type="number"] { -moz-appearance: textfield; }
-
-        .action-footer {
-            background: #fff;
-            padding: 20px 24px;
-            border-top: 1px solid var(--border-light);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .total-row td {
-            background-color: #fafbfc;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #2c3e50;
-        }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
+    .table-container {
+        background: var(--card-bg);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        border: 1px solid var(--border-light);
+        overflow: visible !important;
+    }
     
-    <div class="main-container">
-        
-        <!-- Header -->
-        <div class="page-title-container">
-            <h1 class="mb-0">
-                <i class="fas fa-clipboard-check"></i> Daily Production Entry
-            </h1>
-        </div>
+    .table {
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .table thead th {
+        background-color: var(--ash, #6c757d) !important;
+        color: #ffffff !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 14px 16px;
+        border-bottom: 2px solid var(--border-light);
+        position: sticky;
+        top: 70px;
+        z-index: 10;
+    }
+
+    .table tbody td {
+        vertical-align: middle;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-light);
+        font-size: 0.95rem;
+    }
+
+    .process-name {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .target-badge {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #495057;
+        display: inline-block;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .target-input {
+        width: 120px;
+        height: 40px;
+        border: 2px solid var(--border-input); 
+        border-radius: 6px;
+        text-align: center;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #0d6efd;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .target-input:focus {
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+        background-color: var(--cell-active-bg);
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    .action-footer {
+        background: #fff;
+        padding: 20px 24px;
+        border-top: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .total-row td {
+        background-color: #fafbfc;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #2c3e50;
+    }
+</style>
+
+<div class="main-container">
+    
+    <!-- Ash Page Header Banner (Matching Navbar Color) -->
+    <div class="page-title-container">
+        <h1 class="mb-0">
+            <i class="fas fa-clipboard-check"></i> Daily Production Entry
+        </h1>
+    </div>
 
         <?php if(isset($success_message)): ?>
             <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">

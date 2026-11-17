@@ -195,16 +195,11 @@ if (!empty($tms) && !empty($processes)) {
         }
     }
 }
+$pageTitle = "Employee Target";
+require 'header.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assign Fixed Targets</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
+
+<style>
         :root {
             --bg-color: #f5f7f9;
             --card-bg: #ffffff;
@@ -227,22 +222,29 @@ if (!empty($tms) && !empty($processes)) {
             padding: 24px;
             max-width: 100%;
             margin: 0 auto;
+            margin-top: 70px;
         }
 
-        .page-header {
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
-        .page-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #2c3e50;
+        .page-title-container h1, .page-title-container h4 {
             margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: white;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .filter-panel {
@@ -322,13 +324,6 @@ if (!empty($tms) && !empty($processes)) {
             box-shadow: 2px 0 5px rgba(0,0,0,0.03);
             border-right: 2px solid var(--border-light) !important;
         }
-        
-        .table thead .col-sno, 
-        .table thead .col-total, 
-        .table thead .col-name {
-            z-index: 15;
-            background-color: #fafbfc;
-        }
 
         .emp-name { font-weight: 600; color: #333; font-size: 0.95rem; line-height: 1.2; }
         .emp-id { font-size: 0.75rem; color: #888; margin-top: 2px; }
@@ -381,40 +376,15 @@ if (!empty($tms) && !empty($processes)) {
             margin-top: 20px;
         }
         
-        /* Ash Page Header Banner (Matching Navbar Color) */
-        .page-title-container {
-            background: var(--ash, #6c757d);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
-        .page-title-container h1 {
-            margin: 0;
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
     
     <div class="main-container">
         
-        <!-- Header -->
+        <!-- Ash Page Header Banner (Matching Navbar Color) -->
         <div class="page-title-container">
             <h1 class="mb-0">
                 <i class="fas fa-bullseye"></i> Employee Target
@@ -447,7 +417,7 @@ if (!empty($tms) && !empty($processes)) {
                 
                 <div class="col-md-auto d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
-                        <i class="fas fa-search me-2"></i>Load Grid
+                        <i class="fas fa-search me-1"></i> Load Grid
                     </button>
                     <a href="target_assignment.php" class="btn btn-secondary btn-sm px-4">Reset</a>
                 </div>
