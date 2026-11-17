@@ -37,6 +37,8 @@ $mysqli->close();
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
         <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-1.13.6/datatables.min.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <!-- Global Tapasi Stylesheet -->
+        <link rel="stylesheet" href="../custom_style.css">
         
         <style>
             .job-master-container {
@@ -121,10 +123,10 @@ $mysqli->close();
             }
         </style>
     
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0">Team Leader and Executives Hierarchy</h2>
-            <div class="text-muted">
-                <small>Click <i class="fas fa-plus-circle text-success"></i> to expand team details</small>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h2 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;"><i class="fas fa-sitemap me-2" style="color: #ffffff !important;"></i>Team Leader and Executives Hierarchy</h2>
+            <div class="text-white opacity-75">
+                <small style="color: rgba(255,255,255,0.85) !important;">Click <i class="fas fa-plus-circle text-white"></i> to expand team details</small>
             </div>
         </div>
         

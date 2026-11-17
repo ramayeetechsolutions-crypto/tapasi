@@ -238,7 +238,7 @@ require 'header.php';
         <?php endif; ?>
 
         <!-- Main job list display -->
-        <div class="page-title-container"><h5 class="mb-0 text-white flex-grow-1">Jobs</h5></div>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white flex-grow-1" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>Jobs</h5></div>
 
         <!-- Filter form -->
         <form method="get" class="row gy-2 gx-2 mb-3 align-items-end">

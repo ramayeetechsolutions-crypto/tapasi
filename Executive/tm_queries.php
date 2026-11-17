@@ -148,6 +148,8 @@ if (!$queries) {
     <title>Query Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -278,10 +280,10 @@ if (!$queries) {
 <body>
     <div class="main-content">
         <!-- User Info Panel -->
-        <div class="user-info d-flex justify-content-between align-items-center">
+        <div class="user-info d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important;">
             <div>
-                <h5 class="mb-0"><i class="fas fa-user-circle me-2"></i>Welcome, <?= h($current_name) ?>!</h5>
-                <small><i class="fas fa-id-card me-1"></i><?= h($current_username) ?> | Employee Query Portal</small>
+                <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-circle me-2" style="color: #ffffff !important;"></i>Welcome, <?= h($current_name) ?>!</h5>
+                <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;"><i class="fas fa-id-card me-1" style="color: #ffffff !important;"></i><?= h($current_username) ?> | Employee Query Portal</small>
             </div>
         </div>
         

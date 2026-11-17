@@ -78,6 +78,8 @@ $jobs = $mysqli->query($sql);
     <!-- Bootstrap 5 & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     
     <style>
         :root {
@@ -191,8 +193,8 @@ $jobs = $mysqli->query($sql);
     <div class="row justify-content-center fade-in">
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-plus-circle' ?> me-2"></i><?= $mode==='edit'?'Modify Job Detail':'Register New Job' ?></span>
+                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+                    <span class="text-white" style="color: #ffffff !important;"><i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-plus-circle' ?> me-2" style="color: #ffffff !important;"></i><?= $mode==='edit'?'Modify Job Detail':'Register New Job' ?></span>
                     <a href="job_master.php" class="btn-close" aria-label="Close"></a>
                 </div>
                 <div class="card-body p-4">
@@ -223,13 +225,13 @@ $jobs = $mysqli->query($sql);
     <?php else: ?>
 
     <!-- Header Actions -->
-    <div class="d-flex justify-content-between align-items-end mb-4 fade-in">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h3 class="fw-bold mb-0">Job Master</h3>
-            <p class="text-muted small mb-0">Manage your company's service catalog and roles.</p>
+            <h3 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;"><i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>Job Master</h3>
+            <p class="text-white opacity-75 small mb-0" style="color: rgba(255,255,255,0.85) !important;">Manage your company's service catalog and roles.</p>
         </div>
-        <a href="job_master.php?mode=add" class="btn btn-primary shadow-sm">
-            <i class="fa fa-plus me-2"></i>Add New Job
+        <a href="job_master.php?mode=add" class="btn btn-light btn-sm fw-semibold">
+            <i class="fa fa-plus me-1 text-primary"></i>Add New Job
         </a>
     </div>
 

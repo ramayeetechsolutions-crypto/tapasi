@@ -384,6 +384,8 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { margin-top: 70px; padding: 20px; margin-left: auto; margin-right: auto; }
@@ -503,8 +505,8 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-bullseye me-2"></i>Team Report</h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;"><i class="fas fa-bullseye me-2" style="color: #ffffff !important;"></i>Team Report</h4>
         </div>
 
         <!-- Filter Form -->

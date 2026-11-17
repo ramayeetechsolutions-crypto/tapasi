@@ -439,7 +439,7 @@ if (!$all_employees || $all_employees->num_rows === 0) {
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add / Edit Form -->
-        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-file-alt me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry' : 'Add New Error Log Entry' ?></h4>
             <a href="error_entry_team.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
@@ -597,7 +597,7 @@ if (!$all_employees || $all_employees->num_rows === 0) {
         <?php else: ?>
 
         <!-- View Mode: Exact UI matching Executive Screenshot -->
-        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-file-alt me-2"></i>Error Logs</h4>
         </div>
 

@@ -498,10 +498,10 @@ require 'header.php';
         <?php if ($mode === 'edit'): ?>
         
         <!-- Edit Form -->
-        <div class="page-title-container">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h1 class="mb-0">
-                    <i class="fas fa-user-edit"></i> Edit Employee: <?= h($editRow['employee_name'] ?? '') ?>
+                <h1 class="mb-0" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
+                    <i class="fas fa-user-edit me-2" style="color: #ffffff !important;"></i>Edit Employee: <?= h($editRow['employee_name'] ?? '') ?>
                 </h1>
             </div>
             <div>
@@ -618,10 +618,10 @@ require 'header.php';
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="page-title-container">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h1 class="mb-0">
-                    <i class="fas fa-users"></i> Employee Profile
+                <h1 class="mb-0" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
+                    <i class="fas fa-users me-2" style="color: #ffffff !important;"></i>Employee Profile
                 </h1>
             </div>
             <div>

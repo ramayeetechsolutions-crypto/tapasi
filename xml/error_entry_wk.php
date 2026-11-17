@@ -467,7 +467,7 @@ if (!$entries) $entries = false;
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
-        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry (XML)' : 'Add New Error Log Entry (XML)' ?></h4>
             <a href="error_entry_wk.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
@@ -658,7 +658,7 @@ if (!$entries) $entries = false;
 
         <?php else: ?>
 
-        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i>Error Logs (WK Team Only)</h4>
             <div>
                  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">

@@ -530,6 +530,8 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         /* Ash Page Header Banner (Matching Navbar Color) */
         .page-title-container {
@@ -632,7 +634,7 @@ require 'header.php';
         .form-section-title {
             font-size: 0.85rem;
             font-weight: 600;
-            color: #1e293b;
+            color: #ffffff !important; font-size: 1.25rem !important;
             margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
@@ -714,7 +716,7 @@ require 'header.php';
         .btn-outline-secondary:hover {
             background: #f1f5f9;
             border-color: #cbd5e1;
-            color: #1e293b;
+            color: #ffffff !important; font-size: 1.25rem !important;
         }
         
         .btn-outline-primary {
@@ -830,7 +832,7 @@ require 'header.php';
         .textarea-wrapper h6 {
             font-size: 0.75rem;
             font-weight: 600;
-            color: #1e293b;
+            color: #ffffff !important; font-size: 1.25rem !important;
             margin-bottom: 0.25rem;
             display: flex;
             align-items: center;
@@ -884,7 +886,7 @@ require 'header.php';
         
         .table thead th {
             background: #f8fafc;
-            color: #1e293b;
+            color: #ffffff !important; font-size: 1.25rem !important;
             font-weight: 600;
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -915,7 +917,7 @@ require 'header.php';
         
         .badge.bg-warning {
             background-color: #fbbf24 !important;
-            color: #1e293b;
+            color: #ffffff !important; font-size: 1.25rem !important;
         }
         
         .badge.bg-info {
@@ -1023,13 +1025,13 @@ require 'header.php';
 <body>
     <div class="page-header">
         <div class="container-fluid px-3">
-            <div class="page-title-container">
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <div>
-                    <h5 class="mb-0 mb-0 text-white" style="font-weight: 700; color: #1e293b;">
-                        <i class="fas fa-briefcase me-1" style="color: #667eea;"></i>
+                    <h5 class="mb-0 mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
+                        <i class="fas fa-briefcase me-1" style="color: #ffffff !important;"></i>
                         Jobs Management
                     </h5>
-                    <small class="text-muted">Manage and track all jobs</small>
+                    <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage and track all jobs</small>
                 </div>
                   <?php if (in_array('CE', $current_user_stages)): ?>
                         <a href="assigned_jobs.php?process=ce" class="btn btn-sm btn-primary <?= (in_array('CE', $current_user_stages))? '' : 'btn-disabled' ?>">

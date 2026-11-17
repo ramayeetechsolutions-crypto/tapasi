@@ -472,6 +472,8 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         /* Remove increase/decrease spinner buttons from number inputs */
         input[type=number]::-webkit-inner-spin-button, 
@@ -491,11 +493,13 @@ require 'header.php';
         }
         
         .page-header {
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1rem 0;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            background-color: #6c757d !important;
+            background: #6c757d !important;
+            color: #ffffff !important;
+            border-radius: 12px;
+            padding: 12px 20px !important;
+            margin-bottom: 20px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         
         .stats-card {
@@ -806,7 +810,6 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <br><br><br>
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
@@ -820,26 +823,21 @@ require 'header.php';
     <!-- Notification Container -->
     <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 
-    <div class="page-header">
-        <div class="container-fluid px-2">
+    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
+        <div class="container-fluid px-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1" style="font-weight: 700; color: #1e293b;">
-                        <i class="fas fa-table me-2" style="color: #667eea;"></i>
+                    <h4 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
+                        <i class="fas fa-table me-2" style="color: #ffffff !important;"></i>
                         LE Assign - CE
                     </h4>
-                    <!-- <p class="mb-0 text-muted small">
-                        <span class="ce-completed-badge">
-                            <i class="fas fa-check-circle"></i> CE Completed Only
-                        </span>
-                    </p> -->
                 </div>
                 <div>
-                    <a href="jobs.php" class="btn btn-outline-secondary btn-sm me-2">
+                    <a href="jobs.php" class="btn btn-light btn-sm fw-semibold me-2">
                         <i class="fas fa-arrow-left me-1"></i> Back to Jobs
                     </a>
-                    <span class="badge bg-primary">
-                        <i class="fas fa-users me-1"></i> <?= count($les) ?> Team Members Available
+                    <span class="badge bg-light text-dark fw-semibold">
+                        <i class="fas fa-users me-1 text-primary"></i> <?= count($les) ?> Team Members Available
                     </span>
                 </div>
             </div>

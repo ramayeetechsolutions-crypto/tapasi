@@ -564,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <?php else: ?>
-<div class="page-title-container"><h5 class="mb-0 text-white">Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;">Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
     <div class="d-flex flex-wrap gap-2 mb-3">
 <input type="text" id="searchInput" class="form-control form-control-sm" style="width:250px" placeholder="Search" value="<?=h($q)?>">
 <select id="statusSelect" class="form-select form-select-sm" style="width:120px;">
