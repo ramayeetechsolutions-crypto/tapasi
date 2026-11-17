@@ -364,7 +364,7 @@ table td:nth-child(26) {
 </style>
 <?php require 'header.php';?>
 
-<div class="container-fluid">
+<div class="container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
     <div class="page-title-container"><h2 class="mb-0 text-white">Job Management</h2></div>
 
     <!-- Dashboard Cards -->
