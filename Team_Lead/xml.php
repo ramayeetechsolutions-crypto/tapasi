@@ -1,7 +1,13 @@
 <?php
-session_start();
+// Start a session if one is not already active
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+    if(isset($_SESSION['uid'])) $exeid=$_SESSION['uid'];
+}
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
 
 require 'db.php';
 if ($mysqli->connect_error) {
@@ -9,111 +15,127 @@ if ($mysqli->connect_error) {
     die(json_encode(["error" => "Connection failed: " . $mysqli->connect_error]));
 }
 
-function refValues($arr){
-    if (version_compare(PHP_VERSION, '5.3.0', '>=')) {
-        $refs = array();
-        foreach($arr as $key => $value)
-            $refs[$key] = &$arr[$key];
-        return $refs;
-    }
-    return $arr;
+function h($s) {
+    return htmlspecialchars((string)$s, ENT_QUOTES);
 }
 
 $uid = $_SESSION['uid'] ?? 0;
-$username = $_SESSION['username'] ?? '';
+$username = trim($_SESSION['username'] ?? '');
 $role_name = $_SESSION['role_name'] ?? '';
-$job_id = isset($_GET['job_id']) ? (int)$_GET['job_id'] : 0;
 $show_completed = isset($_GET['show_completed']) && $_GET['show_completed'] == '1';
 
-// Check user permissions for editing
-$canEdit = false;
-$allowed_roles = ['TM', 'XML', 'Team Lead', 'Admin']; // Add roles that can edit
+// Handle filter parameters
+$search = trim($_GET['search'] ?? '');
+$overall = trim($_GET['overall'] ?? '');
+$billed = trim($_GET['billed'] ?? '');
+$xml = trim($_GET['xml'] ?? '');
+$html = trim($_GET['html'] ?? '');
+$scielo = trim($_GET['scielo'] ?? '');
+$pubmed = trim($_GET['pubmed'] ?? '');
 
-if(in_array($role_name, $allowed_roles)) {
-    $canEdit = true;
-}
-
-$canEditJson = json_encode($canEdit);
-
-// Handle AJAX requests (Update)
+// ==========================================
+// AJAX HANDLERS
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    if ($_POST['action'] === 'update') {
-        handleUpdateRequest();
+    if ($_POST['action'] === 'full_update') {
+        handleFullUpdateRequest();
     } elseif ($_POST['action'] === 'complete') {
         handleCompleteRequest();
     } elseif ($_POST['action'] === 'assign_to_me') {
         handleAssignToMeRequest();
-    } elseif ($_POST['action'] === 'update_sequence') {
-        handleUpdateSequenceRequest();
-    } elseif ($_POST['action'] === 'update_status_bill') {
-        handleStatusBillRequest();
     }
     exit;
 }
 
-// Handle data fetch request
 if (isset($_GET['fetch']) && $_GET['fetch'] === 'data') {
     fetchData();
     exit;
 }
 
-function handleStatusBillRequest() {
+function handleFullUpdateRequest() {
     global $mysqli, $username;
     $response = ['success' => false, 'error' => ''];
     
-    if (!isset($_POST['id']) || !isset($_POST['status']) || !isset($_POST['billed'])) {
-        $response['error'] = 'Invalid request. Missing parameters.';
-        echo json_encode($response);
-        exit;
-    }
-    
     $record_id = (int)$_POST['id'];
-    $status = $_POST['status'];
-    $billed = $_POST['billed'];
+    $status = $_POST['status'] ?? '';
+    $billed = $_POST['billed'] ?? '';
+    $xml_status = $_POST['xml_status'] ?? '';
+    $scielo_status = $_POST['scielo_status'] ?? '';
+    $pubmed_status = $_POST['pubmed_status'] ?? '';
+    $html_status = $_POST['html_status'] ?? '';
     $remarks = $_POST['remarks'] ?? '';
     $final_remarks = $_POST['final_remarks'] ?? '';
+    $instruction = $_POST['instruction'] ?? '';
+    
+    $despatched_date = !empty($_POST['despatched_date']) ? $_POST['despatched_date'] : null;
+    $job_status = $_POST['job_status'] ?? '';
+    $status = $_POST['status'] ?? '';
+
+    // If date is entered, force Despatched status and Green status
+    if (!empty($despatched_date)) {
+        $job_status = 'Despatched';
+        $status = 'Completed'; 
+    }
     
     try {
         $current_datetime = date('Y-m-d H:i:s');
         
-        // Get job_id from unique_xml_jobs
-        $stmt = $mysqli->prepare("SELECT job_id FROM unique_xml_jobs WHERE id = ?");
-        $stmt->bind_param("i", $record_id);
-        $stmt->execute();
-        $stmt->bind_result($xml_job_id);
-        $stmt->fetch();
-        $stmt->close();
-        
         $query = "UPDATE unique_xml_jobs SET 
-                  status = ?,
-                  Billed = ?,
-                  remarks = ?,
-                  `final Remarks` = ?,
-                  updated_at = ?,
-                  updated_by = ?
-                  WHERE id = ?";
+                  status = ?, Billed = ?, xml_status = ?, scielo_ebsco_status = ?, pubmed_biblat_status = ?, 
+                  html_status = ?, remarks = ?, `final Remarks` = ?, instruction_to_image = ?, 
+                  despatched_date = ?, job_status = ?,
+                  updated_at = ?, updated_by = ? WHERE id = ?";
         
         $stmt = $mysqli->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $mysqli->error);
-        }
-        
-        $stmt->bind_param("ssssssi", $status, $billed, $remarks, $final_remarks, $current_datetime, $username, $record_id);
+        $stmt->bind_param("sssssssssssssi", $status, $billed, $xml_status, $scielo_status, $pubmed_status, $html_status, $remarks, $final_remarks, $instruction, $despatched_date, $job_status, $current_datetime, $username, $record_id);
         
         if (!$stmt->execute()) {
             throw new Exception("Execute failed: " . $stmt->error);
         }
-        
         $stmt->close();
         
-        // If status is set to Completed, update the jobs table
-        if ($status === 'Completed' && $xml_job_id) {
-            updateJobsTableForXMLCompletion($xml_job_id, $username);
+        $check = $mysqli->prepare("SELECT Image_user, Table_user, WPContent_user, nlm_user, jats_user, clockss_user, HTML_user, new_html_user, Scielo_user, ebsco_user, pubmed_user, biblat_user, doaj_user, QC_user FROM unique_xml_jobs WHERE id = ?");
+        $check->bind_param("i", $record_id);
+        $check->execute();
+        $res = $check->get_result()->fetch_assoc();
+        $check->close();
+
+        $all_done = true;
+        $has_valid_task = false;
+        
+        foreach($res as $col => $val) {
+            $v = trim((string)$val);
+            if ($v === 'N/A' || $v === 'NA' || $v === '-') { continue; }
+            
+            $has_valid_task = true;
+            if ($v === '' || strpos($v, '✓') === false) { 
+                $all_done = false; 
+                break; 
+            }
+        }
+
+        if ($all_done && $has_valid_task) {
+            
+            $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', job_status = 'Despatched', updated_at = NOW() WHERE id = $record_id");
+            $status = 'Completed'; 
+        }
+        // ----------------------------------------------------------------------------------------------------
+
+        if ($status === 'Completed') {
+            $stmt = $mysqli->prepare("SELECT job_id FROM unique_xml_jobs WHERE id = ?");
+            $stmt->bind_param("i", $record_id);
+            $stmt->execute();
+            $stmt->bind_result($xml_job_id);
+            if ($stmt->fetch() && $xml_job_id) {
+                $stmt->close();
+                updateJobsTableForXMLCompletion($xml_job_id, $username);
+            } else {
+                $stmt->close();
+            }
         }
         
         $response['success'] = true;
-        $response['message'] = 'Status and billing updated successfully.';
-        
+        $response['message'] = 'Row details saved successfully.';
     } catch (Exception $e) {
         $response['error'] = $e->getMessage();
     }
@@ -125,252 +147,26 @@ function handleStatusBillRequest() {
 
 function handleAssignToMeRequest() {
     global $mysqli, $username;
-    
     $response = ['success' => false, 'error' => '', 'message' => ''];
     
-    if (!isset($_POST['id']) || !isset($_POST['field'])) {
-        $response['error'] = 'Invalid request. Missing ID or field.';
-        echo json_encode($response);
-        exit;
-    }
-
     $record_id = (int)$_POST['id'];
     $field = $_POST['field'] ?? '';
-    $sequence_number = $_POST['seq_number'] ?? 1;
     
-    $valid_fields = ['Image_user', 'Table_user', 'WPContent_user', 'HTML_user', 'Scielo_user', 'QC_user'];
-    
-    if (!in_array($field, $valid_fields)) {
-        $response['error'] = 'Invalid field.';
-        echo json_encode($response);
-        exit;
-    }
-
     try {
-        $current_date = date('d-m'); // Format: date-month
-        $assign_value = $username . '/' . $current_date . '/' . $sequence_number;
+        $assign_value = $username . '/' . date('d-m');
         
-        // Check current value
-        $check_stmt = $mysqli->prepare("SELECT $field FROM unique_xml_jobs WHERE id = ?");
-        $check_stmt->bind_param("i", $record_id);
-        $check_stmt->execute();
-        $check_stmt->bind_result($current_value);
-        $check_stmt->fetch();
-        $check_stmt->close();
-        
-        if (!empty($current_value)) {
-            // Parse existing value
-            $parts = explode('/', $current_value);
-            if (count($parts) === 3 && $parts[0] === $username) {
-                // Already assigned to current user, just update sequence
-                $assign_value = $username . '/' . $current_date . '/' . $sequence_number;
-                $response['message'] = 'Sequence updated successfully.';
-            } else {
-                $response['error'] = 'Already assigned to ' . $parts[0];
-                echo json_encode($response);
-                exit;
-            }
-        } else {
-            $response['message'] = 'Assigned to you successfully.';
-        }
-        
-        // Update the field
         $query = "UPDATE unique_xml_jobs SET 
-                  $field = ?, 
-                  updated_at = NOW(),
-                  status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END
+                  $field = ?, updated_at = NOW(),
+                  status = 'Inprocess', job_status = 'Inprocess'
                   WHERE id = ?";
         
         $stmt = $mysqli->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $mysqli->error);
-        }
-        
         $stmt->bind_param("si", $assign_value, $record_id);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Execute failed: " . $stmt->error);
-        }
-        
+        $stmt->execute();
         $stmt->close();
+
         $response['success'] = true;
-        $response['assign_value'] = $assign_value;
-        
-    } catch (Exception $e) {
-        $response['error'] = $e->getMessage();
-    }
-    
-    header('Content-Type: application/json');
-    echo json_encode($response);
-    exit;
-}
-
-function handleUpdateSequenceRequest() {
-    global $mysqli, $username;
-    
-    $response = ['success' => false, 'error' => '', 'message' => ''];
-    
-    if (!isset($_POST['id']) || !isset($_POST['field']) || !isset($_POST['seq_number'])) {
-        $response['error'] = 'Invalid request. Missing parameters.';
-        echo json_encode($response);
-        exit;
-    }
-
-    $record_id = (int)$_POST['id'];
-    $field = $_POST['field'] ?? '';
-    $sequence_number = (int)$_POST['seq_number'];
-    
-    $valid_fields = ['Image_user', 'Table_user', 'WPContent_user', 'HTML_user', 'Scielo_user', 'QC_user'];
-    
-    if (!in_array($field, $valid_fields)) {
-        $response['error'] = 'Invalid field.';
-        echo json_encode($response);
-        exit;
-    }
-
-    try {
-        // Get current value
-        $check_stmt = $mysqli->prepare("SELECT $field FROM unique_xml_jobs WHERE id = ?");
-        $check_stmt->bind_param("i", $record_id);
-        $check_stmt->execute();
-        $check_stmt->bind_result($current_value);
-        $check_stmt->fetch();
-        $check_stmt->close();
-        
-        if (empty($current_value)) {
-            $response['error'] = 'Field not assigned yet.';
-            echo json_encode($response);
-            exit;
-        }
-        
-        // Parse current value
-        $parts = explode('/', $current_value);
-        if (count($parts) !== 3) {
-            $response['error'] = 'Invalid format in existing value.';
-            echo json_encode($response);
-            exit;
-        }
-        
-        // Check if current user is the assignee
-        if ($parts[0] !== $username) {
-            $response['error'] = 'You are not assigned to this task.';
-            echo json_encode($response);
-            exit;
-        }
-        
-        // Update with new sequence number
-        $current_date = date('d-m');
-        $new_value = $username . '/' . $current_date . '/' . $sequence_number;
-        
-        $query = "UPDATE unique_xml_jobs SET 
-                  $field = ?, 
-                  updated_at = NOW()
-                  WHERE id = ?";
-        
-        $stmt = $mysqli->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $mysqli->error);
-        }
-        
-        $stmt->bind_param("si", $new_value, $record_id);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Execute failed: " . $stmt->error);
-        }
-        
-        $stmt->close();
-        $response['success'] = true;
-        $response['message'] = 'Sequence number updated successfully.';
-        $response['new_value'] = $new_value;
-        
-    } catch (Exception $e) {
-        $response['error'] = $e->getMessage();
-    }
-    
-    header('Content-Type: application/json');
-    echo json_encode($response);
-    exit;
-}
-
-function handleUpdateRequest() {
-    global $mysqli, $username;
-    $response = [
-        'success' => false, 
-        'error' => '', 
-        'updated_by' => $username,
-        'updated_at' => date('Y-m-d H:i:s')
-    ];
-    
-    if (!isset($_POST['id']) || !isset($_POST['field'])) {
-        $response['error'] = 'Invalid request. Missing ID or field.';
-        echo json_encode($response);
-        exit;
-    }
-    
-    $record_id = (int)$_POST['id'];
-    $field = $_POST['field'];
-    $value = $_POST['value'] ?? '';
-    
-    // Define which fields can be updated and their validation
-    $editable_fields = [
-        'xml_status',
-        'scielo_ebsco_status', 
-        'pubmed_biblat_status',
-        'html_status',
-        'tat_to_client',
-        'missed_tat',
-        'instruction_to_image',
-        'remarks',
-        'final Remarks',
-        'Billed',
-        'status'
-    ];
-    
-    if (!in_array($field, $editable_fields)) {
-        $response['error'] = 'Field not editable.';
-        echo json_encode($response);
-        exit;
-    }
-    
-    try {
-        $current_datetime = date('Y-m-d H:i:s');
-        
-        $query = "UPDATE unique_xml_jobs SET 
-                  $field = ?, 
-                  updated_at = ?,
-                  updated_by = ?
-                  WHERE id = ?";
-        
-        $stmt = $mysqli->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $mysqli->error);
-        }
-        
-        $stmt->bind_param("sssi", $value, $current_datetime, $username, $record_id);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Execute failed: " . $stmt->error);
-        }
-        
-        $stmt->close();
-        
-        // If status field is updated to 'Completed', check if we need to update jobs table
-        if ($field === 'status' && $value === 'Completed') {
-            // Get job_id from unique_xml_jobs
-            $stmt = $mysqli->prepare("SELECT job_id FROM unique_xml_jobs WHERE id = ?");
-            $stmt->bind_param("i", $record_id);
-            $stmt->execute();
-            $stmt->bind_result($xml_job_id);
-            $stmt->fetch();
-            $stmt->close();
-            
-            if ($xml_job_id) {
-                updateJobsTableForXMLCompletion($xml_job_id, $username);
-            }
-        }
-        
-        $response['success'] = true;
-        
+        $response['message'] = 'Task assigned successfully.';
     } catch (Exception $e) {
         $response['error'] = $e->getMessage();
     }
@@ -384,147 +180,96 @@ function handleCompleteRequest() {
     global $mysqli, $username;
     $response = ['success' => false, 'error' => ''];
     
-    if (!isset($_POST['id']) || !isset($_POST['field'])) {
-        $response['error'] = 'Invalid request. Missing ID or field.';
-        echo json_encode($response);
-        exit;
-    }
-
     $record_id = (int)$_POST['id'];
     $field = $_POST['field'];
-    
-    $valid_fields = ['Image_user', 'Table_user', 'WPContent_user', 'HTML_user', 'Scielo_user', 'QC_user'];
-    
-    if (!in_array($field, $valid_fields)) {
-        $response['error'] = 'Invalid field.';
-        echo json_encode($response);
+    $seq_number = $_POST['seq_number'] ?? '';
+
+    if (trim($seq_number) === '') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Please enter a value.']);
         exit;
     }
 
+    // --- NEW VALIDATION: User Check & Target Number Check ---
+    $val_stmt = $mysqli->prepare("SELECT * FROM unique_xml_jobs WHERE id = ?");
+    $val_stmt->bind_param("i", $record_id);
+    $val_stmt->execute();
+    $row_data = $val_stmt->get_result()->fetch_assoc();
+    $val_stmt->close();
+
+    $current_task_val = $row_data[$field] ?? '';
+    $task_parts = explode('/', $current_task_val);
+    $assigned_user = trim($task_parts[0]);
+    
+    if ($assigned_user !== $username) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Action Denied: You can only complete tasks assigned to you.']);
+        exit;
+    }
+
+    $targetNum = '';
+    if ($field === 'nlm_user') $targetNum = $row_data['nlm'] ?? '';
+    else if ($field === 'jats_user') $targetNum = $row_data['jats'] ?? '';
+    else if ($field === 'clockss_user') $targetNum = $row_data['clockss'] ?? '';
+    else if ($field === 'HTML_user') $targetNum = $row_data['html'] ?? '';
+    else if ($field === 'new_html_user') {
+        $new = trim((string)($row_data['new_html'] ?? ''));
+        $direct = trim((string)($row_data['direct_html'] ?? ''));
+        $targetNum = ($new !== '' && $new !== '-') ? $new : $direct;
+    }
+    else if ($field === 'Scielo_user') $targetNum = $row_data['scielo'] ?? '';
+    else if ($field === 'ebsco_user') $targetNum = $row_data['ebsco'] ?? '';
+    else if ($field === 'pubmed_user') $targetNum = $row_data['pubmed'] ?? '';
+    else if ($field === 'biblat_user') $targetNum = $row_data['biblat'] ?? '';
+    else if ($field === 'doaj_user') $targetNum = $row_data['doaj'] ?? '';
+
+    $targetNum = trim((string)$targetNum);
+    if ($targetNum !== '' && $targetNum !== '-') {
+        if (trim($seq_number) !== $targetNum) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => "Invalid value! You must enter exactly '$targetNum' to complete this task."]);
+            exit;
+        }
+    }
     try {
-        $current_datetime = date('Y-m-d H:i:s');
-        
-        // Start transaction
         $mysqli->begin_transaction();
-        
-        // Get current user for this field and job_id
-        $check_stmt = $mysqli->prepare("SELECT $field, job_id FROM unique_xml_jobs WHERE id = ?");
+        $check_stmt = $mysqli->prepare("SELECT job_id FROM unique_xml_jobs WHERE id = ?");
         $check_stmt->bind_param("i", $record_id);
         $check_stmt->execute();
-        $check_stmt->bind_result($current_value, $xml_job_id);
+        $check_stmt->bind_result($xml_job_id);
         $check_stmt->fetch();
         $check_stmt->close();
         
-        if (empty($current_value)) {
-            throw new Exception("This task is not assigned yet.");
-        }
-        
-        // Parse current value to get username
-        $parts = explode('/', $current_value);
-        $current_user = $parts[0] ?? '';
-        
-        if ($current_user !== $username) {
-            throw new Exception("This task is assigned to $current_user, not you.");
-        }
-        
-        // Mark as completed - add completion indicator
-        $new_value = $current_value . ' ✓';
-        
-        $query = "UPDATE unique_xml_jobs SET 
-                  $field = ?,
-                  updated_at = ?,
-                  updated_by = ?
-                  WHERE id = ?";
-        
-        $stmt = $mysqli->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $mysqli->error);
-        }
-        
-        $stmt->bind_param("sssi", $new_value, $current_datetime, $username, $record_id);
-        
-        if (!$stmt->execute()) {
-            throw new Exception("Execute failed: " . $stmt->error);
-        }
-        
+        $new_value = $username . '/' . date('d-m') . '/' . $seq_number . ' ✓';
+        $stmt = $mysqli->prepare("UPDATE unique_xml_jobs SET $field = ?, updated_at = NOW(), updated_by = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $new_value, $username, $record_id);
+        $stmt->execute();
         $stmt->close();
         
-        // Check if all fields are completed to mark overall job as completed
-        $check_completion_stmt = $mysqli->prepare("
-            SELECT 
-                Image_user, Table_user, WPContent_user, 
-                HTML_user, Scielo_user, QC_user,
-                xml_status, scielo_ebsco_status, pubmed_biblat_status, html_status
-            FROM unique_xml_jobs 
-            WHERE id = ?
-        ");
-        $check_completion_stmt->bind_param("i", $record_id);
-        $check_completion_stmt->execute();
-        $check_completion_stmt->bind_result(
-            $image_user, $table_user, $wpcontent_user,
-            $html_user, $scielo_user, $qc_user,
-            $xml_status, $scielo_status, $pubmed_status, $html_status
-        );
-        $check_completion_stmt->fetch();
-        $check_completion_stmt->close();
-        
-        // Check if all required tasks are completed
-        $all_completed = true;
-        
-        // Check user assignments (check if they have completion mark)
-        $user_fields = [
-            'Image_user' => $image_user,
-            'Table_user' => $table_user,
-            'WPContent_user' => $wpcontent_user,
-            'HTML_user' => $html_user,
-            'Scielo_user' => $scielo_user,
-            'QC_user' => $qc_user
-        ];
-        
-        foreach ($user_fields as $field_name => $user_field) {
-            if (empty($user_field) || strpos($user_field, '✓') === false) {
-                $all_completed = false;
-                break;
-            }
+        $check = $mysqli->prepare("SELECT Image_user, Table_user, WPContent_user, nlm_user, jats_user, clockss_user, HTML_user, new_html_user, Scielo_user, ebsco_user, pubmed_user, biblat_user, doaj_user, QC_user FROM unique_xml_jobs WHERE id = ?");
+        $check->bind_param("i", $record_id);
+        $check->execute();
+        $res = $check->get_result()->fetch_assoc();
+        $check->close();
+
+        $all_done = true;
+        foreach($res as $col => $val) {
+            $v = trim((string)$val);
+            if ($v === 'N/A' || $v === 'NA' || $v === '-') { continue; }
+            if (empty($v) || strpos($v, '✓') === false) { $all_done = false; break; }
         }
-        
-        // Check status fields (assuming 'Completed' status)
-        $status_fields = [$xml_status, $scielo_status, $pubmed_status, $html_status];
-        foreach ($status_fields as $status_field) {
-            if ($status_field !== 'Completed' && !empty($status_field)) {
-                $all_completed = false;
-                break;
-            }
-        }
-        
-        if ($all_completed) {
-            // Update overall status to Completed in unique_xml_jobs
-            $complete_stmt = $mysqli->prepare("
-                UPDATE unique_xml_jobs SET 
-                status = 'Completed',
-                updated_at = ?,
-                updated_by = ?
-                WHERE id = ?
-            ");
-            $complete_stmt->bind_param("ssi", $current_datetime, $username, $record_id);
-            $complete_stmt->execute();
-            $complete_stmt->close();
-            
-            // Update the jobs table with the username who completed it
-            if ($xml_job_id) {
-                updateJobsTableForXMLCompletion($xml_job_id, $username);
-            }
-            
-            $response['all_completed'] = true;
-            $response['message'] = 'Job marked as completed. All tasks are done!';
+
+        if ($all_done) {
+            // FIX: Mark as Despatched so color turns GREEN
+            $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', job_status = 'Despatched', updated_at = NOW() WHERE id = $record_id");
+            if ($xml_job_id) updateJobsTableForXMLCompletion($xml_job_id, $username);
+            $response['message'] = 'All tasks completed! Row is now Green.';
         } else {
-            $response['all_completed'] = false;
-            $response['message'] = 'Task completed successfully.';
+            $response['message'] = 'Task saved successfully.';
         }
         
         $mysqli->commit();
         $response['success'] = true;
-        
     } catch (Exception $e) {
         $mysqli->rollback();
         $response['error'] = $e->getMessage();
@@ -537,8 +282,6 @@ function handleCompleteRequest() {
 
 function updateJobsTableForXMLCompletion($job_id, $username) {
     global $mysqli;
-    
-    // Check if job exists in jobs table
     $check_stmt = $mysqli->prepare("SELECT job_id FROM jobs WHERE job_id = ?");
     $check_stmt->bind_param("i", $job_id);
     $check_stmt->execute();
@@ -547,618 +290,532 @@ function updateJobsTableForXMLCompletion($job_id, $username) {
     $check_stmt->close();
     
     if ($job_exists) {
-        // Update assigned_xml field in jobs table
-        $update_stmt = $mysqli->prepare("
-            UPDATE jobs 
-            SET assigned_xml = ?,
-                due_date_xml = CASE WHEN due_date_xml IS NULL THEN CURDATE() ELSE due_date_xml END
-            WHERE job_id = ?
-        ");
-        $update_stmt->bind_param("si", $username, $job_id);
+        // FIX: Added $username to bind_param because there are two '?' in the query
+        $update_stmt = $mysqli->prepare("UPDATE jobs SET assigned_xml = ?, due_date_xml = CASE WHEN due_date_xml IS NULL THEN CURDATE() ELSE due_date_xml END WHERE job_id = ?");
+        $update_stmt->bind_param("si", $username, $job_id); 
         $update_stmt->execute();
         $update_stmt->close();
-        
-        // Also update the process status if needed
-     /*   $process_stmt = $mysqli->prepare("
-            UPDATE jobs 
-            SET status = 'Completed'
-            WHERE job_id = ? AND assigned_xml IS NOT NULL
-        ");
-        $process_stmt->bind_param("i", $job_id);
-        $process_stmt->execute();
-        $process_stmt->close();
-        */
         return true;
     }
-    
     return false;
 }
 
 function fetchData() {
-    global $mysqli, $job_id, $username, $show_completed;
-    
+    global $mysqli, $username;
     if (ob_get_length()) ob_clean();
     header('Content-Type: application/json');
 
-    // Build the base query
-    $base_query = "SELECT 
-                    u.id, 
-                    u.job_id, 
-                    u.rec_date, 
-                    u.journal_name_client, 
-                    u.issue, 
-                    u.articles, 
-                    u.xml_status, 
-                    u.scielo_ebsco_status, 
-                    u.pubmed_biblat_status, 
-                    u.html_status, 
-                    u.tat_to_client, 
-                    u.missed_tat, 
-                    u.instruction_to_image, 
-                    u.remarks, 
-                    u.created_at, 
-                    u.created_by, 
-                    u.updated_at, 
-                    u.Image_user, 
-                    u.Table_user, 
-                    u.WPContent_user, 
-                    u.HTML_user, 
-                    u.Scielo_user, 
-                    u.QC_user, 
-                    u.`final Remarks`, 
-                    u.Billed, 
-                    u.status,
-                    j.assigned_xml as jobs_assigned_xml,
-                    j.process_id,
-                    j.job_date,
-                    j.mail_subject,
-                    j.word_count as jobs_word_count
-                  FROM unique_xml_jobs u
-                  LEFT JOIN jobs j ON u.job_id = j.job_id
-                  WHERE 1=1";
+    $show_completed = isset($_GET['show_completed']) && $_GET['show_completed'] == '1';
+    $search = trim($_GET['search'] ?? '');
+    $overall = trim($_GET['overall'] ?? '');
+    $billed = trim($_GET['billed'] ?? '');
+    $xml = trim($_GET['xml'] ?? '');
+    $html = trim($_GET['html'] ?? '');
+    $scielo = trim($_GET['scielo'] ?? '');
+    $pubmed = trim($_GET['pubmed'] ?? '');
 
-    // Add filters
-    $params = [];
+    $base_query = "SELECT u.*, j.assigned_xml as jobs_assigned_xml, j.process_id, j.job_date, j.mail_subject, j.word_count as jobs_word_count, 
+                   COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(u.journal_name_client, ''), '-') as client_name, 
+                   j.journal_issue 
+                   FROM unique_xml_jobs u 
+                   LEFT JOIN jobs j ON u.job_id = j.job_id 
+                   LEFT JOIN client_master c ON j.client_id = c.client_id 
+                   WHERE 1=1";
+
+    $params =[];
     $types = '';
     
-    if ($job_id > 0) {
-        $base_query .= " AND u.job_id = ?";
-        $params[] = $job_id;
-        $types .= 'i';
+    // Completely remove 'Despatched' jobs from this page so they move to the Upload Page unless Completed is filtered
+    if ($overall !== 'Completed') {
+        $base_query .= " AND (u.job_status IS NULL OR u.job_status != 'Despatched')";
     }
     
-    // Add status filter if not showing completed
-    if (!$show_completed) {
-        $base_query .= " AND (u.status IS NULL OR u.status != 'Completed')";
+    if (!$show_completed && $overall !== 'Completed') { 
+        $base_query .= " AND (u.status IS NULL OR u.status != 'Completed')"; 
+    }
+
+    if (!empty($search)) {
+        $base_query .= " AND (c.client_name LIKE ? OR c.team_client_name LIKE ? OR u.journal_name_client LIKE ? OR j.journal_issue LIKE ? OR u.issue LIKE ? OR u.job_id LIKE ? OR u.id LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $types .= 'sssssss';
+    }
+    if (!empty($overall)) {
+        if ($overall === 'Need to Assign') {
+            $base_query .= " AND (u.job_status IS NULL OR (u.job_status != 'Inprocess' AND u.job_status != 'Despatched'))";
+            $base_query .= " AND (u.status IS NULL OR (u.status != 'Inprocess' AND u.status != 'Completed'))";
+            $base_query .= " AND (
+                (u.Image_user IS NULL OR u.Image_user = '' OR u.Image_user = '-' OR u.Image_user = 'N/A' OR u.Image_user = 'NA')
+                AND (u.Table_user IS NULL OR u.Table_user = '' OR u.Table_user = '-' OR u.Table_user = 'N/A' OR u.Table_user = 'NA')
+                AND (u.WPContent_user IS NULL OR u.WPContent_user = '' OR u.WPContent_user = '-' OR u.WPContent_user = 'N/A' OR u.WPContent_user = 'NA')
+                AND (u.nlm_user IS NULL OR u.nlm_user = '' OR u.nlm_user = '-' OR u.nlm_user = 'N/A' OR u.nlm_user = 'NA')
+                AND (u.jats_user IS NULL OR u.jats_user = '' OR u.jats_user = '-' OR u.jats_user = 'N/A' OR u.jats_user = 'NA')
+                AND (u.clockss_user IS NULL OR u.clockss_user = '' OR u.clockss_user = '-' OR u.clockss_user = 'N/A' OR u.clockss_user = 'NA')
+                AND (u.HTML_user IS NULL OR u.HTML_user = '' OR u.HTML_user = '-' OR u.HTML_user = 'N/A' OR u.HTML_user = 'NA')
+                AND (u.new_html_user IS NULL OR u.new_html_user = '' OR u.new_html_user = '-' OR u.new_html_user = 'N/A' OR u.new_html_user = 'NA')
+                AND (u.Scielo_user IS NULL OR u.Scielo_user = '' OR u.Scielo_user = '-' OR u.Scielo_user = 'N/A' OR u.Scielo_user = 'NA')
+                AND (u.ebsco_user IS NULL OR u.ebsco_user = '' OR u.ebsco_user = '-' OR u.ebsco_user = 'N/A' OR u.ebsco_user = 'NA')
+                AND (u.pubmed_user IS NULL OR u.pubmed_user = '' OR u.pubmed_user = '-' OR u.pubmed_user = 'N/A' OR u.pubmed_user = 'NA')
+                AND (u.biblat_user IS NULL OR u.biblat_user = '' OR u.biblat_user = '-' OR u.biblat_user = 'N/A' OR u.biblat_user = 'NA')
+                AND (u.doaj_user IS NULL OR u.doaj_user = '' OR u.doaj_user = '-' OR u.doaj_user = 'N/A' OR u.doaj_user = 'NA')
+                AND (u.QC_user IS NULL OR u.QC_user = '' OR u.QC_user = '-' OR u.QC_user = 'N/A' OR u.QC_user = 'NA')
+            )";
+        } elseif ($overall === 'In Progress') {
+            $base_query .= " AND (
+                u.status = 'Inprocess' 
+                OR u.job_status = 'Inprocess' 
+                OR u.status = 'In Progress' 
+                OR u.job_status = 'In Progress'
+                OR (u.Table_user IS NOT NULL AND u.Table_user != '' AND u.Table_user != '-' AND u.Table_user != 'N/A' AND u.Table_user != 'NA')
+                OR (u.WPContent_user IS NOT NULL AND u.WPContent_user != '' AND u.WPContent_user != '-' AND u.WPContent_user != 'N/A' AND u.WPContent_user != 'NA')
+                OR (u.Image_user IS NOT NULL AND u.Image_user != '' AND u.Image_user != '-' AND u.Image_user != 'N/A' AND u.Image_user != 'NA')
+                OR (u.nlm_user IS NOT NULL AND u.nlm_user != '' AND u.nlm_user != '-' AND u.nlm_user != 'N/A' AND u.nlm_user != 'NA')
+                OR (u.jats_user IS NOT NULL AND u.jats_user != '' AND u.jats_user != '-' AND u.jats_user != 'N/A' AND u.jats_user != 'NA')
+                OR (u.clockss_user IS NOT NULL AND u.clockss_user != '' AND u.clockss_user != '-' AND u.clockss_user != 'N/A' AND u.clockss_user != 'NA')
+                OR (u.HTML_user IS NOT NULL AND u.HTML_user != '' AND u.HTML_user != '-' AND u.HTML_user != 'N/A' AND u.HTML_user != 'NA')
+                OR (u.new_html_user IS NOT NULL AND u.new_html_user != '' AND u.new_html_user != '-' AND u.new_html_user != 'N/A' AND u.new_html_user != 'NA')
+                OR (u.Scielo_user IS NOT NULL AND u.Scielo_user != '' AND u.Scielo_user != '-' AND u.Scielo_user != 'N/A' AND u.Scielo_user != 'NA')
+                OR (u.ebsco_user IS NOT NULL AND u.ebsco_user != '' AND u.ebsco_user != '-' AND u.ebsco_user != 'N/A' AND u.ebsco_user != 'NA')
+                OR (u.pubmed_user IS NOT NULL AND u.pubmed_user != '' AND u.pubmed_user != '-' AND u.pubmed_user != 'N/A' AND u.pubmed_user != 'NA')
+                OR (u.biblat_user IS NOT NULL AND u.biblat_user != '' AND u.biblat_user != '-' AND u.biblat_user != 'N/A' AND u.biblat_user != 'NA')
+                OR (u.doaj_user IS NOT NULL AND u.doaj_user != '' AND u.doaj_user != '-' AND u.doaj_user != 'N/A' AND u.doaj_user != 'NA')
+                OR (u.QC_user IS NOT NULL AND u.QC_user != '' AND u.QC_user != '-' AND u.QC_user != 'N/A' AND u.QC_user != 'NA')
+            ) AND (u.job_status IS NULL OR u.job_status != 'Despatched') AND (u.status IS NULL OR u.status != 'Completed')";
+        } elseif ($overall === 'Completed') {
+            $base_query .= " AND (u.status = 'Completed' OR u.job_status = 'Despatched')";
+        }
+    }
+    if (!empty($billed)) {
+        if ($billed === 'Yes') {
+            $base_query .= " AND u.Billed = 'Yes'";
+        } elseif ($billed === 'No') {
+            $base_query .= " AND (u.Billed = 'No' OR u.Billed IS NULL OR u.Billed = '' OR u.Billed != 'Yes')";
+        }
+    }
+    if (!empty($xml)) {
+        if ($xml === 'Done') {
+            $base_query .= " AND (u.nlm_user LIKE '%✓%' OR u.jats_user LIKE '%✓%')";
+        } elseif ($xml === 'In Progress') {
+            $base_query .= " AND (
+                (u.nlm_user IS NOT NULL AND u.nlm_user != '' AND u.nlm_user != '-' AND u.nlm_user != 'N/A' AND u.nlm_user != 'NA' AND u.nlm_user NOT LIKE '%✓%')
+                OR (u.jats_user IS NOT NULL AND u.jats_user != '' AND u.jats_user != '-' AND u.jats_user != 'N/A' AND u.jats_user != 'NA' AND u.jats_user NOT LIKE '%✓%')
+            )";
+        } elseif ($xml === 'Pending') {
+            $base_query .= " AND (
+                ( (u.nlm IS NOT NULL AND u.nlm != '' AND u.nlm != '-' AND u.nlm != '0') AND (u.nlm_user IS NULL OR u.nlm_user = '' OR u.nlm_user = '-' OR u.nlm_user NOT LIKE '%✓%') )
+                OR ( (u.jats IS NOT NULL AND u.jats != '' AND u.jats != '-' AND u.jats != '0') AND (u.jats_user IS NULL OR u.jats_user = '' OR u.jats_user = '-' OR u.jats_user NOT LIKE '%✓%') )
+            )";
+        }
+    }
+    if (!empty($html)) {
+        if ($html === 'Done') {
+            $base_query .= " AND (u.HTML_user LIKE '%✓%' OR u.new_html_user LIKE '%✓%' OR u.direct_html_user LIKE '%✓%')";
+        } elseif ($html === 'In Progress') {
+            $base_query .= " AND (
+                (u.HTML_user IS NOT NULL AND u.HTML_user != '' AND u.HTML_user != '-' AND u.HTML_user != 'N/A' AND u.HTML_user != 'NA' AND u.HTML_user NOT LIKE '%✓%')
+                OR (u.new_html_user IS NOT NULL AND u.new_html_user != '' AND u.new_html_user != '-' AND u.new_html_user != 'N/A' AND u.new_html_user != 'NA' AND u.new_html_user NOT LIKE '%✓%')
+                OR (u.direct_html_user IS NOT NULL AND u.direct_html_user != '' AND u.direct_html_user != '-' AND u.direct_html_user != 'N/A' AND u.direct_html_user != 'NA' AND u.direct_html_user NOT LIKE '%✓%')
+            )";
+        } elseif ($html === 'Pending') {
+            $base_query .= " AND (
+                ( (u.html IS NOT NULL AND u.html != '' AND u.html != '-' AND u.html != '0') AND (u.HTML_user IS NULL OR u.HTML_user = '' OR u.HTML_user = '-' OR u.HTML_user NOT LIKE '%✓%') )
+                OR ( (u.new_html IS NOT NULL AND u.new_html != '' AND u.new_html != '-' AND u.new_html != '0') AND (u.new_html_user IS NULL OR u.new_html_user = '' OR u.new_html_user = '-' OR u.new_html_user NOT LIKE '%✓%') )
+                OR ( (u.direct_html IS NOT NULL AND u.direct_html != '' AND u.direct_html != '-' AND u.direct_html != '0') AND (u.direct_html_user IS NULL OR u.direct_html_user = '' OR u.direct_html_user = '-' OR u.direct_html_user NOT LIKE '%✓%') )
+            )";
+        }
+    }
+    if (!empty($scielo)) {
+        if ($scielo === 'Done') {
+            $base_query .= " AND (u.Scielo_user LIKE '%✓%' OR u.ebsco_user LIKE '%✓%')";
+        } elseif ($scielo === 'In Progress') {
+            $base_query .= " AND (
+                (u.Scielo_user IS NOT NULL AND u.Scielo_user != '' AND u.Scielo_user != '-' AND u.Scielo_user != 'N/A' AND u.Scielo_user != 'NA' AND u.Scielo_user NOT LIKE '%✓%')
+                OR (u.ebsco_user IS NOT NULL AND u.ebsco_user != '' AND u.ebsco_user != '-' AND u.ebsco_user != 'N/A' AND u.ebsco_user != 'NA' AND u.ebsco_user NOT LIKE '%✓%')
+            )";
+        } elseif ($scielo === 'Pending') {
+            $base_query .= " AND (
+                ( (u.scielo IS NOT NULL AND u.scielo != '' AND u.scielo != '-' AND u.scielo != '0') AND (u.Scielo_user IS NULL OR u.Scielo_user = '' OR u.Scielo_user = '-' OR u.Scielo_user NOT LIKE '%✓%') )
+                OR ( (u.ebsco IS NOT NULL AND u.ebsco != '' AND u.ebsco != '-' AND u.ebsco != '0') AND (u.ebsco_user IS NULL OR u.ebsco_user = '' OR u.ebsco_user = '-' OR u.ebsco_user NOT LIKE '%✓%') )
+            )";
+        }
+    }
+    if (!empty($pubmed)) {
+        if ($pubmed === 'Done') {
+            $base_query .= " AND (u.pubmed_user LIKE '%✓%' OR u.biblat_user LIKE '%✓%' OR u.doaj_user LIKE '%✓%')";
+        } elseif ($pubmed === 'In Progress') {
+            $base_query .= " AND (
+                (u.pubmed_user IS NOT NULL AND u.pubmed_user != '' AND u.pubmed_user != '-' AND u.pubmed_user != 'N/A' AND u.pubmed_user != 'NA' AND u.pubmed_user NOT LIKE '%✓%')
+                OR (u.biblat_user IS NOT NULL AND u.biblat_user != '' AND u.biblat_user != '-' AND u.biblat_user != 'N/A' AND u.biblat_user != 'NA' AND u.biblat_user NOT LIKE '%✓%')
+                OR (u.doaj_user IS NOT NULL AND u.doaj_user != '' AND u.doaj_user != '-' AND u.doaj_user != 'N/A' AND u.doaj_user != 'NA' AND u.doaj_user NOT LIKE '%✓%')
+            )";
+        } elseif ($pubmed === 'Pending') {
+            $base_query .= " AND (
+                ( (u.pubmed IS NOT NULL AND u.pubmed != '' AND u.pubmed != '-' AND u.pubmed != '0') AND (u.pubmed_user IS NULL OR u.pubmed_user = '' OR u.pubmed_user = '-' OR u.pubmed_user NOT LIKE '%✓%') )
+                OR ( (u.biblat IS NOT NULL AND u.biblat != '' AND u.biblat != '-' AND u.biblat != '0') AND (u.biblat_user IS NULL OR u.biblat_user = '' OR u.biblat_user = '-' OR u.biblat_user NOT LIKE '%✓%') )
+                OR ( (u.doaj IS NOT NULL AND u.doaj != '' AND u.doaj != '-' AND u.doaj != '0') AND (u.doaj_user IS NULL OR u.doaj_user = '' OR u.doaj_user = '-' OR u.doaj_user NOT LIKE '%✓%') )
+            )";
+        }
     }
     
-    $order_query = " ORDER BY 
-                    CASE 
-                        WHEN u.status = 'In Progress' THEN 1
-                        WHEN u.status = 'Need to Assign' THEN 2
-                        WHEN u.status = 'Completed' THEN 3
-                        ELSE 4
-                    END,
-                    u.rec_date DESC";
-    
+    // --- CHANGED CODE: Matching the sorting order exactly with UQ Process ---
+    $order_query = " ORDER BY j.job_date DESC, u.job_id DESC";
     $full_query = $base_query . $order_query;
     
     if (!empty($params)) {
         $stmt = $mysqli->prepare($full_query);
-        if ($stmt) {
-            $stmt->bind_param($types, ...$params);
-            $stmt->execute();
-            $result = $stmt->get_result();
-        } else {
-            // If prepare fails, fall back to regular query
-            $result = $mysqli->query($full_query);
-        }
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
     } else {
         $result = $mysqli->query($full_query);
     }
-    
-    $data = [];
-    $current_date = new DateTime();
 
+    // --- NEW LOGIC: Fetch names from DB to replace IDs ---
+    $user_map = [];
+    $u_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master");
+    if ($u_res) {
+        while ($u = $u_res->fetch_assoc()) {
+            $user_map[$u['employee_username']] = $u['employee_name'];
+        }
+    }
+    // -----------------------------------------------------
+    
+    $data =[];
     if ($result) {
         while ($row = $result->fetch_assoc()) {
-            foreach ($row as $key => $value) {
-                if ($value === null) {
-                    $row[$key] = '';
+            foreach ($row as $key => $value) if ($value === null) $row[$key] = '';
+
+            // --- NEW LOGIC: Dynamic N/A calculation exactly like UQ Process ---
+            $safe_trim = function($val) { return trim((string)$val); };
+            $img_na = ($safe_trim($row['instruction_to_image'])==='' || $safe_trim($row['instruction_to_image'])==='-' || strtolower($safe_trim($row['instruction_to_image']))==='no images');
+            $nlm_na = ($safe_trim($row['nlm'])==='' || $safe_trim($row['nlm'])==='-');
+            $jats_na = ($safe_trim($row['jats'])==='' || $safe_trim($row['jats'])==='-');
+            $clockss_na = ($safe_trim($row['clockss'])==='' || $safe_trim($row['clockss'])==='-');
+            $html_na = ($safe_trim($row['html'])==='' || $safe_trim($row['html'])==='-');
+            $nhtml_na = (($safe_trim($row['new_html'])==='' || $safe_trim($row['new_html'])==='-') && ($safe_trim($row['direct_html'])==='' || $safe_trim($row['direct_html'])==='-'));
+            $scielo_na = ($safe_trim($row['scielo'])==='' || $safe_trim($row['scielo'])==='-');
+            $ebsco_na = ($safe_trim($row['ebsco'])==='' || $safe_trim($row['ebsco'])==='-');
+            $pubmed_na = ($safe_trim($row['pubmed'])==='' || $safe_trim($row['pubmed'])==='-');
+            $biblat_na = ($safe_trim($row['biblat'])==='' || $safe_trim($row['biblat'])==='-');
+            $doaj_na = ($safe_trim($row['doaj'])==='' || $safe_trim($row['doaj'])==='-');
+
+            // Force N/A to JSON response if data is not applicable
+            if ($img_na && $safe_trim($row['Image_user']) === '') $row['Image_user'] = 'N/A';
+            if ($nlm_na && $safe_trim($row['nlm_user']) === '') $row['nlm_user'] = 'N/A';
+            if ($jats_na && $safe_trim($row['jats_user']) === '') $row['jats_user'] = 'N/A';
+            if ($clockss_na && $safe_trim($row['clockss_user']) === '') $row['clockss_user'] = 'N/A';
+            if ($html_na && $safe_trim($row['HTML_user']) === '') $row['HTML_user'] = 'N/A';
+            if ($nhtml_na && $safe_trim($row['new_html_user']) === '') $row['new_html_user'] = 'N/A';
+            if ($scielo_na && $safe_trim($row['Scielo_user']) === '') $row['Scielo_user'] = 'N/A';
+            if ($ebsco_na && $safe_trim($row['ebsco_user']) === '') $row['ebsco_user'] = 'N/A';
+            if ($pubmed_na && $safe_trim($row['pubmed_user']) === '') $row['pubmed_user'] = 'N/A';
+            if ($biblat_na && $safe_trim($row['biblat_user']) === '') $row['biblat_user'] = 'N/A';
+            if ($doaj_na && $safe_trim($row['doaj_user']) === '') $row['doaj_user'] = 'N/A';
+
+            // --- Swap ID with FULL Name for Task Columns ---
+            $cols_to_map = ['Image_user', 'Table_user', 'WPContent_user', 'nlm_user', 'jats_user', 'clockss_user', 'HTML_user', 'new_html_user', 'Scielo_user', 'ebsco_user', 'pubmed_user', 'biblat_user', 'doaj_user', 'QC_user'];
+                foreach ($cols_to_map as $c) {
+                    $val = trim((string)$row[$c]);
+                    $row[$c . '_raw'] = $val;   // <-- NEW LINE (raw username store panna)
+                    if ($val !== '' && $val !== '-' && $val !== 'N/A' && $val !== 'NA') {
+                    $parts = explode('/', $val);
+                    $uname = trim($parts[0]);
+                    
+                    // If ID exists in map, swap it with Full Name
+                    if (isset($user_map[$uname])) {
+                        // Display the Full Name exactly as it is in the database
+                        $parts[0] = trim($user_map[$uname]); 
+                        $row[$c] = implode('/', $parts);
+                    }
                 }
             }
-
-            // Calculate TAT status
+            
             $tat_status = '';
-            if (!empty($row['rec_date']) && !empty($row['tat_to_client'])) {
+            if (!empty($row['tat_to_client'])) {
                 try {
-                    $rec_date = new DateTime($row['rec_date']);
+                    $tat_date = new DateTime($row['tat_to_client']);
                     $current_date = new DateTime();
-                    $interval = $rec_date->diff($current_date);
-                    $days_passed = $interval->days;
                     
-                    if ($days_passed > (int)$row['tat_to_client']) {
+                    $tat_date->setTime(0, 0, 0);
+                    $current_date->setTime(0, 0, 0);
+                    
+                    $interval = $current_date->diff($tat_date);
+                    $days_diff = (int)$interval->format('%R%a');
+                    
+                    if ($days_diff < 0) {
                         $tat_status = 'Overdue';
-                    } elseif ($days_passed == (int)$row['tat_to_client']) {
+                    } elseif ($days_diff === 0) {
                         $tat_status = 'Due Today';
                     } else {
-                        $days_left = (int)$row['tat_to_client'] - $days_passed;
-                        $tat_status = $days_left . ' days left';
+                        $tat_status = $days_diff . ' days left';
                     }
-                } catch (Exception $e) {
-                    $tat_status = 'N/A';
+                } catch (Exception $e) { 
+                    $tat_status = 'N/A'; 
                 }
             }
             $row['tat_status'] = $tat_status;
 
-            // Check which tasks are assigned to current user and extract details
-            $row['my_tasks'] = [];
-            $task_fields = [
-                'Image_user' => 'Image Processing',
-                'Table_user' => 'Table Processing',
-                'WPContent_user' => 'WP Content',
-                'HTML_user' => 'HTML',
-                'Scielo_user' => 'Scielo/EBSCO',
-                'QC_user' => 'QC'
-            ];
-            
-            foreach ($task_fields as $field => $task_name) {
-                if (!empty($row[$field])) {
-                    $parts = explode('/', $row[$field]);
-                    if (isset($parts[0]) && $parts[0] === $username) {
-                        $row['my_tasks'][$field] = [
-                            'name' => $task_name,
-                            'value' => $row[$field],
-                            'username' => $parts[0] ?? '',
-                            'date' => $parts[1] ?? '',
-                            'sequence' => $parts[2] ?? '',
-                            'is_completed' => strpos($row[$field], '✓') !== false
-                        ];
-                    }
-                }
-            }
-
-            // Count completed tasks
-            $row['completed_tasks'] = 0;
-            $row['total_tasks'] = 0;
-            
-            foreach ($task_fields as $field => $task_name) {
-                if (!empty($row[$field])) {
-                    $row['total_tasks']++;
-                    if (strpos($row[$field], '✓') !== false) {
-                        $row['completed_tasks']++;
-                    }
-                } else {
-                    $row['total_tasks']++;
-                }
-            }
-
-            // Add status flags
-            $row['is_assigned_to_me'] = !empty($row['my_tasks']);
-            $row['progress_percentage'] = $row['total_tasks'] > 0 ? 
-                round(($row['completed_tasks'] / $row['total_tasks']) * 100) : 0;
-                
-            // Check if job is already assigned in jobs table
-            $row['jobs_xml_assigned'] = !empty($row['jobs_assigned_xml']);
-            $row['jobs_xml_assignee'] = $row['jobs_assigned_xml'] ?? '';
-
             $data[] = $row;
         }
-        if (isset($stmt)) {
-            $stmt->close();
-        }
-    } else {
-        // Log error for debugging
-        error_log("Query failed: " . $mysqli->error . " Query: " . $full_query);
     }
-    
     echo json_encode(['data' => $data]);
     exit;
 }
-require 'header.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>XML Jobs Management - <?php echo $job_id > 0 ? "Job ID: $job_id" : 'All Jobs'; ?></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Jobs Management - Flat Wide Grid</title>
+    
+    <!-- Bootstrap 5 & DataTables -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
     <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        :root {
+            --bg-color: #f5f7fa;
+            --header-bg: #5e6b77;
         }
-        .spin {
-            animation: spin 1s linear infinite;
+        
+        html, body {
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12.5px;
+            color: #2c3e50;
+            overflow-x: hidden !important;
+            max-width: 100vw;
         }
-        td.editable { cursor: pointer; } 
-        .status-badge { font-size: 0.8em; }
-        .overdue { background-color: #dc3545 !important; color: white !important; }
-        .due-today { background-color: #ffc107 !important; color: black !important; }
-        .on-track { background-color: #28a745 !important; color: white !important; }
-        .task-badge { 
-            font-size: 0.7em; 
-            margin: 1px;
-            padding: 2px 5px;
+        .container-fluid {
+            max-width: 100%;
+            overflow-x: hidden;
         }
-        .progress-sm {
-            height: 5px;
-            margin-top: 3px;
+        .card {
+            max-width: 100%;
+            overflow: hidden;
         }
-        .assign-btn {
-            font-size: 0.7em;
-            padding: 1px 4px;
-            margin: 1px;
+
+        /* 1. Consistent Header Styling */
+        table.dataTable {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            margin-top: 0 !important;
+            font-size: 12.5px;
+            width: 100% !important;
         }
-        .my-task-row {
-            background-color: #e8f4f8 !important;
+
+        table.dataTable thead th { 
+            position: sticky !important;
+            top: 0;
+            z-index: 20 !important;
+            background-color: var(--header-bg) !important; 
+            color: #ffffff !important; 
+            font-size: 12.5px;
+            font-weight: 600;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            padding: 8px 10px !important;
+            white-space: nowrap;
         }
-        .table th { font-size: 0.85rem; }
-        .table td { font-size: 0.82rem; }
-        .completed-row {
-            opacity: 0.7;
+        table.dataTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
-        .status-filter {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
+
+        /* 2. Cell Padding & Text Alignments */
+        table.dataTable tbody td { 
+            vertical-align: middle !important; 
+            text-align: center;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            padding: 6px 10px !important;
+            white-space: nowrap;
+            font-size: 12.5px;
         }
-        .completed-task {
-            text-decoration: line-through;
-            color: #28a745;
-            font-weight: bold;
+        table.dataTable tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
-        .sequence-input {
-            width: 60px;
-            display: inline-block;
-            margin-left: 5px;
+
+        /* 3. Zebra Striping matching UQ Process */
+        table.dataTable tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
         }
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            min-width: 300px;
-            max-width: 400px;
+        table.dataTable tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
         }
-        .toast {
-            opacity: 1 !important;
+
+        /* 4. Full Row Hover Effect */
+        table.dataTable tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
         }
-        .status-bill-group {
-            background-color: #f0f8ff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
+
+        /* 5. Sticky Columns for Unassigned Jobs with Exact Widths (No Gaps, No Overlap) */
+        table.dataTable thead th:nth-child(1), table.dataTable tbody td:nth-child(1) {
+            position: sticky !important; left: 0;
+            width: 45px !important; min-width: 45px !important; max-width: 45px !important;
+            box-sizing: border-box !important;
         }
-        .jobs-info {
-            background-color: #fff3cd;
-            padding: 5px 10px;
-            border-radius: 4px;
-            margin: 2px 0;
-            font-size: 0.75rem;
+        table.dataTable thead th:nth-child(2), table.dataTable tbody td:nth-child(2) {
+            position: sticky !important; left: 45px;
+            width: 140px !important; min-width: 140px !important; max-width: 140px !important;
+            box-sizing: border-box !important;
         }
-        .jobs-assigned {
-            background-color: #d1ecf1;
-            padding: 5px 10px;
-            border-radius: 4px;
-            margin: 2px 0;
-            font-size: 0.75rem;
+        table.dataTable thead th:nth-child(3), table.dataTable tbody td:nth-child(3) {
+            position: sticky !important; left: 185px;
+            width: 135px !important; min-width: 135px !important; max-width: 135px !important;
+            box-sizing: border-box !important;
+        }
+        table.dataTable thead th:nth-child(4), table.dataTable tbody td:nth-child(4) {
+            position: sticky !important; left: 320px;
+            width: 140px !important; min-width: 140px !important; max-width: 140px !important;
+            border-right: 1px solid #dee2e6 !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Fixed background for sticky columns to avoid see-through/overlap */
+        table.dataTable tbody tr:nth-child(even) td:nth-child(-n+4) { background-color: #f2f4f6 !important; }
+        table.dataTable tbody tr:nth-child(odd) td:nth-child(-n+4) { background-color: #ffffff !important; }
+        table.dataTable tbody tr:hover td:nth-child(-n+4) { background-color: #c4cbd3 !important; }
+
+        table.dataTable tbody td:nth-child(-n+4) {
+            z-index: 10 !important;
+        }
+
+        /* Apply z-index only to the first 4 headers */
+        table.dataTable thead th:nth-child(-n+4) {
+            z-index: 30 !important;
+            background-color: var(--header-bg) !important;
+        }
+
+        /* 6. Process Raw Numbers and Badges */
+        .badge-article { color: #000; font-weight: bold; font-size: 12px; }
+        .badge-cyan-num { color: #000; font-weight: 700; font-size: 12px; }
+        .badge-blue-status { background-color: #0d6efd; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 10px; }
+        .badge-missed { background-color: #dc3545; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; }
+
+        .status-inprocess { background-color: #fd7e14 !important; color: white !important; border-radius: 12px; padding: 3px 10px; font-weight: 700; font-size: 10px; }
+        .status-despatched { background-color: #198754 !important; color: white !important; border-radius: 12px; padding: 3px 10px; font-weight: 700; font-size: 10px; }
+        
+
+        .form-control, .form-select, .input-group-text, .btn-sm {
+            font-size: 12.5px !important;
+        }
+        .notification { position: fixed; top: 20px; right: 20px; z-index: 1060; min-width: 300px; }
+
+        .table-scroll-container {
+            max-height: calc(100vh - 380px);
+            overflow: auto;
+            position: relative;
+            border-top: 1px solid #dee2e6;
         }
     </style>
+
 </head>
-<body class="bg-light">
-    <!-- Notification Toast Container -->
+<body>
+    <?php require 'header.php'; ?>
+    <br><br><br>
+
     <div id="notificationContainer" class="notification"></div>
     
-    <div class="container-fluid mt-3">
-        <div class="card shadow">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">XML Jobs Management <?php echo $job_id > 0 ? "- Job ID: $job_id" : ''; ?></h4>
-                <div class="d-flex align-items-center">
-                    <span class="me-3">Logged in as: <strong><?php echo htmlspecialchars($username); ?></strong></span>
-                    
-                    <!-- Show Completed toggle -->
-                    <div class="form-check form-check-inline me-3">
-                        <input class="form-check-input" type="checkbox" id="showCompleted" 
-                               <?php echo $show_completed ? 'checked' : ''; ?>
-                               onchange="toggleShowCompleted()">
-                        <label class="form-check-label text-white" for="showCompleted">
-                            Show Completed
-                        </label>
+    <div class="container-fluid mt-2 px-4 pb-5">
+        <div class="card mb-4">
+            <!-- Header -->
+            <div class="card-header d-flex justify-content-between align-items-center py-3" style="background-color: #5e6b77; border-bottom: 2px solid #475569;">
+                <h5 class="mb-0 fw-bold text-white"><i class="bi bi-table me-2 text-white"></i>Unassigned Jobs</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-light text-dark border px-3 py-2 fw-medium rounded-pill">
+                        <i class="bi bi-person-circle text-muted me-1"></i> <?php echo h($username); ?>
+                    </span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="showCompleted" <?php echo $show_completed ? 'checked' : ''; ?> onchange="toggleShowCompleted()" style="cursor: pointer;">
+                        <label class="form-check-label small fw-medium text-white" for="showCompleted" style="cursor: pointer; padding-top:2px;">Show Completed</label>
                     </div>
-                    
-                    <?php if($job_id > 0): ?>
-                        <a href="unassigned_xml_jobs.php" class="btn btn-light btn-sm">View All Jobs</a>
-                    <?php else: ?>
-                        <div class="input-group" style="width: 250px;">
-                            <input type="number" id="jobIdFilter" class="form-control" placeholder="Enter Job ID" value="<?php echo $job_id > 0 ? $job_id : ''; ?>">
-                            <button class="btn btn-light" onclick="filterByJobId()">
-                                <i class="bi bi-filter"></i>
-                            </button>
-                        </div>
-                    <?php endif; ?>
                 </div>
             </div>
-            <div class="card-body">
-                <!-- Status Summary -->
-                <div class="row mb-3 status-filter">
-                    <div class="col-md-12">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="filterByStatus('')">All</button>
-                            <button type="button" class="btn btn-outline-warning btn-sm" onclick="filterByStatus('In Progress')">In Progress</button>
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="filterByStatus('Need to Assign')">Need to Assign</button>
-                            <button type="button" class="btn btn-outline-success btn-sm" onclick="filterByStatus('Completed')">Completed</button>
-                            <button type="button" class="btn btn-outline-info btn-sm" onclick="filterByStatus('assigned_to_me')">My Tasks</button>
+            
+            <!-- Filter Bar -->
+            <div class="card-body bg-white border-bottom py-4 px-3" style="padding-top: 22px !important; padding-bottom: 22px !important;">
+                <form method="get" class="row g-2 align-items-center">
+                    <?php if($show_completed): ?> <input type="hidden" name="show_completed" value="1"> <?php endif; ?>
+                    
+                    <div class="col-md-2">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" value="<?= h($search) ?>" placeholder="Search ID / Journal..." class="form-control border-start-0 ps-0">
                         </div>
                     </div>
-                </div>
-                
-                <table id="xmlJobsTable" class="table table-hover table-bordered w-100">
-                    <thead>
+                    
+                    <div class="col"><select name="overall" class="form-select form-select-sm"><option value="">Overall Status</option><option value="Need to Assign" <?= $overall === 'Need to Assign' ? 'selected' : '' ?>>Need to Assign</option><option value="In Progress" <?= $overall === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Completed" <?= $overall === 'Completed' ? 'selected' : '' ?>>Completed</option></select></div>
+                    <div class="col"><select name="billed" class="form-select form-select-sm"><option value="">Billing</option><option value="Yes" <?= $billed === 'Yes' ? 'selected' : '' ?>>Billed</option><option value="No" <?= $billed === 'No' ? 'selected' : '' ?>>Unbilled</option></select></div>
+                    <div class="col"><select name="xml" class="form-select form-select-sm"><option value="">NLM/JATS</option><option value="Pending" <?= $xml === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $xml === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $xml === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
+                    <div class="col"><select name="html" class="form-select form-select-sm"><option value="">HTML</option><option value="Pending" <?= $html === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $html === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $html === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
+                    <div class="col"><select name="scielo" class="form-select form-select-sm"><option value="">SciELO</option><option value="Pending" <?= $scielo === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $scielo === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $scielo === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
+                    <div class="col"><select name="pubmed" class="form-select form-select-sm"><option value="">PubMed</option><option value="Pending" <?= $pubmed === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $pubmed === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $pubmed === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
+
+                    <div class="col-auto d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm px-3 shadow-sm">Filter</button>
+                        <a href="?" class="btn btn-light btn-sm border px-2 text-muted" title="Clear Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Single Line Wide Table Data -->
+            <div class="card-body p-0">
+                <table id="xmlJobsTable" class="table table-hover w-100 mb-0">
+                   <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Job ID</th>
-                            <th>Date</th>
-                            <th>Journal/Client</th>
-                            <th>Issue</th>
-                            <th>Articles</th>
-                            
-                            <!-- Status Columns -->
-                            <th>XML Status</th>
-                            <th>Scielo/EBSCO</th>
-                            <th>PubMed/Biblat</th>
-                            <th>HTML Status</th>
-                            
-                            <!-- TAT Info -->
-                            <th>TAT Days</th>
-                            <th>TAT Status</th>
+                            <th>S.No</th>
+                            <th>Rec Date (Time)</th>
+                            <th>Client Name</th>
+                            <th>Journal / Issue</th>
+                            <th>No.of Article</th>
+                            <th>NLM</th>
+                            <th>JATS</th>
+                            <th>Clockss</th>
+                            <th>Scielo</th>
+                            <th>EBSCO</th>
+                            <th>PubMed</th>
+                            <th>Biblat</th>
+                            <th>DOAJ</th>
+                            <th>HTML</th>
+                            <th>New HTML</th>
+                            <th>Direct HTML</th>
+                            <th>Job Status</th>
+                            <th>TAT</th>
                             <th>Missed TAT</th>
-                            
-                            <!-- Task Assignments -->
+                            <th>Img Inst.</th>
+                            <!-- Task Columns -->
                             <th>Image</th>
                             <th>Table</th>
-                            <th>WP Content</th>
+                            <th>WP</th>
+                            <th>NLM</th>
+                            <th>JATS</th>
+                            <th>Clockss</th>
                             <th>HTML</th>
+                            <th>New HTML/Direct HTML</th>
                             <th>Scielo</th>
+                            <th>EBSCO</th>
+                            <th>PubMed</th>
+                            <th>Biblat</th>
+                            <th>DOAJ</th>
                             <th>QC</th>
-                            
-                            <!-- Progress -->
-                            <th>Progress</th>
-                            <th>My Tasks</th>
-                            
-                            <!-- Jobs Table Info -->
-                            <th>Jobs XML</th>
-                            <th>Job Info</th>
-                            
-                            <!-- Other Info -->
-                            <th>Instructions</th>
+                            <th>Despatched Date</th>
                             <th>Remarks</th>
-                            <th>Final Remarks</th>
-                            <th>Billed</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
+
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Status & Bill Update -->
-    <div class="modal fade" id="statusBillModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Status & Billing</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="statusBillForm">
-                        <input type="hidden" id="sbRecordId">
-                        <input type="hidden" id="sbJobId">
-                        
-                        <div class="status-bill-group">
-                            <h6>Job Information</h6>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Job ID</label>
-                                    <input type="text" id="sbJobIdDisplay" class="form-control" readonly>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Articles</label>
-                                    <input type="text" id="sbArticles" class="form-control" readonly>
-                                </div>
-                            </div>
-                            
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> When status is set to "Completed", the username will be automatically updated in the jobs table (assigned_xml field).
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="sbStatus" class="form-label">Status *</label>
-                                    <select id="sbStatus" class="form-select" required>
-                                        <option value="Need to Assign">Need to Assign</option>
-                                        <option value="In Progress">In Progress</option>
-                                        <option value="Completed">Completed</option>
-                                        <option value="On Hold">On Hold</option>
-                                        <option value="Cancelled">Cancelled</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="sbBilled" class="form-label">Billed *</label>
-                                    <select id="sbBilled" class="form-select" required>
-                                        <option value="">Select Billing Status</option>
-                                        <option value="Yes">Yes</option>
-                                        <option value="No">No</option>
-                                        <option value="Partial">Partial</option>
-                                        <option value="Pending">Pending</option>
-                                        <option value="Disputed">Disputed</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label for="sbRemarks" class="form-label">Remarks</label>
-                                <textarea id="sbRemarks" class="form-control" rows="3" placeholder="Enter any remarks about this job"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label for="sbFinalRemarks" class="form-label">Final Remarks</label>
-                                <textarea id="sbFinalRemarks" class="form-control" rows="3" placeholder="Enter final remarks for completed jobs"></textarea>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveStatusBillChanges()">Save Changes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Assign Task with Sequence Number -->
-    <div class="modal fade" id="assignModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Assign Task</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="assignForm">
-                        <input type="hidden" id="assignRecordId">
-                        <input type="hidden" id="assignField">
-                        <input type="hidden" id="assignFieldName">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Task: <strong id="modalTaskName"></strong></label>
-                            <div class="alert alert-info">
-                                Format: <code>username/date-month/number</code><br>
-                                Example: <code>john/06-02/50</code>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="assignSequence" class="form-label">Sequence Number</label>
-                            <input type="number" id="assignSequence" class="form-control" min="1" value="1" required>
-                            <div class="form-text">Enter the sequence number for this task</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="skipConfirmation">
-                                <label class="form-check-label" for="skipConfirmation">
-                                    Don't ask for confirmation again
-                                </label>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="confirmAssignTask()">Assign</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Update Sequence -->
-    <div class="modal fade" id="updateSequenceModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Sequence Number</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="updateSequenceForm">
-                        <input type="hidden" id="seqRecordId">
-                        <input type="hidden" id="seqField">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Current Value: <code id="currentValue"></code></label>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="newSequence" class="form-label">New Sequence Number</label>
-                            <input type="number" id="newSequence" class="form-control" min="1" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="updateSequenceNumber()">Update</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Remarks/Instructions -->
-    <div class="modal fade" id="remarksModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="remarksForm">
-                        <input type="hidden" id="modalRecordId">
-                        <input type="hidden" id="modalFieldName">
-                        
-                        <div class="mb-3">
-                            <label id="modalFieldLabel" class="form-label"></label>
-                            <textarea id="modalFieldValue" class="form-control" rows="4"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveModalChanges()">Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Status Update Only -->
-    <div class="modal fade" id="statusModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Update Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="statusForm">
-                        <input type="hidden" id="statusRecordId">
-                        <input type="hidden" id="statusFieldName">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Select Status</label>
-                            <select id="statusValue" class="form-select">
-                                <option value="Need to Assign">Need to Assign</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="On Hold">On Hold</option>
-                                <option value="Cancelled">Cancelled</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveStatusChanges()">Save</button>
-                </div>
             </div>
         </div>
     </div>
@@ -1166,680 +823,335 @@ require 'header.php';
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
     <script>
-    var table;
-    var skipConfirmation = localStorage.getItem('skipAssignConfirmation') === 'true';
-    
-    // Notification functions
+    let table;
+    const currentUser = '<?php echo h($username); ?>';
+
     function showNotification(message, type = 'success') {
-        var alertClass = 'alert-' + type;
-        var icon = type === 'success' ? '✓' : '✗';
-        
-        var toastHtml = `
-            <div class="toast show" role="alert">
-                <div class="toast-header">
-                    <strong class="me-auto">${icon} Notification</strong>
-                    <button type="button" class="btn-close" onclick="$(this).closest('.toast').remove()"></button>
+        const icon = type === 'success' ? '<i class="bi bi-check2-circle"></i>' : '<i class="bi bi-exclamation-circle"></i>';
+        const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+        const toast = `
+            <div class="toast show align-items-center text-white ${bg} border-0 mb-2 shadow" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body fw-medium" style="font-size: 0.85rem">${icon} ${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="$(this).closest('.toast').remove()"></button>
                 </div>
-                <div class="toast-body">
-                    ${message}
-                </div>
-            </div>
-        `;
-        
-        $('#notificationContainer').append(toastHtml);
-        
-        // Auto remove after 3 seconds
-        setTimeout(function() {
-            $('.toast').first().fadeOut(300, function() {
-                $(this).remove();
-            });
-        }, 3000);
+            </div>`;
+        $('#notificationContainer').append(toast);
+        setTimeout(() => $('.toast').first().fadeOut(300, function() { $(this).remove(); }), 3500);
     }
-    
-    function filterByJobId() {
-        var jobId = $('#jobIdFilter').val();
-        var showCompleted = $('#showCompleted').is(':checked') ? '1' : '0';
-        
-        if(jobId && jobId > 0) {
-            window.location.href = 'xml_jobs.php?job_id=' + jobId + '&show_completed=' + showCompleted;
-        } else {
-            window.location.href = 'xml_jobs.php?show_completed=' + showCompleted;
-        }
-    }
-    
+
     function toggleShowCompleted() {
-        var showCompleted = $('#showCompleted').is(':checked') ? '1' : '0';
-        var jobId = $('#jobIdFilter').val();
-        
-        var url = 'xml_jobs.php?show_completed=' + showCompleted;
-        if (jobId && jobId > 0) {
-            url += '&job_id=' + jobId;
-        }
-        
-        window.location.href = url;
-    }
-    
-    function filterByStatus(status) {
-        if (status === 'assigned_to_me') {
-            table.column(20).search('\\S', true, false).draw(); // Search for non-empty in My Tasks column
-        } else if (status) {
-            table.column(27).search(status).draw(); // Status column (changed from 25 to 27)
+        let params = new URLSearchParams(window.location.search);
+        if ($('#showCompleted').is(':checked')) {
+            params.set('show_completed', '1');
         } else {
-            table.columns().search('').draw();
+            params.delete('show_completed');
         }
+        window.location.search = params.toString();
     }
 
-    function openStatusBillModal(recordId, jobId, articles, currentStatus, currentBilled, currentRemarks, currentFinalRemarks) {
-        $('#sbRecordId').val(recordId);
-        $('#sbJobId').val(jobId);
-        $('#sbJobIdDisplay').val(jobId);
-        $('#sbArticles').val(articles || '');
-        $('#sbStatus').val(currentStatus || 'Need to Assign');
-        $('#sbBilled').val(currentBilled || '');
-        $('#sbRemarks').val(currentRemarks || '');
-        $('#sbFinalRemarks').val(currentFinalRemarks || '');
-        
-        var modal = new bootstrap.Modal(document.getElementById('statusBillModal'));
-        modal.show();
-    }
-    
-    function saveStatusBillChanges() {
-        var recordId = $('#sbRecordId').val();
-        var status = $('#sbStatus').val();
-        var billed = $('#sbBilled').val();
-        var remarks = $('#sbRemarks').val();
-        var finalRemarks = $('#sbFinalRemarks').val();
-        
-        if (!billed) {
-            showNotification('Please select a billing status.', 'danger');
-            return;
-        }
-        
-        $.ajax({
-            url: '',
-            method: 'POST',
-            data: {
-                action: 'update_status_bill',
-                id: recordId,
-                status: status,
-                billed: billed,
-                remarks: remarks,
-                final_remarks: finalRemarks
-            },
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    if (status === 'Completed') {
-                        showNotification('✓ ' + response.message + ' Job assigned to you in main jobs table.', 'success');
-                    } else {
-                        showNotification('✓ ' + response.message, 'success');
-                    }
-                    $('#statusBillModal').modal('hide');
-                    table.ajax.reload(null, false);
-                } else {
-                    showNotification('Error: ' + response.error, 'danger');
-                }
-            },
-            error: function() {
-                showNotification('Server communication failed.', 'danger');
-            }
-        });
-    }
-
-    function openAssignModal(recordId, field, fieldName) {
-        $('#assignRecordId').val(recordId);
-        $('#assignField').val(field);
-        $('#assignFieldName').val(fieldName);
-        $('#modalTaskName').text(fieldName);
-        $('#assignSequence').val(1);
-        $('#skipConfirmation').prop('checked', skipConfirmation);
-        
-        var modal = new bootstrap.Modal(document.getElementById('assignModal'));
-        modal.show();
-    }
-    
-    function confirmAssignTask() {
-        var recordId = $('#assignRecordId').val();
-        var field = $('#assignField').val();
-        var fieldName = $('#assignFieldName').val();
-        var sequence = $('#assignSequence').val();
-        var skipConfirm = $('#skipConfirmation').is(':checked');
-        
-        // Save preference
-        localStorage.setItem('skipAssignConfirmation', skipConfirm);
-        skipConfirmation = skipConfirm;
-        
-        $('#assignModal').modal('hide');
-        
-        // Direct assignment without confirmation if skip is checked
-        if (skipConfirm) {
-            assignTaskDirect(recordId, field, fieldName, sequence);
-        } else {
-            // Show confirmation
-            if (confirm('Assign ' + fieldName + ' task to you with sequence number ' + sequence + '?')) {
-                assignTaskDirect(recordId, field, fieldName, sequence);
-            }
-        }
-    }
-    
-    function assignTaskDirect(recordId, field, fieldName, sequence) {
-        $.ajax({
-            url: '',
-            method: 'POST',
-            data: {
-                action: 'assign_to_me',
-                id: recordId,
-                field: field,
-                seq_number: sequence
-            },
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    showNotification(response.message || 'Task assigned successfully!');
-                    table.ajax.reload(null, false);
-                } else {
-                    showNotification('Error: ' + response.error, 'danger');
-                }
-            },
-            error: function() {
-                showNotification('Server communication failed.', 'danger');
-            }
-        });
-    }
-    
-    function openUpdateSequenceModal(recordId, field, currentValue) {
-        $('#seqRecordId').val(recordId);
-        $('#seqField').val(field);
-        $('#currentValue').text(currentValue);
-        
-        // Extract current sequence number
-        var parts = currentValue.split('/');
-        var currentSeq = parts.length === 3 ? parts[2].replace(' ✓', '') : '1';
-        $('#newSequence').val(currentSeq);
-        
-        var modal = new bootstrap.Modal(document.getElementById('updateSequenceModal'));
-        modal.show();
-    }
-    
-    function updateSequenceNumber() {
-        var recordId = $('#seqRecordId').val();
-        var field = $('#seqField').val();
-        var newSequence = $('#newSequence').val();
-        
-        if (!newSequence || newSequence < 1) {
-            showNotification('Please enter a valid sequence number (>= 1)', 'danger');
-            return;
-        }
-        
-        $.ajax({
-            url: '',
-            method: 'POST',
-            data: {
-                action: 'update_sequence',
-                id: recordId,
-                field: field,
-                seq_number: newSequence
-            },
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    showNotification(response.message || 'Sequence number updated!');
-                    $('#updateSequenceModal').modal('hide');
-                    table.ajax.reload(null, false);
-                } else {
-                    showNotification('Error: ' + response.error, 'danger');
-                }
-            },
-            error: function() {
-                showNotification('Server communication failed.', 'danger');
-            }
-        });
-    }
-
-    function markComplete(recordId, field, fieldName) {
-        $.ajax({
-            url: '',
-            method: 'POST',
-            data: {
-                action: 'complete',
-                id: recordId,
-                field: field
-            },
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    if(response.all_completed) {
-                        showNotification('🎉 ' + response.message + ' Job assigned to you in main jobs table.', 'success');
-                    } else {
-                        showNotification('✓ ' + response.message, 'success');
-                    }
-                    table.ajax.reload(null, false);
-                } else {
-                    showNotification('Error: ' + response.error, 'danger');
-                }
-            },
-            error: function() {
-                showNotification('Server communication failed.', 'danger');
-            }
-        });
-    }
-
-    function openRemarksModal(recordId, field, currentValue, fieldLabel) {
-        $('#modalRecordId').val(recordId);
-        $('#modalFieldName').val(field);
-        $('#modalFieldLabel').text(fieldLabel);
-        $('#modalFieldValue').val(currentValue);
-        
-        var modal = new bootstrap.Modal(document.getElementById('remarksModal'));
-        modal.show();
-    }
-    
-    function openStatusModal(recordId, currentValue) {
-        $('#statusRecordId').val(recordId);
-        $('#statusValue').val(currentValue);
-        
-        var modal = new bootstrap.Modal(document.getElementById('statusModal'));
-        modal.show();
-    }
-
-    function saveModalChanges() {
-        var recordId = $('#modalRecordId').val();
-        var field = $('#modalFieldName').val();
-        var value = $('#modalFieldValue').val();
-        
-        $.ajax({
-            url: '',
-            method: 'POST',
-            data: {
-                action: 'update',
-                id: recordId,
-                field: field,
-                value: value
-            },
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    showNotification('✓ Updated successfully');
-                    $('#remarksModal').modal('hide');
-                    table.ajax.reload(null, false);
-                } else {
-                    showNotification('Error: ' + response.error, 'danger');
-                }
-            },
-            error: function() {
-                showNotification('Server communication failed.', 'danger');
-            }
-        });
-    }
-    
-    function saveStatusChanges() {
-        var recordId = $('#statusRecordId').val();
-        var value = $('#statusValue').val();
-        
-        $.ajax({
-            url: '',
-            method: 'POST',
-            data: {
-                action: 'update',
-                id: recordId,
-                field: 'status',
-                value: value
-            },
-            dataType: 'json',
-            success: function(response) {
-                if(response.success) {
-                    if (value === 'Completed') {
-                        showNotification('✓ Status updated successfully. Job assigned to you in main jobs table.', 'success');
-                    } else {
-                        showNotification('✓ Status updated successfully', 'success');
-                    }
-                    $('#statusModal').modal('hide');
-                    table.ajax.reload(null, false);
-                } else {
-                    showNotification('Error: ' + response.error, 'danger');
-                }
-            },
-            error: function() {
-                showNotification('Server communication failed.', 'danger');
-            }
-        });
-    }
-
-    $(document).ready(function(){
-        var canEdit = <?php echo $canEditJson; ?>;
-        var currentUser = '<?php echo $username; ?>';
+    $(document).ready(function() {
+        let ajaxParams = new URLSearchParams(window.location.search);
+        ajaxParams.set('fetch', 'data');
+        let ajaxUrl = '?' + ajaxParams.toString();
 
         table = $('#xmlJobsTable').DataTable({
-            ajax: '?fetch=data<?php echo $job_id > 0 ? '&job_id=' . $job_id : ''; echo $show_completed ? '&show_completed=1' : ''; ?>',
-            dom: 'Bfrtip',
-            buttons: [
-                'copy', 'csv', 'excel', 'pdf', 'print'
-            ],
-            columns: [
-                {data: 'id'},                     // 0 - ID
-                {data: 'job_id'},                 // 1 - Job ID
-                {data: 'rec_date'},               // 2 - Date
-                {data: 'journal_name_client'},    // 3 - Journal/Client
-                {data: 'issue'},                  // 4 - Issue
-                {data: 'articles'},               // 5 - Articles
+            ajax: ajaxUrl,
+            autoWidth: false,
+            ordering: false,
+            pageLength: 25,
+            dom: '<"top d-flex justify-content-between p-3"i p>r<"table-scroll-container"t>',
+           columns:[
+               { 
+                    data: null, 
+                    render: (data, type, row, meta) => `<span class="fw-bold">${meta.row + 1}</span>` 
+                },
+                { 
+                    data: 'rec_date', 
+                    render: data => {
+                        if (!data) return '-';
+                        let d = new Date(data);
+                        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        let day = ("0" + d.getDate()).slice(-2);
+                        let monthName = months[d.getMonth()];
+                        let year = d.getFullYear();
+                        let timePart = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+                        return `${day}-${monthName}-${year}-${timePart}`;
+                    }
+                },
+                { 
+                    data: 'client_name', 
+                    className: "text-start fw-bold text-primary", 
+                    render: data => `<div style="max-width: 115px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${data ? data.replace(/"/g, '&quot;') : ''}">${data || '-'}</div>` 
+                },
+                { 
+                    data: 'journal_issue', 
+                    className: "text-start", 
+                    render: data => `<div style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${data ? data.replace(/"/g, '&quot;') : ''}">${data || '-'}</div>` 
+                },
+                { data: 'articles', render: data => `<span class="fw-bold text-dark" style="font-size: 12px;">${data || '-'}</span>` },
                 
-                // Status columns (6-9)
-                {data: 'xml_status'},             // 6 - XML Status
-                {data: 'scielo_ebsco_status'},    // 7 - Scielo/EBSCO
-                {data: 'pubmed_biblat_status'},   // 8 - PubMed/Biblat
-                {data: 'html_status'},            // 9 - HTML Status
-                
-                // TAT columns (10-12)
-                {data: 'tat_to_client'},          // 10 - TAT Days
-                {data: 'tat_status'},             // 11 - TAT Status
-                {data: 'missed_tat'},             // 12 - Missed TAT
-                
-                // Task assignment columns (13-18)
-                {data: 'Image_user'},             // 13 - Image
-                {data: 'Table_user'},             // 14 - Table
-                {data: 'WPContent_user'},         // 15 - WP Content
-                {data: 'HTML_user'},              // 16 - HTML
-                {data: 'Scielo_user'},            // 17 - Scielo
-                {data: 'QC_user'},                // 18 - QC
-                
-                // Progress columns (19-20)
-                {data: 'progress_percentage'},    // 19 - Progress
-                {data: 'my_tasks'},               // 20 - My Tasks
-                
-                // Jobs Table Info columns (21-22)
-                {data: 'jobs_xml_assignee'},      // 21 - Jobs XML Assignee
-                {data: 'job_date'},               // 22 - Job Info
-                
-                // Other info columns (23-26)
-                {data: 'instruction_to_image'},   // 23 - Instructions
-                {data: 'remarks'},                // 24 - Remarks
-                {data: 'final Remarks'},          // 25 - Final Remarks
-                {data: 'Billed'},                 // 26 - Billed
-                {data: 'status'},                 // 27 - Status
-                
-                // Actions column (28)
-                {
-                    data: null,
+                // Process columns rendered as raw numbers in black text (no background, no rounded badge)
+                ...['nlm', 'jats', 'clockss', 'scielo', 'ebsco', 'pubmed', 'biblat', 'doaj', 'html', 'new_html', 'direct_html'].map(field => {
+                    return {
+                        data: field,
+                        render: function(data) {
+                            let v = (data === null || data === undefined || String(data).trim() === '' || String(data).trim() === '-') ? '-' : String(data).trim();
+                            if (v === '-') return `<span class="text-muted">-</span>`;
+                            return `<span class="fw-bold text-dark" style="font-size: 12px;">${v}</span>`;
+                        }
+                    }
+                }),
+
+                { 
+                    data: 'job_status', 
                     render: function(data, type, row) {
-                        var actions = '';
+                        let statusText = data;
                         
-                        // Quick actions for tasks assigned to current user
-                        if (row.my_tasks && Object.keys(row.my_tasks).length > 0) {
-                            for (var field in row.my_tasks) {
-                                var task = row.my_tasks[field];
-                                if (!task.is_completed) {
-                                    actions += '<button class="btn btn-success btn-sm me-1 mb-1" onclick="markComplete(' + row.id + ', \'' + field + '\', \'' + task.name + '\')" title="Mark ' + task.name + ' Complete">✓ ' + task.name.split(' ')[0] + '</button>';
-                                }
+                        let tasks = [row.Image_user, row.Table_user, row.WPContent_user, row.nlm_user, row.jats_user, row.clockss_user, row.HTML_user, row.new_html_user, row.Scielo_user, row.ebsco_user, row.pubmed_user, row.biblat_user, row.doaj_user, row.QC_user];
+                        let isAssigned = false;
+                        
+                        for(let i=0; i<tasks.length; i++) {
+                            let val = tasks[i] ? String(tasks[i]).trim() : '';
+                            if(val !== '' && val !== '-' && val !== 'N/A' && val !== 'NA') {
+                                isAssigned = true;
+                                break;
                             }
                         }
-                        
-                        // Edit button for remarks/instructions
-                        if (canEdit) {
-                            // Main action button for status and billing
-                            actions += '<button class="btn btn-primary btn-sm me-1 mb-1" onclick="openStatusBillModal(' + row.id + ', ' + row.job_id + ', \'' + (row.articles || '').replace(/'/g, "\\'") + '\', \'' + (row.status || '') + '\', \'' + (row.Billed || '') + '\', \'' + (row.remarks || '').replace(/'/g, "\\'") + '\', \'' + (row['final Remarks'] || '').replace(/'/g, "\\'") + '\')" title="Update Status & Billing">📊 Status/Bill</button>';
-                            
-                            actions += '<button class="btn btn-info btn-sm me-1 mb-1" onclick="openRemarksModal(' + row.id + ', \'remarks\', \'' + (row.remarks || '').replace(/'/g, "\\'") + '\', \'Update Remarks\')" title="Edit Remarks">📝</button>';
-                            
-                            // Separate status-only update button
-                            actions += '<button class="btn btn-warning btn-sm mb-1" onclick="openStatusModal(' + row.id + ', \'' + (row.status || '') + '\')" title="Update Status Only">Status</button>';
+
+                        if (!isAssigned) {
+                            statusText = 'Need to Assign';
+                        } else if (!data || data === '-' || String(data).trim() === '') {
+                            statusText = 'Need to Assign';
                         }
                         
-                        return actions || '<span class="text-muted">-</span>';
-                    },
-                    orderable: false,
-                    searchable: false
-                }
-            ],
-            columnDefs: [
-                {
-                    targets: [0, 1],
-                    className: 'text-center'
+                        // Matches UQ Process: Inprocess = Blue, Despatched = Green
+                        let colorClass = (statusText === 'Inprocess' || statusText === 'In Progress') ? 'status-inprocess' : (statusText === 'Despatched' ? 'status-despatched' : 'badge-blue-status');
+                        return `<span class="badge ${colorClass}">${statusText}</span>`;
+                    } 
                 },
-                {
-                    targets: [2], // Date column
-                    render: function(data) {
+                { 
+                    data: 'tat_to_client', 
+                    render: data => {
                         if (!data) return '-';
-                        var date = new Date(data);
-                        return date.toLocaleDateString();
+                        let d = new Date(data);
+                        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        let day = ("0" + d.getDate()).slice(-2);
+                        let monthName = months[d.getMonth()];
+                        let year = d.getFullYear();
+                        return `<span class="fw-bold">${day}-${monthName}-${year}</span>`;
                     }
                 },
-                {
-                    targets: [6, 7, 8, 9], // Status columns
-                    render: function(data) {
-                        if (!data) return '<span class="badge bg-secondary">Pending</span>';
+                { 
+                    data: null, 
+                    render: function(data, type, row) {
+                        if (!row.tat_to_client) return '<span class="text-muted">-</span>';
                         
-                        var badgeClass = 'bg-secondary';
-                        if (data === 'Completed') badgeClass = 'bg-success';
-                        else if (data === 'In Progress') badgeClass = 'bg-warning';
-                        else if (data === 'Need to Assign') badgeClass = 'bg-danger';
-                        else if (data === 'On Hold') badgeClass = 'bg-info';
-                        else if (data === 'Cancelled') badgeClass = 'bg-dark';
-                        else if (!isNaN(data) && data > 0) {
-                            // If it's a number, show progress
-                            return '<span class="badge bg-info">' + data + '</span>';
+                        let tatDate = new Date(row.tat_to_client);
+                        let today = new Date();
+                        
+                        // Reset time to compare only dates
+                        tatDate.setHours(0, 0, 0, 0);
+                        today.setHours(0, 0, 0, 0);
+
+                        // Calculate difference in days
+                        let diffTime = today.getTime() - tatDate.getTime();
+                        let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                        // Show badge only if overdue and not despatched
+                        if (diffDays > 0 && row.job_status !== 'Despatched') {
+                            return `<span class="badge-missed">${diffDays} days</span>`;
                         }
-                        
-                        return '<span class="badge ' + badgeClass + '">' + data + '</span>';
+                        return '<span class="text-muted">-</span>';
                     }
                 },
-                {
-                    targets: [11], // TAT Status column
-                    render: function(data) {
-                        if (!data) return '-';
-                        
-                        var badgeClass = 'bg-secondary';
-                        if (data === 'Overdue') badgeClass = 'bg-danger';
-                        else if (data === 'Due Today') badgeClass = 'bg-warning';
-                        else if (data.includes('days left')) badgeClass = 'bg-success';
-                        
-                        return '<span class="badge ' + badgeClass + '">' + data + '</span>';
-                    }
-                },
-                {
-                    targets: [12], // Missed TAT
-                    render: function(data) {
-                        if (!data) return '-';
-                        return '<span class="badge bg-danger">' + data + '</span>';
-                    }
-                },
-                {
-                    targets: [13, 14, 15, 16, 17, 18], // Task assignment columns
-                    render: function(data, type, row, meta) {
-                        var field = ['Image_user', 'Table_user', 'WPContent_user', 'HTML_user', 'Scielo_user', 'QC_user'][meta.col - 13];
-                        var fieldNames = ['Image', 'Table', 'WP Content', 'HTML', 'Scielo', 'QC'];
-                        var fieldName = fieldNames[meta.col - 13];
-                        
-                        if (data) {
-                            // Check if completed
-                            var isCompleted = data.includes('✓');
-                            var displayValue = data.replace(' ✓', '');
-                            
-                            // Parse the value
-                            var parts = displayValue.split('/');
-                            var badgeClass = 'bg-info';
-                            var actions = '';
-                            
-                            if (parts.length === 3) {
-                                var assignedUser = parts[0];
-                                var assignedDate = parts[1];
-                                var sequence = parts[2];
-                                
-                                if (assignedUser === currentUser) {
-                                    badgeClass = isCompleted ? 'bg-success' : 'bg-primary';
-                                    
-                                    if (!isCompleted) {
-                                        actions = ' <button class="btn btn-success btn-sm assign-btn" onclick="markComplete(' + row.id + ', \'' + field + '\', \'' + fieldName + '\')" title="Mark Complete">✓</button>';
-                                        actions += ' <button class="btn btn-warning btn-sm assign-btn" onclick="openUpdateSequenceModal(' + row.id + ', \'' + field + '\', \'' + data.replace(/'/g, "\\'") + '\')" title="Update Sequence">#</button>';
-                                    }
-                                }
-                                
-                                var displayText = assignedUser + '/' + assignedDate + '/' + sequence;
-                                if (isCompleted) {
-                                    displayText = '<span class="completed-task">' + displayText + ' ✓</span>';
-                                }
-                                
-                                return '<span class="badge ' + badgeClass + ' task-badge">' + displayText + '</span>' + actions;
+                { data: 'instruction_to_image', render: (data, type, row) => `<input type="text" id="instruction_${row.id}" class="form-control form-control-sm" style="min-width:120px;" value="${(data||'').replace(/"/g, '&quot;')}">` },
+
+                // Task Columns mapping with 3-Step Flow (Full Cell Coloring - Including Blue for Assign)
+                ...[
+                    { field: 'Image_user' }, { field: 'Table_user' }, { field: 'WPContent_user' },
+                    { field: 'nlm_user' }, { field: 'jats_user' }, { field: 'clockss_user' },
+                    { field: 'HTML_user' }, { field: 'new_html_user' }, 
+                    { field: 'Scielo_user' }, { field: 'ebsco_user' }, 
+                    { field: 'pubmed_user' }, { field: 'biblat_user' }, { field: 'doaj_user' },
+                    { field: 'QC_user' }
+                ].map(task => {
+                    return {
+                        data: null,
+                        createdCell: function(td, cellData, rowData, row, col) {
+                            let val = rowData[task.field] ? String(rowData[task.field]).trim() : '';
+
+                            // Apply full cell background colors using !important to override zebra stripes
+                            if (val === 'N/A' || val === 'NA') {
+                                $(td).attr('style', 'background-color: #e9ecef !important; color: #6c757d !important; vertical-align: middle !important;');
+                            } else if (!val || val === '-' || val === '') {
+                                // Assign State (Full Blue Cell)
+                                $(td).attr('style', 'background-color: #0d6efd !important; vertical-align: middle !important;');
+                            } else if (val.includes('✓')) {
+                                // Completed State (Full Green Cell)
+                                $(td).attr('style', 'background-color: #198754 !important; color: #ffffff !important; font-weight: 600 !important; vertical-align: middle !important;');
+                            } else if (val.indexOf('/') === -1) {
+                                // NEW: TL assigned, TM innum click pannala -> Blue
+                                $(td).attr('style', 'background-color: #0d6efd !important; color: #ffffff !important; vertical-align: middle !important;');
                             } else {
-                                // Old format or invalid format
-                                return '<span class="badge bg-secondary task-badge">' + data + '</span>';
+                                // In-Process State (Full Orange Cell)
+                                $(td).attr('style', 'background-color: #fd7e14 !important; color: #ffffff !important; vertical-align: middle !important;');
                             }
-                        } else {
-                            // Not assigned yet
-                            return '<button class="btn btn-outline-primary btn-sm assign-btn" onclick="openAssignModal(' + row.id + ', \'' + field + '\', \'' + fieldName + '\')">Assign</button>';
+                        },
+                        render: function(data, type, row) {
+                            let f = task.field;
+                            let val = row[f] ? String(row[f]).trim() : '';
+
+                            // 1. Not Applicable (N/A) -> Plain text since cell is grey
+                            if (val === 'N/A' || val === 'NA') {
+                                return `<span style="font-size:11px; font-weight: 600;">N/A</span>`;
+                            }
+
+                            // 2. Step 1: Initial Unassigned State -> Show [ Assign ] Button (White Button on Blue Cell)
+                            if (!val || val === '-' || val === '') {
+                                return `<button type="button" class="btn btn-light btn-sm rounded-pill px-3 py-0 shadow-sm" 
+                                            style="font-size:11px; height:24px; line-height:22px; color: #0d6efd; font-weight: 700; border: none;" 
+                                            onclick="assignTask(${row.id}, '${f}')">Assign</button>`;
+                            }
+
+                            // 3. Step 3: Completed State -> Plain white text with Icon (Cell is already Green)
+                            if (val.includes('✓')) {
+                                return `<span style="font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">
+                                            ${val}
+                                        </span>`;
+                            }
+
+                            // NEW: TL assigned (no '/' yet) -> show name on Blue cell, TM click panna Orange aagum
+                            if (val.indexOf('/') === -1) {
+                                let rawUser = row[f + '_raw'] || '';
+                                if (rawUser === currentUser) {
+                                    return `<button type="button" class="btn btn-light btn-sm rounded-pill px-3 py-0 shadow-sm" 
+                                                style="font-size:11px; height:24px; line-height:22px; color: #0d6efd; font-weight: 700; border: none;" 
+                                                onclick="assignTask(${row.id}, '${f}')">${val}</button>`;
+                                }
+                                return `<span style="color:#fff; font-weight:700; font-size:11px;">${val}</span>`;
+                            }
+
+                            // 4. Step 2: Assigned In-Progress -> White text, input, and white check button (Cell is Orange)
+                            let p = val.split('/');
+                            let user = p[0] || currentUser;
+                            let seq = p[2] ? p[2].replace('✓', '').trim() : '';
+
+                            return `<div class="d-flex align-items-center justify-content-center gap-1">
+                                        <span class="fw-semibold text-white" style="font-size:11px;">${user}</span>
+                                        <input type="text" id="seq_${f}_${row.id}" class="form-control text-center px-1 shadow-none" 
+                                            style="width: 38px; height: 24px; font-size: 11px; border: 1px solid #ffffff; border-radius: 4px; color: #000; background-color: #ffffff;" 
+                                            placeholder="#" value="${seq}" 
+                                            onkeydown="if(event.key === 'Enter') { completeTask(${row.id}, '${f}', this.value); }">
+                                        <button type="button" class="btn btn-sm btn-light p-0 d-flex align-items-center justify-content-center shadow-sm" 
+                                                style="width: 24px; height: 24px; border-radius: 4px; border: none; color: #fd7e14; background-color: #ffffff;" 
+                                                onclick="completeTask(${row.id}, '${f}')" title="Complete Task">
+                                            <i class="bi bi-check-lg" style="font-size:13px; font-weight:bold;"></i>
+                                        </button>
+                                    </div>`;
                         }
                     }
-                },
-                {
-                    targets: [19], // Progress column
-                    render: function(data, type, row) {
-                        var progressColor = 'bg-success';
-                        if (data < 50) progressColor = 'bg-danger';
-                        else if (data < 80) progressColor = 'bg-warning';
+                }),
+
+                { 
+                    data: 'despatched_date', 
+                    render: (data, type, row) => {
+                        if (!data || data === '0000-00-00' || row.job_status !== 'Despatched') return '-';
                         
-                        return '<div class="d-flex align-items-center">' +
-                               '<span class="me-2">' + data + '%</span>' +
-                               '<div class="progress w-100 progress-sm">' +
-                               '<div class="progress-bar ' + progressColor + '" style="width: ' + data + '%"></div>' +
-                               '</div></div>';
+                        let d = new Date(data);
+                        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        let day = ("0" + d.getDate()).slice(-2);
+                        let monthName = months[d.getMonth()];
+                        let year = d.getFullYear();
+                        return `${day}-${monthName}-${year}`;
                     }
                 },
-                {
-                    targets: [20], // My Tasks column
-                    render: function(data) {
-                        if (!data || Object.keys(data).length === 0) return '-';
-                        
-                        var badges = '';
-                        for (var field in data) {
-                            var task = data[field];
-                            var badgeClass = task.is_completed ? 'bg-success' : 'bg-primary';
-                            badges += '<span class="badge ' + badgeClass + ' task-badge me-1 mb-1">' + 
-                                     task.name + ': ' + task.value + '</span>';
-                        }
-                        return badges;
-                    }
-                },
-                {
-                    targets: [21], // Jobs XML Assignee column
-                    render: function(data, type, row) {
-                        if (!data) {
-                            return '<span class="badge bg-secondary">Not Assigned</span>';
-                        }
-                        
-                        if (data === currentUser) {
-                            return '<span class="badge bg-success jobs-assigned">' + data + ' (You)</span>';
-                        } else {
-                            return '<span class="badge bg-info jobs-assigned">' + data + '</span>';
-                        }
-                    }
-                },
-                {
-                    targets: [22], // Job Info column
-                    render: function(data, type, row) {
-                        var info = '';
-                        if (row.job_date) {
-                            var date = new Date(row.job_date);
-                            info += '<div class="jobs-info">Date: ' + date.toLocaleDateString() + '</div>';
-                        }
-                        if (row.jobs_word_count) {
-                            info += '<div class="jobs-info">Words: ' + row.jobs_word_count + '</div>';
-                        }
-                        if (row.mail_subject) {
-                            var shortSubject = row.mail_subject.length > 30 ? row.mail_subject.substring(0, 30) + '...' : row.mail_subject;
-                            info += '<div class="jobs-info" title="' + row.mail_subject.replace(/"/g, '&quot;') + '">Subject: ' + shortSubject + '</div>';
-                        }
-                        return info || '-';
-                    }
-                },
-                {
-                    targets: [23, 24, 25], // Instructions, Remarks, Final Remarks
-                    render: function(data) {
-                        if (!data) return '-';
-                        var shortText = data.length > 30 ? data.substring(0, 30) + '...' : data;
-                        return '<span title="' + data.replace(/"/g, '&quot;') + '">' + shortText + '</span>';
-                    }
-                },
-                {
-                    targets: [26], // Billed column
-                    render: function(data) {
-                        if (!data) return '<span class="badge bg-danger">No</span>';
-                        
-                        var badgeClass = 'bg-secondary';
-                        if (data === 'Yes') badgeClass = 'bg-success';
-                        else if (data === 'No') badgeClass = 'bg-danger';
-                        else if (data === 'Partial') badgeClass = 'bg-warning';
-                        else if (data === 'Pending') badgeClass = 'bg-info';
-                        else if (data === 'Disputed') badgeClass = 'bg-dark';
-                        
-                        return '<span class="badge ' + badgeClass + '">' + data + '</span>';
-                    }
-                },
-                {
-                    targets: [27], // Status column
-                    render: function(data) {
-                        if (!data) return '<span class="badge bg-secondary">Unknown</span>';
-                        
-                        var badgeClass = 'bg-secondary';
-                        if (data === 'Completed') badgeClass = 'bg-success';
-                        else if (data === 'In Progress') badgeClass = 'bg-warning';
-                        else if (data === 'Need to Assign') badgeClass = 'bg-danger';
-                        else if (data === 'On Hold') badgeClass = 'bg-info';
-                        else if (data === 'Cancelled') badgeClass = 'bg-dark';
-                        
-                        return '<span class="badge ' + badgeClass + '">' + data + '</span>';
-                    }
+                { data: 'remarks', render: (data, type, row) => `<input type="text" id="remarks_${row.id}" class="form-control form-control-sm" style="min-width:140px;" value="${(data||'').replace(/"/g, '&quot;')}">` },
+                { 
+                    data: null, 
+                    render: (d, t, row) => `
+                        <button type="button" class="btn btn-primary btn-sm px-3" onclick="saveRow(${row.id})"><i class="bi bi-save me-1"></i> Save</button>
+                        <input type="hidden" id="status_${row.id}" value="${row.status || ''}">
+                        <input type="hidden" id="job_status_${row.id}" value="${row.job_status || ''}">
+                        <input type="hidden" id="billed_${row.id}" value="${row.Billed || ''}">
+                        <input type="hidden" id="xml_status_${row.id}" value="${row.xml_status || ''}">
+                        <input type="hidden" id="html_status_${row.id}" value="${row.html_status || ''}">
+                        <input type="hidden" id="scielo_status_${row.id}" value="${row.scielo_ebsco_status || ''}">
+                        <input type="hidden" id="pubmed_status_${row.id}" value="${row.pubmed_biblat_status || ''}">
+                    `
                 }
             ],
-            rowCallback: function(row, data) {
-                // Highlight rows with tasks assigned to current user
-                if (data.is_assigned_to_me) {
-                    $(row).addClass('my-task-row');
-                }
-                
-                // Highlight overdue rows
-                if (data.tat_status === 'Overdue') {
-                    $(row).addClass('overdue');
-                } else if (data.tat_status === 'Due Today') {
-                    $(row).addClass('due-today');
-                }
-                
-                // Dim completed rows
-                if (data.status === 'Completed') {
-                    $(row).addClass('completed-row');
-                }
-                
-                // Make remarks/instructions clickable for editing
-                if (canEdit) {
-                    $('td', row).eq(23).addClass('editable').attr('onclick', 
-                        'openRemarksModal(' + data.id + ', \'instruction_to_image\', \'' + 
-                        (data.instruction_to_image || '').replace(/'/g, "\\'") + '\', \'Instructions to Image\')');
-                    
-                    $('td', row).eq(24).addClass('editable').attr('onclick', 
-                        'openRemarksModal(' + data.id + ', \'remarks\', \'' + 
-                        (data.remarks || '').replace(/'/g, "\\'") + '\', \'Remarks\')');
-                    
-                    $('td', row).eq(25).addClass('editable').attr('onclick', 
-                        'openRemarksModal(' + data.id + ', \'final Remarks\', \'' + 
-                        (data['final Remarks'] || '').replace(/'/g, "\\'") + '\', \'Final Remarks\')');
-                }
-            },
-            pageLength: 50,
-            order: [[0, 'desc']],
-            createdRow: function(row, data, dataIndex) {
-                // Add data attributes for filtering
-                $(row).attr('data-job-id', data.job_id);
-                $(row).attr('data-status', data.status);
-                $(row).attr('data-assigned-to-me', data.is_assigned_to_me ? 'true' : 'false');
+            language: { 
+                search: "", 
+                searchPlaceholder: "Search records...",
+                info: "<span class='text-muted small'>Showing _START_ to _END_ of _TOTAL_ entries</span>",
+                paginate: { previous: "<i class='bi bi-chevron-left'></i>", next: "<i class='bi bi-chevron-right'></i>" }
             }
         });
 
-        // Auto-refresh every 60 seconds
-        setInterval(function() {
-            table.ajax.reload(null, false);
-        }, 60000);
+        table.on('page.dt search.dt order.dt', function () {
+            $('.table-scroll-container').scrollLeft(0);
+        });
     });
+
+    function assignTask(id, field) {
+        $.post('?', { action: 'assign_to_me', id: id, field: field }, function(res) {
+            if(res.success) { showNotification(res.message); table.ajax.reload(null, false); } 
+            else { showNotification(res.error, 'danger'); }
+        }, 'json');
+    }
+
+    function completeTask(id, field, providedValue = null) {
+        let seq = (providedValue !== null) ? providedValue : $(`#seq_${field}_${id}`).val();
+        
+        if (seq === null || seq === undefined || String(seq).trim() === "") {
+            showNotification('Please enter a value.', 'danger');
+            return;
+        }
+        
+        $.ajax({
+            url: '?',
+            type: 'POST',
+            data: { action: 'complete', id: id, field: field, seq_number: seq },
+            dataType: 'json',
+            success: function(res) {
+                if(res.success) { 
+                    showNotification(res.message); 
+                    table.ajax.reload(null, false); 
+                } else { 
+                    showNotification(res.error, 'danger'); 
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText); // Ithu console-la exact error-ah kaattum
+                showNotification('Saving failed. Check console for details.', 'danger');
+            }
+        });
+    }
+
+    function saveRow(id) {
+        let payload = {
+            action: 'full_update', id: id,
+            status: $(`#status_${id}`).val(), 
+            job_status: $(`#job_status_${id}`).val(), 
+            billed: $(`#billed_${id}`).val(),
+            xml_status: $(`#xml_status_${id}`).val(), 
+            html_status: $(`#html_status_${id}`).val(),
+            scielo_status: $(`#scielo_status_${id}`).val(), 
+            pubmed_status: $(`#pubmed_status_${id}`).val(),
+            despatched_date: $(`#despatched_date_${id}`).val(),
+            instruction: $(`#instruction_${id}`).val(), 
+            remarks: $(`#remarks_${id}`).val(), 
+            final_remarks: $(`#final_remarks_${id}`).val()
+        };
+        $.post('?', payload, function(res) {
+            if(res.success) { showNotification(res.message); table.ajax.reload(null, false); } 
+            else { showNotification(res.error, 'danger'); }
+        }, 'json');
+    }
     </script>
 </body>
 </html>
