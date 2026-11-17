@@ -1,5 +1,5 @@
 <?php require 'header.php';?>
-<div class="main-content">
+<div class="main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
     <div class="job-master-container">
 
 <?php
@@ -171,8 +171,12 @@ table td,th { vertical-align: middle; padding: 6px 8px; white-space: nowrap; fon
         }
     </style>
 
-<div class="container-fluid mt-3">
-    <div class="page-title-container"><h2 class="mb-0 text-white">Input/Output Data (Datatable View)</h2></div>
+<div class="container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <h2 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
+            <i class="fas fa-exchange-alt me-2" style="color: #ffffff !important;"></i>Input/Output Data (Datatable View)
+        </h2>
+    </div>
 
     <?php if (isset($_SESSION['message'])): ?>
         <div class="alert alert-info alert-dismissible fade show" role="alert">

@@ -541,8 +541,8 @@ table td:nth-child(26) {
 </style>
 <?php require 'header.php';?>
 
-<div class="container-fluid">
-    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+<div class="container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <h2 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
             <i class="fas fa-chart-pie me-2" style="color: #ffffff !important;"></i>Input & Output
         </h2>
