@@ -48,27 +48,55 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $target_type = $_POST['type'] ?? 'ce';
     $new_status = trim($_POST['status']);
 
-    // Fetch current status and times to combine and validate
-    $get_stat = $mysqli->prepare("SELECT status, ce_start_time, ce_end_time, ref_start_time, ref_end_time, fqa_start_time, fqa_end_time FROM ce WHERE id = ?");
+    // Fetch current status, assigned TMs, and times to combine and validate
+    $get_stat = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to AS fqa_tm, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
     $get_stat->bind_param("i", $ce_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
     $curr_status = $curr_data['status'] ?? '';
     $get_stat->close();
 
-    // Mandatory Time Validation for 'Completed' Status
+    // Mandatory TM & Time Validation for 'Completed' Status
     if ($new_status === 'Completed') {
-        if ($target_type === 'ce' && (empty($curr_data['ce_start_time']) || empty($curr_data['ce_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both CE Start Time and End Time before marking as Completed.']);
-            exit;
-        } elseif ($target_type === 'ref' && (empty($curr_data['ref_start_time']) || empty($curr_data['ref_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both REF Start Time and End Time before marking as Completed.']);
-            exit;
+        if ($target_type === 'ce') {
+            if (empty(trim($curr_data['assigned_to_content'] ?? ''))) {
+                echo json_encode(['success' => false, 'message' => 'Please assign a Content TM before marking CE Assignment as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['ce_start_time']) || empty($curr_data['ce_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both CE Start Time and End Time before marking as Completed.']);
+                exit;
+            }
+        } elseif ($target_type === 'ref') {
+            if (empty(trim($curr_data['assigned_to_img'] ?? ''))) {
+                echo json_encode(['success' => false, 'message' => 'Please assign a REF TM before marking REF Assignment as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['ref_start_time']) || empty($curr_data['ref_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both REF Start Time and End Time before marking as Completed.']);
+                exit;
+            }
         } elseif ($target_type === 'fqa') {
+            $fqa_tm = trim($curr_data['fqa_tm'] ?? '');
+            $fqa_assigned = false;
+            if (!empty($fqa_tm) && !in_array($fqa_tm, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL'])) {
+                $emp_chk = $mysqli->prepare("SELECT 1 FROM employee_master WHERE employee_username = ? LIMIT 1");
+                if ($emp_chk) {
+                    $emp_chk->bind_param("s", $fqa_tm);
+                    $emp_chk->execute();
+                    $fqa_assigned = ($emp_chk->get_result()->num_rows > 0);
+                    $emp_chk->close();
+                }
+            }
+            if (!$fqa_assigned) {
+                echo json_encode(['success' => false, 'message' => 'Please assign an FQA TM before marking FQA Assignment as Completed.']);
+                exit;
+            }
+
             $ce_done = in_array($curr_status, ['CE Done', 'CE & REF Done', 'Completed']);
             $ref_done = in_array($curr_status, ['REF Done', 'CE & REF Done', 'Completed']);
-            if (!$ce_done || !$ref_done) {
-                echo json_encode(['success' => false, 'message' => 'Please complete both CE Assignment and REF Assignment before marking FQA as Completed.']);
+            if (!$ce_done && !$ref_done) {
+                echo json_encode(['success' => false, 'message' => 'Please complete either CE Assignment or REF Assignment before marking FQA as Completed.']);
                 exit;
             }
             if (empty($curr_data['fqa_start_time']) || empty($curr_data['fqa_end_time'])) {
@@ -1625,19 +1653,31 @@ require 'header.php';
             const select = selectElement || (typeof event !== 'undefined' ? event.target : null);
             const prevValue = select ? (select.getAttribute('data-prev') || select.value) : '';
 
-            // Frontend validation to enforce time completion
+            // Frontend validation to enforce TM assignment, stage completion & time completion
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + ceId);
                 if (row) {
-                    // Check if both CE and REF are Completed before allowing FQA Completed
+                    // Check if a Team Member is assigned before allowing Completed
+                    let tmSelector = type === 'ce' ? ('.content-select-' + ceId) : (type === 'ref' ? ('.images-select-' + ceId) : ('.fqa-select-' + ceId));
+                    let tmSelect = row.querySelector(tmSelector);
+                    let cell = select ? select.closest('.assignment-cell') : null;
+                    let hasBadge = cell ? cell.querySelector('.tm-badge') : null;
+                    if ((!tmSelect || !tmSelect.value) && !hasBadge) {
+                        let stageLabel = type === 'ce' ? 'Content' : (type === 'ref' ? 'REF' : 'FQA');
+                        showNotification('danger', 'Please select a ' + stageLabel + ' Team Member before marking as Completed!');
+                        if (select) { select.value = prevValue; }
+                        return;
+                    }
+
+                    // Check if either CE or REF is Completed before allowing FQA Completed
                     if (type === 'fqa') {
                         let ceSelect = Array.from(row.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ce'"));
                         let refSelect = Array.from(row.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ref'"));
                         let ceDone = ceSelect && ceSelect.value === 'Completed';
                         let refDone = refSelect && refSelect.value === 'Completed';
 
-                        if (!ceDone || !refDone) {
-                            showNotification('danger', 'Please complete both CE Assignment and REF Assignment before marking FQA as Completed!');
+                        if (!ceDone && !refDone) {
+                            showNotification('danger', 'Please complete either CE Assignment or REF Assignment before marking FQA as Completed!');
                             if (select) { select.value = prevValue; }
                             return;
                         }
