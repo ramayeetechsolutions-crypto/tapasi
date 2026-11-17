@@ -64,46 +64,85 @@ function getWeekDates($week_number, $year = null) {
     ];
 }
 
-// Get TLs for dropdown (only if current user is Manager/Admin)
-$tls = [];
+// Resolve logged-in user's Team Leader ID (for TL, SubTL, and TM)
+$my_tl_id = 0;
 if ($current_user_role == 3) {
+    $my_tl_id = (int)$current_user_id;
+} elseif (in_array((int)$current_user_role, [4, 11])) {
+    $tl_lookup = $mysqli->prepare("SELECT tl.employee_id FROM employee_master me 
+                                   INNER JOIN employee_master tl ON tl.user_role_id = 3 AND (
+                                       CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                                       OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                                       OR EXISTS (
+                                           SELECT 1 FROM employee_master sub
+                                           WHERE (
+                                               CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(sub.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                                               OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(sub.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                                           )
+                                           AND (
+                                               CAST(sub.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                                               OR CAST(sub.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                                           )
+                                       )
+                                   )
+                                   WHERE me.employee_id = ? LIMIT 1");
+    $tl_lookup->bind_param("i", $current_user_id);
+    $tl_lookup->execute();
+    $tl_res = $tl_lookup->get_result();
+    if ($tl_r = $tl_res->fetch_assoc()) {
+        $my_tl_id = (int)$tl_r['employee_id'];
+    }
+    $tl_lookup->close();
+}
+
+// Get TLs for dropdown
+$tls = [];
+if ($my_tl_id > 0) {
+    $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master 
+                             WHERE user_role_id = 3 AND status = 'Active' AND employee_id = ?
+                             ORDER BY employee_name");
+    $stmt->bind_param("i", $my_tl_id);
+} else {
     $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master 
                              WHERE user_role_id = 3 AND status = 'Active' 
                              ORDER BY employee_name");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $tls[] = $row;
-    }
-    $stmt->close();
 }
-
-// Get selected TL
-$selected_tl_id = isset($_GET['tl_id']) ? (int)$_GET['tl_id'] : 0;
-if ($current_user_role == 3) {
-    $selected_tl_id = $current_user_id;
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $tls[] = $row;
 }
+$stmt->close();
 
-// Get TMs for the selected TL (Only UQ Team Members)
+// Get selected TL for Filter & Assign (always lock to own Team Leader for TL, SubTL, TM)
+$selected_tl_id = isset($_GET['tl_id']) && $_GET['tl_id'] !== '' ? (int)$_GET['tl_id'] : 0;
+$filter_tl_id = ($my_tl_id > 0) ? $my_tl_id : $selected_tl_id;
+$assign_tl_id = ($my_tl_id > 0) ? $my_tl_id : $selected_tl_id;
+
+// Get TMs strictly under this Team Leader (reporting_manager)
 $tms = [];
 if ($current_user_role > 0) {
-    $query = "SELECT DISTINCT em.employee_id, em.employee_name, em.employee_username 
-              FROM employee_master em
-              LEFT JOIN team_master tm_tbl ON em.team_id = tm_tbl.team_id
-              WHERE (
-                  tm_tbl.team_name LIKE '%UQ%'
-                  OR em.team_id LIKE '%UQ%'
-                  OR em.process LIKE '%UQ%'
-                  OR EXISTS (
-                      SELECT 1 FROM process_master pm 
-                      WHERE FIND_IN_SET(pm.process_id, em.process) 
-                      AND pm.process_name LIKE '%UQ%'
-                  )
-              ) 
-              AND em.status = 'Active' 
-              ORDER BY em.employee_username ASC";
-              
-    $stmt = $mysqli->prepare($query);
+    if ($filter_tl_id > 0) {
+        $query = "SELECT DISTINCT em.employee_id, em.employee_name, em.employee_username 
+                  FROM employee_master em
+                  INNER JOIN employee_master tl ON tl.employee_id = ?
+                  WHERE (em.user_role_id = 4 OR em.user_role_id = 11)
+                    AND (em.status = 'Active' OR em.status IS NULL)
+                    AND (
+                        CAST(em.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                        OR CAST(em.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                    )
+                  ORDER BY em.employee_username ASC";
+        $stmt = $mysqli->prepare($query);
+        $stmt->bind_param("i", $filter_tl_id);
+    } else {
+        $query = "SELECT DISTINCT em.employee_id, em.employee_name, em.employee_username 
+                  FROM employee_master em
+                  WHERE (em.user_role_id = 4 OR em.user_role_id = 11)
+                    AND (em.status = 'Active' OR em.status IS NULL)
+                  ORDER BY em.employee_username ASC";
+        $stmt = $mysqli->prepare($query);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
@@ -112,8 +151,8 @@ if ($current_user_role > 0) {
     $stmt->close();
 }
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Handle form submission (Only TL & SubTL allowed)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((int)$current_user_role, [3, 11])) {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'assign_target') {
@@ -175,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                      (tl_id, tm_id, target_limit, from_date, to_date, week_number, year, assigned_by, assigned_date) 
                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $assigned_by = $current_user_id;
-            $stmt->bind_param("isissiii", $selected_tl_id, $tm_id, $target_limit, $from_date, $to_date, $week_number, $year, $assigned_by);
+            $stmt->bind_param("isissiii", $assign_tl_id, $tm_id, $target_limit, $from_date, $to_date, $week_number, $year, $assigned_by);
             
             if ($stmt->execute()) {
                 $success_message = "Target assigned successfully for Week $week_number!";
@@ -202,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Get TM's username
                 $tm_stmt = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE employee_username = ?");
-                $tm_stmt->bind_param("i", $tm_id);
+                $tm_stmt->bind_param("s", $tm_id);
                 $tm_stmt->execute();
                 $tm_result = $tm_stmt->get_result();
                 
@@ -319,7 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     // Fix for strict mode: replaced '0000-00-00' with CURDATE() and added 'status'
                         $ins = $mysqli->prepare("INSERT INTO weekly_targets (tl_id, tm_id, revision_month, target_limit, revision_target, week_number, year, assigned_by, assigned_date, from_date, to_date, status) VALUES (?, ?, ?, ?, ?, 0, 0, ?, NOW(), CURDATE(), CURDATE(), 'Active')");
-                        $ins->bind_param("issiii", $selected_tl_id, $tm, $rm, $ct, $rt, $current_user_id);
+                        $ins->bind_param("issiii", $assign_tl_id, $tm, $rm, $ct, $rt, $current_user_id);
                         if($ins->execute()) $success_count++;
                         $ins->close();
                 }
@@ -346,7 +385,7 @@ $target_query = "SELECT
     wt.year,
     wt.status,
     wt.assigned_date,
-    tl.employee_name as tl_name,
+    COALESCE(NULLIF(tl.employee_name, ''), tm.reporting_manager) as tl_name,
     tm.employee_name as tm_name,
     tm.employee_username as tm_username,
     ass.employee_name as assigned_by_name
@@ -359,16 +398,11 @@ WHERE wt.week_number > 0";
 $params = [];
 $types = '';
 
-if ($selected_tl_id > 0) {
-    if ($current_user_role == 2) {
-        $target_query .= " AND wt.tl_id = ?";
-        $params[] = $selected_tl_id;
-        $types .= 'i';
-    } elseif ($current_user_role == 3 && isset($_GET['tl_id'])) {
-        $target_query .= " AND wt.tl_id = ?";
-        $params[] = $selected_tl_id;
-        $types .= 'i';
-    }
+if ($filter_tl_id > 0) {
+    $target_query .= " AND (wt.tl_id = ? OR CAST(tm.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = (SELECT CAST(employee_name AS CHAR) COLLATE utf8mb4_unicode_ci FROM employee_master WHERE employee_id = ? LIMIT 1))";
+    $params[] = $filter_tl_id;
+    $params[] = $filter_tl_id;
+    $types .= 'ii';
 }
 
 // Apply Team Member filter if specified
@@ -392,16 +426,17 @@ if (isset($_GET['week_filter']) && $_GET['week_filter']) {
         $target_query .= " AND wt.week_number = ?";
         $params[] = $week_num;
         $types .= 'i';
-        
-        if (isset($_GET['year_filter']) && $_GET['year_filter']) {
-            $target_query .= " AND wt.year = ?";
-            $params[] = $_GET['year_filter'];
-            $types .= 'i';
-        }
     }
 }
 
-$target_query .= " ORDER BY wt.year DESC, wt.week_number DESC, tm.employee_name";
+// Apply Year filter independently (works with All Weeks too)
+if (isset($_GET['year_filter']) && $_GET['year_filter'] !== '') {
+    $target_query .= " AND wt.year = ?";
+    $params[] = (int)$_GET['year_filter'];
+    $types .= 'i';
+}
+
+$target_query .= " ORDER BY wt.id DESC";
 
 if (!empty($params)) {
     $stmt = $mysqli->prepare($target_query);
@@ -567,25 +602,23 @@ require 'header.php';
     <!-- Filter Section -->
     <div class="filter-section">
         <form method="get" class="row g-2 align-items-end">
-            <?php if($current_user_role == 3): ?>
             <div class="col-md-3">
                 <label for="tl_id" class="form-label small fw-semibold">Select Team Leader</label>
                 <select name="tl_id" id="tl_id" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">All Team Leaders</option>
                     <?php foreach($tls as $tl): ?>
-                    <option value="<?= h($tl['employee_username']) ?>" 
-                            <?= $selected_tl_id == $tl['employee_username'] ? 'selected' : '' ?>>
+                    <option value="<?= h($tl['employee_id']) ?>" 
+                            <?= $filter_tl_id == $tl['employee_id'] ? 'selected' : '' ?>>
                         <?= h($tl['employee_name']) ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <?php endif; ?>
 
             <div class="col-md">
                 <label for="tm_filter" class="form-label small fw-semibold">Team Member</label>
                 <select name="tm_filter" id="tm_filter" class="form-select form-select-sm">
-                    <option value="">All UQ Members</option>
+                    <option value="">All Team Members</option>
                     <?php foreach($tms as $tm): ?>
                     <option value="<?= h($tm['employee_username']) ?>" <?= (isset($_GET['tm_filter']) && $_GET['tm_filter'] == $tm['employee_username']) ? 'selected' : '' ?>>
                         <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
@@ -627,75 +660,10 @@ require 'header.php';
     </div>
 
         <div class="row">
-            <!-- Assign Target Form -->
-            <div class="col-md-4">
+            <!-- Quick Stats (Full Width Top for TM View-Only) -->
+            <div class="col-12">
                 <div class="card">
-                    <!-- <div class="card-header bg-primary text-white"> -->
-                        <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Assign Weekly Target</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" autocomplete="off">
-                            <input type="hidden" name="action" value="assign_target">
-                            
-                            <div class="mb-3">
-                                <label for="tm_id" class="form-label">Team Member <span class="text-danger">*</span></label>
-                                <select name="tm_id" id="tm_id" class="form-select" required <?= count($tms) == 0 ? 'disabled' : '' ?>>
-                                    <option value="">Select Team Member</option>
-                                    <?php foreach($tms as $tm): ?>
-                                    <option value="<?= h($tm['employee_username']) ?>">
-                                        <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <?php if(count($tms) == 0): ?>
-                                <div class="form-text text-warning">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    No team members found for the selected TL
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="target_limit" class="form-label">Target Limit <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="target_limit" name="target_limit" 
-                                       min="1" required placeholder="Enter target number">
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="week_input" class="form-label">Week <span class="text-danger">*</span></label>
-                                <div class="week-input-container">
-                                    <select class="form-select" id="week_input" name="week_input" required>
-                                        <option value="">Select Week</option>
-                                        <?php for($w=1; $w<=53; $w++): ?>
-                                            <option value="W<?= $w ?>">W<?= str_pad($w, 2, "0", STR_PAD_LEFT) ?></option>
-                                        <?php endfor; ?>
-                                    </select>
-                                    <input type="number" class="form-control" id="year" name="year" 
-                                           value="<?= date('Y') ?>" min="2023" max="2030" style="width: 100px;">
-                                </div>
-                                <div class="form-text">
-                                    <i class="fas fa-info-circle me-1"></i> Select week number
-                                </div>
-                            </div>
-                            
-                            <div id="weekDates" class="alert alert-info">
-                                <small>Week dates will be calculated automatically</small>
-                            </div>
-                            
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-success" <?= count($tms) == 0 ? 'disabled' : '' ?>>
-                                    <i class="fas fa-paper-plane me-1"></i> Assign Target
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                
-                <!-- Quick Stats -->
-                <div class="card mt-3">
-                    <!-- <div class="card-header bg-info text-white"> -->
-                        <div class="card-header">
+                    <div class="card-header">
                         <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Quick Stats</h6>
                     </div>
                     <div class="card-body">
@@ -734,8 +702,8 @@ require 'header.php';
                 </div>
             </div>
 
-            <!-- Targets List -->
-            <div class="col-md-8">
+            <!-- Targets List (Full Width) -->
+            <div class="col-12">
                 <div class="card">
                     <!-- <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"> -->
                          <div class="card-header d-flex justify-content-between align-items-center">
@@ -749,28 +717,23 @@ require 'header.php';
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th width="50">ID</th>
-                                        <?php if($current_user_role == 3): ?>
+                                        <th width="50">S.No</th>
                                         <th>TL</th>
-                                        <?php endif; ?>
                                         <th>Team Member</th>
                                         <th width="80">Week</th>
                                         <th width="120" class="text-center">Target Limit</th>
                                         <th width="200">Progress</th>
                                         <th width="100">Status</th>
-                                        <th width="100" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if(!empty($targets)): ?>
-                                        <?php foreach($targets as $target): ?>
+                                        <?php $sno = 1; foreach($targets as $target): ?>
                                         <tr>
-                                            <td class="fw-bold"><?= h($target['id']) ?></td>
-                                            <?php if($current_user_role == 3): ?>
+                                            <td class="fw-bold"><?= $sno++ ?></td>
                                             <td>
                                                 <small><?= h($target['tl_name']) ?></small>
                                             </td>
-                                            <?php endif; ?>
                                             <td>
                                                 <div class="fw-semibold"><?= h($target['tm_name']) ?></div>
                                                 <small class="text-muted"><?= h($target['tm_username']) ?></small>
@@ -808,12 +771,12 @@ require 'header.php';
                                                     <?= h($target['status']) ?>
                                                 </span>
                                             </td>
-                                            <td class="text-center">
+                                            <!-- <td class="text-center">
                                                 <div class="btn-group btn-group-sm">
-                                                    <!--button class="btn btn-info" title="Update Progress"
+                                                    button class="btn btn-info" title="Update Progress"
                                                             onclick="updateProgress(<?= $target['id'] ?>, '<?= h($target['tm_name']) ?>')">
                                                         <i class="fas fa-chart-line"></i>
-                                                    </button-->
+                                                    </button
                                                     <button class="btn btn-warning" title="Edit Target"
                                                             onclick="editTarget(<?= $target['id'] ?>, <?= h($target['target_limit']) ?>, 'W<?= h($target['week_number']) ?>', <?= h($target['year']) ?>)">
                                                         <i class="fas fa-edit"></i>
@@ -827,16 +790,15 @@ require 'header.php';
                                                         </button>
                                                     </form>
                                                 </div>
-                                            </td>
+                                            </td> -->
                                         </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="<?= $current_user_role == 3 ? 8 : 7 ?>" class="text-center py-5">
+                                            <td colspan="7" class="text-center py-5">
                                                 <div class="text-muted">
                                                     <i class="fas fa-bullseye fa-3x mb-3"></i>
                                                     <h5>No targets found</h5>
-                                                    <p class="mb-0">Assign your first weekly target using the form.</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -856,8 +818,7 @@ require 'header.php';
                     <input type="hidden" name="action" value="save_revisions">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Target Revision</h5>
-                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i> Save Revisions</button>
+                            <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Target Revision</h5>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive" style="overflow: visible;">
@@ -895,16 +856,16 @@ require 'header.php';
                                                     <input type="hidden" name="tm_id_rev[]" value="<?= h($tm['employee_username']) ?>">
                                                 </td>
                                                 <td>
-                                                    <input type="month" class="form-control form-control-sm" name="rev_month[]" value="<?= h($saved_month) ?>">
+                                                    <input type="month" class="form-control form-control-sm" name="rev_month[]" value="<?= h($saved_month) ?>" readonly disabled>
                                                 </td>
                                                 <td>
                                                     <div class="fw-semibold"><?= h($tm['employee_name']) ?></div>
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control form-control-sm" name="current_target[]" placeholder="Enter Target" min="0" value="<?= h($saved_ct) ?>">
+                                                    <input type="number" class="form-control form-control-sm" name="current_target[]" placeholder="—" min="0" value="<?= h($saved_ct) ?>" readonly disabled>
                                                 </td>
                                                 <td>
-                                                    <input type="number" class="form-control form-control-sm" name="revision_target[]" placeholder="Enter Revision" min="0" value="<?= h($saved_rt) ?>">
+                                                    <input type="number" class="form-control form-control-sm" name="revision_target[]" placeholder="—" min="0" value="<?= h($saved_rt) ?>" readonly disabled>
                                                 </td>
                                             </tr>
                                             <?php endforeach; ?>
