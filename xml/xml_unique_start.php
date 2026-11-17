@@ -133,6 +133,23 @@ if ($client_result) {
     }
 }
 
+// Fetch clients specifically for this page (XML jobs) - dynamic dropdown
+$page_clients = [];
+$cl_q = "SELECT DISTINCT COALESCE(NULLIF(c.team_client_name, ''), c.client_name) AS display_client, c.client_name, c.team_client_name 
+         FROM jobs j 
+         JOIN client_master c ON j.client_id = c.client_id 
+         JOIN job_master jm ON j.process_id = jm.job_id 
+         WHERE jm.job_name LIKE '%XML%' 
+         ORDER BY display_client ASC";
+$cl_res = $mysqli->query($cl_q);
+if ($cl_res) {
+    while ($cl_row = $cl_res->fetch_assoc()) {
+        if (!empty($cl_row['display_client'])) {
+            $page_clients[] = $cl_row;
+        }
+    }
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -367,9 +384,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $search = trim($_GET['search'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_job_status = trim($_GET['job_status'] ?? '');
 $filter_date_from = trim($_GET['date_from'] ?? '');
 $filter_date_to = trim($_GET['date_to'] ?? '');
-$show_tracked = isset($_GET['show_tracked']) ? $_GET['show_tracked'] : 'all';
+$filter_tat = strtolower(trim($_GET['tat'] ?? ''));
+$filter_missed_tat = strtolower(trim($_GET['missed_tat'] ?? ''));
 
 $sort = $_GET['sort'] ?? 'job_date';
 $dir = strtoupper($_GET['dir'] ?? 'DESC');
@@ -378,7 +397,7 @@ if (!in_array($dir,['ASC', 'DESC'], true)) $dir = 'DESC';
 $sort_map =[
     'job_id' => 'j.job_id',
     'job_date' => 'j.job_date',
-    'client_name' => 'c.client_name',
+    'client_name' => 'COALESCE(NULLIF(c.team_client_name, ""), c.client_name)',
     'tat_to_client' => 'cjt.tat_to_client',
     'rec_date' => 'cjt.rec_date'
 ];
@@ -397,15 +416,50 @@ if ($search) {
     $types .= "sssss";
 }
 if ($filter_client) {
-    $where[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ?)";
-    $params = array_merge($params, ["%$filter_client%", "%$filter_client%"]);
+    $where[] = "(c.client_name = ? OR c.team_client_name = ?)";
+    $params = array_merge($params, [$filter_client, $filter_client]);
     $types .= "ss";
 }
+
+// Process filter mapping (NLM, JATS, Clockss, Scielo, EBSCO, PubMed, Biblat, DOAJ, HTML, New HTML, Direct HTML)
+$process_col_map = [
+    'nlm' => 'cjt.nlm',
+    'jats' => 'cjt.jats',
+    'clockss' => 'cjt.clockss',
+    'scielo' => 'cjt.scielo',
+    'ebsco' => 'cjt.ebsco',
+    'pubmed' => 'cjt.pubmed',
+    'biblat' => 'cjt.biblat',
+    'doaj' => 'cjt.doaj',
+    'html' => 'cjt.html',
+    'new_html' => 'cjt.new_html',
+    'direct_html' => 'cjt.direct_html',
+    'new html' => 'cjt.new_html',
+    'direct html' => 'cjt.direct_html'
+];
 if ($filter_process) {
-    $where[] = "jm.job_name = ?";
-    $params[] = $filter_process;
-    $types .= "s";
+    $clean_proc = strtolower(trim($filter_process));
+    if (isset($process_col_map[$clean_proc])) {
+        $pcol = $process_col_map[$clean_proc];
+        $where[] = "($pcol IS NOT NULL AND $pcol != '' AND $pcol != '-' AND $pcol != '0')";
+    } else {
+        $where[] = "jm.job_name = ?";
+        $params[] = $filter_process;
+        $types .= "s";
+    }
 }
+
+// Job Status filter (Query, Rework/Correction, Hold, Inprocess, Despatched, PNR)
+if ($filter_job_status) {
+    if (strcasecmp($filter_job_status, 'Inprocess') === 0) {
+        $where[] = "(cjt.job_status = 'Inprocess' OR cjt.job_status = 'In Progress')";
+    } else {
+        $where[] = "cjt.job_status = ?";
+        $params[] = $filter_job_status;
+        $types .= "s";
+    }
+}
+
 if ($filter_date_from) {
     $where[] = "j.job_date >= ?";
     $params[] = $filter_date_from;
@@ -416,10 +470,17 @@ if ($filter_date_to) {
     $params[] = $filter_date_to . ' 23:59:59';
     $types .= "s";
 }
-if ($show_tracked === 'tracked') {
-    $where[] = "EXISTS (SELECT 1 FROM unique_xml_jobs WHERE job_id = j.job_id)";
-} elseif ($show_tracked === 'untracked') {
-    $where[] = "NOT EXISTS (SELECT 1 FROM unique_xml_jobs WHERE job_id = j.job_id)";
+
+// Missed TAT Sort & Filter (Ascending / Descending directly by missed days count: 19 days -> 28 days -> 29 days)
+if ($filter_missed_tat === 'asc' || $filter_missed_tat === 'desc') {
+    $where[] = "((cjt.tat_to_client IS NOT NULL AND cjt.tat_to_client < CURDATE() AND (cjt.job_status != 'Despatched' OR cjt.job_status IS NULL)) OR LOWER(TRIM(cjt.missed_tat)) = 'yes')";
+    $order_by = "DATEDIFF(CURDATE(), cjt.tat_to_client)";
+    $dir = strtoupper($filter_missed_tat);
+}
+// TAT Sort (Ascending / Descending by date)
+elseif ($filter_tat === 'asc' || $filter_tat === 'desc') {
+    $order_by = "(CASE WHEN cjt.tat_to_client IS NULL THEN 1 ELSE 0 END) ASC, cjt.tat_to_client";
+    $dir = strtoupper($filter_tat);
 }
 
 $where_sql = $where ? "WHERE " . implode(" AND ", $where) : "";
@@ -711,35 +772,68 @@ if ($results && $results->num_rows > 0) {
         <div class="card mb-3 shadow-sm border">
             <div class="card-body p-2">
                 <form method="get" class="row g-2 compact-filter align-items-end">
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <input type="text" name="search" placeholder="Sort by ID/Client/Article" value="<?= h($search) ?>" class="form-control">
                     </div>
-                    <div class="col-md-1">
-                        <input type="text" name="client" placeholder="Sort by Client" value="<?= h($filter_client) ?>" class="form-control">
+                    <div class="col-md-3">
+                        <select name="client" class="form-select">
+                            <option value="">Sort by Client</option>
+                            <?php foreach ($page_clients as $pc): 
+                                $c_name = $pc['display_client'];
+                            ?>
+                                <option value="<?= h($c_name) ?>" <?= ($filter_client === $c_name) ? 'selected' : '' ?>><?= h($c_name) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-3">
                         <select name="process" class="form-select">
                             <option value="">Sort by Process</option>
-                            <option value="CE+PAG+XML" <?= $filter_process == 'CE+PAG+XML' ? 'selected' : '' ?>>CE+TS+XML</option>
-                            <option value="PAG+XML" <?= $filter_process == 'PAG+XML' ? 'selected' : '' ?>>TS+XML</option>
-                            <option value="CE+XML" <?= $filter_process == 'CE+XML' ? 'selected' : '' ?>>CE+XML</option>
-                            <option value="XML" <?= $filter_process == 'XML' ? 'selected' : '' ?>>XML</option>
+                            <option value="NLM" <?= strcasecmp($filter_process, 'NLM') === 0 ? 'selected' : '' ?>>NLM</option>
+                            <option value="JATS" <?= strcasecmp($filter_process, 'JATS') === 0 ? 'selected' : '' ?>>JATS</option>
+                            <option value="Clockss" <?= strcasecmp($filter_process, 'Clockss') === 0 ? 'selected' : '' ?>>Clockss</option>
+                            <option value="Scielo" <?= strcasecmp($filter_process, 'Scielo') === 0 ? 'selected' : '' ?>>Scielo</option>
+                            <option value="EBSCO" <?= strcasecmp($filter_process, 'EBSCO') === 0 ? 'selected' : '' ?>>EBSCO</option>
+                            <option value="PubMed" <?= strcasecmp($filter_process, 'PubMed') === 0 ? 'selected' : '' ?>>PubMed</option>
+                            <option value="Biblat" <?= strcasecmp($filter_process, 'Biblat') === 0 ? 'selected' : '' ?>>Biblat</option>
+                            <option value="DOAJ" <?= strcasecmp($filter_process, 'DOAJ') === 0 ? 'selected' : '' ?>>DOAJ</option>
+                            <option value="HTML" <?= strcasecmp($filter_process, 'HTML') === 0 ? 'selected' : '' ?>>HTML</option>
+                            <option value="New HTML" <?= strcasecmp($filter_process, 'New HTML') === 0 ? 'selected' : '' ?>>New HTML</option>
+                            <option value="Direct HTML" <?= strcasecmp($filter_process, 'Direct HTML') === 0 ? 'selected' : '' ?>>Direct HTML</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="job_status" class="form-select">
+                            <option value="">Filter by Job Status</option>
+                            <option value="Query" <?= strcasecmp($filter_job_status, 'Query') === 0 ? 'selected' : '' ?>>Query</option>
+                            <option value="Rework/Correction" <?= strcasecmp($filter_job_status, 'Rework/Correction') === 0 ? 'selected' : '' ?>>Rework/Correction</option>
+                            <option value="Hold" <?= strcasecmp($filter_job_status, 'Hold') === 0 ? 'selected' : '' ?>>Hold</option>
+                            <option value="Inprocess" <?= strcasecmp($filter_job_status, 'Inprocess') === 0 ? 'selected' : '' ?>>Inprocess</option>
+                            <option value="Despatched" <?= strcasecmp($filter_job_status, 'Despatched') === 0 ? 'selected' : '' ?>>Despatched</option>
+                            <option value="PNR" <?= strcasecmp($filter_job_status, 'PNR') === 0 ? 'selected' : '' ?>>PNR</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <input type="date" name="date_from" value="<?= h($filter_date_from) ?>" class="form-control" title="Date From">
+                            <input type="date" name="date_to" value="<?= h($filter_date_to) ?>" class="form-control" title="Date To">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="tat" class="form-select">
+                            <option value="">Sort by TAT</option>
+                            <option value="asc" <?= $filter_tat === 'asc' ? 'selected' : '' ?>>Ascending</option>
+                            <option value="desc" <?= $filter_tat === 'desc' ? 'selected' : '' ?>>Descending</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <div class="input-group input-group-sm">
-                            <input type="date" name="date_from" value="<?= h($filter_date_from) ?>" class="form-control">
-                            <input type="date" name="date_to" value="<?= h($filter_date_to) ?>" class="form-control">
-                        </div>
-                    </div>
-                    <div class="col-md-1">
-                        <select name="show_tracked" class="form-select">
-                            <option value="all" <?= $show_tracked == 'all' ? 'selected' : '' ?>>Sort by Tracking</option>
-                            <option value="tracked" <?= $show_tracked == 'tracked' ? 'selected' : '' ?>>Tracked</option>
-                            <option value="untracked" <?= $show_tracked == 'untracked' ? 'selected' : '' ?>>Untracked</option>
+                        <select name="missed_tat" class="form-select">
+                            <option value="">Missed TAT</option>
+                            <option value="asc" <?= $filter_missed_tat === 'asc' ? 'selected' : '' ?>>Ascending</option>
+                            <option value="desc" <?= $filter_missed_tat === 'desc' ? 'selected' : '' ?>>Descending</option>
                         </select>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-md-2">
                         <select name="sort" class="form-select"> 
                             <option value="job_date" <?= $sort === 'job_date' ? 'selected' : '' ?>>Sort by Job Date</option>
                             <option value="job_id" <?= $sort === 'job_id' ? 'selected' : '' ?>>Sort by Job ID</option>
@@ -748,8 +842,9 @@ if ($results && $results->num_rows > 0) {
                             <option value="rec_date" <?= $sort === 'rec_date' ? 'selected' : '' ?>>Sort by Rec Date</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <div class="col-md-3 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="xml_unique_start.php" class="btn btn-outline-secondary btn-sm" title="Reset Filters"><i class="fas fa-undo"></i></a>
                     </div>
                 </form>
             </div>

@@ -181,7 +181,10 @@ if (!empty($tms) && !empty($processes)) {
             foreach ($procs as $p => $l) {
                 $current_state[$p] = $l; // Updates only the changed ones
             }
-            $tm_revisions[$tm][] = $current_state; // Saves the full snapshot
+            $tm_revisions[$tm][] = [
+                'date' => $date,
+                'data' => $current_state
+            ]; // Saves the full snapshot along with assigned/revised date
         }
     }
 
@@ -492,12 +495,14 @@ if (!empty($tms) && !empty($processes)) {
 
                                 if (empty($revisions)) $revisions[0] = [];
 
-                                foreach ($revisions as $idx => $rev_data):
+                                foreach ($revisions as $idx => $rev_item):
+                                    $rev_data = isset($rev_item['data']) ? $rev_item['data'] : $rev_item;
+                                    $rev_date = $rev_item['date'] ?? '';
                                     $label = ($idx == 0) ? "Assigned Target" : "R" . $idx . ": Revised Target " . $idx;
                                     $is_latest = ($idx == count($revisions) - 1);
                                     
                                     $emp_total = 0;
-                                    foreach ($rev_data as $val) $emp_total += $val;
+                                    foreach ($rev_data as $val) $emp_total += (int)$val;
                             ?>
                                 <tr style="<?= !$is_latest ? 'background-color:#fcfcfc;' : '' ?>">
                                     <td class="sticky-col col-sno"><?= $sno++ ?></td>
@@ -505,6 +510,11 @@ if (!empty($tms) && !empty($processes)) {
                                     <td class="sticky-col col-name ps-3">
                                         <div class="emp-name"><?= h($selected_tm_name) ?></div>
                                         <div class="emp-id text-primary fw-bold"><?= $label ?></div>
+                                        <?php if ($idx > 0 && !empty($rev_date)): ?>
+                                            <div class="text-secondary small fw-normal" style="font-size: 11px;">
+                                                <i class="far fa-calendar-alt me-1"></i><?= date('d-M-Y', strtotime($rev_date)) ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </td>
                                     
                                     <?php foreach($processes as $proc): 

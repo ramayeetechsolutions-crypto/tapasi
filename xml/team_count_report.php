@@ -279,9 +279,12 @@ foreach($processes_array as $proc) {
     ];
 }
 
+$chart_employees = [];
+
 foreach($employee_details as $emp_id => $emp) {
     $sum_of_percentages = 0;
     $has_any_data = false;
+    $emp_proc_data = [];
     
     foreach($processes_array as $proc) {
         $p_name = $proc['process_name'];
@@ -303,19 +306,50 @@ foreach($employee_details as $emp_id => $emp) {
             $sum_of_percentages += 100;
         }
         
-        $emp_proc_datasets_raw[$p_name]['data'][] = round($p_percent, 1);
-        $emp_proc_datasets_raw[$p_name]['raw_achieved'][] = $p_achieved;
-        $emp_proc_datasets_raw[$p_name]['raw_target'][] = $p_total_target;
+        $emp_proc_data[$p_name] = [
+            'percent' => round($p_percent, 1),
+            'achieved' => $p_achieved,
+            'target' => $p_total_target
+        ];
         
         if ($p_total_target > 0 || $p_achieved > 0) {
-            $emp_proc_datasets_raw[$p_name]['has_data'] = true;
             $has_any_data = true;
         }
     }
     
     if ($has_any_data) {
-        $emp_chart_labels[] = $emp['employee_name'];
-        $emp_chart_percentages[] = round($sum_of_percentages, 0); 
+        $chart_employees[] = [
+            'id' => $emp_id,
+            'name' => $emp['employee_name'],
+            'total_percentage' => round($sum_of_percentages, 0),
+            'processes' => $emp_proc_data
+        ];
+    }
+}
+
+// Sort employees descending by overall percentage (highest to lowest / desc to asc)
+usort($chart_employees, function($a, $b) {
+    if ($b['total_percentage'] === $a['total_percentage']) {
+        return strcmp($a['name'], $b['name']);
+    }
+    return ($b['total_percentage'] < $a['total_percentage']) ? -1 : 1;
+});
+
+foreach($chart_employees as $c_emp) {
+    $emp_chart_labels[] = $c_emp['name'];
+    $emp_chart_percentages[] = $c_emp['total_percentage'];
+    
+    foreach($processes_array as $proc) {
+        $p_name = $proc['process_name'];
+        $p_info = $c_emp['processes'][$p_name] ?? ['percent' => 0, 'achieved' => 0, 'target' => 0];
+        
+        $emp_proc_datasets_raw[$p_name]['data'][] = $p_info['percent'];
+        $emp_proc_datasets_raw[$p_name]['raw_achieved'][] = $p_info['achieved'];
+        $emp_proc_datasets_raw[$p_name]['raw_target'][] = $p_info['target'];
+        
+        if ($p_info['target'] > 0 || $p_info['achieved'] > 0) {
+            $emp_proc_datasets_raw[$p_name]['has_data'] = true;
+        }
     }
 }
 
