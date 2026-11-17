@@ -153,9 +153,9 @@ $processStageMap = [
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
 $unique_team_members = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active' ORDER BY employee_name ASC");
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ? OR employee_name = ?) AND status = 'Active' ORDER BY employee_name ASC");
 if ($stmt_team) {
-    $stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
+    $stmt_team->bind_param("sss", $user_employee_name, $logged_in_name, $user_employee_name);
     $stmt_team->execute();
     $res_team = $stmt_team->get_result();
     while ($row_team = $res_team->fetch_assoc()) {
@@ -179,8 +179,14 @@ if (!empty($team_users)) {
     $team_list = implode(',', array_unique($team_users));
     $team_condition = "(j.assigned_to = ? 
         OR j.assigned_to IN ($team_list) 
+        OR j.assigned_qc IN ($team_list)
+        OR j.assigned_pag IN ($team_list)
+        OR pag.assigned_to_pag IN ($team_list)
+        OR pag.assigned_to_img IN ($team_list)
+        OR pag.assigned_to_table IN ($team_list)
         OR qc.assigned_to_qc IN ($team_list) 
         OR qc_crx.assigned_to_qc IN ($team_list) 
+        OR qc_crx.pag_crx_assigned_to IN ($team_list)
         OR qc.upload_by IN ($team_list) 
         OR qc_crx.upload_by IN ($team_list))";
 }
@@ -189,35 +195,6 @@ if (!empty($team_users)) {
 $where = [$team_condition];
 $params = [$user_employee_name];
 $types  = 's';
-
-// Fetch employee processes (based on logged in user)
-$emp_sql = "
-    SELECT e.process, e.process1, pm.process_name
-    FROM employee_master e
-    LEFT JOIN process_master pm ON pm.process_id IN (e.process, e.process1)
-    WHERE e.employee_username = ?
-";
-$stmt = $mysqli->prepare($emp_sql);
-$stmt->bind_param("s", $current_user);
-$stmt->execute();
-$res = $stmt->get_result();
-
-$allowed_process_ids = [];
-while ($row = $res->fetch_assoc()) {
-    $pname = strtoupper($row['process_name']??'');
-
-    // Only include processes that have QC
-    if (strpos($pname, 'QC') !== false) {
-        $allowed_process_ids = array_merge($allowed_process_ids, [2,4,5,6]); // Adjust these IDs based on your QC process IDs
-    }
-}
-
-// Remove duplicates and apply process filter
-$allowed_process_ids = array_unique($allowed_process_ids);
-if (!empty($allowed_process_ids)) {
-    $clean_ids = array_map('intval', $allowed_process_ids);
-    $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
-}
 // FIX: Show everything EXCEPT standalone 'CE'
 $where[] = "jm.job_name != 'CE'";
 // Search query filter
@@ -273,19 +250,19 @@ $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 $sql = "SELECT 
     j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal_issue, j.article,
     jm.job_name AS process, j.file_path as jfile_path, j.assigned_to, j.due_date,
-    j.assigned_ce, j.assigned_le, j.assigned_pag,
+    j.assigned_ce, j.assigned_le, j.assigned_pag, j.dispatch_date as job_dispatch_date,
     
     qc.status AS qc_status, qc.assigned_to_qc, qc.qc_start_time, qc.qc_end_time,
-    qc.rtat, qc.atat, qc.path, qc.priority, qc.dispatch_date, qc.upload_by as qc_upload_by,
+    qc.rtat, qc.atat, qc.path, qc.priority, qc.dispatch_date, qc.upload_by as qc_upload_by, qc.qc_date, qc.last_updated,
     
     ce.status as ce_status, ce.ce_date as ce_moved_date, ce.done_by as ce_done_by, ce.assigned_to_content as ce_assigned_to,
     le.status as le_status, le.last_updated as le_moved_date, le.done_by as le_done_by, le.assigned_to_le as le_assigned_to, le.assigned_to_le_qc as le_qc_assigned_to,
     pag.status as pag_status, pag.created_at as pag_received_date, pag.done_by as pag_done_by, pag.assigned_to_pag as pag_assigned_to,
-    pag.eq, pag.pages, pag.images, pag.tables_count,
+    pag.eq, pag.pages, pag.images, pag.tables_count, pag.table_status, pag.assigned_to_table,
     
-    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.is_moved, qc_crx.assigned_to_qc as crx_assigned_to_qc,
+    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.done_by as crx_done_by, qc_crx.dispatch_date as crx_dispatch_date, qc_crx.qc_date as crx_qc_date, qc_crx.is_moved, qc_crx.assigned_to_qc as crx_assigned_to_qc,
     
-    ju.upload_date, ju.file_path 
+    ju.upload_date, ju.upload_by as ju_upload_by, ju.file_path 
 FROM jobs j
 JOIN client_master c ON j.client_id=c.client_id
 JOIN job_master jm ON j.process_id=jm.job_id
@@ -295,7 +272,7 @@ LEFT JOIN ce ON ce.job_id=j.job_id
 LEFT JOIN le ON le.job_id=j.job_id
 LEFT JOIN pag ON pag.job_id=j.job_id
 LEFT JOIN (
-    SELECT job_id, upload_date, file_path
+    SELECT job_id, upload_date, upload_by, file_path
     FROM job_uploads 
     WHERE id IN (
         SELECT MAX(id) FROM job_uploads GROUP BY job_id
@@ -337,8 +314,10 @@ if ($results->num_rows > 0) {
         $required_stages = $processStageMap[$normalized_process] ?? ['QC']; // Default to QC
         
         // Determine final status based on QC only
-        $qc_status = $row['qc_status'] ?? 'Need to Assign';
-        $final_status = $qc_status;
+        $qc_status = trim((string)($row['qc_status'] ?? 'Need to Assign'));
+        if ($qc_status === '' || strcasecmp($qc_status, 'Pending') === 0) $qc_status = 'Need to Assign';
+        if (strcasecmp($qc_status, 'Done') === 0) $qc_status = 'Completed';
+        $final_status = isset($status_counts[$qc_status]) ? $qc_status : 'In Progress';
         
         $status_counts[$final_status]++;
         $status_counts['Total']++;
@@ -676,7 +655,26 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h($row['eq'] ?? '0') ?></td>
                             <td><?= h($row['pages'] ?? '0') ?></td>
                             <td><?= h($row['images'] ?? '0') ?></td>
-                            <td><?= h($row['tables_count'] ?? '0') ?></td>
+                            <td>
+                                <div><strong><?= h($row['tables_count'] ?? '0') ?></strong></div>
+                                <?php
+                                    $table_emp = trim((string)($row['assigned_to_table'] ?? ''));
+                                    $table_stat = trim((string)($row['table_status'] ?? ''));
+                                    $is_pag_done_row = in_array(($row['pag_status'] ?? ''), ['Completed', 'Done']) || in_array(($row['pag_crx_stage'] ?? ''), ['PAG_CRX_Compelete', 'Completed', 'Done']);
+                                    if (strcasecmp($table_stat, 'Completed') === 0) {
+                                        $table_badge_stat = 'Completed';
+                                    } elseif (strcasecmp($table_stat, 'In Progress') === 0 || !empty($table_emp)) {
+                                        $table_badge_stat = 'In Progress';
+                                    } elseif (!$is_pag_done_row) {
+                                        $table_badge_stat = 'Need to Assign';
+                                    } else {
+                                        $table_badge_stat = '';
+                                    }
+                                    if ($table_badge_stat !== '') {
+                                        echo '<div class="mt-1">' . getStatusBadge($table_badge_stat, $table_emp, $emp_map) . '</div>';
+                                    }
+                                ?>
+                            </td>
                             <td><span class="badge bg-secondary"><?= h($row['process']) ?></span></td>
                             <!-- CE Status (Green when Completed + Completed By Who) -->
                             <?php 
@@ -748,14 +746,32 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td class="fw-bold"><?= intval($row['atat'] ?? 0) ?></td>
                             
                             <!-- Dispatch & Upload -->
-                            <td><?= !empty($row['dispatch_date']) && $row['dispatch_date'] != '0000-00-00 00:00:00' ? formatDateOnly(substr($row['dispatch_date'], 0, 10), 'd-m-Y') : '—' ?></td>
                             <?php 
-                                // QC Completed = QC row. CRX columns must show dash.
-                                // Only show CRX data when QC is NOT Completed AND QC_CRX stage IS Moved.
                                 $qc_completed = in_array(($row['qc_status'] ?? ''), ['Completed', 'Done']);
                                 $is_crx_moved = (!empty($row['is_moved']) && $row['is_moved'] == 1) || (($row['qc_crx_stage'] ?? '') === 'Moved');
-                                $up_by = !empty($row['crx_upload_by']) ? $row['crx_upload_by'] : ($row['qc_upload_by'] ?? '');
+                                
+                                $disp_date = '';
+                                foreach ([$row['dispatch_date'] ?? '', $row['crx_dispatch_date'] ?? '', $row['job_dispatch_date'] ?? ''] as $d_cand) {
+                                    if (!empty($d_cand) && $d_cand != '0000-00-00' && $d_cand != '0000-00-00 00:00:00') {
+                                        $disp_date = $d_cand;
+                                        break;
+                                    }
+                                }
+                                if (empty($disp_date) && ($qc_completed || $is_crx_moved)) {
+                                    foreach ([$row['crx_qc_date'] ?? '', $row['qc_date'] ?? '', $row['upload_date'] ?? ''] as $d_cand) {
+                                        if (!empty($d_cand) && $d_cand != '0000-00-00' && $d_cand != '0000-00-00 00:00:00') {
+                                            $disp_date = $d_cand;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                $up_by = !empty($row['crx_upload_by']) ? $row['crx_upload_by']
+                                       : (!empty($row['qc_upload_by']) ? $row['qc_upload_by']
+                                       : (!empty($row['crx_done_by']) ? $row['crx_done_by']
+                                       : (($qc_completed || $is_crx_moved) ? ($row['ju_upload_by'] ?? '') : '')));
                             ?>
+                            <td><?= !empty($disp_date) ? formatDateOnly(substr($disp_date, 0, 10), 'd-m-Y') : '—' ?></td>
                             <td>
                                 <?php echo !empty($up_by) ? h($emp_map[$up_by] ?? $up_by) : '—'; ?>
                             </td>
