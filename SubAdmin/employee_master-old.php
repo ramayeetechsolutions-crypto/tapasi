@@ -213,7 +213,46 @@ $employees_result = $mysqli->query($sql);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     
     <style>
-        .table th { background-color: #2c3e50; color: white; }
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
+        .table th { background-color: var(--ash, #6c757d) !important; color: white; }
         .salary-cell { text-align: right; font-weight: 500; }
         .tds-cell { text-align: center; font-weight: 500; }
         .table-compact th, .table-compact td { padding: 0.4rem 0.5rem; font-size: 0.875rem; }
@@ -236,8 +275,8 @@ $employees_result = $mysqli->query($sql);
         <?php if ($mode === 'edit' && $editRow): ?>
         
         <!-- Edit Form -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-user-edit me-2"></i>Edit Employee Details</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white"><i class="fas fa-user-edit me-2"></i>Edit Employee Details</h5>
             <a href="employee_master-old.php" class="btn btn-sm btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -373,8 +412,8 @@ $employees_result = $mysqli->query($sql);
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-users me-2"></i>Employee Master</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white"><i class="fas fa-users me-2"></i>Employee Master</h5>
         </div>
 
         <div class="card">
@@ -449,7 +488,7 @@ $employees_result = $mysqli->query($sql);
                                         <div class="text-muted">
                                             <i class="fas fa-users fa-3x mb-3"></i>
                                             <h5>No employees found</h5>
-                                            <p class="mb-0">No employee data available.</p>
+                                            <p class="mb-0 mb-0 text-white-50 small">No employee data available.</p>
                                         </div>
                                     </td>
                                 </tr>

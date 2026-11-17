@@ -632,7 +632,6 @@ function fetchData() {
 </head>
 <body>
     <?php require 'header.php'; ?>
-    <br><br><br>
 
     <div id="notificationContainer" class="notification"></div>
     

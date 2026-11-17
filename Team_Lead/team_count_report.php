@@ -177,21 +177,51 @@ $processes_result = $mysqli->query($processes_sql);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .main-content {
+            margin-top: 70px;
             padding: 20px;
-            margin: 0 auto;
+            margin-left: auto;
+            margin-right: auto;
         }
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             border: 1px solid rgba(0, 0, 0, 0.125);
             margin-bottom: 20px;
         }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .table th {
             /* background-color: #2c3e50; */
-            background-color: #707981 !important;
+            background-color: var(--ash, #6c757d) !important;
             color: white;
             position: sticky;
             top: 0;
             z-index: 10;
+            border: 1px solid #5a6268 !important;
         }
         .table-secondary th {
             background-color: #6c757d;
@@ -261,14 +291,14 @@ $processes_result = $mysqli->query($processes_sql);
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-chart-bar me-2"></i>Employee Word Count Report</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-chart-bar me-2"></i>Employee Word Count Report</h4>
             <div class="btn-group">
-                <button class="btn btn-primary" onclick="exportToExcel()">
-                    <i class="fas fa-file-excel me-1"></i> Export Excel
+                <button class="btn btn-light btn-sm fw-semibold" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel me-1 text-success"></i> Export Excel
                 </button>
-                <button class="btn btn-success" onclick="window.print()">
-                    <i class="fas fa-print me-1"></i> Print
+                <button class="btn btn-light btn-sm fw-semibold ms-2" onclick="window.print()">
+                    <i class="fas fa-print me-1 text-primary"></i> Print
                 </button>
             </div>
         </div>

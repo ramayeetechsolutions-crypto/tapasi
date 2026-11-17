@@ -376,17 +376,56 @@ unset($_SESSION['form_data']);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content {
+        .main-content { margin-top: 70px;
             padding: 20px;
             max-width: 1800px;
             margin: 0 auto;
         }
         .table th {
-            background-color: #2c3e50;
+            background-color: var(--ash, #6c757d) !important;
             color: white;
             border: none;
         }
@@ -437,8 +476,8 @@ unset($_SESSION['form_data']);
         <?php if($mode === 'generate' || $mode === 'edit'): ?>
         
         <!-- Generate/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-bill-wave me-2"></i><?= $mode === 'edit' ? 'Edit Salary Record' : 'Generate Salary' ?></h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-money-bill-wave me-2"></i><?= $mode === 'edit' ? 'Edit Salary Record' : 'Generate Salary' ?></h4>
             <a href="salary.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -603,8 +642,8 @@ unset($_SESSION['form_data']);
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-check me-2"></i>Salary Management</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-money-check me-2"></i>Salary Management</h4>
             <div>
                 <a href="salary.php?mode=generate" class="btn btn-success me-2">
                     <i class="fas fa-plus me-1"></i> Generate Salary
@@ -661,7 +700,7 @@ unset($_SESSION['form_data']);
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h5><i class="fas fa-bolt me-2"></i>Quick Bulk Generation</h5>
-                    <p class="mb-0">Generate salaries for all TDS employees at once for the current month</p>
+                    <p class="mb-0 mb-0 text-white-50 small">Generate salaries for all TDS employees at once for the current month</p>
                 </div>
                 <div class="col-md-4 text-end">
                     <form method="post" class="d-inline">

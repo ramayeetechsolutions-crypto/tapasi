@@ -252,7 +252,46 @@ $processes1=$mysqli->query("SELECT process_id, process_name FROM process_master 
 
 ?>
 <?php require 'header.php';?>
-<style>.btn-brown{background:#795548;color:#fff;border:none}.btn-brown:hover{background:#5d4037;color:#fff}
+<style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+.btn-brown{background:#795548;color:#fff;border:none}.btn-brown:hover{background:#5d4037;color:#fff}
 
 /* Reduce vertical space */
 .row.mb-1 {
@@ -291,7 +330,7 @@ hr.my-1 {
 <?php endif; ?>
 
 <?php if ($mode==='add'||$mode==='edit'): ?>
-<div class="d-flex justify-content-between mb-3"><h5><?= $mode==='edit'?'Edit':'Add' ?> Employee</h5><a href="employee_master.php" class="btn btn-sm btn-secondary">Back</a></div>
+<div class="page-title-container"><h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit':'Add' ?> Employee</h5><a href="employee_master.php" class="btn btn-sm btn-secondary">Back</a></div>
 <div class="card p-4 mx-auto" style="max-width:900px;">
 <form method="post" class="row g-3" onsubmit="return checkPasswordMatch()">
     <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
@@ -525,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <?php else: ?>
-<div class="d-flex justify-content-between mb-3"><h5>Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
+<div class="page-title-container"><h5 class="mb-0 text-white">Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
     <div class="d-flex flex-wrap gap-2 mb-3">
 <input type="text" id="searchInput" class="form-control form-control-sm" style="width:250px" placeholder="Search" value="<?=h($q)?>">
 <select id="statusSelect" class="form-select form-select-sm" style="width:120px;">

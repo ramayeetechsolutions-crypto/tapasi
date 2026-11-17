@@ -120,11 +120,50 @@ $jobs = $mysqli->query("SELECT job_id, article, journal_issue FROM jobs ORDER BY
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content {
+        .main-content { margin-top: 70px;
             padding: 20px;
             max-width: 1200px;
             margin: 0 auto;
@@ -147,8 +186,8 @@ $jobs = $mysqli->query("SELECT job_id, article, journal_issue FROM jobs ORDER BY
     <?php if (file_exists('header.php')) require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-edit me-2"></i>Edit Invoice - <?= h($invoice['invoice_no']) ?></h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-edit me-2"></i>Edit Invoice - <?= h($invoice['invoice_no']) ?></h4>
             <div class="btn-group">
                 <a href="invoice_view.php?id=<?= $invoice_id ?>" class="btn btn-info">
                     <i class="fas fa-eye me-1"></i> View Invoice

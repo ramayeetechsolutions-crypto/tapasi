@@ -168,10 +168,21 @@ require 'header.php';
         }
 
         .page-header {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
             margin-bottom: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .page-header h3, .page-header h1, .page-header h2, .page-header h4, .page-header h5 {
+            color: white !important;
+        }
+        .page-header p {
+            color: rgba(255, 255, 255, 0.85) !important;
         }
     </style>
 </head>

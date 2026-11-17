@@ -186,6 +186,45 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         .card-stat {
             border-radius: 10px;
             transition: transform 0.2s;
@@ -194,7 +233,7 @@ require 'header.php';
             transform: translateY(-5px);
         }
         .table th {
-            background-color: #f8f9fa;
+            background-color: var(--ash, #6c757d) !important;
             font-weight: 600;
         }
         .badge-status {
@@ -227,8 +266,8 @@ require 'header.php';
 </head>
 <body>
     <div class="container-fluid py-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white">
                 <?php if ($role_name === 'TM'): ?>
                     <i class="fas fa-chart-line text-primary"></i> My Time Tracking Report
                 <?php else: ?>
@@ -245,10 +284,10 @@ require 'header.php';
             <div class="col-md-3 mb-3">
                 <div class="card card-stat summary-card">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="page-title-container">
                             <div>
                                 <h6 class="text-muted mb-2">Total Sessions</h6>
-                                <h3 class="mb-0"><?= number_format($summary['total_sessions'] ?? 0) ?></h3>
+                                <h3 class="mb-0 mb-0 text-white"><?= number_format($summary['total_sessions'] ?? 0) ?></h3>
                             </div>
                             <div class="icon-circle bg-primary text-white rounded-circle">
                                 <i class="fas fa-clock fa-2x"></i>
@@ -260,10 +299,10 @@ require 'header.php';
             <div class="col-md-3 mb-3">
                 <div class="card card-stat in-progress">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="page-title-container">
                             <div>
                                 <h6 class="text-muted mb-2">Total Jobs</h6>
-                                <h3 class="mb-0"><?= number_format($summary['total_jobs'] ?? 0) ?></h3>
+                                <h3 class="mb-0 mb-0 text-white"><?= number_format($summary['total_jobs'] ?? 0) ?></h3>
                             </div>
                             <div class="icon-circle bg-warning text-white rounded-circle">
                                 <i class="fas fa-tasks fa-2x"></i>
@@ -275,10 +314,10 @@ require 'header.php';
             <div class="col-md-3 mb-3">
                 <div class="card card-stat completed">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="page-title-container">
                             <div>
                                 <h6 class="text-muted mb-2">Total Time</h6>
-                                <h3 class="mb-0"><?= formatDuration($summary['total_minutes'] ?? 0) ?></h3>
+                                <h3 class="mb-0 mb-0 text-white"><?= formatDuration($summary['total_minutes'] ?? 0) ?></h3>
                             </div>
                             <div class="icon-circle bg-success text-white rounded-circle">
                                 <i class="fas fa-hourglass-half fa-2x"></i>
@@ -290,10 +329,10 @@ require 'header.php';
             <div class="col-md-3 mb-3">
                 <div class="card card-stat not-started">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="page-title-container">
                             <div>
                                 <h6 class="text-muted mb-2">Avg Time/Session</h6>
-                                <h3 class="mb-0"><?= formatDuration($summary['avg_minutes_per_session'] ?? 0) ?></h3>
+                                <h3 class="mb-0 mb-0 text-white"><?= formatDuration($summary['avg_minutes_per_session'] ?? 0) ?></h3>
                             </div>
                             <div class="icon-circle bg-info text-white rounded-circle">
                                 <i class="fas fa-chart-pie fa-2x"></i>

@@ -135,6 +135,45 @@ function generateExcelContent($data, $month, $year) {
         <meta charset=\"UTF-8\">
         <title>TDS Report - $month $year</title>
         <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
             td { mso-number-format:\\@; }
             .number { mso-number-format:'#,##0.00'; }
         </style>
@@ -323,13 +362,13 @@ $years = range($current_year - 2, $current_year + 1);
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content {
+        .main-content { margin-top: 70px;
             padding: 20px;
             max-width: 1800px;
             margin: 0 auto;
         }
         .table th {
-            background-color: #2c3e50;
+            background-color: var(--ash, #6c757d) !important;
             color: white;
             border: none;
         }
@@ -366,8 +405,8 @@ $years = range($current_year - 2, $current_year + 1);
     <?php if (file_exists('header.php')) require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-file-invoice-dollar me-2"></i>TDS Monthly Deduction Report</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-file-invoice-dollar me-2"></i>TDS Monthly Deduction Report</h4>
             <div>
                 <a href="tds.php?export=excel&month=<?= h($month) ?>&year=<?= h($year) ?>" 
                    class="btn btn-success">
@@ -419,7 +458,7 @@ $years = range($current_year - 2, $current_year + 1);
                     <div class="card-body text-center">
                         <h5><i class="fas fa-users me-2"></i>Salary Records</h5>
                         <h2><?= $tds_data['summary']['salary_records'] ?></h2>
-                        <p class="mb-0">Employees with TDS</p>
+                        <p class="mb-0 mb-0 text-white-50 small">Employees with TDS</p>
                     </div>
                 </div>
             </div>

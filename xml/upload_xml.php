@@ -1045,7 +1045,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 </head>
 <body>
     <?php require 'header.php'; ?>
-    <br><br><br>
 
     <div id="notificationContainer"></div>
 

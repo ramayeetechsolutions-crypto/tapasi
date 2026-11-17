@@ -191,8 +191,8 @@ require 'header.php';
 <?php endif; ?>
 
 <?php if($mode==='add'||$mode==='edit'): ?>
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h5><?= $mode==='edit'?'Edit Job':'Add Job' ?></h5>
+<div class="page-title-container">
+    <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Job':'Add Job' ?></h5>
     <a href="job_management.php" class="btn btn-secondary">Back</a>
 </div>
 <div class="card mb-3 mx-auto" style="max-width:980px;">
@@ -265,8 +265,8 @@ require 'header.php';
 
 <?php else: ?>
 <!-- Toolbar like client_master -->
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h5>Job Master</h5>
+<div class="page-title-container">
+    <h5 class="mb-0 text-white">Job Master</h5>
     <a href="job_management.php?mode=add" class="btn btn-success"><i class="fa fa-plus"></i> Add Job</a>
 </div>
 

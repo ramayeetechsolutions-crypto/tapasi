@@ -51,10 +51,10 @@ require 'header.php';
 <div class="container-fluid py-4" style="margin-top: 60px;">
     
     <!-- PAGE HEADER: Title & Add Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark"><i class="fas fa-calculator me-2"></i>Math Category Master</h3>
-            <p class="text-muted mb-0">Manage all available math categories and definitions</p>
+            <h3 class="fw-bold mb-0 text-white"><i class="fas fa-calculator me-2"></i>Math Category Master</h3>
+            <p class="mb-0 mb-0 text-white-50 small">Manage all available math categories and definitions</p>
         </div>
         <!-- Button triggers modal -->
         <button class="btn btn-success fw-bold px-4 py-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
@@ -91,8 +91,8 @@ require 'header.php';
     <!-- TABLE SECTION -->
     <!-- Cyan/Info Background Header -->
     <div class="card shadow border-0">
-        <div class="card-header bg-info text-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-list-ul me-2"></i>All Categories</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 fw-bold mb-0 text-white"><i class="fas fa-list-ul me-2"></i>All Categories</h5>
             <span class="badge bg-white text-info fw-bold fs-6 px-3"><?= $cats->num_rows ?> records found</span>
         </div>
         

@@ -1,4 +1,5 @@
-﻿<?php
+<?php
+ob_start();
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -337,17 +338,58 @@ if ($current_user_name) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
         }
         .main-content { 
-            padding: 20px; 
+            padding: 90px 25px 30px 25px; 
             max-width: 1900px; 
             margin: 0 auto; 
         }
-        .table th { 
-            background-color: #5e6b77 !important; 
-            color: #ffffff !important; 
-            border: none; 
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .page-title-container h1, .page-title-container h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sticky Table Header */
+        .table thead th, .table th { 
+            position: sticky;
+            top: 70px;
+            z-index: 900;
+            background-color: var(--ash, #6c757d) !important; 
+            color: white !important; 
+            border: 1px solid #6c757d !important; 
             font-size: 11px; 
+            font-weight: bold;
+            text-transform: uppercase;
             white-space: nowrap; 
             padding: 8px 5px; 
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+        }
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .card, .card-body, .table-responsive, .table-container {
+            overflow: visible !important;
+        }
+        .card-header {
+            background-color: var(--ash, #6c757d) !important;
+            color: white !important;
         }
         .table td { 
             vertical-align: middle; 
@@ -428,9 +470,9 @@ if ($current_user_name) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
 
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-ticket-alt me-2"></i><?= $mode === 'edit' ? 'Edit Ticket' : 'Create New Ticket' ?></h4>
-            <a href="ticketmanagementexecutive.php" class="btn btn-secondary btn-sm">
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i><?= $mode === 'edit' ? 'Edit Ticket' : 'Create New Ticket' ?></h4>
+            <a href="ticketmanagementexecutive.php" class="btn btn-light btn-sm fw-semibold">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
         </div>
@@ -602,11 +644,11 @@ if ($current_user_name) {
         <?php else: ?>
 
         <!-- View Mode - IT Ticket Management -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-ticket-alt me-2"></i>System Complaints</h4>
-            <div class="d-flex align-items-center">
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i>System Complaints</h4>
+            <div class="d-flex align-items-center gap-2">
                 <?php if($current_user_name): ?>
-                <span class="badge bg-primary me-2">Viewing: <?= h($current_user_name) ?>'s Team</span>
+                <span class="badge bg-light text-dark">Viewing: <?= h($current_user_name) ?>'s Team</span>
                 <?php endif; ?>
                 <a href="ticketmanagementexecutive.php?mode=add" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus me-1"></i> Create Ticket
@@ -677,7 +719,7 @@ if ($current_user_name) {
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
                                 <th>Ticket ID</th>
                                 <th>Date</th>

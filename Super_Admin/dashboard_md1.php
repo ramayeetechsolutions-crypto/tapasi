@@ -34,11 +34,40 @@ body { background:#f4f6f9; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans
 
 /* Text colors */
 .text-primary { color:#8B6450 !important; }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
 </style>
 </head>
 <body>
 
 <div class="container mt-4">
+  <div class="page-title-container">
+    <h4 class="mb-0 text-white"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Overview</h4>
+  </div>
   <!-- Filter Bar -->
   <div class="filter-bar">
     <div>

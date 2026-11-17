@@ -244,8 +244,8 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
         }
 
         .main-content {
-            margin-top: 90px;
-            padding: 30px 5%;
+            margin-top: 0;
+            padding: 15px 5%;
             transition: all 0.3s ease;
         }
 

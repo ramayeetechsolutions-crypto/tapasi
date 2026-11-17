@@ -459,17 +459,56 @@ if (!$rateLists) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content {
+        .main-content { margin-top: 70px;
             padding: 20px;
             max-width: 1800px;
             margin: 0 auto;
         }
         .table th {
-            background-color: #2c3e50;
+            background-color: var(--ash, #6c757d) !important;
             color: white;
             border: none;
             font-size: 0.85rem;
@@ -528,8 +567,8 @@ if (!$rateLists) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-list-alt me-2"></i><?= $mode === 'edit' ? 'Edit Client Rate List' : 'Add New Client Rate List' ?></h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-list-alt me-2"></i><?= $mode === 'edit' ? 'Edit Client Rate List' : 'Add New Client Rate List' ?></h4>
             <a href="client_rate_list.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -667,8 +706,8 @@ if (!$rateLists) {
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-list-alt me-2"></i>Client Rate List</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-list-alt me-2"></i>Client Rate List</h4>
             <div>
                 <a href="client_rate_list.php?mode=add" class="btn btn-success btn-sm me-2">
                     <i class="fas fa-plus me-1"></i> Add Rate List
@@ -684,7 +723,7 @@ if (!$rateLists) {
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h6 class="mb-1"><i class="fas fa-download me-2"></i>Excel Template</h6>
-                    <p class="mb-0 text-muted">Download the Excel template with correct column format for import.</p>
+                    <p class="mb-0 mb-0 text-white-50 small">Download the Excel template with correct column format for import.</p>
                     <small class="text-muted">Required columns in order: client_name, payment, frequency, y0j, invoice_name, all_services, ce_ts, ce_ts_xml, ce, ts, xml, html, xml_html</small>
                     <br><small class="text-muted">Service values: "Yes" or "No" (case-insensitive)</small>
                 </div>

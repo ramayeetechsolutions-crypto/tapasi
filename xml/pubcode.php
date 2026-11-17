@@ -441,9 +441,48 @@ $managers = getManagers($mysqli);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { padding: 20px; max-width: 2500px; margin: 0 auto; }
-        .table th { background-color:  #5e6b77 !important; color: #ffffff !important; border: none; white-space: nowrap; }
+        .table th { background-color:  var(--ash, #6c757d) !important; color: #ffffff !important; border: none; white-space: nowrap; }
         .table td { vertical-align: middle; font-size: 0.9rem; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .journal-name-cell, .email-cell, .url-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; position: relative; }
@@ -474,8 +513,8 @@ $managers = getManagers($mysqli);
         <?php endif; ?>
 
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4><i class="fas fa-book me-2"></i><?= $mode === 'edit' ? 'Edit Journal' : 'Add New Journal' ?></h4>
+            <div class="page-title-container">
+                <h4 class="mb-0 text-white"><i class="fas fa-book me-2"></i><?= $mode === 'edit' ? 'Edit Journal' : 'Add New Journal' ?></h4>
                 <a href="pubcode.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
             </div>
             
@@ -647,9 +686,9 @@ $managers = getManagers($mysqli);
         <?php else: ?>
 
             <!-- View Mode -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="page-title-container">
                 <div>
-                    <h4><i class="fas fa-book me-2"></i>Pub Code</h4>
+                    <h4 class="mb-0 text-white"><i class="fas fa-book me-2"></i>Pub Code</h4>
                     <p class="text-muted mb-0">Manage publication codes | Import Excel/CSV to bulk update</p>
                 </div>
                 <div>

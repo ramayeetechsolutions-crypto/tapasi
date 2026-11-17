@@ -582,15 +582,54 @@ require 'header.php';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content {
+        .main-content { margin-top: 70px;
             padding-top: 70px;
         }
         .table th {
-            background-color: #2c3e50;
+            background-color: var(--ash, #6c757d) !important;
             color: white;
             border: none;
             font-size: 0.85rem;
@@ -649,8 +688,8 @@ require 'header.php';
 
     <?php if($mode==='add'||$mode==='edit'): ?>
     <!-- ADD/EDIT FORM -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
+    <div class="page-title-container">
+        <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
         <a href="client_master.php" class="btn btn-sm btn-secondary">Back</a>
     </div>
     <div class="card mb-3 mx-auto" style="max-width:1200px;">
@@ -832,8 +871,8 @@ require 'header.php';
 
     <?php else: ?>
     <!-- LIST VIEW -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5>Client Master <?= $isPassive ? '<span class="badge bg-warning">Passive Clients</span>' : '' ?></h5>
+    <div class="page-title-container">
+        <h5 class="mb-0 text-white">Client Master <?= $isPassive ? '<span class="badge bg-warning">Passive Clients</span>' : '' ?></h5>
         <div>
             <a href="client_master.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add</a>
             <button type="button" class="btn btn-sm btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#importModal">
@@ -847,7 +886,7 @@ require 'header.php';
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h6 class="mb-1"><i class="fas fa-file-excel me-2"></i>Excel Import Instructions</h6>
-                <p class="mb-0 text-muted">Download the sample Excel file with correct column format for import.</p>
+                <p class="mb-0 mb-0 text-white-50 small">Download the sample Excel file with correct column format for import.</p>
                 <small class="text-muted">Required columns: client_name (Column B) is mandatory. First row must be headers.</small>
                 <br><small class="text-muted">Existing clients will be updated, new clients will be added.</small>
             </div>

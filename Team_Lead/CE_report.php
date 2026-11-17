@@ -327,8 +327,34 @@ foreach ($performance_data as &$emp) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .main-content { padding: 20px; max-width: 1600px; margin: 0 auto; }
+        .main-content { margin-top: 70px; padding: 20px; max-width: 1600px; margin-left: auto; margin-right: auto; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); margin-bottom: 20px; }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         .stat-card { border-radius: 10px; padding: 20px; text-align: center; color: white; }
         .stat-card.employees { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .stat-card.target { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
@@ -336,7 +362,7 @@ foreach ($performance_data as &$emp) {
         .stat-card.errors { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
         .stat-card h3 { font-size: 2.5rem; margin: 10px 0; }
         .table thead th {
-            background-color: #707981 !important;
+            background-color: var(--ash, #6c757d) !important;
             font-weight: bold;
             font-size: 0.85rem;
             text-transform: uppercase;
@@ -357,14 +383,14 @@ foreach ($performance_data as &$emp) {
     
     <div class="main-content">
         <!-- Header with Title, Week Selector, and Download Button -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-container">
             <div>
-                <h4><i class="fas fa-file-alt me-2"></i>WEEKLY PRODUCTION REPORT</h4>
-                <p class="text-muted mb-0">Team: <?= h($team_leader_team_name) ?> | Week <?= $week ?>, <?= $year ?></p>
+                <h4 class="mb-1 text-white"><i class="fas fa-file-alt me-2"></i>WEEKLY PRODUCTION REPORT</h4>
+                <p class="text-white-50 mb-0 small">Team: <?= h($team_leader_team_name) ?> | Week <?= $week ?>, <?= $year ?></p>
             </div>
             <div class="d-flex align-items-center gap-3">
                 <!-- Week Selector Form -->
-                <form method="get" class="row g-2">
+                <form method="get" class="row g-2 align-items-center">
                     <div class="col-auto">
                         <input type="number" name="week" class="form-control form-control-sm" value="<?= $week ?>" min="1" max="53" style="width: 80px;" placeholder="Week">
                     </div>
@@ -372,16 +398,12 @@ foreach ($performance_data as &$emp) {
                         <input type="number" name="year" class="form-control form-control-sm" value="<?= $year ?>" min="2020" max="2030" style="width: 100px;" placeholder="Year">
                     </div>
                     <div class="col-auto">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fas fa-filter me-1"></i> Filter
+                        <button type="submit" class="btn btn-light btn-sm fw-semibold">
+                            <i class="fas fa-filter me-1 text-primary"></i> Filter
                         </button>
                     </div>
                 </form>
-                
-                <!-- Download Excel Button -->
-              <!--a href="?week=<?= $week ?>&year=<?= $year ?>&download=excel" class="btn btn-success download-btn">
-    <i class="fas fa-file-excel excel-icon me-2"></i> Download Excel
-</a-->            </div>
+            </div>
         </div>
 
         <!-- Team Statistics -->

@@ -358,8 +358,8 @@ if ($row = $result->fetch_assoc()) {
 
         /* Main Content */
         .main-content {
-            margin-top: 70px;
-            padding: 30px 5%;
+            margin-top: 0;
+            padding: 15px 5%;
             transition: all 0.3s ease;
         }
 

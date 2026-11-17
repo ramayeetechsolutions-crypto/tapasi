@@ -155,10 +155,10 @@ require 'header.php';
 <div class="container-fluid py-4" style="margin-top: 60px;">
     
     <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Invoice Data</h3>
-            <p class="text-muted">Manage uploaded invoice records. (Duplicates are skipped)</p>
+            <h3 class="fw-bold  mb-0 mb-0 text-white"><i class="fas fa-file-invoice-dollar me-2"></i>Invoice Data</h3>
+            <p class=" mb-0 text-white-50 small">Manage uploaded invoice records. (Duplicates are skipped)</p>
         </div>
         <button type="button" class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
             <i class="fas fa-file-excel me-2"></i> Import Invoices

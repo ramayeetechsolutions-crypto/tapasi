@@ -265,10 +265,10 @@ require 'header.php';
 
 <div class="container-fluid py-4" style="margin-top: 60px;">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark"><i class="fas fa-users me-2"></i>Employee Master</h3>
-            <p class="text-muted mb-0">Manage all employee details including salary, statutory, and exit information.</p>
+            <h3 class="fw-bold mb-0 text-white"><i class="fas fa-users me-2"></i>Employee Master</h3>
+            <p class="mb-0 mb-0 text-white-50 small">Manage all employee details including salary, statutory, and exit information.</p>
         </div>
         <div class="d-flex gap-2">
             <a href="employee_master.php?mode=add" class="btn btn-success">
@@ -305,8 +305,8 @@ require 'header.php';
     <!-- Employee Master DataTable -->
     <div class="card shadow border-0">
         <div class="card-header bg-primary text-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold"><i class="fas fa-table me-2"></i>Employee Master List</h5>
+            <div class="page-title-container">
+                <h5 class="mb-0 fw-bold mb-0 text-white"><i class="fas fa-table me-2"></i>Employee Master List</h5>
                 <div class="d-flex gap-2">
                     <button class="btn btn-light btn-sm" onclick="exportToExcel()">
                         <i class="fas fa-file-excel me-1"></i> Export
@@ -478,7 +478,7 @@ require 'header.php';
                                     <div class="text-muted">
                                         <i class="fas fa-users fa-3x mb-3"></i>
                                         <h5>No employees found</h5>
-                                        <p class="mb-0">Get started by adding your first employee.</p>
+                                        <p class="mb-0 mb-0 text-white-50 small">Get started by adding your first employee.</p>
                                         <a href="employee_master.php?mode=add" class="btn btn-primary mt-2">
                                             <i class="fas fa-plus me-1"></i> Add Employee
                                         </a>

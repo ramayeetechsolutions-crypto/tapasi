@@ -46,7 +46,7 @@ require 'header.php';
         <div class="col-md-10 col-lg-8"> <!-- Widened card to fit 4 columns -->
             <div class="card shadow">
                 <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Sales & OT Calculation</h5>
+                    <div class="page-title-container"><h5 class="mb-0 text-white"><i class="fas fa-calculator me-2"></i>Sales & OT Calculation</h5></div>
                 </div>
                 <div class="card-body p-4">
                     <form method="post">

@@ -148,6 +148,45 @@ require 'header.php';
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
     /* Custom styles for the professional invoice look */
     .invoice-container {
         border: 1px solid #dee2e6;
@@ -183,8 +222,8 @@ require 'header.php';
     </div>
 <?php endif; ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5>Invoice Preview Tool (No DB Insert)</h5>
+<div class="page-title-container">
+    <h5 class="mb-0 text-white">Invoice Preview Tool (No DB Insert)</h5>
     <a href="job_master.php" class="btn btn-sm btn-secondary"><i class="fas fa-arrow-left"></i> Back to Jobs</a>
 </div>
 
@@ -266,7 +305,7 @@ require 'header.php';
       <div class="row mb-5">
         <div class="col-sm-6">
           <h5 class="mb-1 text-primary"><?= h($preview_data['company']['company_name'] ?? 'COMPANY NAME') ?></h5>
-          <p class="small mb-0"><?= nl2br(h($preview_data['company']['company_address'] ?? '')) ?></p>
+          <p class="small mb-0 mb-0 text-white-50 small"><?= nl2br(h($preview_data['company']['company_address'] ?? '')) ?></p>
           <p class="small mb-0">GSTIN: <?= h($preview_data['company']['pan_number'] ?? '') ?></p>
           <p class="small mb-0">PAN: <?= h($preview_data['company']['pan_number'] ?? '') ?></p>
         </div>

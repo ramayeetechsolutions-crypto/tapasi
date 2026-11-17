@@ -680,6 +680,45 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         .btn-brown{background:#795548;color:#fff;border:none}.btn-brown:hover{background:#5d4037;color:#fff}
 
         /* Reduce vertical space */
@@ -704,7 +743,7 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
         .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
         .close-modal:hover { color: #bbb; }
         
-        .table th { background-color: #2c3e50; color: white; }
+        .table th { background-color: var(--ash, #6c757d) !important; color: white; }
         
         /* Verification badges */
         .verification-badge { font-size: 0.75em; }
@@ -837,8 +876,8 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-users me-2"></i>Employee Master</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white"><i class="fas fa-users me-2"></i>Employee Master</h5>
             <a href="employee_master.php?mode=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Add Employee
             </a>
@@ -1144,7 +1183,7 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
                                 <div class="text-muted">
                                     <i class="fas fa-users fa-3x mb-3"></i>
                                     <h5>No employees found</h5>
-                                    <p class="mb-0">Get started by adding your first employee.</p>
+                                    <p class="mb-0 mb-0 text-white-50 small">Get started by adding your first employee.</p>
                                     <a href="employee_master.php?mode=add" class="btn btn-primary mt-2">
                                         <i class="fas fa-plus me-1"></i> Add Employee
                                     </a>

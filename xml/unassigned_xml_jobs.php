@@ -80,7 +80,46 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
-        .table th { font-size: 0.8rem; font-weight: 600; background-color: #f8f9fa; white-space: nowrap; }
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
+        .table th { font-size: 0.8rem; font-weight: 600; background-color: var(--ash, #6c757d) !important; white-space: nowrap; }
         .table td { font-size: 0.8rem; vertical-align: middle; }
         .badge { font-size: 0.75rem; font-weight: 500; padding: 5px 8px; }
         .text-truncate-custom { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
@@ -99,8 +138,8 @@ require 'header.php';
             </div>
         <?php endif; ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Unique XML Jobs Dashboard</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 mb-0 text-white">Unique XML Jobs Dashboard</h5>
             <a href="unassigned_xml_jobs.php" class="btn btn-sm btn-secondary">
                 <i class="fas fa-sync-alt"></i> Refresh
             </a>

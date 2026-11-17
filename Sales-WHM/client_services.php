@@ -270,17 +270,56 @@ if (!$services_list) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
     body {
       background-color: #f8f9fa;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .main-content {
+    .main-content { margin-top: 70px;
       padding: 20px;
       max-width: 1800px;
       margin: 0 auto;
     }
     .table th {
-      background-color: #2c3e50;
+      background-color: var(--ash, #6c757d) !important;
       color: white;
       border: none;
       font-size: 0.85rem;
@@ -455,8 +494,8 @@ if (!$services_list) {
     <?php endif; ?>
 
         <div class="card">
-      <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-list me-2"></i>All Client Services</h5>
+      <div class="page-title-container">
+        <h5 class="mb-0 mb-0 text-white"><i class="fas fa-list me-2"></i>All Client Services</h5>
         <div>
           <span class="badge bg-light text-dark">
             <?= $services_list && $services_list->num_rows > 0 ? $services_list->num_rows : '0' ?> active services
@@ -552,7 +591,7 @@ if (!$services_list) {
                     <div class="text-muted">
                       <i class="fas fa-cogs fa-3x mb-3"></i>
                       <h5>No services found</h5>
-                      <p class="mb-0">Select a client above to start adding services.</p>
+                      <p class="mb-0 mb-0 text-white-50 small">Select a client above to start adding services.</p>
                     </div>
                   </td>
                 </tr>

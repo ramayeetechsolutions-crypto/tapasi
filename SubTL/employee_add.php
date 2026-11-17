@@ -151,6 +151,45 @@ require 'header.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         .section-title { font-weight: 600; color: #495057; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #dee2e6; }
     </style>
 </head>
@@ -158,8 +197,8 @@ require 'header.php';
     <div class="container-fluid mt-3" style="margin-top: 80px;">
         
         <!-- Header -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-user-plus me-2"></i>Add New Employee</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white"><i class="fas fa-user-plus me-2"></i>Add New Employee</h5>
             <a href="employee_master.php" class="btn btn-sm btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>

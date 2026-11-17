@@ -91,6 +91,45 @@ $active_week_dates = getWeekDates($active_week, $year_filter);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body { background-color: #f8f9fa; }
         .target-card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.2s; }
         .target-card:hover { transform: translateY(-3px); }
@@ -103,9 +142,9 @@ $active_week_dates = getWeekDates($active_week, $year_filter);
     <?php require 'header.php'; ?>
 
     <div class="container py-4">
-        <div class="row mb-4 align-items-center">
+        <div class="page-title-container">
             <div class="col-md-6">
-                <h3 class="mb-0"><i class="fas fa-chart-line text-primary me-2"></i>My Weekly Targets</h3>
+                <h3 class="mb-0 text-white"><i class="fas fa-chart-line me-2"></i>My Weekly Targets</h3>
                 <p class="text-muted">Logged in as: <strong><?= h($current_user_name) ?></strong></p>
             </div>
             <div class="col-md-6 text-md-end">

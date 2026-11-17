@@ -572,11 +572,50 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {
             background-color: #f4f7f6;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content {
+        .main-content { margin-top: 70px;
             padding: 25px;
             max-width: 100%;
         }
@@ -601,7 +640,7 @@ require 'header.php';
             margin-bottom: 0;
         }
         .table th {
-            background-color: #2c3e50;
+            background-color: var(--ash, #6c757d) !important;
             color: white;
             border: none;
             font-size: 0.80rem;
@@ -658,8 +697,8 @@ require 'header.php';
     <?php if($mode==='add'||$mode==='edit'): ?>
     
     <!-- ADD/EDIT FORM -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold text-dark"><i class="fas fa-user-edit text-primary me-2"></i><?= $mode==='edit'?'Edit Client':'Add New Client' ?></h4>
+    <div class="page-title-container">
+        <h4 class="fw-bold mb-0 text-white"><i class="fas fa-user-edit text-primary me-2"></i><?= $mode==='edit'?'Edit Client':'Add New Client' ?></h4>
         <a href="client_master.php" class="btn btn-secondary btn-sm shadow-sm">
             <i class="fas fa-arrow-left me-1"></i> Back to List
         </a>
@@ -899,10 +938,10 @@ require 'header.php';
     <?php else: ?>
     
     <!-- LIST VIEW -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h4 class="fw-bold text-dark"><i class="fas fa-building text-primary me-2"></i>Client Master <?= $isPassive ? '<span class="badge bg-warning text-dark shadow-sm">Passive Clients</span>' : '' ?></h4>
-            <p class="text-muted mb-0">Manage client directory and billing configurations</p>
+            <h4 class="fw-bold mb-0 text-white"><i class="fas fa-building text-primary me-2"></i>Client Master <?= $isPassive ? '<span class="badge bg-warning text-dark shadow-sm">Passive Clients</span>' : '' ?></h4>
+            <p class="mb-0 mb-0 text-white-50 small">Manage client directory and billing configurations</p>
         </div>
         <div>
             <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">

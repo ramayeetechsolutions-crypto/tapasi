@@ -13,9 +13,11 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Prevent caching
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+if (!headers_sent()) {
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+}
 
 require 'db.php'; // Ensure db connection is available
 

@@ -63,8 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'edit') {
 }
 ?>
 <?php require 'header.php';?>
-<br>
-<br><br>
 <div class="container mt-3">
 
 <?php if (!empty($_GET['msg'])): ?>
@@ -74,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'edit') {
     </div>
 <?php endif; ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5>Company Master</h5>
+<div class="page-title-container">
+    <h5 class="mb-0 text-white">Company Master</h5>
     <?php if ($mode === 'view'): ?>
         <a href="company_master.php?mode=edit" class="btn btn-sm btn-primary">Edit</a>
     <?php else: ?>
