@@ -71,22 +71,6 @@ $check_rem_col = $mysqli->query("SHOW COLUMNS FROM pag LIKE 'remarks'");
 if ($check_rem_col && $check_rem_col->num_rows == 0) {
     $mysqli->query("ALTER TABLE pag ADD COLUMN remarks VARCHAR(255) NULL DEFAULT NULL");
 }
-$check_wp_col = $mysqli->query("SHOW COLUMNS FROM pag LIKE 'word_pages'");
-if ($check_wp_col && $check_wp_col->num_rows == 0) {
-    $mysqli->query("ALTER TABLE pag ADD COLUMN word_pages VARCHAR(50) NULL DEFAULT '0'");
-}
-$check_tfqa_p = $mysqli->query("SHOW COLUMNS FROM pag LIKE 'table_fqa_pages'");
-if ($check_tfqa_p && $check_tfqa_p->num_rows == 0) {
-    $mysqli->query("ALTER TABLE pag ADD COLUMN table_fqa_pages VARCHAR(50) NULL DEFAULT '0'");
-}
-$check_tfqa_s = $mysqli->query("SHOW COLUMNS FROM pag LIKE 'table_fqa_status'");
-if ($check_tfqa_s && $check_tfqa_s->num_rows == 0) {
-    $mysqli->query("ALTER TABLE pag ADD COLUMN table_fqa_status VARCHAR(100) DEFAULT 'Need to Assign'");
-}
-$check_tfqa_a = $mysqli->query("SHOW COLUMNS FROM pag LIKE 'assigned_to_table_fqa'");
-if ($check_tfqa_a && $check_tfqa_a->num_rows == 0) {
-    $mysqli->query("ALTER TABLE pag ADD COLUMN assigned_to_table_fqa VARCHAR(100) NULL DEFAULT NULL");
-}
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES); }
 
@@ -267,8 +251,7 @@ $sql = "SELECT
     
     pag.status AS pag_status, pag.pag_status_col, pag.word_status,
     pag.created_at, pag.pag_date, pag.done_by AS pag_done_by,
-    pag.eq, pag.pages, pag.images, pag.remarks, pag.tables_count, pag.word_pages,
-    pag.table_fqa_pages, pag.table_fqa_status, pag.assigned_to_table_fqa,
+    pag.eq, pag.pages, pag.images, pag.remarks, pag.tables_count,
     pag.table_status, pag.assigned_to_table,
     pag.assigned_to_img, pag.assigned_to_pag,
     pag.img_start_time, pag.img_end_time, pag.pag_start_time, pag.pag_end_time,
@@ -278,7 +261,7 @@ $sql = "SELECT
     ju.upload_date, ju.upload_by, ju.file_path,
     
     le.last_updated as le_moved_date, ce.ce_date as ce_moved_date,
-    ce.status as ce_status, ce.remarks as ce_remarks, ce.assigned_to_content as ce_assigned,
+    ce.status as ce_status, ce.remarks as ce_remarks,
     le.status as le_status, le.assigned_to_le as le_assigned_to, qc.status as qc_status,
     qc.rtat, qc.atat,
     qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to,
@@ -590,9 +573,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     $st = trim((string)$status);
     if (empty($st) || $st === 'Need to Assign') $st = 'Need to Assign';
     
-    if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'W-Complete') === 0 || strcasecmp($st, 'ID_Complete') === 0 || strcasecmp($st, 'FQA_Complete') === 0) {
-        $comp_label = (strcasecmp($st, 'FQA_Complete') === 0) ? 'FQA_Complete' : 'Completed';
-        $badge = '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . $comp_label . '</span>';
+    if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'W-Complete') === 0 || strcasecmp($st, 'ID_Complete') === 0) {
+        $badge = '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Completed</span>';
     } elseif (strcasecmp($st, 'Need to Assign') === 0) {
         $badge = '<span class="badge" style="background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Need to Assign</span>';
     } elseif (strcasecmp($st, 'Pending') === 0) {
@@ -760,10 +742,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Images</th>
                             <th>Remarks</th>
                             <th>Tables</th>
-                            <th>Table_FQA</th>
                             <th>Process</th>
                             <th>Due Date</th>
-                            <th>FQA Status</th>
                             <th>LE Status</th>
                             <th>Word Process</th>
                             <th>Word Start</th>
@@ -819,46 +799,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     }
                                 ?>
                             </td>
-                            <td>
-                                <div><strong><?= h(($row['table_fqa_pages'] !== null && $row['table_fqa_pages'] !== '') ? $row['table_fqa_pages'] : '0') ?></strong></div>
-                                <?php
-                                    $tfqa_emp = trim((string)($row['assigned_to_table_fqa'] ?? ''));
-                                    $tfqa_stat = trim((string)($row['table_fqa_status'] ?? ''));
-                                    if (strcasecmp($tfqa_stat, 'FQA_Complete') === 0 || strcasecmp($tfqa_stat, 'Completed') === 0) {
-                                        $tfqa_badge_stat = 'FQA_Complete';
-                                    } elseif (strcasecmp($tfqa_stat, 'FQA_Inprocess') === 0 || strcasecmp($tfqa_stat, 'In Progress') === 0 || !empty($tfqa_emp)) {
-                                        $tfqa_badge_stat = 'FQA_Inprocess';
-                                    } else {
-                                        $tfqa_badge_stat = 'Need to Assign';
-                                    }
-                                    echo '<div class="mt-1">' . getStatusBadge($tfqa_badge_stat, $tfqa_emp, $emp_map) . '</div>';
-                                ?>
-                            </td>
                             <td><span class="badge bg-secondary"><?= h($row['process']) ?></span></td>
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
-                            <?php
-                                $fqa_proc = strtoupper(str_replace(' ', '', $row['process'] ?? ''));
-                                $has_ce_proc = (strpos($fqa_proc, 'CE') !== false);
-                                if (!$has_ce_proc) {
-                                    // Only TS process: show only Pending like LE status
-                                    $fqa_status_val = 'Pending';
-                                    $fqa_emp_val = '';
-                                } else {
-                                    $ce_is_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']) || trim($row['ce_remarks'] ?? '') === 'Moved' || !empty($row['ce_moved_date']);
-                                    $fqa_emp_val = trim((string)($row['ce_assigned'] ?? ''));
-                                    if ($ce_is_done) {
-                                        $fqa_status_val = 'Completed';
-                                        if ($fqa_emp_val === '') $fqa_emp_val = trim((string)($row['assigned_to'] ?? ''));
-                                    } elseif (!empty($fqa_emp_val)) {
-                                        $fqa_status_val = !empty($row['ce_status']) ? $row['ce_status'] : 'In Progress';
-                                    } elseif (!empty($row['ce_status']) && strcasecmp($row['ce_status'], 'Need to Assign') !== 0) {
-                                        $fqa_status_val = $row['ce_status'];
-                                    } else {
-                                        $fqa_status_val = 'Need to Assign';
-                                    }
-                                }
-                            ?>
-                            <td><?= getStatusBadge($fqa_status_val, $fqa_emp_val, $emp_map) ?></td>
                             <td><?= getStatusBadge($row['le_status'] ?? 'Pending', $row['le_assigned_to'] ?? '', $emp_map) ?></td>
                             
                             <!-- Word Process & Times -->
@@ -919,10 +861,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     $ts_end = date('H:i', strtotime($row['pag_crx_end_time']));
                                 }
                             ?>
-                            <td>
-                                <div><strong><?= h(($row['word_pages'] !== null && $row['word_pages'] !== '') ? $row['word_pages'] : '0') ?></strong></div>
-                                <div class="mt-1"><?= getStatusBadge($word_stat, $word_emp, $emp_map) ?></div>
-                            </td>
+                            <td><?= getStatusBadge($word_stat, $word_emp, $emp_map) ?></td>
                             <td><?= $word_start ?></td>
                             <td><?= $word_end ?></td>
                             
@@ -964,7 +903,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             </td>
                         </tr>
                         <?php endforeach; else: ?>
-                        <tr><td colspan="27" class="text-center">No jobs found assigned to you.</td></tr>
+                        <tr><td colspan="24" class="text-center">No jobs found assigned to you.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

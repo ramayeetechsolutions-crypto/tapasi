@@ -181,7 +181,7 @@ if ($types) {
 require 'header.php';
 ?>
 
-<div class="container" style="padding-top: 0 !important; margin-top: 0 !important;">
+<div class="container mt-3">
 
 <?php if (!empty($_GET['msg'])): ?>
 <div class="alert alert-<?= h($_GET['type']??'info') ?> alert-dismissible fade show" role="alert">
