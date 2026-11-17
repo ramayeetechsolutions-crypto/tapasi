@@ -30,18 +30,12 @@ $check_columns = [
     'images' => "VARCHAR(50) NULL DEFAULT '0'",
     'tables_count' => "VARCHAR(50) NULL DEFAULT '0'",
     'pages' => "VARCHAR(50) NULL DEFAULT '0'",
-    'word_pages' => "VARCHAR(50) NULL DEFAULT '0'",
     'word_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
     'pag_status_col' => "VARCHAR(100) DEFAULT 'Need to Assign'",
     'table_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
     'table_start_time' => "TIME NULL DEFAULT NULL",
     'table_end_time' => "TIME NULL DEFAULT NULL",
     'assigned_to_table' => "VARCHAR(100) NULL DEFAULT NULL",
-    'table_fqa_pages' => "VARCHAR(50) NULL DEFAULT '0'",
-    'table_fqa_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
-    'table_fqa_start_time' => "TIME NULL DEFAULT NULL",
-    'table_fqa_end_time' => "TIME NULL DEFAULT NULL",
-    'assigned_to_table_fqa' => "VARCHAR(100) NULL DEFAULT NULL",
     'path' => "VARCHAR(255) NULL DEFAULT NULL",
     'priority' => "VARCHAR(50) NULL DEFAULT NULL"
 ];
@@ -165,7 +159,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'word_pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'table_fqa_pages', 'table_fqa_status', 'table_fqa_start_time', 'table_fqa_end_time', 'assigned_to_table_fqa', 'remarks', 'note', 'path', 'priority'];
+    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'path', 'priority'];
     if (in_array($field, $allowed_fields)) {
         if ($val === '') {
             $stmt = $mysqli->prepare("UPDATE pag SET $field = NULL, last_updated = NOW() WHERE id = ?");
@@ -634,7 +628,6 @@ require 'header.php';
                             <th>Pages</th>
                             <th>Images</th>
                             <th>Tables</th>
-                            <th>Table_FQA</th>
                             <th>Process</th>
                             <th>Due Date</th>
                             <th>FQA Status</th>
@@ -707,42 +700,7 @@ require 'header.php';
                                     <div class="d-flex gap-1 mt-1">
                                         <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table Start" value="<?= !empty($row['table_start_time']) ? date('H:i', strtotime($row['table_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_start_time', t, this);">
                                         <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table End" value="<?= !empty($row['table_end_time']) ? date('H:i', strtotime($row['table_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_end_time', t, this);">
-                                    </div>
-                                    </td>
-
-                                    <!-- Table_FQA (Pages, Status Dropdown, Assign TM & Times) -->
-                                    <td class="assignment-cell" style="padding: 8px; vertical-align: top; min-width: 130px;">
-                                        <!-- Pages Input -->
-                                        <div class="mb-1">
-                                            <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Pages" min="0" value="<?= h($row['table_fqa_pages'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'table_fqa_pages', this.value)">
-                                        </div>
-
-                                        <!-- Status Dropdown -->
-                                        <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateInlineField(<?= $row['id'] ?>, 'table_fqa_status', this.value)">
-                                                <option value="Need to Assign" <?= (($row['table_fqa_status'] ?? 'Need to Assign') == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
-                                                <option value="FQA_Inprocess" <?= (($row['table_fqa_status'] ?? '') == 'FQA_Inprocess') ? 'selected' : '' ?>>FQA_Inprocess</option>
-                                                <option value="FQA_Complete" <?= (($row['table_fqa_status'] ?? '') == 'FQA_Complete') ? 'selected' : '' ?>>FQA_Complete</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Assign TM Dropdown -->
-                                        <div class="mb-1">
-                                            <select class="assign-select mt-1 w-100" onchange="updateInlineField(<?= $row['id'] ?>, 'assigned_to_table_fqa', this.value)">
-                                                <option value=""><?= !empty($row['assigned_to_table_fqa']) ? 'Change TM' : 'Assign TM' ?></option>
-                                                <?php foreach ($tms as $tm): ?>
-                                                    <option value="<?= h($tm['employee_username']) ?>" <?= (($row['assigned_to_table_fqa'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
-                                                        <?= h($tm['employee_name']) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-
-                                        <!-- Start & End Time Inputs -->
-                                        <div class="d-flex gap-1 mt-1">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table FQA Start" value="<?= !empty($row['table_fqa_start_time']) ? date('H:i', strtotime($row['table_fqa_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_fqa_start_time', t, this);">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table FQA End" value="<?= !empty($row['table_fqa_end_time']) ? date('H:i', strtotime($row['table_fqa_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_fqa_end_time', t, this);">
-                                        </div>
+                                            </div>
                                     </td>
                                     
                                     <!-- Process -->
@@ -812,11 +770,6 @@ require 'header.php';
                                         elseif ($word_inprogress) { $word_badge_cls = 'in-progress'; }
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
-                                        <!-- Pages Entry Input (Like Tables Count) -->
-                                        <div class="mb-1">
-                                            <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 130px; height: 22px; font-size: 11px;" placeholder="Pages" min="0" value="<?= h($row['word_pages'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'word_pages', this.value)">
-                                        </div>
-
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value)">
                                                 <option value="Need to Assign" <?= ($word_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
