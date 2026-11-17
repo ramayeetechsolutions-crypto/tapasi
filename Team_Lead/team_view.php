@@ -6,56 +6,82 @@ require 'header.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// --- PHP Database Query (Corrected) ---
-$ename = isset($_SESSION["ename"]) ? $_SESSION["ename"] : '';
+$ename = $mysqli->real_escape_string($_SESSION["ename"] ?? ($_SESSION["username"] ?? ''));
+$sess_user = $mysqli->real_escape_string($_SESSION["username"] ?? '');
+$sess_uid = (int)($_SESSION['uid'] ?? 0);
 
-// SQL Query to get team leaders and their executives
+// 1. Fetch ALL processes to create a mapping dictionary (ID => Name)
+$pm_sql = "SELECT process_id, process_name FROM process_master";
+$pm_result = $mysqli->query($pm_sql);
+$process_map = [];
+
+if ($pm_result) {
+    while($row = $pm_result->fetch_assoc()) {
+        if (!empty($row['process_name'])) {
+            $process_map[$row['process_id']] = trim($row['process_name']);
+            $process_map[$row['process_name']] = trim($row['process_name']);
+        }
+    }
+}
+$json_process_map = json_encode($process_map);
+
+// 2. Main Query for Teams & Executives (Always shows actual Team Leader)
 $sql = "
     SELECT DISTINCT
         tl.employee_name AS team_leader,
-        tl.employee_id AS team_leader_id,
+        tl.employee_username AS team_leader_username,
+        tl.employee_username AS team_leader_id,
         COALESCE(
             GROUP_CONCAT(
-                DISTINCT CONCAT(e.employee_name, '::', e.employee_id) 
-                ORDER BY e.employee_name
+                DISTINCT CONCAT(
+                    COALESCE(e.employee_name, 'Unknown'), '::', 
+                    COALESCE(e.employee_username, 'N/A'), '::', 
+                    COALESCE(e.process, ''), '::',
+                    COALESCE(e.process1, '')
+                ) 
+                ORDER BY e.employee_username ASC
                 SEPARATOR '|||'
             ), ''
         ) AS executives,
         COUNT(DISTINCT e.employee_id) AS team_size
-    FROM employee_master e
-    INNER JOIN employee_master tl ON e.reporting_manager = tl.employee_name
-    WHERE e.user_role_id = 4  -- Assuming 4 is executive role
-      AND tl.employee_name LIKE '%$ename%'  -- Filter by current user if needed
-    GROUP BY tl.employee_id, tl.employee_name
+    FROM employee_master me
+    INNER JOIN employee_master tl 
+        ON tl.user_role_id = 3
+        AND (
+            tl.employee_id = me.employee_id
+            OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+            OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+            OR EXISTS (
+                SELECT 1 FROM employee_master sub
+                WHERE (
+                    CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(sub.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                    OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(sub.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                )
+                AND (
+                    CAST(sub.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                    OR CAST(sub.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                )
+            )
+        )
+    LEFT JOIN employee_master e 
+        ON e.employee_id != tl.employee_id
+        AND (e.user_role_id = 4 OR e.user_role_id = 11)
+        AND (e.status = 'Active' OR e.status IS NULL)
+        AND (
+            CAST(e.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+            OR CAST(e.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+        )
+    WHERE (
+        me.employee_id = $sess_uid
+        OR me.employee_username = '$sess_user' 
+        OR ('$ename' != '' AND CAST(me.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci LIKE '%$ename%')
+    )
+    GROUP BY tl.employee_username, tl.employee_name
     ORDER BY tl.employee_name;
 ";
-
-// Alternative: If you want all team leaders regardless of current user
-/*
-$sql = "
-    SELECT DISTINCT
-        tl.employee_name AS team_leader,
-        tl.employee_id AS team_leader_id,
-        COALESCE(
-            GROUP_CONCAT(
-                DISTINCT CONCAT(e.employee_name, '::', e.employee_id) 
-                ORDER BY e.employee_name
-                SEPARATOR '|||'
-            ), ''
-        ) AS executives,
-        COUNT(DISTINCT e.employee_id) AS team_size
-    FROM employee_master tl
-    LEFT JOIN employee_master e ON e.reporting_manager = tl.employee_name 
-        AND e.user_role_id = 4
-    WHERE tl.user_role_id = 3  -- Assuming 3 is team leader role
-    GROUP BY tl.employee_id, tl.employee_name
-    ORDER BY tl.employee_name;
-";
-*/
 
 $result = $mysqli->query($sql);
 
-// Check for errors
 if (!$result) {
     die("Query failed: " . $mysqli->error);
 }
@@ -65,7 +91,6 @@ while($row = $result->fetch_assoc()){
     $data[] = $row;
 }
 
-// If no data, create an empty array
 if (empty($data)) {
     $data = [];
 }
@@ -177,6 +202,16 @@ $mysqli->close();
             border-radius: 4px;
             font-size: 12px;
             font-weight: 600;
+        }
+
+        .process-badge {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid #d4ac0d;
         }
         
         .team-leader-badge {
@@ -291,13 +326,13 @@ $mysqli->close();
     </style>
 </head>
 <body>
-    <div class="main-content">
+    <div class="main-content" style="margin-top: 80px;">
         <div class="job-master-container">
             <div class="page-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h2><i class="fas fa-sitemap me-3"></i>Team Master</h2>
-                        <div class="subtitle">View organizational structure and team compositions</div>
+                        <h2 class="text-white"><i class="fas fa-sitemap me-3 text-white"></i>Team Master</h2>
+                        <div class="subtitle">View organizational structure, team sizes, and assigned CE processes</div>
                     </div>
                     <div class="text-white-50">
                         <small><i class="fas fa-info-circle me-1"></i>Click <i class="fas fa-plus-circle"></i> to expand team details</small>
@@ -338,18 +373,28 @@ $mysqli->close();
 
     <script>
         var teamData = <?= $json_data ?>;
+        var processMap = <?= $json_process_map ?>; 
         
-        // Debug: Log data to console
-        console.log('Team Data Loaded:', teamData);
+        // Helper function for Process Map
+        function getMappedProcesses(proc1, proc2) {
+            var rawList = [];
+            if (proc1) rawList = rawList.concat(proc1.split(','));
+            if (proc2) rawList = rawList.concat(proc2.split(','));
+            
+            var namesList = [];
+            rawList.forEach(function(item) {
+                var p = item.trim();
+                if (p !== '' && p !== '0') {
+                    namesList.push(processMap[p] ? processMap[p] : p);
+                }
+            });
+            return [...new Set(namesList)];
+        }
 
-        /**
-         * Renders the detailed list of executives for a team.
-         * Parses data formatted as "Name::ID|||Name::ID..."
-         */
+        // Formats the expanded inner table for the team
         function formatTeamDetails(d) {
             var listHtml = '<div class="executives-list fade-in">';
             
-            // Check if we have executives data
             if (d.executives && d.executives.trim() !== '') {
                 var executivesArray = d.executives.split('|||').filter(function(item) {
                     return item.trim() !== '';
@@ -357,61 +402,77 @@ $mysqli->close();
                 
                 var teamSize = executivesArray.length;
                 
-                if (teamSize > 0) {
-                    // Header with team leader info
-                    listHtml += '<div class="mb-4">' +
-                        '<h6 class="fw-bold mb-2"><i class="fas fa-user-tie me-2 text-primary"></i>Team Leader: ' + d.team_leader + '</h6>' +
-                        '<div class="d-flex align-items-center mb-3">' +
-                            '<span class="badge bg-primary me-3">Team ID: ' + (d.team_leader_id || 'N/A') + '</span>' +
-                            '<span class="badge bg-success">Team Size: ' + teamSize + '</span>' +
+                if (teamSize >= 0) { 
+                    listHtml += '<div class="d-flex justify-content-between align-items-start mb-4">' +
+                        '<div>' +
+                            '<h6 class="fw-bold mb-2"><i class="fas fa-user-tie me-2 text-primary"></i>Team Leader: ' + d.team_leader + '</h6>' +
+                            '<div class="d-flex align-items-center mb-0 flex-wrap">' +
+                                '<span class="badge bg-primary me-3 mb-2">Team Leader ID: ' + (d.team_leader_username || 'N/A') + '</span>' +
+                                '<span class="badge bg-success me-3 mb-2">Team Size: ' + teamSize + '</span>' +
+                            '</div>' +
                         '</div>' +
-                        '<hr>' +
+                        '<div>' +
+                            '<a href="add_team_member.php?tl_name=' + encodeURIComponent(d.team_leader) + '" ' +
+                            'class="btn shadow-sm text-white px-4 py-2" style="background-color: #0d6efd; border-radius: 6px; font-weight: 500;">' +
+                            '<i class="fas fa-user-plus me-2"></i>Add Team Member</a>' +
+                        '</div>' +
                     '</div>';
                     
-                    listHtml += '<h6 class="fw-bold mb-3">Team Members:</h6>';
+                    listHtml += '<h6 class="fw-bold mb-3 text-secondary">Team Members & Assigned Processes:</h6>';
                     
-                    // List all executives
+                    listHtml += '<div class="table-responsive shadow-sm rounded">' +
+                                '<table class="table table-hover inner-table w-100">' +
+                                '<thead class="table-light">' +
+                                    '<tr>' +
+                                        '<th class="text-center" style="width: 60px;">S.No</th>' +
+                                        '<th style="width: 130px;">Employee ID</th>' +
+                                        '<th>Name</th>' +
+                                        '<th>Process Details</th>' +
+                                        '<th class="text-center" style="width: 100px;">Action</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>';
+                    
                     executivesArray.forEach(function(executive, index) {
                         var execParts = executive.split('::');
-                        var execName = execParts[0] ? execParts[0].trim() : 'Unknown Executive';
-                        var execId = execParts[1] ? execParts[1].trim() : 'N/A';
+                        var execName = execParts[0] ? execParts[0].trim() : 'Unknown';
+                        var execUsername = execParts[1] ? execParts[1].trim() : 'N/A';
                         
-                        listHtml += '<div class="executive-item">' +
-                            '<div class="executive-icon">' +
-                                '<i class="fas fa-user"></i>' +
-                            '</div>' +
-                            '<div class="executive-info">' +
-                                '<div>' +
-                                    '<strong class="me-2">' + execName + '</strong>' +
-                                    '<span class="text-muted small">#' + (index + 1) + '</span>' +
-                                '</div>' +
-                                '<span class="team-badge">ID: ' + execId + '</span>' +
-                            '</div>' +
-                        '</div>';
+                        var mappedProcesses = getMappedProcesses(execParts[2], execParts[3]);
+                        
+                        var processBadges = '<span class="text-muted small fw-bold">Unassigned</span>';
+                        if (mappedProcesses.length > 0) {
+                            processBadges = mappedProcesses.map(function(p) {
+                                return '<span class="process-badge me-2 mb-1 d-inline-block"><i class="fas fa-cogs me-1"></i> ' + p + '</span>';
+                            }).join('');
+                        }
+                        
+                        listHtml += '<tr>' +
+                            '<td class="text-center fw-bold text-muted">' + (index + 1) + '</td>' +
+                            '<td><span class="team-badge">' + execUsername + '</span></td>' +
+                            '<td><div class="d-flex align-items-center"><i class="fas fa-user text-success me-2"></i> <strong>' + execName + '</strong></div></td>' +
+                            '<td>' + processBadges + '</td>' +
+                            '<td class="text-center">' +
+                                '<a href="add_team_member.php?mode=edit&emp_username=' + execUsername + '&tl_name=' + encodeURIComponent(d.team_leader) + '" ' +
+                                'class="btn btn-sm shadow-sm text-white" style="background-color: #0d6efd; padding: 4px 12px; font-size: 11px;">' +
+                                '<i class="fas fa-edit"></i> Edit</a>' +
+                            '</td>' +
+                        '</tr>';
                     });
                     
-                    // Team summary
-                    listHtml += '<div class="mt-4 pt-3 border-top">' +
-                        '<div class="d-flex justify-content-between align-items-center">' +
-                            '<small class="text-muted">' +
-                                '<i class="fas fa-clock me-1"></i>Last updated: ' + new Date().toLocaleDateString() +
-                            '</small>' +
-                            '<span class="badge bg-info">Total: ' + teamSize + ' members</span>' +
-                        '</div>' +
-                    '</div>';
-                } else {
-                    listHtml += '<div class="no-executives">' +
-                        '<i class="fas fa-users-slash fa-2x mb-3"></i>' +
-                        '<h6>No Team Members</h6>' +
-                        '<p>This team leader currently has no executives assigned.</p>' +
-                    '</div>';
+                    listHtml += '</tbody></table></div>';
                 }
             } else {
-                listHtml += '<div class="no-executives">' +
-                    '<i class="fas fa-users-slash fa-2x mb-3"></i>' +
-                    '<h6>No Team Members</h6>' +
-                    '<p>This team leader currently has no executives assigned.</p>' +
-                '</div>';
+                listHtml += '<div class="d-flex justify-content-between align-items-start mb-4">' +
+                        '<div>' +
+                            '<h6 class="fw-bold mb-2"><i class="fas fa-user-tie me-2 text-primary"></i>Team Leader: ' + d.team_leader + '</h6>' +
+                            '<span class="badge bg-secondary mb-2">Team Size: 0</span>' +
+                        '</div>' +
+                        '<div>' +
+                            '<a href="add_team_member.php?tl_name=' + encodeURIComponent(d.team_leader) + '" class="btn btn-primary"><i class="fas fa-user-plus me-2"></i>Add Team Member</a>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="no-executives"><i class="fas fa-users-slash fa-2x mb-3"></i><h6>No Team Members</h6></div>';
             }
             
             listHtml += '</div>';
@@ -419,7 +480,6 @@ $mysqli->close();
         }
 
         $(document).ready(function(){
-            // Only initialize DataTable if we have data
             if (teamData.length === 0) {
                 return;
             }
@@ -506,13 +566,12 @@ $mysqli->close();
                             var teamSize = executivesArray.length;
                             
                             if (teamSize > 0) {
-                                // Show sample of team members
                                 var sampleNames = [];
                                 executivesArray.slice(0, 2).forEach(function(executive) {
                                     var execParts = executive.split('::');
                                     var execName = execParts[0] ? execParts[0].trim() : '';
                                     if (execName) {
-                                        sampleNames.push(execName.split(' ')[0]); // First name only
+                                        sampleNames.push(execName.split(' ')[0]);
                                     }
                                 });
                                 
@@ -557,31 +616,45 @@ $mysqli->close();
                     }
                 },
                 initComplete: function() {
-                    // Add custom styling after table initialization
                     $('.dataTables_length select').addClass('form-select form-select-sm');
                     $('.dataTables_filter input').addClass('form-control form-control-sm');
+
+                    var savedTeam = localStorage.getItem('expandedTeam_TL');
+                    if(savedTeam) {
+                        setTimeout(function() {
+                            table.rows().every(function () {
+                                var data = this.data();
+                                if (data && data.team_leader_username === savedTeam) {
+                                    var tr = $(this.node());
+                                    tr.find('td.dt-control').trigger('click');
+                                }
+                            });
+                        }, 100);
+                    }
                 }
             });
 
-            // Add click event for expand/collapse
             $('#teamTable tbody').on('click', 'td.dt-control', function () {
                 var tr = $(this).closest('tr');
                 var row = table.row(tr);
-                
-                // Toggle icon
+                var rowData = row.data();
                 var icon = $(this).find('i');
+                
                 if (row.child.isShown()) {
                     row.child.hide();
                     tr.removeClass('shown');
                     icon.removeClass('fa-minus-circle text-danger').addClass('fa-plus-circle text-success');
+                    localStorage.removeItem('expandedTeam_TL');
                 } else {
-                    row.child(formatTeamDetails(row.data())).show();
+                    row.child(formatTeamDetails(rowData)).show();
                     tr.addClass('shown');
                     icon.removeClass('fa-plus-circle text-success').addClass('fa-minus-circle text-danger');
+                    if(rowData && rowData.team_leader_username) {
+                        localStorage.setItem('expandedTeam_TL', rowData.team_leader_username);
+                    }
                 }
             });
             
-            // Style rows on hover
             $('#teamTable tbody').on('mouseenter', 'tr', function() {
                 if (!$(this).hasClass('shown')) {
                     $(this).find('.expand-icon i').addClass('fa-beat');
@@ -590,7 +663,6 @@ $mysqli->close();
                 $(this).find('.expand-icon i').removeClass('fa-beat');
             });
 
-            // Add refresh button functionality
             $('.btn-refresh').on('click', function() {
                 var btn = $(this);
                 btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...');

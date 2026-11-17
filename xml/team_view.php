@@ -141,7 +141,6 @@ $mysqli->close();
             border-bottom: 1px solid #f1f3f5;
         }
         .inner-table tbody tr {
-            border-left: 4px solid #2ecc71; /* Keeps the green left border */
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .inner-table tbody tr:hover {

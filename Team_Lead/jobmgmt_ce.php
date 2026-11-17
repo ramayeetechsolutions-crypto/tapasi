@@ -705,7 +705,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
-                            <th>Remarks</th>
                             <th>CE Status</th>
                             <th>Word Count</th>
                             <th>REF Status</th>
@@ -717,8 +716,9 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>REF End</th>
                             <th>FQA Start</th>
                             <th>FQA End</th>
-                            <th>TAT</th>
+                            <th>Status</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -809,16 +809,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 8. Due Date -->
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
 
-                            <!-- Remarks -->
-                            <td>
-                                <?php if (!empty($row['ce_remarks'])): ?>
-                                    <span class="badge bg-light text-dark border"><?= h($row['ce_remarks']) ?></span>
-                                <?php else: ?>
-                                    —
-                                <?php endif; ?>
-                            </td>
-
-                            <!-- 9. CE Status (Orange: WIP / Green: Completed) -->
+                            <!-- 9. CE Status -->
                             <td><?= getStatusBadge($ce_stat, $row['assigned_to_content'] ?? '', $emp_map) ?></td>
 
                             <!-- 10. Word Count -->
@@ -845,10 +836,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= !empty($row['fqa_start_time']) ? date('H:i', strtotime($row['fqa_start_time'])) : '—' ?></td>
                             <td><?= !empty($row['fqa_end_time']) ? date('H:i', strtotime($row['fqa_end_time'])) : '—' ?></td>
 
-                            <!-- 16. TAT -->
-                            <td><?= $tat_display ?></td>
-                            
-                            <!-- 17. Priority -->
+                            <!-- Status (Formerly Remarks) -->
+                            <td>
+                                <?php if (!empty($row['ce_remarks'])): ?>
+                                    <span class="badge bg-light text-dark border"><?= h($row['ce_remarks']) ?></span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Priority -->
                             <td>
                                 <?php if (!empty($row['priority'])): ?>
                                     <span class="badge <?= $row['priority'] === 'Urgent' ? 'bg-danger' : 'bg-warning text-dark' ?>"><?= h($row['priority']) ?></span>
@@ -856,6 +853,9 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     —
                                 <?php endif; ?>
                             </td>
+
+                            <!-- TAT -->
+                            <td><?= $tat_display ?></td>
                         </tr>
                         <?php endforeach; else: ?>
                         <tr><td colspan="24" class="text-center">No jobs found assigned to you.</td></tr>
