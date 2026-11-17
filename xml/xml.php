@@ -723,11 +723,11 @@ function fetchData() {
 </head>
 <body>
     <?php require 'header.php'; ?>
-    <br><br><br>
+    <br><br><br><br>
 
     <div id="notificationContainer" class="notification"></div>
     
-    <div class="container-fluid mt-2 px-4 pb-5">
+    <div class="container-fluid mt-4 px-4 pb-5">
         <div class="card mb-4">
             <!-- Header -->
             <div class="card-header d-flex justify-content-between align-items-center py-3" style="background-color: #5e6b77; border-bottom: 2px solid #475569;">
@@ -744,7 +744,7 @@ function fetchData() {
             </div>
             
             <!-- Filter Bar -->
-            <div class="card-body bg-white border-bottom py-4 px-3" style="padding-top: 22px !important; padding-bottom: 22px !important;">
+            <div class="card-body bg-white border-bottom p-3">
                 <form method="get" class="row g-2 align-items-center">
                     <?php if($show_completed): ?> <input type="hidden" name="show_completed" value="1"> <?php endif; ?>
                     
