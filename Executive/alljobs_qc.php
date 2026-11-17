@@ -363,6 +363,8 @@ while ($job = $jobs_res->fetch_assoc()) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
   <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+  <!-- Global Tapasi Stylesheet -->
+  <link rel="stylesheet" href="../custom_style.css">
   <style>
     .badge { font-size: 0.75rem; }
     .upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -384,8 +386,8 @@ while ($job = $jobs_res->fetch_assoc()) {
     </div>
 
     <div class="card shadow-sm">
-      <div class="card-header bg-light">
-        <h5 class="card-title mb-0">All Jobs</h5>
+      <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important;">
+        <h5 class="card-title mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-tasks me-2" style="color: #ffffff !important;"></i> QC Jobs Management</h5>
       </div>
       <div class="card-body p-0">
         <table id="jobsTable" class="table table-striped table-hover" style="width:100%">

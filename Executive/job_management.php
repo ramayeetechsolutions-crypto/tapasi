@@ -419,6 +419,8 @@ if ($results->num_rows > 0) {
 ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"/>
+<!-- Global Tapasi Stylesheet -->
+<link rel="stylesheet" href="../custom_style.css">
 <style>
 table td { vertical-align: middle; padding: 6px 8px; white-space: nowrap; font-size: 0.9rem; }
 .table thead th {
@@ -540,11 +542,10 @@ table td:nth-child(26) {
 <?php require 'header.php';?>
 
 <div class="container-fluid">
-    <!-- <div class="d-flex justify-content-between align-items-center mb-4"> -->
-        <h2>Input & Output</h2>
-        <!-- <div class="team-leader-badge"> -->
-            <!-- <i class="fas fa-user-tie me-1"></i> <?= h($user_employee_name) ?> -->
-        </div>
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <h2 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
+            <i class="fas fa-chart-pie me-2" style="color: #ffffff !important;"></i>Input & Output
+        </h2>
     </div>
 
     <!-- CE Team Summary Cards -->

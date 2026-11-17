@@ -548,7 +548,7 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
 
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
 
-            <div class="page-title-container">
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <h5 class="mb-0 text-white"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
                 <a href="jobs.php" class="btn btn-sm btn-secondary">Back</a>
             </div>
@@ -838,7 +838,7 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
 
         <?php else: ?>
             <!-- LIST VIEW -->
-            <div class="page-title-container">
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <h5 class="mb-0 text-white">Jobs</h5>
                 <a href="jobs.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add </a>
             </div>

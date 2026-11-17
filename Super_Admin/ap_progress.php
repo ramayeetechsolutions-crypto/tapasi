@@ -77,6 +77,8 @@ include 'header.php';
     <title>All AP Progress Tracking</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         body { background-color: #f8f9fa; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
@@ -136,12 +138,12 @@ include 'header.php';
     
     <div class="container-fluid mt-4">
         <!-- Main Header Card -->
-        <div class="card mb-4 ap-header border-0">
+        <div class="card mb-4 ap-header border-0" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="mb-1"><i class="fas fa-file-alt me-2"></i>All AP Progress Tracking</h4>
-                        <h5 class="mb-0">Complete AP Management Dashboard</h5>
+                        <h4 class="mb-1 text-white" style="color: #ffffff !important;"><i class="fas fa-file-alt me-2" style="color: #ffffff !important;"></i>All AP Progress Tracking</h4>
+                        <h5 class="mb-0 text-white" style="color: #ffffff !important;">Complete AP Management Dashboard</h5>
                         <p class="mb-0 small opacity-75">
                             Showing <?= count($all_ap_records) ?> AP records with <?= $total_articles ?> total articles
                         </p>

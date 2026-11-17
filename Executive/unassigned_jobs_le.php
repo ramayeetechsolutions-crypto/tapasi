@@ -308,6 +308,8 @@ require 'header.php';
     <title>Jobs Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         .btn-brown { background-color: brown !important; color: white !important; }
         .compact-form { max-height: 80vh; overflow-y: auto; }
@@ -336,8 +338,9 @@ require 'header.php';
             </div>
         <?php endif; ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
+                <i class="fas fa-tasks me-2" style="color: #ffffff !important;"></i>
                 <?php if ($role_name === 'TM'): ?>
                     <?php if ($current_username): ?>
                         LE Jobs for <?= h($current_username) ?>
@@ -350,8 +353,8 @@ require 'header.php';
             </h5>
             <?php if ($role_name === 'TM'): ?>
                 <a href="time_tracking_report.php?employee=<?= urlencode($logged_user) ?>" 
-                   class="btn btn-sm btn-info">
-                    <i class="fas fa-chart-line"></i> My Time Report
+                   class="btn btn-sm btn-light fw-semibold">
+                    <i class="fas fa-chart-line text-primary"></i> My Time Report
                 </a>
             <?php endif; ?>
         </div>

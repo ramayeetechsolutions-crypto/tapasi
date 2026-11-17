@@ -171,6 +171,8 @@ $processes_result = $mysqli->query($processes_sql);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         body {
             background-color: #f8f9fa;
@@ -291,8 +293,8 @@ $processes_result = $mysqli->query($processes_sql);
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-chart-bar me-2"></i>Employee Word Count Report</h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;"><i class="fas fa-chart-bar me-2" style="color: #ffffff !important;"></i>Employee Word Count Report</h4>
             <div class="btn-group">
                 <button class="btn btn-light btn-sm fw-semibold" onclick="exportToExcel()">
                     <i class="fas fa-file-excel me-1 text-success"></i> Export Excel

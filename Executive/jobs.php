@@ -646,6 +646,8 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -657,11 +659,13 @@ require 'header.php';
         
         /* Header Styles */
         .page-header {
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 0.75rem 0;
-            margin-bottom: 1rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            background-color: #6c757d !important;
+            background: #6c757d !important;
+            color: #ffffff !important;
+            border-radius: 12px;
+            padding: 12px 20px !important;
+            margin-bottom: 20px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         
         /* Form Card Styles (for Add/Edit mode) */
@@ -675,9 +679,9 @@ require 'header.php';
         }
         
         .form-card-header {
-            background-color: #707981; /* Grey color matching table header */
+            background-color: #6c757d !important; /* Ash color matching navbar */
             padding: 0.75rem 1.25rem;
-            color: white;
+            color: white !important;
         }
         
         .form-card-header h3 {
@@ -1100,19 +1104,19 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <div class="page-header">
-        <div class="container-fluid px-3">
+    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
+        <div class="container-fluid px-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-0" style="font-weight: 700; color: #1e293b;">
-                        <i class="fas fa-briefcase me-1" style="color: #667eea;"></i>
+                    <h5 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
+                        <i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>
                         Manage Jobs
                     </h5>
-                    <small class="text-muted">Manage and track all jobs</small>
+                    <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage and track all jobs</small>
                 </div>
                 <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
-                    <a href="jobs.php?mode=add" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i> Add Job(s)
+                    <a href="jobs.php?mode=add" class="btn btn-light btn-sm fw-semibold">
+                        <i class="fas fa-plus me-1 text-primary"></i> Add Job(s)
                     </a>
                 <?php endif; ?>
             </div>

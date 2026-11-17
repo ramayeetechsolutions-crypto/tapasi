@@ -325,6 +325,8 @@ $clients = getClients($mysqli);
     <title>XML Clients Master</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     <style>
         /* Ash Page Header Banner (Matching Navbar Color) */
         .page-title-container {
@@ -450,7 +452,7 @@ $clients = getClients($mysqli);
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="page-title-container">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h4 class="mb-0 text-white"><i class="fas fa-file-code me-2"></i><?= $mode === 'edit' ? 'Edit XML Client' : 'Add New XML Client' ?></h4>
             <a href="xml_clients.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
@@ -583,7 +585,7 @@ $clients = getClients($mysqli);
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="page-title-container">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h4 class="mb-0 text-white"><i class="fas fa-file-code me-2"></i>XML Clients Master</h4>
             <a href="xml_clients.php?mode=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Add New

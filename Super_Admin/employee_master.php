@@ -254,7 +254,7 @@ if (isset($_POST['import_btn'])) {
 
     <div class="card shadow-lg border-0 rounded-4 overflow-hidden h-100">
         <!-- <div class="card-header bg-primary text-white text-center py-3"> -->
-            <div class="card-header text-white text-center py-3" style="background-color: #707981 !important;">
+            <div class="card-header text-white text-center py-3" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
             <h3 class="mb-0 fw-bold"><i class="fas fa-file-import me-2"></i>Import Employees</h3>
         </div>
         

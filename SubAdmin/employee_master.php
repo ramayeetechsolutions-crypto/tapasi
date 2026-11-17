@@ -41,7 +41,7 @@ foreach ($header_paths as $path) {
     <!-- Main Card -->
     <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
         <!-- Header Section -->
-        <div class="card-header bg-gradient-primary text-white py-4">
+        <div class="card-header text-white py-4" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <h2 class="mb-1 fw-bold"><i class="fas fa-users me-2"></i>Employee Management</h2>
