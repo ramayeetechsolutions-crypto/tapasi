@@ -37,8 +37,8 @@ $processIdsJson = json_encode($process_ids);
 ?>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3><i class="bi bi-table me-2"></i> CE Records</h3>
+    <div class="page-title-container">
+        <h3 class="mb-0 text-white"><i class="bi bi-table me-2"></i> CE Records</h3>
         <div>
             <button id="refreshBtn" class="btn btn-outline-primary me-2">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
@@ -362,6 +362,45 @@ $(document).ready(function(){
 </script>
 
 <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
 .editable-cell {
     cursor: pointer;
     background-color: #f8f9fa !important;

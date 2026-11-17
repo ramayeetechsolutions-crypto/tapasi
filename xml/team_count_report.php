@@ -279,9 +279,12 @@ foreach($processes_array as $proc) {
     ];
 }
 
+$chart_employees = [];
+
 foreach($employee_details as $emp_id => $emp) {
     $sum_of_percentages = 0;
     $has_any_data = false;
+    $emp_proc_data = [];
     
     foreach($processes_array as $proc) {
         $p_name = $proc['process_name'];
@@ -303,19 +306,50 @@ foreach($employee_details as $emp_id => $emp) {
             $sum_of_percentages += 100;
         }
         
-        $emp_proc_datasets_raw[$p_name]['data'][] = round($p_percent, 1);
-        $emp_proc_datasets_raw[$p_name]['raw_achieved'][] = $p_achieved;
-        $emp_proc_datasets_raw[$p_name]['raw_target'][] = $p_total_target;
+        $emp_proc_data[$p_name] = [
+            'percent' => round($p_percent, 1),
+            'achieved' => $p_achieved,
+            'target' => $p_total_target
+        ];
         
         if ($p_total_target > 0 || $p_achieved > 0) {
-            $emp_proc_datasets_raw[$p_name]['has_data'] = true;
             $has_any_data = true;
         }
     }
     
     if ($has_any_data) {
-        $emp_chart_labels[] = $emp['employee_name'];
-        $emp_chart_percentages[] = round($sum_of_percentages, 0); 
+        $chart_employees[] = [
+            'id' => $emp_id,
+            'name' => $emp['employee_name'],
+            'total_percentage' => round($sum_of_percentages, 0),
+            'processes' => $emp_proc_data
+        ];
+    }
+}
+
+// Sort employees descending by overall percentage (highest to lowest / desc to asc)
+usort($chart_employees, function($a, $b) {
+    if ($b['total_percentage'] === $a['total_percentage']) {
+        return strcmp($a['name'], $b['name']);
+    }
+    return ($b['total_percentage'] < $a['total_percentage']) ? -1 : 1;
+});
+
+foreach($chart_employees as $c_emp) {
+    $emp_chart_labels[] = $c_emp['name'];
+    $emp_chart_percentages[] = $c_emp['total_percentage'];
+    
+    foreach($processes_array as $proc) {
+        $p_name = $proc['process_name'];
+        $p_info = $c_emp['processes'][$p_name] ?? ['percent' => 0, 'achieved' => 0, 'target' => 0];
+        
+        $emp_proc_datasets_raw[$p_name]['data'][] = $p_info['percent'];
+        $emp_proc_datasets_raw[$p_name]['raw_achieved'][] = $p_info['achieved'];
+        $emp_proc_datasets_raw[$p_name]['raw_target'][] = $p_info['target'];
+        
+        if ($p_info['target'] > 0 || $p_info['achieved'] > 0) {
+            $emp_proc_datasets_raw[$p_name]['has_data'] = true;
+        }
     }
 }
 
@@ -352,8 +386,34 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .main-content { padding: 20px; margin: 0 auto; }
+        .main-content { margin-top: 70px; padding: 20px; margin-left: auto; margin-right: auto; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); margin-bottom: 20px; }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         
         /* Table Grid & Column Border Fixes - Unified Single Table */
         .table-container { 
@@ -374,12 +434,12 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
 
         #processReportTable thead th,
         #dailyReportTable thead th { 
-            background-color: #5e6b77 !important;  
+            background-color: var(--ash, #6c757d) !important;  
             color: #ffffff !important; 
             position: sticky !important; 
             top: 0 !important; 
             z-index: 10 !important;
-            border: 1px solid #4a545e !important;
+            border: 1px solid #5a6268 !important;
             vertical-align: middle !important;
             text-align: center !important;
             padding: 6px 3px !important;
@@ -426,9 +486,9 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
         #processReportTable thead th.sticky-col,
         #dailyReportTable thead th.sticky-col {
             z-index: 99 !important;
-            background-color: #5e6b77 !important;
+            background-color: var(--ash, #6c757d) !important;
             color: #ffffff !important;
-            border: 1px solid #4a545e !important;
+            border: 1px solid #5a6268 !important;
         }
         #processReportTable .fs-6 { font-size: 0.82rem !important; }
         .summary-card { color: white; border-radius: 10px; }
@@ -443,9 +503,8 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <br><br><br>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-bullseye me-2"></i>Team Report</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-bullseye me-2"></i>Team Report</h4>
         </div>
 
         <!-- Filter Form -->
@@ -723,8 +782,8 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
         <?php endif; ?>
         
         <!-- Employee Performance Charts Heading Added Here -->
-        <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
-            <h4><i class="fas fa-chart-bar me-2"></i>Employee Performance Charts</h4>
+        <div class="page-title-container mt-4 mb-3">
+            <h4 class="mb-0 text-white"><i class="fas fa-chart-bar me-2"></i>Employee Performance Charts</h4>
         </div>
 
         <!-- Graphical Reports Added Here -->

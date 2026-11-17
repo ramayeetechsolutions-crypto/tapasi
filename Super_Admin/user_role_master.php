@@ -181,8 +181,8 @@ if ($types) {
 
 <?php if($mode==='add'||$mode==='edit'): ?>
 <!-- Add/Edit Form -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h5><?= $mode==='edit'?'Edit Role':'Add Role' ?></h5>
+<div class="page-title-container">
+  <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Role':'Add Role' ?></h5>
   <a href="user_role_master.php" class="btn btn-sm btn-secondary">Back</a>
 </div>
 <div class="card mb-3 mx-auto" style="max-width:600px;">
@@ -216,8 +216,8 @@ if ($types) {
 
 <?php else: ?>
 <!-- Roles List -->
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <h5>User Role Master</h5>
+<div class="page-title-container">
+  <h5 class="mb-0 text-white">User Role Master</h5>
   <a href="user_role_master.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add</a>
 </div>
 

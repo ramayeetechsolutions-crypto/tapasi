@@ -365,6 +365,46 @@ if (!$entries) $entries = false;
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background-color: #6c757d !important;
+            background: #6c757d !important;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: #ffffff !important;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -375,7 +415,7 @@ if (!$entries) $entries = false;
             margin: 0 auto;
         }
         .table th {
-            background-color: #6c757d !important;
+            background-color: var(--ash, #6c757d) !important;
             color: white !important;
             border: none;
             white-space: nowrap;
@@ -413,6 +453,8 @@ if (!$entries) $entries = false;
             transform: scale(1.1);
         }
     </style>
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
 </head>
 <body>
     <?php require 'header.php'; ?>
@@ -427,8 +469,8 @@ if (!$entries) $entries = false;
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry' : 'Add New Error Log Entry' ?></h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry' : 'Add New Error Log Entry' ?></h4>
             <a href="error_entry.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -620,8 +662,8 @@ if (!$entries) $entries = false;
 
         <?php else: ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-bug me-2"></i>Error Logs</h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i>Error Logs</h4>
             <div>
                  <button type="button" class="btn btn-warning btn-sm text-black" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-import me-1"></i> Import Excel

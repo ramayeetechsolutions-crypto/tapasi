@@ -195,10 +195,10 @@ require 'header.php';
 <div class="container-fluid py-4" style="margin-top: 60px;">
     
     <!-- PAGE HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark mb-0"><i class="fas fa-user-times me-2"></i>Inactive Clients</h3>
-            <p class="text-muted">Import Excel to update existing clients to Inactive status.</p>
+            <h3 class="fw-bold  mb-0 mb-0 text-white"><i class="fas fa-user-times me-2"></i>Inactive Clients</h3>
+            <p class=" mb-0 text-white-50 small">Import Excel to update existing clients to Inactive status.</p>
         </div>
         
         <!-- IMPORT BUTTON -->

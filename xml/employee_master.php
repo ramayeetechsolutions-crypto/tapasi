@@ -665,11 +665,20 @@ require 'header.php';
 
         <?php else: ?>
 
-        <!-- View Mode -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-users me-2"></i>Employee Profile</h5>
+        <!-- View Mode Header Banner (Ash matching Navbar) -->
+        <div class="page-title-container">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fas fa-users"></i> Employee Profile
+                </h1>
+            </div>
+            <div>
+                <a href="employee_add.php" class="btn btn-header-action">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add Employee</span>
+                </a>
+            </div>
         </div>
-<div class="d-flex justify-content-between mb-3"><a href="employee_add.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
         <!-- Search and Filter -->
         <div class="card mb-4">
             <div class="card-body">

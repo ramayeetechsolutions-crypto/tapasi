@@ -295,6 +295,45 @@ class ClientInvoiceGenerator {
         
         $html = '
         <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
             body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 0; }
             .container { width: 100%; }
             .header { width: 100%; margin-bottom: 10px; }
@@ -674,7 +713,7 @@ $clients_result = $invoiceGenerator->getAllClients();
         <?php endif; ?>
 
         <div class="form-section">
-            <h2>Select Client and Period for Review</h2>
+            <div class="page-title-container"><h2 class="mb-0 text-white">Select Client and Period for Review</h2></div>
             <form method="post">
                 <div class="form-group">
                     <label for="month">Month:</label>

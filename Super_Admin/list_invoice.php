@@ -77,10 +77,49 @@ $invoices = array_keys($unique_invoices);
 <head>
     <meta charset="UTF-8">
     <title>Super Admin: Combined Available Files</title>
+<style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+</style>
 </head>
 <body>
-    <br><br><br>
-    <h1>Combined Available Files (Invoices & Job Uploads)</h1>
+    <div class="page-title-container"><h1 class="mb-0 text-white">Combined Available Files (Invoices & Job Uploads)</h1></div>
 
     <?php if (empty($invoices)): ?>
         <p>No files found either on the disk or referenced in the database.</p>

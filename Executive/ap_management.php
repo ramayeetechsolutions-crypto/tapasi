@@ -158,9 +158,48 @@ include 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body { background-color: #f8f9fa; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
-        .table th { background-color: #2c3e50; color: white; }
+        .table th { background-color: var(--ash, #6c757d) !important; color: white; }
         .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500; }
         .status-Pending { background-color: #fff3cd; color: #856404; }
         .status-In-Progress { background-color: #d1ecf1; color: #0c5460; }
@@ -176,10 +215,10 @@ include 'header.php';
     
     <div class="container-fluid mt-4">
         <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-container">
             <div>
-                <h2><i class="fas fa-file-invoice-dollar text-primary me-2"></i>AP Details Management</h2>
-                <p class="text-muted mb-0">Manage Accounts Payable details and track status</p>
+                <h2 class="mb-0 text-white"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>AP Details Management</h2>
+                <p class="mb-0 mb-0 text-white-50 small">Manage Accounts Payable details and track status</p>
             </div>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAPModal">
                 <i class="fas fa-plus-circle me-2"></i>Add New AP
@@ -243,8 +282,8 @@ include 'header.php';
         <!-- AP Records Table -->
         <div class="card">
             <div class="card-header bg-dark text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>AP Records</h5>
+                <div class="page-title-container">
+                    <h5 class="mb-0 mb-0 text-white"><i class="fas fa-list me-2"></i>AP Records</h5>
                     <span class="badge bg-light text-dark"><?= count($ap_records) ?> records</span>
                 </div>
             </div>
@@ -479,7 +518,7 @@ include 'header.php';
                     <input type="hidden" name="id" id="delete_id">
                     <div class="modal-body">
                         <p>Are you sure you want to delete this AP record?</p>
-                        <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+                        <p class="text-danger mb-0 text-white-50 small"><strong>This action cannot be undone.</strong></p>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

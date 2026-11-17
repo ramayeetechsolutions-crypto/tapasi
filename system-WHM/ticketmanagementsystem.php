@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -171,8 +172,56 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .main-content { padding: 20px; max-width: 1900px; margin: 0 auto; }
-        .table th { background-color: #2c3e50; color: white; border: none; font-size: 11px; white-space: nowrap; padding: 8px 5px; }
+        .main-content { padding: 90px 25px 30px 25px; max-width: 1900px; margin: 0 auto; }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        .page-title-container h1, .page-title-container h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Sticky Table Header */
+        .table thead th, .table th { 
+            position: sticky;
+            top: 70px;
+            z-index: 900;
+            background-color: var(--ash, #6c757d) !important; 
+            color: white !important; 
+            border: 1px solid #6c757d !important; 
+            font-size: 11px; 
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap; 
+            padding: 8px 5px; 
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+        }
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .card, .card-body, .table-responsive, .table-container {
+            overflow: visible !important;
+        }
+        .card-header {
+            background-color: var(--ash, #6c757d) !important;
+            color: white !important;
+        }
         .table td { vertical-align: middle; font-size: 12px; padding: 8px 5px; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .stats-card { border-left: 4px solid; padding: 15px; margin-bottom: 15px; }
@@ -204,9 +253,9 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-ticket-alt me-2"></i><?= $mode === 'edit' ? 'Edit Ticket' : 'Create New Ticket' ?></h4>
-            <a href="ticketmanagementsystem.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i><?= $mode === 'edit' ? 'Edit Ticket' : 'Create New Ticket' ?></h4>
+            <a href="ticketmanagementsystem.php" class="btn btn-light btn-sm fw-semibold"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
         </div>
         <div class="card">
             <div class="card-body">
@@ -344,8 +393,8 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-ticket-alt me-2"></i>IT Support Ticket Management</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i>System Complaints</h4>
         </div>
 
         <!-- Statistics -->
@@ -376,7 +425,7 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
         </div>
 
         <!-- Tickets Table -->
-        <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Date</th><th>Created By</th><th>Dept</th><th>System</th><th>Cabin</th><th>Issues</th><th>Type</th><th>Severity</th><th>Assigned To</th><th>Status</th><th>Resolved By</th><th>Resolved Date</th><th>TAT</th><th>Comment</th><th width="100" class="text-center">Actions</th></tr></thead><tbody>
+        <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Date</th><th>Created By</th><th>Dept</th><th>System</th><th>Cabin</th><th>Issues</th><th>Type</th><th>Severity</th><th>Assigned To</th><th>Status</th><th>Resolved By</th><th>Resolved Date</th><th>TAT</th><th>Comment</th><th width="100" class="text-center">Actions</th></tr></thead><tbody>
         <?php if($tickets && $tickets->num_rows > 0): ?><?php while($row = $tickets->fetch_assoc()): ?>
         <tr><td><?= formatDate($row['complaint_date']) ?></td><td><?= h($row['created_by']) ?></td><td><?= h($row['department']) ?></td><td><?= h($row['system_no']) ?></td><td><?= h($row['cabin']) ?></td><td><small><?= h($row['issues']) ?></small></td><td><?= h($row['complaint_type']) ?></td>
 <td>

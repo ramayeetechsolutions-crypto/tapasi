@@ -407,17 +407,58 @@ if($stmt_error) $stmt_error->close();
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         body { background-color: #f8fafc; }
         
         .page-header {
-            background: white;
+            background: var(--ash, #6c757d) !important; color: white !important; border-radius: 12px;;
             border-bottom: 1px solid #e2e8f0;
             padding: 1rem 0;
             margin-bottom: 1.5rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-top: 70px;
         }
+        .page-header h4, .page-header h1, .page-header h2, .page-header h3, .page-header h5, .page-header i { color: #ffffff !important; }
+        .page-header p { color: rgba(255, 255, 255, 0.85) !important; }
         
         .table-container {
             background: white;
@@ -497,10 +538,10 @@ if($stmt_error) $stmt_error->close();
 
 <div class="page-header">
     <div class="container-fluid px-4">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="page-title-container">
             <div>
-                <h4 class="mb-1" style="font-weight: 700; color: #1e293b;">
-                    <i class="fas fa-handshake me-2" style="color: #667eea;"></i>
+                <h4 class="mb-1 mb-0 text-white" >
+                    <i class="fas fa-handshake me-2" ></i>
                     CE Meeting
                 </h4>
                 <p class="mb-0 text-muted small">Weekly Production & Accuracy Report</p>

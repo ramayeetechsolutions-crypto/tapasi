@@ -80,6 +80,45 @@ $jobs = $mysqli->query($sql);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         :root {
             --primary-color: #4361ee;
             --secondary-color: #e2e8f0;
@@ -223,10 +262,10 @@ $jobs = $mysqli->query($sql);
     <?php else: ?>
 
     <!-- Header Actions -->
-    <div class="d-flex justify-content-between align-items-end mb-4 fade-in">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold mb-0">Job Master</h3>
-            <p class="text-muted small mb-0">Manage your company's service catalog and roles.</p>
+            <h3 class="fw-bold mb-0 mb-0 text-white">Job Master</h3>
+            <p class="small mb-0 mb-0 text-white-50 small">Manage your company's service catalog and roles.</p>
         </div>
         <a href="job_master.php?mode=add" class="btn btn-primary shadow-sm">
             <i class="fa fa-plus me-2"></i>Add New Job

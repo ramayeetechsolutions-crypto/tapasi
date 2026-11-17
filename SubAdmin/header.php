@@ -5,9 +5,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Prevent caching issues
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+if (!headers_sent()) {
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+}
 
 // Redirect to login if not logged in
 if (!isset($_SESSION['adminname'])) {
@@ -294,8 +296,8 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
 
         /* Main Content */
         .main-content {
-            margin-top: 70px;
-            padding: 30px 5%;
+            margin-top: 0;
+            padding: 15px 5%;
             transition: all 0.3s ease;
         }
 

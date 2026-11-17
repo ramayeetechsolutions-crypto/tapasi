@@ -103,12 +103,42 @@ require 'header.php';
             background-color: #707981 !important;
             border-color: #707981 !important;
         }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
     </style>
-    <br><br><br>
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
-                <h2 class="mb-4"><i class="fas fa-users"></i> User Management</h2>
+                <div class="page-title-container">
+                    <h2 class="mb-0 text-white"><i class="fas fa-users"></i> User Management</h2>
+                </div>
                 
                 <?php echo $message; ?>
                 

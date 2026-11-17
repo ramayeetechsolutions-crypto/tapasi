@@ -245,10 +245,10 @@ if (isset($_POST['import_btn'])) {
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <!-- Header Section -->
         <div class="card-header bg-gradient-primary text-white py-3">
-            <div class="d-flex align-items-center justify-content-between">
+            <div class="page-title-container">
                 <div>
-                    <h4 class="mb-0 fw-bold"><i class="fas fa-users me-2"></i>Employee Management</h4>
-                    <p class="mb-0 opacity-75 small">Central hub for all employee operations</p>
+                    <h4 class="mb-0 fw-bold mb-0 text-white"><i class="fas fa-users me-2"></i>Employee Management</h4>
+                    <p class="mb-0 opacity-75 small mb-0 text-white-50 small">Central hub for all employee operations</p>
                 </div>
                 <div class="bg-white rounded-circle p-2 shadow">
                     <i class="fas fa-user-cog text-primary fa-lg"></i>
@@ -468,6 +468,45 @@ if (isset($_POST['import_btn'])) {
 
 <!-- Custom CSS for hover effects -->
 <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
 .hover-shadow {
     transition: all 0.3s ease;
 }

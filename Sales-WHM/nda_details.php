@@ -242,9 +242,9 @@ require 'header.php';
 
     <!-- LIST VIEW -->
     <?php if ($mode === 'view'): ?>
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <!-- New Title Here -->
-        <h4 class="fw-bold text-primary"><i class="fas fa-file-contract me-2"></i>Client NDA Details</h4>
+        <h4 class="fw-bold text-primary mb-0 text-white"><i class="fas fa-file-contract me-2"></i>Client NDA Details</h4>
     </div>
 
     <!-- Filter Bar -->

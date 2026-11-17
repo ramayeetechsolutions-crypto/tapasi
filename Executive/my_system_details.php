@@ -66,6 +66,7 @@ body{
 
 .main-content{
     padding:25px;
+    margin-top: 70px;
 }
 
 .card{
@@ -75,8 +76,8 @@ body{
 }
 
 .card-header{
-    background:#5c6670;
-    color:#fff;
+    background: var(--ash, #6c757d) !important;
+    color:#fff !important;
 }
 
 .table td{
@@ -88,6 +89,28 @@ body{
     color:#0d6efd;
 }
 
+/* Ash Page Header Banner (Matching Navbar Color) */
+.page-title-container {
+    background: var(--ash, #6c757d);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.page-title-container h1, .page-title-container h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 </style>
 
 </head>
@@ -96,17 +119,14 @@ body{
 
 <?php require 'header.php'; ?>
 
-<div class="main-content" style="margin-top: 80px;">
+<div class="main-content" style="margin-top: 70px;">
 
 <div class="container-fluid">
 
-<div class="mb-4">
-
-<h3>
-<i class="fas fa-desktop"></i>
-System Details
-</h3>
-
+<div class="page-title-container">
+    <h1 class="mb-0">
+        <i class="fas fa-desktop"></i> System Details
+    </h1>
 </div>
 
 <?php if($system){ ?>

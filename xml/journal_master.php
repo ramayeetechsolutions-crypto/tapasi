@@ -71,31 +71,78 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if ($action === 'import_excel') {
         if (isset($_FILES['excel_file']) && $_FILES['excel_file']['error'] === 0) {
             
-            // Locate the SimpleXLSX Library
+            // Multi-format Parser (SimpleXLSX, SimpleXLS, and CSV)
+            $tmpFile = $_FILES['excel_file']['tmp_name'];
+            $fileName = $_FILES['excel_file']['name'];
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            $rows = null;
+
+            // 1. Try SimpleXLSX for .xlsx files
             $libPath = dirname(__DIR__) . '/simplexlsx-master/src/SimpleXLSX.php';
-            // Fallback paths just in case
             if (!file_exists($libPath)) $libPath = dirname(__DIR__) . '/simplexlsx-master/SimpleXLSX.php';
-            if (!file_exists($libPath)) $libPath = 'simplexlsx-master/src/SimpleXLSX.php';
+            if (!file_exists($libPath)) $libPath = 'simplexls-master/src/SimpleXLSX.php';
+            if (!file_exists($libPath)) $libPath = __DIR__ . '/simplexlsx-master/src/SimpleXLSX.php';
 
-            if (!file_exists($libPath)) {
-                redirect_with(['msg' => 'Library file not found.', 'type' => 'danger']);
+            if (file_exists($libPath)) {
+                require_once $libPath;
+                if (class_exists('Shuchkin\SimpleXLSX')) {
+                    $xlsx = Shuchkin\SimpleXLSX::parse($tmpFile);
+                    if ($xlsx) {
+                        $rows = $xlsx->rows();
+                    }
+                } elseif (class_exists('SimpleXLSX')) {
+                    $xlsx = SimpleXLSX::parse($tmpFile);
+                    if ($xlsx) {
+                        $rows = $xlsx->rows();
+                    }
+                }
             }
-            
-            require_once $libPath;
 
-            // Initialize Parser
-            $xlsx = null;
-            if (class_exists('Shuchkin\SimpleXLSX')) {
-                $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
-            } elseif (class_exists('SimpleXLSX')) {
-                $xlsx = SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
-            } else {
-                redirect_with(['msg' => 'Class SimpleXLSX not found.', 'type' => 'danger']);
+            // 2. If not parsed, try SimpleXLS for .xls (legacy binary format)
+            if (!$rows) {
+                $xlsLib = dirname(__DIR__) . '/simplexls-master/src/SimpleXLS.php';
+                if (!file_exists($xlsLib)) $xlsLib = dirname(__DIR__) . '/simplexls-master/SimpleXLS.php';
+                if (!file_exists($xlsLib)) $xlsLib = 'simplexls-master/src/SimpleXLS.php';
+                if (!file_exists($xlsLib)) $xlsLib = __DIR__ . '/simplexls-master/src/SimpleXLS.php';
+
+                if (file_exists($xlsLib)) {
+                    require_once $xlsLib;
+                    if (class_exists('Shuchkin\SimpleXLS')) {
+                        $xls = Shuchkin\SimpleXLS::parse($tmpFile);
+                        if ($xls) {
+                            $rows = $xls->rows();
+                        }
+                    } elseif (class_exists('SimpleXLS')) {
+                        $xls = SimpleXLS::parse($tmpFile);
+                        if ($xls) {
+                            $rows = $xls->rows();
+                        }
+                    }
+                }
+            }
+
+            // 3. Fallback: Parse as CSV or text format (e.g. downloaded sample)
+            if (!$rows) {
+                $csvRows = [];
+                if (($handle = fopen($tmpFile, "r")) !== FALSE) {
+                    while (($data = fgetcsv($handle, 10000, ",", '"', "\\")) !== FALSE) {
+                        if (count($data) === 1 && strpos($data[0], ';') !== false) {
+                            $data = str_getcsv($data[0], ';');
+                        } elseif (count($data) === 1 && strpos($data[0], "\t") !== false) {
+                            $data = str_getcsv($data[0], "\t");
+                        }
+                        $csvRows[] = $data;
+                    }
+                    fclose($handle);
+                }
+                if (!empty($csvRows) && count($csvRows) > 1) {
+                    $rows = $csvRows;
+                }
             }
 
             // Process Rows
-            if ($xlsx) {
-                $rows = $xlsx->rows();
+            if ($rows && is_array($rows)) {
                 $imported_count = 0;
                 $updated_count = 0;
                 $skipped_count = 0;
@@ -103,10 +150,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 
                 // Pre-fetch clients and teams to map names to IDs quickly
                 $clients_map =[];
-                $res = $mysqli->query("SELECT client_id, client_name FROM client_master");
+                $res = $mysqli->query("SELECT client_id, client_name, team_client_name FROM client_master");
                 if($res) {
                     while($row = $res->fetch_assoc()) {
                         $clients_map[strtolower(trim($row['client_name']))] = $row['client_id'];
+                        if (!empty($row['team_client_name'])) $clients_map[strtolower(trim($row['team_client_name']))] = $row['client_id'];
                     }
                 }
 
@@ -137,8 +185,17 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                         continue;
                     }
 
-                    // Resolve Client ID
+                    // Resolve Client ID (or auto-create in client_master if not found)
                     $client_id = $clients_map[strtolower($client_raw)] ?? 0;
+                    if ($client_id === 0 && !empty($client_raw)) {
+                        $ins_c = $mysqli->prepare("INSERT INTO client_master (client_name, team_client_name, template, tds_percentage, igst, status, created_date) VALUES (?, ?, '', 0.00, 0.00, 'Active', NOW())");
+                        $ins_c->bind_param("ss", $client_raw, $client_raw);
+                        if ($ins_c->execute()) {
+                            $client_id = (int)$mysqli->insert_id;
+                            $clients_map[strtolower($client_raw)] = $client_id;
+                        }
+                        $ins_c->close();
+                    }
                     if ($client_id === 0) {
                         $skipped_count++;
                         $error_details[] = "Row " . ($k + 1) . ": Client '$client_raw' not found in database";
@@ -233,7 +290,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         if ($c_res->num_rows > 0) {
             $client_id = (int)$c_res->fetch_assoc()['client_id'];
         } else {
-            $ins_c = $mysqli->prepare("INSERT INTO client_master (client_name, team_client_name, status, created_date) VALUES (?, ?, 'Active', NOW())");
+            // Automatically add new client to client_master
+            $ins_c = $mysqli->prepare("INSERT INTO client_master (client_name, team_client_name, template, tds_percentage, igst, status, created_date) VALUES (?, ?, '', 0.00, 0.00, 'Active', NOW())");
             $ins_c->bind_param("ss", $client_name_input, $client_name_input);
             if ($ins_c->execute()) {
                 $client_id = (int)$mysqli->insert_id;
@@ -243,7 +301,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $c_stmt->close();
         
         if ($client_id === 0) {
-            redirect_with(['msg' => 'Unable to process Client Name.', 'type' => 'danger']);
+            redirect_with(['mode' => $action, 'msg' => 'Unable to process or save Client Name.', 'type' => 'danger']);
         }
         
         if (empty($wk_new_journals)) {
@@ -440,6 +498,45 @@ $months = getMonths();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -450,7 +547,7 @@ $months = getMonths();
             margin: 0 auto;
         }
         .table th {
-            background-color: #5e6b77 !important;
+            background-color: var(--ash, #6c757d) !important;
             color: #ffffff !important;
             border: none;
         }
@@ -514,8 +611,8 @@ $months = getMonths();
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-newspaper me-2"></i><?= $mode === 'edit' ? 'Edit Journal Entry' : 'Add New Journal Entry' ?></h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-newspaper me-2"></i><?= $mode === 'edit' ? 'Edit Journal Entry' : 'Add New Journal Entry' ?></h4>
             <a href="journal_master.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -533,24 +630,9 @@ $months = getMonths();
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="client_name" class="form-label">Client Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="client_name" name="client_name" list="client_datalist" 
+                                <input type="text" class="form-control" id="client_name" name="client_name" 
                                        value="<?= isset($editEntry['team_client_name']) && !empty($editEntry['team_client_name']) ? h($editEntry['team_client_name']) : (isset($editEntry['client_name']) ? h($editEntry['client_name']) : '') ?>" 
-                                       placeholder="Enter client name" required>
-                                <datalist id="client_datalist">
-                                    <?php 
-                                    $displayed_clients = [];
-                                    foreach($clients as $client): 
-                                        $display_name = !empty($client['team_client_name']) ? $client['team_client_name'] : $client['client_name'];
-                                        if (!in_array($display_name, $displayed_clients)):
-                                            $displayed_clients[] = $display_name;
-                                    ?>
-                                        <option value="<?= h($display_name) ?>">
-                                    <?php 
-                                        endif;
-                                    endforeach; 
-                                    ?>
-                                </datalist>
-                                <div class="form-text">Enter client name for this journal entry</div>
+                                       placeholder="Enter client name" autocomplete="off" required>
                             </div>
                         </div>
                         
@@ -565,7 +647,6 @@ $months = getMonths();
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <div class="form-text">Select the team responsible</div>
                             </div>
                         </div>
                         
@@ -574,8 +655,7 @@ $months = getMonths();
                                 <label for="wk_new_journals" class="form-label">New Journals<span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="wk_new_journals" name="wk_new_journals" 
                                        value="<?= isset($editEntry['wk_new_journals']) ? h($editEntry['wk_new_journals']) : '' ?>" 
-                                       placeholder="Enter journal name" required>
-                                <div class="form-text">Enter the name of the new journal</div>
+                                       placeholder="Enter journal name" autocomplete="off" required>
                             </div>
                         </div>
                         
@@ -584,8 +664,7 @@ $months = getMonths();
                                 <label for="year_volume_issue" class="form-label">Year_Volume_Issue</label>
                                 <input type="text" class="form-control" id="year_volume_issue" name="year_volume_issue" 
                                        value="<?= isset($editEntry['year_volume_issue']) ? h($editEntry['year_volume_issue']) : '' ?>" 
-                                       placeholder="e.g., 2024_01_01">
-                                <div class="form-text">Enter year, volume and issue details</div>
+                                       placeholder="e.g., 2024_01_01" autocomplete="off">
                             </div>
                         </div>
                         
@@ -594,7 +673,6 @@ $months = getMonths();
                                 <label for="month" class="form-label">Date / Month</label>
                                 <input type="date" class="form-control" id="month" name="month" 
                                        value="<?= isset($editEntry['month']) ? h($editEntry['month']) : '' ?>">
-                                <div class="form-text">Choose date, month, and year</div>
                             </div>
                         </div>
                         
@@ -623,9 +701,9 @@ $months = getMonths();
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-container">
             <div>
-                <h4><i class="fas fa-newspaper me-2"></i>Assigned New Journals</h4>
+                <h4 class="mb-0 text-white"><i class="fas fa-newspaper me-2"></i>Assigned New Journals</h4>
                 <p class="text-muted mb-0">Manage journals | Import Excel to bulk add/update</p>
             </div>
             <div>
@@ -882,8 +960,8 @@ $months = getMonths();
                         <div class="row">
                             <div class="col-md-8">
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Select Excel File (.xlsx)</label>
-                                    <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
+                                    <label class="form-label fw-bold">Select Excel / CSV File (.xlsx, .xls, .csv)</label>
+                                    <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
                                     <small class="text-muted">Maximum file size: 5MB</small>
                                 </div>
                             </div>

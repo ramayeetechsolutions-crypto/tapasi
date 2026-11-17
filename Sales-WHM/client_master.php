@@ -382,8 +382,8 @@ require 'header.php';
 
 <?php if($mode==='add'||$mode==='edit'): ?>
 <!-- ADD/EDIT FORM -->
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h5><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
+<div class="page-title-container">
+    <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
     <a href="client_master.php" class="btn btn-sm btn-secondary">Back</a>
 </div>
 <div class="card mb-3 mx-auto" style="max-width:1200px;">
@@ -546,8 +546,8 @@ require 'header.php';
 
 <?php else: ?>
 <!-- LIST VIEW -->
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <h5>Client Master <?= $isPassive ? '<span class="badge bg-warning">Passive Clients</span>' : '' ?></h5>
+<div class="page-title-container">
+    <h5 class="mb-0 text-white">Client Master <?= $isPassive ? '<span class="badge bg-warning">Passive Clients</span>' : '' ?></h5>
     <div>
         <a href="client_master.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add</a>
         <button type="button" class="btn btn-sm btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#importModal">
@@ -742,7 +742,7 @@ require 'header.php';
                     
                     <div class="alert alert-info">
                         <h6><i class="bi bi-info-circle me-2"></i>Excel Format Information:</h6>
-                        <p class="mb-2">The Excel file should follow this column structure:</p>
+                        <p class="mb-2 mb-0 text-white-50 small">The Excel file should follow this column structure:</p>
                         <ul class="small mb-0">
                             <li>Column A: Month (for other purposes, not used in import)</li>
                             <li>Column B: Client Name (required)</li>

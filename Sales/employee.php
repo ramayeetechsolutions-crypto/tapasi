@@ -307,6 +307,45 @@ $stmt->close();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         .btn-brown{background:#795548;color:#fff;border:none}.btn-brown:hover{background:#5d4037;color:#fff}
         .btn-verify{background:#28a745;color:#fff;border:none}.btn-verify:hover{background:#218838;color:#fff}
         .readonly-field { background-color: #f8f9fa; cursor: not-allowed; }
@@ -365,8 +404,8 @@ $stmt->close();
         <?php if ($mode==='edit'): ?>
         
         <!-- Edit Form -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-user me-2"></i>Edit My Details</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white"><i class="fas fa-user me-2"></i>Edit My Details</h5>
             <a href="employee.php" class="btn btn-sm btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Back to View
             </a>
@@ -598,8 +637,8 @@ $stmt->close();
         }
         ?>
         
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5><i class="fas fa-user me-2"></i>My Employee Details</h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white"><i class="fas fa-user me-2"></i>My Employee Details</h5>
             <div class="d-flex gap-2">
                 <?php if ($employee_data && $employee_data['emp_confirm'] == 0): ?>
                     <form method="post" style="display:inline" onsubmit="return confirm('Are you sure you want to verify your details? Once verified, you cannot edit them again.')">
@@ -775,7 +814,7 @@ $stmt->close();
                         <div class="text-muted">
                             <i class="fas fa-user fa-3x mb-3"></i>
                             <h5>No employee data found</h5>
-                            <p class="mb-0">Please contact administrator.</p>
+                            <p class="mb-0 mb-0 text-white-50 small">Please contact administrator.</p>
                         </div>
                     </div>
                 <?php endif; ?>

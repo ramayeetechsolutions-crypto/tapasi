@@ -21,8 +21,23 @@ if ($mode == 'edit') {
     }
 }
 
-// 1. Fetch Employees (ID and Name) from employee_master
-$emp_query = "SELECT employee_id, employee_username, employee_name FROM employee_master WHERE user_role_id = 4 AND status='Active' ORDER BY employee_username ASC";
+// 1. Fetch Employees (ID and Name) under this Reporting Manager (Team Leader)
+$tl_name_esc = $mysqli->real_escape_string($tl_name);
+$emp_query = "
+    SELECT employee_id, employee_username, employee_name 
+    FROM employee_master 
+    WHERE (user_role_id = 4 OR user_role_id = 11) 
+      AND status = 'Active'
+      AND (
+          CAST(reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = '$tl_name_esc'
+          OR CAST(reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci IN (
+              SELECT CAST(employee_username AS CHAR) COLLATE utf8mb4_unicode_ci 
+              FROM employee_master 
+              WHERE CAST(employee_name AS CHAR) COLLATE utf8mb4_unicode_ci = '$tl_name_esc'
+          )
+      )
+    ORDER BY employee_username ASC
+";
 $emp_result = $mysqli->query($emp_query);
 
 // 2. Fetch Only XML Processes from process_master
@@ -30,9 +45,9 @@ $proc_query = "SELECT process_id, process_name FROM process_master ORDER BY proc
 $proc_result = $mysqli->query($proc_query);
 ?>
 
-<?php if($mode == 'edit'): ?>
+<!-- <?php if($mode == 'edit'): ?>
     <input type="hidden" name="employee_id" value="<?php echo $selected_emp_id; ?>">
-<?php endif; ?>
+<?php endif; ?> -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -60,6 +75,9 @@ $proc_result = $mysqli->query($proc_query);
             <hr class="mb-4">
             
             <form action="save_team_member.php" method="POST">
+                <?php if($mode == 'edit'): ?>
+                    <input type="hidden" name="employee_id" value="<?php echo $selected_emp_id; ?>">
+                <?php endif; ?>
                 <!-- Pre-filled Team Leader Name -->
                 <div class="mb-4">
                     <label class="form-label">Team Leader Name</label>

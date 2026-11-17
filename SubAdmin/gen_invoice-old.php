@@ -1225,6 +1225,45 @@ $clients_result = $mysqli->query("SELECT client_id, client_name, company_name FR
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Invoice Generator</title>
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0056b3; padding-bottom: 20px; }
@@ -1348,10 +1387,10 @@ $clients_result = $mysqli->query("SELECT client_id, client_name, company_name FR
         <?php endif; ?>
 
         <div class="form-section">
-            <h2>Select Client and Period for Review</h2>   
+            <div class="page-title-container"><h2 class="mb-0 text-white">Select Client and Period for Review</h2></div>   
             
-           <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Invoice List</h4>
+           <div class="page-title-container">
+        <h4 class="mb-0 mb-0 text-white">Invoice List</h4>
         <button 
             type="button" 
             name="generate" 

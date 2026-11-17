@@ -187,30 +187,30 @@ try {
             <div class="card text-white h-100 border-0 shadow-sm" style="background-color: #6f42c1;">
                 <div class="card-body">
                     <h2 class="fw-bold mb-0"><?= $total_clients ?></h2>
-                    <div class="d-flex justify-content-between align-items-center"><span>Total Clients</span><i class="fas fa-users fa-2x opacity-50"></i></div>
+                    <div class="page-title-container"><span>Total Clients</span><i class="fas fa-users fa-2x opacity-50"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-white h-100 border-0 shadow-sm" style="background-color: #e83e8c;">
                 <div class="card-body">
-                    <h2 class="fw-bold mb-0"><?= $active_clients ?></h2>
-                    <div class="d-flex justify-content-between align-items-center"><span>Active Clients</span><i class="fas fa-user-check fa-2x opacity-50"></i></div>
+                    <h2 class="fw-bold mb-0 mb-0 text-white"><?= $active_clients ?></h2>
+                    <div class="page-title-container"><span>Active Clients</span><i class="fas fa-user-check fa-2x opacity-50"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-white h-100 border-0 shadow-sm" style="background-color: #0dcaf0;">
                 <div class="card-body">
-                    <h2 class="fw-bold mb-0"><?= $followup_today ?></h2>
-                    <div class="d-flex justify-content-between align-items-center"><span>Follow-ups Today</span><i class="fas fa-calendar-day fa-2x opacity-50"></i></div>
+                    <h2 class="fw-bold mb-0 mb-0 text-white"><?= $followup_today ?></h2>
+                    <div class="page-title-container"><span>Follow-ups Today</span><i class="fas fa-calendar-day fa-2x opacity-50"></i></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card text-white h-100 border-0 shadow-sm" style="background-color: #fd7e14;">
                 <div class="card-body">
-                    <h2 class="fw-bold mb-0"><?= $overdue_followups ?></h2>
+                    <h2 class="fw-bold mb-0 mb-0 text-white"><?= $overdue_followups ?></h2>
                     <div class="d-flex justify-content-between align-items-center"><span>Overdue / Pending</span><i class="fas fa-clock fa-2x opacity-50"></i></div>
                 </div>
             </div>
@@ -477,7 +477,7 @@ function refreshHistory() {
     fetch(`client_followup.php?fetch_history=1&client_id=${currentClientId}`)
         .then(response => response.text())
         .then(html => { container.innerHTML = html; })
-        .catch(err => { container.innerHTML = '<p class="text-danger text-center">Error.</p>'; });
+        .catch(err => { container.innerHTML = '<p class="text-danger text-center mb-0 text-white-50 small">Error.</p>'; });
 }
 </script>
 

@@ -271,10 +271,10 @@ require 'header.php';
 
 <div class="container-fluid py-4" style="margin-top: 60px;">
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark mb-0"><i class="fas fa-money-bill-wave me-2"></i>Publisher Payments</h3>
-            <p class="text-muted">Manage publisher payments and track financial records</p>
+            <h3 class="fw-bold  mb-0 mb-0 text-white"><i class="fas fa-money-bill-wave me-2"></i>Publisher Payments</h3>
+            <p class=" mb-0 text-white-50 small">Manage publisher payments and track financial records</p>
         </div>
         <div>
             <?php if($edit_mode): ?>

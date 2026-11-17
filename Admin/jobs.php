@@ -487,6 +487,45 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         .btn-brown { background-color: brown !important; color: white !important; }
         .compact-form { max-height: 80vh; overflow-y: auto; }
         .assignment-popup { max-width: 400px; }
@@ -509,8 +548,8 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
 
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
+            <div class="page-title-container">
+                <h5 class="mb-0 text-white"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
                 <a href="jobs.php" class="btn btn-sm btn-secondary">Back</a>
             </div>
 
@@ -799,8 +838,8 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
 
         <?php else: ?>
             <!-- LIST VIEW -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5>Jobs</h5>
+            <div class="page-title-container">
+                <h5 class="mb-0 text-white">Jobs</h5>
                 <a href="jobs.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add </a>
             </div>
 

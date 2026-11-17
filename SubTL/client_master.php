@@ -152,8 +152,8 @@ require 'header.php';
 <?php endif; ?>
 
 <?php if($mode==='add'||$mode==='edit'): ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h5><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
+<div class="page-title-container">
+  <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
   <a href="client_master.php" class="btn btn-sm btn-secondary">Back</a>
 </div>
 <div class="card mb-3 mx-auto" style="max-width:650px;">
@@ -202,8 +202,8 @@ require 'header.php';
 
 <?php else: ?>
 
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <h5>Client Master</h5>
+<div class="page-title-container">
+  <h5 class="mb-0 text-white">Client Master</h5>
   <a href="client_master.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add</a>
 </div>
 

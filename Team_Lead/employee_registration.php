@@ -159,10 +159,10 @@ require 'header.php';
     <?php $isAddMode = isset($_GET['action']) && $_GET['action'] == 'add'; ?>
 
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark"><i class="fas fa-users me-2"></i>Employee Registration</h3>
-            <p class="text-muted mb-0">Manage and Register Employees (TL Access)</p>
+            <h3 class="fw-bold mb-0 text-white"><i class="fas fa-users me-2"></i>Employee Registration</h3>
+            <p class="mb-0 mb-0 text-white-50 small">Manage and Register Employees (TL Access)</p>
         </div>
         <div class="d-flex gap-2">
             <?php if (!$isAddMode): ?>

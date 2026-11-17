@@ -108,10 +108,10 @@ require 'header.php';
 
 <div class="container-fluid py-4" style="margin-top: 60px;">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container">
         <div>
-            <h3 class="fw-bold text-dark"><i class="fas fa-user-shield me-2"></i>Employee Master (Super Admin)</h3>
-            <p class="text-muted mb-0">Manage Salary, Statutory Eligibility, and Exit Details.</p>
+            <h3 class="fw-bold mb-0 text-white"><i class="fas fa-user-shield me-2"></i>Employee Master (Super Admin)</h3>
+            <p class="mb-0 mb-0 text-white-50 small">Manage Salary, Statutory Eligibility, and Exit Details.</p>
         </div>
         <div>
             <a href="employee_master.php" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i> Back</a>

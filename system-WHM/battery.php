@@ -160,9 +160,48 @@ $expiredBatteries = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_battery WHER
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         body {background-color: #f8f9fa;font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
-        .main-content {padding: 20px;max-width: 1800px;margin: 0 auto;}
-        .table th {background-color: #2c3e50;color: white;border: none;font-size: 12px;white-space: nowrap;}
+        .main-content { margin-top: 70px;padding: 20px;max-width: 1800px;margin: 0 auto;}
+        .table th {background-color: var(--ash, #6c757d) !important;color: white;border: none;font-size: 12px;white-space: nowrap;}
         .table td {vertical-align: middle;font-size: 13px;}
         .card {box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);border: 1px solid rgba(0,0,0,.125);}
         .btn-group-sm > .btn {padding: 0.25rem 0.5rem;}
@@ -188,8 +227,8 @@ $expiredBatteries = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_battery WHER
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-battery-full me-2"></i><?= $mode === 'edit' ? 'Edit Battery' : 'Add New Battery' ?></h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-battery-full me-2"></i><?= $mode === 'edit' ? 'Edit Battery' : 'Add New Battery' ?></h4>
             <a href="battery.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -251,8 +290,8 @@ $expiredBatteries = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_battery WHER
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-battery-full me-2"></i>Battery Management (<?= $totalBatteries ?> Batteries)</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-battery-full me-2"></i>Battery Management (<?= $totalBatteries ?> Batteries)</h4>
             <a href="battery.php?mode=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Add Battery
             </a>
@@ -260,7 +299,7 @@ $expiredBatteries = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_battery WHER
 
         <!-- Statistics -->
         <div class="row mb-3">
-            <div class="col-md-3"><div class="card stats-card total"><h3><?= $totalBatteries ?></h3><p class="mb-0">Total Batteries</p></div></div>
+            <div class="col-md-3"><div class="card stats-card total"><h3><?= $totalBatteries ?></h3><p class="mb-0 mb-0 text-white-50 small">Total Batteries</p></div></div>
             <div class="col-md-3"><div class="card stats-card active"><h3><?= $activeBatteries ?></h3><p class="mb-0">Active Batteries</p></div></div>
             <div class="col-md-3"><div class="card stats-card warranty"><h3><?= $underWarranty ?></h3><p class="mb-0">Under Warranty</p></div></div>
             <div class="col-md-3"><div class="card stats-card expired"><h3><?= $expiredBatteries ?></h3><p class="mb-0">Expired Batteries</p></div></div>

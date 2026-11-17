@@ -391,10 +391,49 @@ require 'header.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
         .btn-brown { background-color: brown !important; color: white !important; }
         .compact-form { max-height: 80vh; overflow-y: auto; }
         .text-truncate { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .table th { font-size: 0.85rem; font-weight: 600; background-color: #f8f9fa; }
+        .table th { font-size: 0.85rem; font-weight: 600; background-color: var(--ash, #6c757d) !important; }
         .table td { font-size: 0.85rem; vertical-align: middle; }
         .badge { font-size: 0.75rem; font-weight: 500; }
         .text-truncate:hover { overflow: visible; white-space: normal; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); z-index: 1000; position: relative; }
@@ -409,7 +448,6 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <br><br><br>
     <div class="container-fluid py-3">
         <?php if (!empty($_GET['msg'])): ?>
             <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show">
@@ -418,8 +456,8 @@ require 'header.php';
             </div>
         <?php endif; ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5>
+        <div class="page-title-container">
+            <h5 class="mb-0 text-white">
                 <?php if ($role_name === 'TM'): ?>
                     My Assigned QC Jobs
                 <?php else: ?>

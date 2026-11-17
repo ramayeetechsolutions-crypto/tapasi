@@ -270,22 +270,47 @@ $all_emp_result = $mysqli->query($all_emp_sql);
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .main-content { padding: 20px; margin: 0 auto; }
+        .main-content { margin-top: 70px; padding: 20px; margin-left: auto; margin-right: auto; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); margin-bottom: 20px; background-color: white; border-radius: 10px; }
         .filter-box { background-color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .chart-container { position: relative; height: 450px; width: 100%; padding: 15px; }
+
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <br><br><br>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-chart-bar me-2"></i>Employee Performance Charts</h4>
+        <div class="page-title-container">
+            <h4 class="mb-0 text-white"><i class="fas fa-chart-bar me-2"></i>Employee Performance Charts</h4>
             <div class="btn-group">
-                <a href="team_count_report.php" class="btn btn-outline-primary">
-                    <i class="fas fa-table me-1"></i> Switch to Grid View
+                <a href="team_count_report.php" class="btn btn-light btn-sm fw-semibold">
+                    <i class="fas fa-table me-1 text-primary"></i> Switch to Grid View
                 </a>
             </div>
         </div>

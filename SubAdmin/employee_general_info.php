@@ -103,6 +103,45 @@ $total_pages = ceil($count_row['total'] / $results_per_page);
 ?>
 
 <style>
+        /* Ash Page Header Banner (Matching Navbar Color) */
+        .page-title-container {
+            background: var(--ash, #6c757d);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title-container h1,
+        .page-title-container h2,
+        .page-title-container h3,
+        .page-title-container h4,
+        .page-title-container h5,
+        .page-title-container h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title-container p {
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0;
+        }
+
+        .page-title-container i {
+            color: white;
+        }
+
     .main-content { margin-top: 60px; }
     .table-responsive { overflow-x: auto; }
     .table thead th { background-color: #f8f9fa; color: #495057; font-weight: 600; font-size: 0.85rem; white-space: nowrap; border-bottom: 2px solid #dee2e6; vertical-align: middle; text-align: center; }
@@ -132,14 +171,14 @@ $total_pages = ceil($count_row['total'] / $results_per_page);
         </div>
     <?php endif; ?>
     
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex justify-content-between mb-3">
+    <div class="page-title-container">
+        <div class="page-title-container">
                 <a href="employee_master.php" class="btn btn-sm btn-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Back to List
                 </a>
           
         </div>
-      <h4 class="text-secondary"><i class="fa fa-user"></i> General Employee Info</h4>
+      <h4 class=" mb-0 text-white"><i class="fa fa-user"></i> General Employee Info</h4>
       <div>
           <a href="?export=true" class="btn btn-outline-primary shadow-sm me-2"><i class="fa fa-download"></i> Export CSV</a>
       </div>
