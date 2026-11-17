@@ -325,50 +325,141 @@ function fetchData() {
     $params =[];
     $types = '';
     
-    // Completely remove 'Despatched' jobs from this page so they move to the Upload Page
-    $base_query .= " AND (u.job_status IS NULL OR u.job_status != 'Despatched')";
+    // Completely remove 'Despatched' jobs from this page so they move to the Upload Page unless Completed is filtered
+    if ($overall !== 'Completed') {
+        $base_query .= " AND (u.job_status IS NULL OR u.job_status != 'Despatched')";
+    }
     
-    if (!$show_completed) { 
+    if (!$show_completed && $overall !== 'Completed') { 
         $base_query .= " AND (u.status IS NULL OR u.status != 'Completed')"; 
     }
 
     if (!empty($search)) {
-        $base_query .= " AND (c.client_name LIKE ? OR c.team_client_name LIKE ? OR j.journal_issue LIKE ? OR u.job_id LIKE ?)";
+        $base_query .= " AND (c.client_name LIKE ? OR c.team_client_name LIKE ? OR u.journal_name_client LIKE ? OR j.journal_issue LIKE ? OR u.issue LIKE ? OR u.job_id LIKE ? OR u.id LIKE ?)";
         $params[] = "%$search%";
         $params[] = "%$search%";
         $params[] = "%$search%";
         $params[] = "%$search%";
-        $types .= 'ssss';
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+        $types .= 'sssssss';
     }
     if (!empty($overall)) {
-        $base_query .= " AND u.status = ?";
-        $params[] = $overall;
-        $types .= 's';
+        if ($overall === 'Need to Assign') {
+            $base_query .= " AND (u.job_status IS NULL OR (u.job_status != 'Inprocess' AND u.job_status != 'Despatched'))";
+            $base_query .= " AND (u.status IS NULL OR (u.status != 'Inprocess' AND u.status != 'Completed'))";
+            $base_query .= " AND (
+                (u.Image_user IS NULL OR u.Image_user = '' OR u.Image_user = '-' OR u.Image_user = 'N/A' OR u.Image_user = 'NA')
+                AND (u.Table_user IS NULL OR u.Table_user = '' OR u.Table_user = '-' OR u.Table_user = 'N/A' OR u.Table_user = 'NA')
+                AND (u.WPContent_user IS NULL OR u.WPContent_user = '' OR u.WPContent_user = '-' OR u.WPContent_user = 'N/A' OR u.WPContent_user = 'NA')
+                AND (u.nlm_user IS NULL OR u.nlm_user = '' OR u.nlm_user = '-' OR u.nlm_user = 'N/A' OR u.nlm_user = 'NA')
+                AND (u.jats_user IS NULL OR u.jats_user = '' OR u.jats_user = '-' OR u.jats_user = 'N/A' OR u.jats_user = 'NA')
+                AND (u.clockss_user IS NULL OR u.clockss_user = '' OR u.clockss_user = '-' OR u.clockss_user = 'N/A' OR u.clockss_user = 'NA')
+                AND (u.HTML_user IS NULL OR u.HTML_user = '' OR u.HTML_user = '-' OR u.HTML_user = 'N/A' OR u.HTML_user = 'NA')
+                AND (u.new_html_user IS NULL OR u.new_html_user = '' OR u.new_html_user = '-' OR u.new_html_user = 'N/A' OR u.new_html_user = 'NA')
+                AND (u.Scielo_user IS NULL OR u.Scielo_user = '' OR u.Scielo_user = '-' OR u.Scielo_user = 'N/A' OR u.Scielo_user = 'NA')
+                AND (u.ebsco_user IS NULL OR u.ebsco_user = '' OR u.ebsco_user = '-' OR u.ebsco_user = 'N/A' OR u.ebsco_user = 'NA')
+                AND (u.pubmed_user IS NULL OR u.pubmed_user = '' OR u.pubmed_user = '-' OR u.pubmed_user = 'N/A' OR u.pubmed_user = 'NA')
+                AND (u.biblat_user IS NULL OR u.biblat_user = '' OR u.biblat_user = '-' OR u.biblat_user = 'N/A' OR u.biblat_user = 'NA')
+                AND (u.doaj_user IS NULL OR u.doaj_user = '' OR u.doaj_user = '-' OR u.doaj_user = 'N/A' OR u.doaj_user = 'NA')
+                AND (u.QC_user IS NULL OR u.QC_user = '' OR u.QC_user = '-' OR u.QC_user = 'N/A' OR u.QC_user = 'NA')
+            )";
+        } elseif ($overall === 'In Progress') {
+            $base_query .= " AND (
+                u.status = 'Inprocess' 
+                OR u.job_status = 'Inprocess' 
+                OR u.status = 'In Progress' 
+                OR u.job_status = 'In Progress'
+                OR (u.Table_user IS NOT NULL AND u.Table_user != '' AND u.Table_user != '-' AND u.Table_user != 'N/A' AND u.Table_user != 'NA')
+                OR (u.WPContent_user IS NOT NULL AND u.WPContent_user != '' AND u.WPContent_user != '-' AND u.WPContent_user != 'N/A' AND u.WPContent_user != 'NA')
+                OR (u.Image_user IS NOT NULL AND u.Image_user != '' AND u.Image_user != '-' AND u.Image_user != 'N/A' AND u.Image_user != 'NA')
+                OR (u.nlm_user IS NOT NULL AND u.nlm_user != '' AND u.nlm_user != '-' AND u.nlm_user != 'N/A' AND u.nlm_user != 'NA')
+                OR (u.jats_user IS NOT NULL AND u.jats_user != '' AND u.jats_user != '-' AND u.jats_user != 'N/A' AND u.jats_user != 'NA')
+                OR (u.clockss_user IS NOT NULL AND u.clockss_user != '' AND u.clockss_user != '-' AND u.clockss_user != 'N/A' AND u.clockss_user != 'NA')
+                OR (u.HTML_user IS NOT NULL AND u.HTML_user != '' AND u.HTML_user != '-' AND u.HTML_user != 'N/A' AND u.HTML_user != 'NA')
+                OR (u.new_html_user IS NOT NULL AND u.new_html_user != '' AND u.new_html_user != '-' AND u.new_html_user != 'N/A' AND u.new_html_user != 'NA')
+                OR (u.Scielo_user IS NOT NULL AND u.Scielo_user != '' AND u.Scielo_user != '-' AND u.Scielo_user != 'N/A' AND u.Scielo_user != 'NA')
+                OR (u.ebsco_user IS NOT NULL AND u.ebsco_user != '' AND u.ebsco_user != '-' AND u.ebsco_user != 'N/A' AND u.ebsco_user != 'NA')
+                OR (u.pubmed_user IS NOT NULL AND u.pubmed_user != '' AND u.pubmed_user != '-' AND u.pubmed_user != 'N/A' AND u.pubmed_user != 'NA')
+                OR (u.biblat_user IS NOT NULL AND u.biblat_user != '' AND u.biblat_user != '-' AND u.biblat_user != 'N/A' AND u.biblat_user != 'NA')
+                OR (u.doaj_user IS NOT NULL AND u.doaj_user != '' AND u.doaj_user != '-' AND u.doaj_user != 'N/A' AND u.doaj_user != 'NA')
+                OR (u.QC_user IS NOT NULL AND u.QC_user != '' AND u.QC_user != '-' AND u.QC_user != 'N/A' AND u.QC_user != 'NA')
+            ) AND (u.job_status IS NULL OR u.job_status != 'Despatched') AND (u.status IS NULL OR u.status != 'Completed')";
+        } elseif ($overall === 'Completed') {
+            $base_query .= " AND (u.status = 'Completed' OR u.job_status = 'Despatched')";
+        }
     }
     if (!empty($billed)) {
-        $base_query .= " AND u.Billed = ?";
-        $params[] = $billed;
-        $types .= 's';
+        if ($billed === 'Yes') {
+            $base_query .= " AND u.Billed = 'Yes'";
+        } elseif ($billed === 'No') {
+            $base_query .= " AND (u.Billed = 'No' OR u.Billed IS NULL OR u.Billed = '' OR u.Billed != 'Yes')";
+        }
     }
     if (!empty($xml)) {
-        $base_query .= " AND u.xml_status = ?";
-        $params[] = $xml;
-        $types .= 's';
+        if ($xml === 'Done') {
+            $base_query .= " AND (u.nlm_user LIKE '%✓%' OR u.jats_user LIKE '%✓%')";
+        } elseif ($xml === 'In Progress') {
+            $base_query .= " AND (
+                (u.nlm_user IS NOT NULL AND u.nlm_user != '' AND u.nlm_user != '-' AND u.nlm_user != 'N/A' AND u.nlm_user != 'NA' AND u.nlm_user NOT LIKE '%✓%')
+                OR (u.jats_user IS NOT NULL AND u.jats_user != '' AND u.jats_user != '-' AND u.jats_user != 'N/A' AND u.jats_user != 'NA' AND u.jats_user NOT LIKE '%✓%')
+            )";
+        } elseif ($xml === 'Pending') {
+            $base_query .= " AND (
+                ( (u.nlm IS NOT NULL AND u.nlm != '' AND u.nlm != '-' AND u.nlm != '0') AND (u.nlm_user IS NULL OR u.nlm_user = '' OR u.nlm_user = '-' OR u.nlm_user NOT LIKE '%✓%') )
+                OR ( (u.jats IS NOT NULL AND u.jats != '' AND u.jats != '-' AND u.jats != '0') AND (u.jats_user IS NULL OR u.jats_user = '' OR u.jats_user = '-' OR u.jats_user NOT LIKE '%✓%') )
+            )";
+        }
     }
     if (!empty($html)) {
-        $base_query .= " AND u.html_status = ?";
-        $params[] = $html;
-        $types .= 's';
+        if ($html === 'Done') {
+            $base_query .= " AND (u.HTML_user LIKE '%✓%' OR u.new_html_user LIKE '%✓%' OR u.direct_html_user LIKE '%✓%')";
+        } elseif ($html === 'In Progress') {
+            $base_query .= " AND (
+                (u.HTML_user IS NOT NULL AND u.HTML_user != '' AND u.HTML_user != '-' AND u.HTML_user != 'N/A' AND u.HTML_user != 'NA' AND u.HTML_user NOT LIKE '%✓%')
+                OR (u.new_html_user IS NOT NULL AND u.new_html_user != '' AND u.new_html_user != '-' AND u.new_html_user != 'N/A' AND u.new_html_user != 'NA' AND u.new_html_user NOT LIKE '%✓%')
+                OR (u.direct_html_user IS NOT NULL AND u.direct_html_user != '' AND u.direct_html_user != '-' AND u.direct_html_user != 'N/A' AND u.direct_html_user != 'NA' AND u.direct_html_user NOT LIKE '%✓%')
+            )";
+        } elseif ($html === 'Pending') {
+            $base_query .= " AND (
+                ( (u.html IS NOT NULL AND u.html != '' AND u.html != '-' AND u.html != '0') AND (u.HTML_user IS NULL OR u.HTML_user = '' OR u.HTML_user = '-' OR u.HTML_user NOT LIKE '%✓%') )
+                OR ( (u.new_html IS NOT NULL AND u.new_html != '' AND u.new_html != '-' AND u.new_html != '0') AND (u.new_html_user IS NULL OR u.new_html_user = '' OR u.new_html_user = '-' OR u.new_html_user NOT LIKE '%✓%') )
+                OR ( (u.direct_html IS NOT NULL AND u.direct_html != '' AND u.direct_html != '-' AND u.direct_html != '0') AND (u.direct_html_user IS NULL OR u.direct_html_user = '' OR u.direct_html_user = '-' OR u.direct_html_user NOT LIKE '%✓%') )
+            )";
+        }
     }
     if (!empty($scielo)) {
-        $base_query .= " AND u.scielo_ebsco_status = ?";
-        $params[] = $scielo;
-        $types .= 's';
+        if ($scielo === 'Done') {
+            $base_query .= " AND (u.Scielo_user LIKE '%✓%' OR u.ebsco_user LIKE '%✓%')";
+        } elseif ($scielo === 'In Progress') {
+            $base_query .= " AND (
+                (u.Scielo_user IS NOT NULL AND u.Scielo_user != '' AND u.Scielo_user != '-' AND u.Scielo_user != 'N/A' AND u.Scielo_user != 'NA' AND u.Scielo_user NOT LIKE '%✓%')
+                OR (u.ebsco_user IS NOT NULL AND u.ebsco_user != '' AND u.ebsco_user != '-' AND u.ebsco_user != 'N/A' AND u.ebsco_user != 'NA' AND u.ebsco_user NOT LIKE '%✓%')
+            )";
+        } elseif ($scielo === 'Pending') {
+            $base_query .= " AND (
+                ( (u.scielo IS NOT NULL AND u.scielo != '' AND u.scielo != '-' AND u.scielo != '0') AND (u.Scielo_user IS NULL OR u.Scielo_user = '' OR u.Scielo_user = '-' OR u.Scielo_user NOT LIKE '%✓%') )
+                OR ( (u.ebsco IS NOT NULL AND u.ebsco != '' AND u.ebsco != '-' AND u.ebsco != '0') AND (u.ebsco_user IS NULL OR u.ebsco_user = '' OR u.ebsco_user = '-' OR u.ebsco_user NOT LIKE '%✓%') )
+            )";
+        }
     }
     if (!empty($pubmed)) {
-        $base_query .= " AND u.pubmed_biblat_status = ?";
-        $params[] = $pubmed;
-        $types .= 's';
+        if ($pubmed === 'Done') {
+            $base_query .= " AND (u.pubmed_user LIKE '%✓%' OR u.biblat_user LIKE '%✓%' OR u.doaj_user LIKE '%✓%')";
+        } elseif ($pubmed === 'In Progress') {
+            $base_query .= " AND (
+                (u.pubmed_user IS NOT NULL AND u.pubmed_user != '' AND u.pubmed_user != '-' AND u.pubmed_user != 'N/A' AND u.pubmed_user != 'NA' AND u.pubmed_user NOT LIKE '%✓%')
+                OR (u.biblat_user IS NOT NULL AND u.biblat_user != '' AND u.biblat_user != '-' AND u.biblat_user != 'N/A' AND u.biblat_user != 'NA' AND u.biblat_user NOT LIKE '%✓%')
+                OR (u.doaj_user IS NOT NULL AND u.doaj_user != '' AND u.doaj_user != '-' AND u.doaj_user != 'N/A' AND u.doaj_user != 'NA' AND u.doaj_user NOT LIKE '%✓%')
+            )";
+        } elseif ($pubmed === 'Pending') {
+            $base_query .= " AND (
+                ( (u.pubmed IS NOT NULL AND u.pubmed != '' AND u.pubmed != '-' AND u.pubmed != '0') AND (u.pubmed_user IS NULL OR u.pubmed_user = '' OR u.pubmed_user = '-' OR u.pubmed_user NOT LIKE '%✓%') )
+                OR ( (u.biblat IS NOT NULL AND u.biblat != '' AND u.biblat != '-' AND u.biblat != '0') AND (u.biblat_user IS NULL OR u.biblat_user = '' OR u.biblat_user = '-' OR u.biblat_user NOT LIKE '%✓%') )
+                OR ( (u.doaj IS NOT NULL AND u.doaj != '' AND u.doaj != '-' AND u.doaj != '0') AND (u.doaj_user IS NULL OR u.doaj_user = '' OR u.doaj_user = '-' OR u.doaj_user NOT LIKE '%✓%') )
+            )";
+        }
     }
     
     // --- CHANGED CODE: Matching the sorting order exactly with UQ Process ---
@@ -653,7 +744,7 @@ function fetchData() {
             </div>
             
             <!-- Filter Bar -->
-            <div class="card-body bg-white border-bottom p-3">
+            <div class="card-body bg-white border-bottom py-4 px-3" style="padding-top: 22px !important; padding-bottom: 22px !important;">
                 <form method="get" class="row g-2 align-items-center">
                     <?php if($show_completed): ?> <input type="hidden" name="show_completed" value="1"> <?php endif; ?>
                     
