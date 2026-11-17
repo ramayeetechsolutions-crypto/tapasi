@@ -82,12 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = 'Pending';
         $resolved_by = trim($_POST['resolved_by'] ?? '');
         $resolved_date = trim($_POST['resolved_date'] ?? '');
-        $resolved_date = ($resolved_date === '') ? null : $resolved_date; 
         $comments = trim($_POST['comments'] ?? '');
 
+        // Convert empty resolved_date to NULL for MySQL
+        $resolved_date = !empty($resolved_date) ? $resolved_date : NULL;
+
         // Calculate TAT if resolved
-        $tat = null; 
-        if ($resolved_date && $complaint_date) {
+        $tat = NULL;
+        if (!empty($resolved_date) && !empty($complaint_date)) {
             $tat = calculateTAT($complaint_date, $resolved_date);
         }
 
@@ -337,7 +339,7 @@ if ($current_user_name) {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
         }
         .main-content { 
-            padding: 20px; 
+            padding: 90px 25px 30px 25px; 
             max-width: 1900px; 
             margin: 0 auto; 
         }
@@ -457,7 +459,7 @@ if ($current_user_name) {
                         </div>
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label class="form-label">Name <span class="text-danger">*</span></label>
+                                <label class="form-label">Employee Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="created_by" name="created_by" 
                                        value="<?= h($current_user_name) ?>" readonly>
                                 <small class="text-muted">Your name is auto-filled from your account</small>
@@ -522,6 +524,8 @@ if ($current_user_name) {
                                     <option value="Monitor" <?= (($editTicket['complaint_type'] ?? '') === 'Monitor') ? 'selected' : '' ?>>Monitor</option>
                                     <option value="CPU" <?= (($editTicket['complaint_type'] ?? '') === 'CPU') ? 'selected' : '' ?>>CPU</option>
                                     <option value="UPS" <?= (($editTicket['complaint_type'] ?? '') === 'UPS') ? 'selected' : '' ?>>UPS</option>
+                                    <option value="Battery Issue" <?= (($editTicket['complaint_type'] ?? '') === 'Battery Issue') ? 'selected' : '' ?>>Battery Issue</option>
+                                    <option value="Charger" <?= (($editTicket['complaint_type'] ?? '') === 'Charger') ? 'selected' : '' ?>>Charger</option>
                                     <option value="Software" <?= (($editTicket['complaint_type'] ?? '') === 'Software') ? 'selected' : '' ?>>Software</option>
                                     <option value="LAN" <?= (($editTicket['complaint_type'] ?? '') === 'LAN') ? 'selected' : '' ?>>LAN</option>
                                     <option value="Printer" <?= (($editTicket['complaint_type'] ?? '') === 'Printer') ? 'selected' : '' ?>>Printer</option>
@@ -658,7 +662,7 @@ if ($current_user_name) {
                             <option value="complaint_date" <?= $sortBy === 'complaint_date' ? 'selected' : '' ?>>Sort by Date</option>
                             <option value="severity" <?= $sortBy === 'severity' ? 'selected' : '' ?>>Sort by Severity</option>
                             <option value="status" <?= $sortBy === 'status' ? 'selected' : '' ?>>Sort by Status</option>
-                            <option value="created_by" <?= $sortBy === 'created_by' ? 'selected' : '' ?>>Sort by Name</option>
+                            <option value="created_by" <?= $sortBy === 'created_by' ? 'selected' : '' ?>>Sort by Employee</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -683,7 +687,7 @@ if ($current_user_name) {
                             <tr>
                                 <th>Ticket ID</th>
                                 <th>Date</th>
-                                <th>Name</th>
+                                <th>Employee Name</th>
                                 <th>Team</th>
                                 <th>System</th>
                                 <th>Cabin</th>
@@ -743,23 +747,20 @@ if ($current_user_name) {
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <?php if($isOwnTicket): ?>
-                                                <a href="ticketmanagementexecutive.php?mode=edit&id=<?= $row['id'] ?>" class="btn btn-outline-primary" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <?php if($row['status'] === 'Pending'): ?>
-                                                <form method="post" style="display:inline;">
-                                                    <input type="hidden" name="action" value="delete">
-                                                    <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                                                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this ticket?');" title="Delete">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <button class="btn btn-outline-secondary" title="View Only (Team Member Ticket)" disabled>
-                                                    <i class="fas fa-eye"></i>
+                                            <!-- Edit Ticket -->
+                                            <a href="ticketmanagementexecutive.php?mode=edit&id=<?= $row['id'] ?>" class="btn btn-outline-primary" title="Edit Ticket">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <!-- Delete Option (Pending tickets only) -->
+                                            <?php if($row['status'] === 'Pending'): ?>
+                                            <form method="post" style="display:inline;">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                                                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this ticket?');" title="Delete">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
+                                            </form>
                                             <?php endif; ?>
                                         </div>
                                     </td>

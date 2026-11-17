@@ -5,11 +5,37 @@
 // -------------------------------------------------------------
 
 require 'db.php'; // Ensure your DB connection is here
-session_start();
+if (session_status() === PHP_SESSION_NONE) { 
+    session_start(); 
+}
 
 // [IMPORTANT] Replace with your actual session variable for logged-in employee
 $employee_username = $_SESSION['username'] ?? '';
 $employee_id = $_SESSION['uid'] ?? 0;
+
+// Function to calculate available OT credits
+function getOTCredits($mysqli, $employee_username) {
+    if (!$employee_username) return 0;
+    // 1. Calculate Earned OT hours (Approved OT Claims)
+    $ot_query = "SELECT SUM(total_hours) as total_ot FROM leave_applications 
+                 WHERE employee_username = '$employee_username' 
+                 AND request_type = 'OT_Claim' 
+                 AND status = 'Approved'";
+    $ot_result = $mysqli->query($ot_query);
+    $ot_hours = ($ot_result && $ot_row = $ot_result->fetch_assoc()) ? ($ot_row['total_ot'] ?? 0) : 0;
+    
+    // 2. Calculate Used hours (Approved Comp-Off Leaves + Approved Permissions)
+    $used_query = "SELECT SUM(total_hours) as total_used FROM leave_applications 
+                   WHERE employee_username = '$employee_username' 
+                   AND request_type IN ('Comp_Off_Leave', 'Permission') 
+                   AND status = 'Approved'";
+    $used_result = $mysqli->query($used_query);
+    $used_hours = ($used_result && $used_row = $used_result->fetch_assoc()) ? ($used_row['total_used'] ?? 0) : 0;
+    
+    // 3. Deduct used hours from total OT hours
+    $available = (float)$ot_hours - (float)$used_hours;
+    return $available > 0 ? round($available, 2) : 0;
+}
 
 // --- 1. HANDLE FORM SUBMISSION (APPLY OT/PERMISSION) ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_ot_request'])) {
@@ -19,15 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_ot_request'])) 
     $start_time = $_POST['start_time'];
     $end_time = $_POST['end_time'];
     $total_hours = !empty($_POST['total_hours']) ? $_POST['total_hours'] : 0; // Manual entry now
-    $article = $_POST['article']?$_POST['article']:'';
-    $count = $_POST['count']?$_POST['count']:'0';
+    $article = !empty($_POST['article']) ? $_POST['article'] : '';
+    $count = !empty($_POST['count']) ? $_POST['count'] : '0';
     $reason = $mysqli->real_escape_string($_POST['reason']);
 
-    // Get employee process from employee_master
-    $emp_query = "SELECT process, process1 FROM employee_master WHERE employee_username = '$employee_username'";
-    $emp_result = $mysqli->query($emp_query);
-    $employee_data = $emp_result->fetch_assoc();
-    $employee_process = $mysqli->real_escape_string($_POST['process']); // Direct ah form la irundhu vanguradhu
+    // Direct from form
+    $employee_process = $mysqli->real_escape_string($_POST['process']); 
 
     $sql = "INSERT INTO leave_applications (employee_username, request_type, from_date, to_date, start_time, end_time, total_hours, process, article, count, reason, status) 
             VALUES ('$employee_username', '$request_type', '$ot_date', '$ot_date', '$start_time', '$end_time', '$total_hours', '$employee_process', '$article', '$count', '$reason', 'Pending')";
@@ -48,19 +71,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_ot_request'])) 
     $request_id = $mysqli->real_escape_string($_POST['request_id']); 
     
     $request_type = $mysqli->real_escape_string($_POST['request_type']);
-    $process = $mysqli->real_escape_string($_POST['process']); /* PUTHUSA ADD PANNA LINE */
+    $process = $mysqli->real_escape_string($_POST['process']);
     $ot_date = $_POST['ot_date'];
     $start_time = $_POST['start_time'];
     $end_time = $_POST['end_time'];
     $total_hours = !empty($_POST['total_hours']) ? $_POST['total_hours'] : 0;
-    $article = $_POST['article'] ? $_POST['article'] : '';
-    $count = $_POST['count'] ? $_POST['count'] : '0';
+    $article = !empty($_POST['article']) ? $_POST['article'] : '';
+    $count = !empty($_POST['count']) ? $_POST['count'] : '0';
     $reason = $mysqli->real_escape_string($_POST['reason']);
 
     // Update query (Ensures only 'Pending' requests belonging to this user are updated)
     $update_sql = "UPDATE leave_applications SET 
                    request_type = '$request_type', 
-                   process = '$process', /* PUTHUSA ADD PANNA LINE */
+                   process = '$process',
                    from_date = '$ot_date', 
                    to_date = '$ot_date', 
                    start_time = '$start_time', 
@@ -81,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_ot_request'])) 
 }
 
 // Get employee details
-$employee_details =[];
+$employee_details = [];
 if ($employee_username) {
     // Get employee details from employee_master
     $emp_query = "SELECT 
@@ -110,10 +133,137 @@ if ($process_result && $process_result->num_rows > 0) {
     }
 }
 
+$pageTitle = "My OT & Permissions";
 include 'header.php'; 
 ?>
 
 <style>
+    body {
+        background-color: var(--light, #f5f7fa);
+    }
+
+    .main-content {
+        margin-top: 70px;
+        padding: 25px 4%;
+        transition: all 0.3s ease;
+    }
+
+    /* Ash Page Header Banner (Matching Dashboard) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-title-container h1 {
+        margin: 0;
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* OT Credits Badge in Header */
+    .ot-credits-card {
+        background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 6px 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: left;
+    }
+    
+    .ot-credits-card .ot-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        opacity: 0.95;
+        line-height: 1.2;
+    }
+    
+    .ot-credits-card .ot-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    /* Header Action Button (+ New Request) */
+    .btn-header-action {
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        border: 1px solid #ced4da !important;
+        font-weight: 600 !important;
+        padding: 8px 18px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-size: 14px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .btn-header-action:hover {
+        background-color: #f8f9fa !important;
+        color: #0d6efd !important;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12) !important;
+    }
+    
+    .btn-header-action i {
+        color: #0d6efd !important;
+        margin-right: 6px !important;
+    }
+    .btn-header-action span {
+        color: #212529 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Table Styling & Sticky Header */
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+        border: 1px solid #6c757d !important;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        padding: 12px 14px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    }
+    .table tbody td {
+        font-size: 13.5px;
+        padding: 12px 14px;
+        vertical-align: middle;
+        color: #333333;
+        background-color: #ffffff;
+    }
+    .table-container {
+        overflow: visible;
+    }
+
     /* Status Badges */
     .status-Pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .status-Approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
@@ -142,13 +292,6 @@ include 'header.php';
         font-weight: bold;
         padding: 4px 8px;
         border-radius: 4px;
-    }
-    
-    .card-header-custom { 
-        /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
-        background-color: #707981 !important; 
-        color: white;
-        border-bottom: none;
     }
     
     .time-display {
@@ -185,151 +328,154 @@ include 'header.php';
     }
 </style>
 
-<div class="container-fluid main-content py-4" style="margin-top: 60px;">
+<main class="main-content">
+    <div class="container-fluid p-0">
 
-    <!-- Page Header & Buttons -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="text-secondary"><i class="fa fa-clock-o"></i> My OT & Permissions</h4>
-            <p class="text-muted small mb-0">Submit and track your requests. Manage your OT credits.</p>
+        <!-- Page Header with Ash Color Background like Dashboard -->
+        <div class="page-title-container">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fas fa-clock"></i> My OT & Permissions
+                </h1>
+                <p class="mb-0 text-white-50 small mt-1">Submit and track your requests. Manage your OT credits.</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                
+                <!-- OT Credits Summary -->
+                <div class="ot-credits-card">
+                    <span class="ot-label">Available OT Credits</span>
+                    <span class="ot-value"><?php echo getOTCredits($mysqli, $employee_username); ?> hours</span>
+                </div>
+                
+                <!-- Button to Open Modal -->
+                <button type="button" class="btn btn-header-action" data-bs-toggle="modal" data-bs-target="#applyOTModal">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Request</span>
+                </button>
+            </div>
         </div>
-        <div class="d-flex gap-2">
-            
-            <!-- OT Credits Summary -->
-            <div class="card border-0 shadow-sm bg-gradient-primary text-white" style="background: linear-gradient(45deg, #2196F3, #21CBF3);">
-                <div class="card-body py-2 px-3">
-                    <small class="d-block">Available OT Credits</small>
-                    <h5 class="mb-0"><?php echo getOTCredits($mysqli, $employee_username); ?> hours</h5>
+
+        <!-- Feedback Message -->
+        <?php if(isset($msg)): ?>
+            <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <?= $msg ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- CLAIMS HISTORY TABLE -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4" style="overflow: visible;">
+            <div class="card-header bg-secondary py-3">
+                <h6 class="mb-0 fw-bold text-white">Request History</h6>
+            </div>
+            <div class="card-body p-0" style="overflow: visible;">
+                <div class="table-container" style="overflow: visible;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Date</th>
+                                <th>Type</th>
+                                <th>Process</th>
+                                <th>Article</th>
+                                <th>Time & Duration</th>
+                                <th>Count</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $query = "SELECT la.*, 
+                                     pm.process_name as process_label
+                              FROM leave_applications la
+                              LEFT JOIN process_master pm ON la.process = pm.process_id
+                              WHERE la.employee_username = '$employee_username' 
+                              AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission') 
+                              ORDER BY la.from_date DESC";
+                            $result = $mysqli->query($query);
+
+                            if ($result && $result->num_rows > 0) {
+                                while ($row = $result->fetch_assoc()) {
+                                    $status = $row['status'];
+                                    $type_label = str_replace('_', ' ', $row['request_type']);
+                                    $ot_date = date('d-M-Y', strtotime($row['from_date']));
+                                    
+                                    // Format time display
+                                    $time_display = '';
+                                    if (!empty($row['start_time']) && !empty($row['end_time'])) {
+                                        $start_time = date('g:i A', strtotime($row['start_time']));
+                                        $end_time = date('g:i A', strtotime($row['end_time']));
+                                        $time_display = "<span class='time-display'>{$start_time} to {$end_time}</span>";
+                                    }
+                                    
+                                    // Get process name from process_master if available
+                                    $process_display = !empty($row['process_label']) ? $row['process_label'] : $row['process'];
+                                    ?>
+                                    <tr>
+                                        <td class="ps-3 fw-bold"><?= $ot_date ?></td>
+                                        <td><span class="type-<?= $row['request_type'] ?>"><?= $type_label ?></span></td>
+                                        <td>
+                                            <?php if (!empty($process_display)): ?>
+                                                <span class="process-badge"><?= htmlspecialchars($process_display) ?></span>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($row['article'])): ?>
+                                                <span class="article-badge"><?= htmlspecialchars($row['article']) ?></span>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?= $time_display ?>
+                                            <?php if (!empty($row['total_hours']) && $row['total_hours'] > 0): ?>
+                                                <div class="mt-1"><span class="hours-badge"><?= $row['total_hours'] ?> hrs</span></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="fw-bold"><?= !empty($row['count']) ? number_format($row['count']) : '-' ?></td>
+                                        <td class="small text-secondary"><?= htmlspecialchars($row['reason']) ?></td>
+                                        <td><span class="badge status-<?= $status ?>"><?= $status ?></span></td>
+                                        <td class="small text-danger"><?= htmlspecialchars($row['admin_remarks'] ?? '-') ?></td>
+                                        <td class="text-center">
+                                            <?php if($status == 'Pending'): ?>
+                                                <button class="btn btn-sm btn-outline-primary edit-btn" 
+                                                    data-id="<?= $row['id'] ?>" 
+                                                    data-type="<?= $row['request_type'] ?>"
+                                                    data-date="<?= $row['from_date'] ?>"
+                                                    data-start="<?= $row['start_time'] ?>"
+                                                    data-end="<?= $row['end_time'] ?>"
+                                                    data-hours="<?= $row['total_hours'] ?>"
+                                                    data-article="<?= htmlspecialchars($row['article'] ?? '') ?>"
+                                                    data-count="<?= $row['count'] ?? '' ?>"
+                                                    data-reason="<?= htmlspecialchars($row['reason'] ?? '') ?>"
+                                                    data-process="<?= $row['process'] ?? '' ?>"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editOTModal"
+                                                    title="Edit Request">
+                                                    <i class="fa fa-pencil"></i> Edit
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="text-muted small">N/A</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php
+                                }
+                            } else {
+                                echo "<tr><td colspan='10' class='text-center py-4 text-muted'>No claims or requests found.</td></tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            
-            <!-- Button to Open Modal -->
-            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#applyOTModal">
-                <i class="fa fa-plus-circle"></i> New Request
-            </button>
         </div>
     </div>
-
-    <!-- Feedback Message -->
-    <?php if(isset($msg)): ?>
-        <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show" role="alert">
-            <?= $msg ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- CLAIMS HISTORY TABLE -->
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header card-header-custom py-3">
-            <h6 class="mb-0 fw-bold text-white">Request History</h6>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="ps-3">Date</th>
-                            <th>Type</th>
-                            <th>Process</th>
-                            <th>Article</th>
-                            <th>Time & Duration</th>
-                            <th>Count</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Remarks</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $query = "SELECT la.*, 
-                                 pm.process_name as process_label
-                          FROM leave_applications la
-                          LEFT JOIN process_master pm ON la.process = pm.process_id
-                          WHERE la.employee_username = '$employee_username' 
-                          AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission') 
-                          ORDER BY la.from_date DESC";
-                        $result = $mysqli->query($query);
-
-                        if ($result && $result->num_rows > 0) {
-                            while ($row = $result->fetch_assoc()) {
-                                $status = $row['status'];
-                                $type_label = str_replace('_', ' ', $row['request_type']);
-                                $ot_date = date('d-M-Y', strtotime($row['from_date']));
-                                
-                                // Format time display
-                                $time_display = '';
-                                if (!empty($row['start_time']) && !empty($row['end_time'])) {
-                                    $start_time = date('g:i A', strtotime($row['start_time']));
-                                    $end_time = date('g:i A', strtotime($row['end_time']));
-                                    $time_display = "<span class='time-display'>{$start_time} to {$end_time}</span>";
-                                }
-                                
-                                // Get process name from process_master if available
-                                $process_display = !empty($row['process_label']) ? $row['process_label'] : $row['process'];
-                                ?>
-                                <tr>
-                                    <td class="ps-3 fw-bold"><?= $ot_date ?></td>
-                                    <td><span class="type-<?= $row['request_type'] ?>"><?= $type_label ?></span></td>
-                                    <td>
-                                        <?php if (!empty($process_display)): ?>
-                                            <span class="process-badge"><?= htmlspecialchars($process_display) ?></span>
-                                        <?php else: ?>
-                                            <span class="text-muted">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($row['article'])): ?>
-                                            <span class="article-badge"><?= htmlspecialchars($row['article']) ?></span>
-                                        <?php else: ?>
-                                            <span class="text-muted">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?= $time_display ?>
-                                        <?php if (!empty($row['total_hours']) && $row['total_hours'] > 0): ?>
-                                            <div class="mt-1"><span class="hours-badge"><?= $row['total_hours'] ?> hrs</span></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="fw-bold"><?= !empty($row['count']) ? number_format($row['count']) : '-' ?></td>
-                                    <td class="small text-secondary"><?= htmlspecialchars($row['reason']) ?></td>
-                                    <td><span class="badge status-<?= $status ?>"><?= $status ?></span></td>
-                                    <td class="small text-danger"><?= htmlspecialchars($row['admin_remarks'] ?? '-') ?></td>
-                                    <td class="text-center">
-                                        <?php if($status == 'Pending'): ?>
-                                            <button class="btn btn-sm btn-outline-primary edit-btn" 
-                                                data-id="<?= $row['id'] ?>" 
-                                                data-type="<?= $row['request_type'] ?>"
-                                                data-date="<?= $row['from_date'] ?>"
-                                                data-start="<?= $row['start_time'] ?>"
-                                                data-end="<?= $row['end_time'] ?>"
-                                                data-hours="<?= $row['total_hours'] ?>"
-                                                data-article="<?= htmlspecialchars($row['article']) ?>"
-                                                data-count="<?= $row['count'] ?>"
-                                                data-reason="<?= htmlspecialchars($row['reason']) ?>"
-                                                data-process="<?= $row['process'] ?>"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#editOTModal"
-                                                title="Edit Request">
-                                                <i class="fa fa-pencil"></i> Edit
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="text-muted small">N/A</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php
-                            }
-                        } else {
-                            echo "<tr><td colspan='9' class='text-center py-4 text-muted'>No claims or requests found.</td></tr>";
-                        }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+</main>
 
 <!-- ======================================== -->
 <!-- APPLY OT/PERMISSION MODAL -->
@@ -361,14 +507,14 @@ include 'header.php';
                             <input type="text" class="form-control" value="<?= htmlspecialchars($employee_details['employee_name'] ?? '') . ' (' . $employee_username . ')' ?>" readonly>
                         </div>
                         
-                        <!-- Process Info (Readonly) -->
+                        <!-- Process Dropdown -->
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Process <span class="text-danger">*</span></label>
                             <select name="process" class="form-select" required>
                                 <option value="">-- Select Process --</option>
                                 <?php foreach($all_processes as $proc): ?>
                                     <option value="<?= $proc['process_id'] ?>" 
-                                        <?= ($employee_details['process'] == $proc['process_id']) ? 'selected' : '' ?>>
+                                        <?= (($employee_details['process'] ?? null) == $proc['process_id']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($proc['process_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -451,6 +597,7 @@ include 'header.php';
         </div>
     </div>
 </div>
+
 <!-- ======================================== -->
 <!-- EDIT OT/PERMISSION MODAL -->
 <!-- ======================================== -->
@@ -546,30 +693,28 @@ include 'header.php';
     }
 
     // Populate Edit Modal Data
-document.addEventListener('DOMContentLoaded', function() {
-    const editButtons = document.querySelectorAll('.edit-btn');
-    
-    editButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Get data from clicked button attributes
-            document.getElementById('edit_request_id').value = this.getAttribute('data-id');
-            document.getElementById('edit_request_type').value = this.getAttribute('data-type');
-            document.getElementById('edit_process').value = this.getAttribute('data-process'); // Process select aagum
-            document.getElementById('edit_ot_date').value = this.getAttribute('data-date');
-            document.getElementById('edit_start_time').value = this.getAttribute('data-start');
-            document.getElementById('edit_end_time').value = this.getAttribute('data-end');
-            document.getElementById('edit_article').value = this.getAttribute('data-article');
-            document.getElementById('edit_count').value = this.getAttribute('data-count');
-            document.getElementById('edit_reason').value = this.getAttribute('data-reason');
+    document.addEventListener('DOMContentLoaded', function() {
+        const editButtons = document.querySelectorAll('.edit-btn');
+        
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Get data from clicked button attributes
+                document.getElementById('edit_request_id').value = this.getAttribute('data-id');
+                document.getElementById('edit_request_type').value = this.getAttribute('data-type');
+                document.getElementById('edit_process').value = this.getAttribute('data-process');
+                document.getElementById('edit_ot_date').value = this.getAttribute('data-date');
+                document.getElementById('edit_start_time').value = this.getAttribute('data-start');
+                document.getElementById('edit_end_time').value = this.getAttribute('data-end');
+                document.getElementById('edit_article').value = this.getAttribute('data-article');
+                document.getElementById('edit_count').value = this.getAttribute('data-count');
+                document.getElementById('edit_reason').value = this.getAttribute('data-reason');
 
-            // IDHU DHAAN TOTAL HOURS FIX
-            // First DB la irundha varadhai set pannidrom
-            document.getElementById('edit_total_hours').value = this.getAttribute('data-hours');
-            // Apram manual-a calculation function-ah call panni update pandrom
-            calculateTotalHours('edit_start_time', 'edit_end_time', 'edit_total_hours');
+                document.getElementById('edit_total_hours').value = this.getAttribute('data-hours');
+                calculateTotalHours('edit_start_time', 'edit_end_time', 'edit_total_hours');
+            });
         });
     });
-});
+
     // Function to calculate time difference
     function calculateTotalHours(startInputId, endInputId, totalInputId) {
         const startTime = document.getElementById(startInputId).value;
@@ -599,28 +744,3 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('edit_start_time').addEventListener('change', function() { calculateTotalHours('edit_start_time', 'edit_end_time', 'edit_total_hours'); });
     document.getElementById('edit_end_time').addEventListener('change', function() { calculateTotalHours('edit_start_time', 'edit_end_time', 'edit_total_hours'); });
 </script>
-
-<?php
-// Function to calculate available OT credits
-function getOTCredits($mysqli, $employee_username) {
-    // 1. Calculate Earned OT hours (Approved OT Claims)
-    $ot_query = "SELECT SUM(total_hours) as total_ot FROM leave_applications 
-                 WHERE employee_username = '$employee_username' 
-                 AND request_type = 'OT_Claim' 
-                 AND status = 'Approved'";
-    $ot_result = $mysqli->query($ot_query);
-    $ot_hours = $ot_result->fetch_assoc()['total_ot'] ?? 0;
-    
-    // 2. Calculate Used hours (Approved Comp-Off Leaves + Approved Permissions)
-    $used_query = "SELECT SUM(total_hours) as total_used FROM leave_applications 
-                   WHERE employee_username = '$employee_username' 
-                   AND request_type IN ('Comp_Off_Leave', 'Permission') 
-                   AND status = 'Approved'";
-    $used_result = $mysqli->query($used_query);
-    $used_hours = $used_result->fetch_assoc()['total_used'] ?? 0;
-    
-    // 3. Deduct used hours from total OT hours
-    $available = $ot_hours - $used_hours;
-    return $available > 0 ? round($available, 2) : 0;
-}
-?>

@@ -2,27 +2,29 @@
 // Start a session if one is not already active
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
-    if(isset($_SESSION['uid'])) $exeid=$_SESSION['uid'];
 }
+$current_user_id = $_SESSION['uid'] ?? 0;
+$current_username = $_SESSION['username'] ?? '';
+$role_name = $_SESSION['role_name'] ?? '';
+if (isset($_SESSION['uid'])) $exeid = $_SESSION['uid'];
+
+// Release session lock early to allow parallel AJAX requests without blocking
+session_write_close();
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require 'db.php';
 
-// Auto-fix database schema for status column (Converts ENUM to VARCHAR automatically)
-$check_col = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'status'");
-if ($check_col) {
-    $col_data = $check_col->fetch_assoc();
-    if (strpos(strtolower($col_data['Type']), 'enum') !== false) {
-        $mysqli->query("ALTER TABLE ce MODIFY COLUMN status VARCHAR(100) DEFAULT 'Need to Assign'");
-    }
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
 }
-
-// Auto-add priority column if not exists
-$check_priority = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'priority'");
-if ($check_priority && $check_priority->num_rows == 0) {
-    $mysqli->query("ALTER TABLE ce ADD COLUMN priority VARCHAR(50) NULL DEFAULT NULL");
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
 }
 
 function h($s) {
@@ -35,49 +37,11 @@ function formatDate($date, $format = 'd-m-Y') {
     return $dateObj ? $dateObj->format($format) : $date;
 }
 
-// Get current user info
-$current_user_id = $_SESSION['uid'] ?? 0;
-$current_username = $_SESSION['username'] ?? '';
-$role_name = $_SESSION['role_name'] ?? '';
+// ==========================================
+// FAST AJAX HANDLERS (Execute without loading full page queries)
+// ==========================================
 
-// Get reporting manager for current user
-$reporting_manager = '';
-$current_user_name = '';
-if ($current_user_id) {
-    $stmt = $mysqli->prepare("SELECT employee_name, reporting_manager FROM employee_master WHERE employee_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("i", $current_user_id);
-        $stmt->execute();
-        $stmt->bind_result($current_user_name, $reporting_manager);
-        $stmt->fetch();
-        $stmt->close();
-    }
-}
-
-// Get all employees under the same reporting manager with TM role
-$tms = [];
-if ($reporting_manager) {
-    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE em.reporting_manager = ? 
-                 AND em.status = 'Active' 
-                 AND ur.role_name IN ('TM', 'TL', 'Admin')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($tm_query);
-    if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($tm = $result->fetch_assoc()) {
-            $tms[] = $tm;
-        }
-        $stmt->close();
-    }
-}
-
-// --- START: Status Update AJAX ---
+// --- 1. Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
     $ce_id = (int)$_POST['ce_id'];
@@ -100,9 +64,17 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         } elseif ($target_type === 'ref' && (empty($curr_data['ref_start_time']) || empty($curr_data['ref_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both REF Start Time and End Time before marking as Completed.']);
             exit;
-        } elseif ($target_type === 'fqa' && (empty($curr_data['fqa_start_time']) || empty($curr_data['fqa_end_time']))) {
-            echo json_encode(['success' => false, 'message' => 'Please fill both FQA Start Time and End Time before marking as Completed.']);
-            exit;
+        } elseif ($target_type === 'fqa') {
+            $ce_done = in_array($curr_status, ['CE Done', 'CE & REF Done', 'Completed']);
+            $ref_done = in_array($curr_status, ['REF Done', 'CE & REF Done', 'Completed']);
+            if (!$ce_done || !$ref_done) {
+                echo json_encode(['success' => false, 'message' => 'Please complete both CE Assignment and REF Assignment before marking FQA as Completed.']);
+                exit;
+            }
+            if (empty($curr_data['fqa_start_time']) || empty($curr_data['fqa_end_time'])) {
+                echo json_encode(['success' => false, 'message' => 'Please fill both FQA Start Time and End Time before marking as Completed.']);
+                exit;
+            }
         }
     }
 
@@ -133,37 +105,83 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $stmt = $mysqli->prepare($update_query);
     $stmt->bind_param("si", $db_status, $ce_id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'status' => $db_status]);
+        echo json_encode(['success' => true, 'status' => $db_status, 'new_status' => $new_status, 'type' => $target_type]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
     }
+    $stmt->close();
     exit;
 }
 
-// --- START: Inline Edit AJAX (For Counts & Time) ---
+// --- 2. Inline Edit AJAX (For Counts & Time) ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     header('Content-Type: application/json');
     $ce_id = (int)$_POST['ce_id'];
     $field = $_POST['field'];
-    $val = $_POST['value'];
+    $val = trim($_POST['value']);
     
     // Allowed fields for security
     $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
     if (in_array($field, $allowed_fields)) {
-        $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
-        $stmt->bind_param("si", $val, $ce_id);
+        // Validation for 'Moved': CE, REF, and FQA assignments must all be assigned and Completed before moving!
+        if ($field === 'remarks' && $val === 'Moved') {
+            $check_stmt = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+            $check_stmt->bind_param("i", $ce_id);
+            $check_stmt->execute();
+            $check_row = $check_stmt->get_result()->fetch_assoc();
+            $check_stmt->close();
+
+            $fqa_user = trim($check_row['fqa_tm'] ?? '');
+            $fqa_assigned = false;
+            if (!empty($fqa_user) && !in_array($fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL', $current_username])) {
+                $emp_chk = $mysqli->prepare("SELECT 1 FROM employee_master WHERE employee_username = ? LIMIT 1");
+                if ($emp_chk) {
+                    $emp_chk->bind_param("s", $fqa_user);
+                    $emp_chk->execute();
+                    $fqa_assigned = ($emp_chk->get_result()->num_rows > 0);
+                    $emp_chk->close();
+                }
+            }
+
+            $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
+            $ref_assigned = !empty(trim($check_row['assigned_to_img'] ?? ''));
+            $is_completed = ($check_row['status'] === 'Completed');
+
+            if (!$ce_assigned || !$ref_assigned || !$fqa_assigned || !$is_completed) {
+                $missing = [];
+                if (!$ce_assigned) $missing[] = 'CE TM not assigned';
+                if (!$ref_assigned) $missing[] = 'REF TM not assigned';
+                if (!$fqa_assigned) $missing[] = 'FQA TM not assigned';
+                if (!$is_completed) $missing[] = 'CE / REF / FQA not Completed';
+                
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Cannot move! ' . implode(', ', $missing) . '. CE, REF, and FQA must all be Completed before moving.'
+                ]);
+                exit;
+            }
+        }
+
+        if ($val === '') {
+            $stmt = $mysqli->prepare("UPDATE ce SET $field = NULL, last_updated = NOW() WHERE id = ?");
+            $stmt->bind_param("i", $ce_id);
+        } else {
+            $stmt = $mysqli->prepare("UPDATE ce SET $field = ?, last_updated = NOW() WHERE id = ?");
+            $stmt->bind_param("si", $val, $ce_id);
+        }
         if ($stmt->execute()) {
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
         }
+        $stmt->close();
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid field update']);
     }
     exit;
 }
 
-// Handle AJAX quick assignment
+// --- 3. Quick Assign AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     header('Content-Type: application/json');
     
@@ -191,7 +209,6 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $get_ce->close();
 
         // Target field in CE table
-        // Note: For CE table, FQA assignee is stored in assigned_to (since assigned_fqa column does not exist)
         if ($type == 'content') {
             $update_ce = "UPDATE ce SET assigned_to_content = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
@@ -230,11 +247,15 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $mysqli->commit();
         $response['success'] = true;
         
-        foreach ($tms as $tm) {
-            if ($tm['employee_username'] == $assigned_to) {
-                $response['tm_name'] = $tm['employee_name'];
-                break;
+        $stmt_name = $mysqli->prepare("SELECT employee_name FROM employee_master WHERE employee_username = ? LIMIT 1");
+        if ($stmt_name) {
+            $stmt_name->bind_param("s", $assigned_to);
+            $stmt_name->execute();
+            $res_name = $stmt_name->get_result();
+            if ($row_name = $res_name->fetch_assoc()) {
+                $response['tm_name'] = $row_name['employee_name'];
             }
+            $stmt_name->close();
         }
     } catch (Exception $e) {
         $mysqli->rollback();
@@ -243,6 +264,48 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     
     echo json_encode($response);
     exit;
+}
+
+// ==========================================
+// FULL PAGE DATA INITIALIZATION
+// ==========================================
+
+// Get reporting manager for current user
+$reporting_manager = '';
+$current_user_name = '';
+if ($current_user_id) {
+    $stmt = $mysqli->prepare("SELECT employee_name, reporting_manager FROM employee_master WHERE employee_id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $current_user_id);
+        $stmt->execute();
+        $stmt->bind_result($current_user_name, $reporting_manager);
+        $stmt->fetch();
+        $stmt->close();
+    }
+}
+
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
+$tms = [];
+$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_tms = $mysqli->query($tm_query);
+if ($res_tms) {
+    while ($tm = $res_tms->fetch_assoc()) {
+        $tms[] = $tm;
+    }
 }
 
 // Handle regular form submission
@@ -350,8 +413,11 @@ $images_tm_filter = isset($_GET['images_tm']) ? trim($_GET['images_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'ce.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
 
-// Build the query for CE records with status not completed
-$where_conditions = ["ce.status != 'Completed'", "ce.status != 'Done'"];
+// Build the query: Show Pending jobs OR recent jobs that are not yet 'Moved'
+$where_conditions = [
+    "TRIM(COALESCE(ce.remarks, '')) != 'Moved'",
+    "(ce.status NOT IN ('Completed', 'Done') OR DATE(COALESCE(j.job_date, ce.created_at)) >= '2026-10-01')"
+];
 $params = [];
 $types = '';
 
@@ -385,8 +451,46 @@ if (!empty($images_tm_filter)) {
 
 $where_sql = implode(' AND ', $where_conditions);
 
+// --- START STATS & PAGINATION ---
+$limit = 15; // Number of rows per page
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+// Save filter params for stats & count
+$filter_params = $params;
+$filter_types = $types;
+
+// Get count statistics (matches the exact dataset and filters of this page)
+$stats_query = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN ce.status = 'Need to Assign' OR (ce.status NOT IN ('Completed', 'Done') AND (COALESCE(ce.assigned_to_content, '') = '' AND COALESCE(ce.assigned_to_img, '') = '')) THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN ce.status IN ('Completed', 'Done') THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND ce.assigned_to_content != '' THEN 1 ELSE 0 END) as content_assigned,
+                    SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND ce.assigned_to_img != '' THEN 1 ELSE 0 END) as images_assigned
+                FROM ce 
+                LEFT JOIN jobs j ON ce.job_id = j.job_id 
+                LEFT JOIN client_master c ON j.client_id = c.client_id 
+                WHERE $where_sql";
+
+$stmt_stats = $mysqli->prepare($stats_query);
+if (!empty($filter_params)) {
+    $stmt_stats->bind_param($filter_types, ...$filter_params);
+}
+$stmt_stats->execute();
+$stats = $stmt_stats->get_result()->fetch_assoc();
+$stmt_stats->close();
+
+$total_rows = (int)($stats['total'] ?? 0);
+$total_pages = ceil($total_rows / $limit);
+// --- END STATS & PAGINATION ---
+
+
+
 // Main query
 $ce_query = "SELECT ce.*, 
+                    j.journal AS job_journal,
+                    j.issue AS job_issue,
                     j.journal_issue, 
                     j.article,
                     j.process_id,
@@ -407,6 +511,12 @@ $ce_query = "SELECT ce.*,
              WHERE $where_sql
              ORDER BY $sort $dir";
 
+// Apply LIMIT and OFFSET to query
+$ce_query .= " LIMIT ? OFFSET ?";
+$params[] = $limit;
+$params[] = $offset;
+$types .= 'ii'; // Append integer types for bind_param
+
 $stmt = $mysqli->prepare($ce_query);
 if (!empty($params)) {
     $stmt->bind_param($types, ...$params);
@@ -416,24 +526,12 @@ $ce_result = $stmt->get_result();
 $stmt->close();
 
 // Get unique statuses for filter dropdown
-$status_query = "SELECT DISTINCT status FROM ce WHERE status != 'Completed' AND status != 'Done' ORDER BY status";
+$status_query = "SELECT DISTINCT status FROM ce WHERE TRIM(COALESCE(remarks, '')) != 'Moved' ORDER BY status";
 $status_result = $mysqli->query($status_query);
 
 // Get unique clients for search dropdown
-$clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE ce.status != 'Completed' AND ce.status != 'Done' ORDER BY c.team_client_name ASC";
+$clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
 $clients_result = $mysqli->query($clients_query);
-
-// Get count statistics
-$stats_query = "SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
-                    SUM(CASE WHEN assigned_to_content IS NOT NULL THEN 1 ELSE 0 END) as content_assigned,
-                    SUM(CASE WHEN assigned_to_img IS NOT NULL THEN 1 ELSE 0 END) as images_assigned
-                FROM ce 
-                WHERE status != 'Completed' AND status != 'Done'";
-$stats_result = $mysqli->query($stats_query);
-$stats = $stats_result->fetch_assoc();
 
 require 'header.php';
 ?>
@@ -449,19 +547,100 @@ require 'header.php';
     <!-- Select2 CSS for Search+Dropdown -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        /* Select2 Custom Style */
+        /* Remove increase/decrease spinner buttons from number inputs */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { 
+            -moz-appearance: textfield; 
+        }
+        /* Select2 Custom Style - Exactly matching other filter boxes in size (26px height & 11px font) */
         .select2-container .select2-selection--single {
-            height: 31px !important;
+            height: 26px !important;
+            min-height: 26px !important;
             border: 1px solid #dee2e6 !important;
             border-radius: 0.25rem !important;
+            background-color: #fff !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
         }
+        /* Active / Open Focus Blue Ring */
+        .select2-container--default.select2-container--open .select2-selection--single,
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: #86b7fe !important;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+            outline: 0 !important;
+        }
+        /* Top Box Text (Matched to 11px font like other filters) */
         .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 29px !important;
-            font-size: 0.875rem !important;
+            line-height: 24px !important;
+            font-size: 11px !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            color: #212529 !important;
+            padding-left: 0.5rem !important;
+            padding-right: 1.75rem !important;
+        }
+        /* Arrow matching other dropdowns */
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 24px !important;
+            right: 6px !important;
+            width: 14px !important;
+            top: 1px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            display: none !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow::after {
+            content: "" !important;
+            display: inline-block !important;
+            width: 10px !important;
+            height: 10px !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-size: 10px 10px !important;
+            background-position: center !important;
+        }
+        /* Dropdown options box */
+        .select2-dropdown {
+            border: 1px solid #ced4da !important;
+            border-radius: 0.25rem !important;
+            background-color: #fff !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            margin-top: 1px !important;
+        }
+        /* Search box */
+        .select2-container--default .select2-search--dropdown {
+            padding: 4px 6px !important;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            font-size: 11px !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 0.25rem !important;
+            padding: 3px 6px !important;
+            height: 24px !important;
+            outline: none !important;
+        }
+        /* Options list */
+        .select2-container--default .select2-results__option {
+            font-size: 11px !important;
+            font-family: Arial, Helvetica, sans-serif !important;
+            padding: 4px 10px !important;
             color: #212529 !important;
         }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 29px !important;
+        /* Selected & Hover item */
+        .select2-container--default .select2-results__option--highlighted,
+        .select2-container--default .select2-results__option--highlighted[aria-selected],
+        .select2-container--default .select2-results__option[aria-selected="true"],
+        .select2-container--default .select2-results__option--selected {
+            background-color: #0d6efd !important;
+            color: #ffffff !important;
         }
 
         * {
@@ -496,7 +675,8 @@ require 'header.php';
         .stats-card.card-total { background: #e0f2fe; border-color: #bae6fd; }
         .stats-card.card-need { background: #fef3c7; border-color: #fde68a; }
         .stats-card.card-progress { background: #dbeafe; border-color: #bfdbfe; }
-        .stats-card.card-content { background: #dcfce7; border-color: #bbf7d0; }
+        .stats-card.card-completed { background: #dcfce7; border-color: #bbf7d0; }
+        .stats-card.card-content { background: #e0e7ff; border-color: #c7d2fe; }
         .stats-card.card-images { background: #fae8ff; border-color: #fbcfe8; }
         
         .stats-icon {
@@ -856,7 +1036,7 @@ require 'header.php';
                     </div>
                     <div class="stats-info">
                         <h3><?= $stats['total'] ?? 0 ?></h3>
-                        <p>Total Pending</p>
+                        <p>Total Jobs</p>
                     </div>
                 </div>
             </div>
@@ -882,9 +1062,20 @@ require 'header.php';
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <div class="stats-card card-completed">
+                    <div class="stats-icon completed" style="background: rgba(16, 185, 129, 0.2); color: #059669;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stats-info">
+                        <h3><?= $stats['completed'] ?? 0 ?></h3>
+                        <p>Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
                 <div class="stats-card card-content">
-                    <div class="stats-icon content">
+                    <div class="stats-icon content" style="background: rgba(99, 102, 241, 0.2); color: #4f46e5;">
                         <i class="fas fa-file-alt"></i>
                     </div>
                     <div class="stats-info">
@@ -893,7 +1084,7 @@ require 'header.php';
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="stats-card card-images">
                     <div class="stats-icon images">
                         <i class="fas fa-image"></i>
@@ -909,7 +1100,7 @@ require 'header.php';
         <!-- Filter Section -->
         <div class="filter-section">
             <form method="get" class="row g-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small">Search Client</label>
                     <select name="search" id="clientSearchDropdown" class="form-select form-select-sm">
                         <option value="">All Clients...</option>
@@ -968,7 +1159,6 @@ require 'header.php';
                     <select name="sort" class="form-select form-select-sm">
                         <option value="ce.created_at" <?= $sort == 'ce.created_at' ? 'selected' : '' ?>>Created Date</option>
                         <option value="c.client_name" <?= $sort == 'c.client_name' ? 'selected' : '' ?>>Client Name</option>
-                        <option value="ce.status" <?= $sort == 'ce.status' ? 'selected' : '' ?>>Status</option>
                         <option value="j.due_date" <?= $sort == 'j.due_date' ? 'selected' : '' ?>>Due Date</option>
                     </select>
                 </div>
@@ -999,6 +1189,7 @@ require 'header.php';
                             <th>S.No</th>
                             <th>Received Date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -1006,14 +1197,14 @@ require 'header.php';
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
-                            <th>Remarks</th>
                             <th>CE Assignment</th>
                             <th>Word Count</th>
                             <th>REF Assignment</th>
                             <th>REF Count</th>
                             <th>FQA Assignment</th>
-                            <th>TAT</th>
+                            <th>Status</th>
                             <th>Priority</th>
+                            <th>TAT</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1049,10 +1240,19 @@ require 'header.php';
                                         </span>
                                     </td>
 
+                                    <!-- Journal -->
+                                    <td>
+                                        <?php $display_journal = !empty($row['job_journal']) ? $row['job_journal'] : (!empty($row['journal_issue']) ? $row['journal_issue'] : ($row['issue'] ?? 'N/A')); ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_journal) ?>">
+                                            <?= h($display_journal) ?>
+                                        </span>
+                                    </td>
+
                                     <!-- 2. Issue -->
                                     <td>
-                                        <span class="text-truncate d-block" title="<?= h($row['issue'] ?? '') ?>">
-                                            <?= h($row['issue'] ?? 'N/A') ?>
+                                        <?php $display_issue = !empty($row['job_issue']) ? $row['job_issue'] : '—'; ?>
+                                        <span class="text-truncate d-block" title="<?= h($display_issue) ?>">
+                                            <?= h($display_issue) ?>
                                         </span>
                                     </td>
 
@@ -1063,19 +1263,19 @@ require 'header.php';
                                         </span>
                                     </td>
 
-                                    <!-- 4. EQ (Editable) -->
+                                                                        <!-- EQ (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 55px; font-size:11px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)">
                                     </td>
 
-                                    <!-- 5. Images (Editable) -->
+                                    <!-- Images (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h($row['images'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 55px; font-size:11px;" value="<?= h($row['images'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)">
                                     </td>
 
-                                    <!-- 6. Tables (Editable) -->
+                                    <!-- Tables (Editable) -->
                                     <td>
-                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px; font-size:11px;" value="<?= h($row['tables_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
+                                        <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 55px; font-size:11px;" value="<?= h($row['tables_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'tables_count', this.value)">
                                     </td>
 
                                     <!-- 7. Process -->
@@ -1092,20 +1292,6 @@ require 'header.php';
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
-                                    </td>
-
-                                    <!-- Remarks Dropdown -->
-                                    <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
-                                            <option value="">Select</option>
-                                            <?php 
-                                            $remarks_options = ['Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM'];
-                                            foreach($remarks_options as $opt) {
-                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
-                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
-                                            }
-                                            ?>
-                                        </select>
                                     </td>
 
                                     <!-- 9. CE Assignment (Content) -->
@@ -1129,7 +1315,7 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'ce', this.value)">
+                                                    data-prev="<?= h($ce_curr_status) ?>" onchange="updateStatus(<?= $row['id'] ?>, 'ce', this.value, this)">
                                                 <option value="Need to Assign" <?= ($ce_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($ce_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($ce_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
@@ -1193,7 +1379,7 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'ref', this.value)">
+                                                    data-prev="<?= h($ref_curr_status) ?>" onchange="updateStatus(<?= $row['id'] ?>, 'ref', this.value, this)">
                                                 <option value="Need to Assign" <?= ($ref_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($ref_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($ref_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
@@ -1232,8 +1418,12 @@ require 'header.php';
                                     <!-- 13. FQA Assignment -->
                                     <td class="assignment-cell">
                                         <?php 
-                                            $fqa_user = $row['assigned_to'] ?? '';
-                                            $fqa_done = ($row['status'] === 'Completed');
+                                            $raw_fqa_user = $row['assigned_to'] ?? '';
+                                            // Check if it's the default TL name from job entry (Not a real assigned TM)
+                                            $is_tl_default = ($raw_fqa_user === $current_user_name || $raw_fqa_user === $reporting_manager || $raw_fqa_user === 'T.G. Bragadeeshwaran' || $raw_fqa_user === $current_username);
+                                            
+                                            $fqa_user = $is_tl_default ? '' : $raw_fqa_user;
+                                            $fqa_done = ($row['status'] === 'Completed' && !empty($fqa_user));
                                             $fqa_inprogress = (!$fqa_done && !empty($fqa_user));
 
                                             $fqa_curr_status = 'Need to Assign';
@@ -1251,21 +1441,21 @@ require 'header.php';
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" 
                                                     style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" 
-                                                    onchange="updateStatus(<?= $row['id'] ?>, 'fqa', this.value)">
+                                                    data-prev="<?= h($fqa_curr_status) ?>" onchange="updateStatus(<?= $row['id'] ?>, 'fqa', this.value, this)">
                                                 <option value="Need to Assign" <?= ($fqa_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($fqa_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($fqa_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
                                             </select>
                                         </div>
 
-                                        <!-- <?php if (!empty($fqa_user)): ?>
+                                        <?php if (!empty($fqa_user)): ?>
                                             <div class="tm-badge <?= $fqa_badge_cls ?> mb-1" title="FQA TM">
                                                 <i class="fas fa-search"></i> <?= h($fqa_user) ?>
                                             </div>
                                             <small class="text-muted d-block mb-1">
                                                 <?php foreach ($tms as $tm) { if ($tm['employee_username'] == $fqa_user) { echo h($tm['employee_name']); break; } } ?>
                                             </small>
-                                        <?php endif; ?> -->
+                                        <?php endif; ?>
                                         
                                         <select class="assign-select mt-1 fqa-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'fqa', this)">
                                             <option value=""><?= !empty($fqa_user) ? 'Change FQA TM' : 'Assign FQA' ?></option>
@@ -1282,7 +1472,30 @@ require 'header.php';
                                         </div>
                                         </td>
 
-                                    <!-- 16. TAT -->
+                                    <!-- Status Dropdown (Formerly Remarks) -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" data-prev="<?= h($row['remarks'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value, this)">
+                                            <option value="">Select</option>
+                                            <?php 
+                                            $remarks_options = ['Moved', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
+                                            foreach($remarks_options as $opt) {
+                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
+                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </td>
+
+                                    <!-- Priority -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
+                                            <option value="">Select Priority</option>
+                                            <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
+                                            <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
+                                        </select>
+                                    </td>
+
+                                    <!-- TAT -->
                                     <td>
                                         <?php 
                                             if (!empty($row['job_date'])) {
@@ -1296,15 +1509,6 @@ require 'header.php';
                                                 echo '<span class="text-muted">-</span>';
                                             }
                                         ?>
-                                    </td>
-                                    
-                                    <!-- 17. Priority -->
-                                    <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
-                                            <option value="">Select Priority</option>
-                                            <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
-                                            <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
-                                        </select>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
@@ -1324,12 +1528,34 @@ require 'header.php';
 
         <!-- Pagination Info -->
         <?php if ($ce_result && $ce_result->num_rows > 0): ?>
-            <div class="row mt-3">
+            <div class="row mt-3 mb-5">
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">
-                            <i class="fas fa-list me-1"></i> Showing <?= $ce_result->num_rows ?> job(s)
+                            <i class="fas fa-list me-1"></i> Showing <?= $ce_result->num_rows ?> job(s) on this page (Total: <?= $total_rows ?>)
                         </small>
+                        
+                        <!-- Pagination Controls -->
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                <?php 
+                                    // Keep existing search/filter parameters in URL when changing pages
+                                    $query_string = $_GET;
+                                    unset($query_string['page']);
+                                    $qs = http_build_query($query_string);
+                                    $qs = $qs ? '&' . $qs : '';
+                                ?>
+                                <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $page - 1 ?><?= $qs ?>">Previous</a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link text-dark">Page <?= $page ?> of <?= $total_pages ?></span>
+                                </li>
+                                <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="?page=<?= $page + 1 ?><?= $qs ?>">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
                         <!-- <small class="text-muted">
                             Reporting Manager: <strong><?= h($reporting_manager) ?></strong>
                         </small> -->
@@ -1394,12 +1620,29 @@ require 'header.php';
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
-       // Status Update Function with stage type support
-        function updateStatus(ceId, type, newStatus) {
+       // Status Update Function with instant DOM badge update
+        function updateStatus(ceId, type, newStatus, selectElement) {
+            const select = selectElement || (typeof event !== 'undefined' ? event.target : null);
+            const prevValue = select ? (select.getAttribute('data-prev') || select.value) : '';
+
             // Frontend validation to enforce time completion
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + ceId);
                 if (row) {
+                    // Check if both CE and REF are Completed before allowing FQA Completed
+                    if (type === 'fqa') {
+                        let ceSelect = Array.from(row.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ce'"));
+                        let refSelect = Array.from(row.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ref'"));
+                        let ceDone = ceSelect && ceSelect.value === 'Completed';
+                        let refDone = refSelect && refSelect.value === 'Completed';
+
+                        if (!ceDone || !refDone) {
+                            showNotification('danger', 'Please complete both CE Assignment and REF Assignment before marking FQA as Completed!');
+                            if (select) { select.value = prevValue; }
+                            return;
+                        }
+                    }
+
                     let startTitle = type === 'ce' ? 'CE Start' : (type === 'ref' ? 'REF Start' : 'FQA Start');
                     let endTitle = type === 'ce' ? 'CE End' : (type === 'ref' ? 'REF End' : 'FQA End');
                     
@@ -1409,14 +1652,15 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500); // reload to revert the dropdown change
+                            if (select) { select.value = prevValue; }
                             return; 
                         }
                     }
                 }
             }
 
-            showLoading();
+            if (select) { select.disabled = true; }
+
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1424,23 +1668,72 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
+                if (select) { select.disabled = false; }
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
-                    setTimeout(() => { window.location.reload(); }, 500);
+                    if (select) { 
+                        select.setAttribute('data-prev', newStatus);
+                        
+                        // INSTANT UI BADGE UPDATE (Green for Completed, Purple for In Progress)
+                        const cell = select.closest('.assignment-cell');
+                        if (cell) {
+                            const badge = cell.querySelector('.tm-badge');
+                            if (badge) {
+                                badge.classList.remove('completed', 'in-progress');
+                                if (newStatus === 'Completed') {
+                                    badge.classList.add('completed');
+                                } else if (newStatus === 'In Progress') {
+                                    badge.classList.add('in-progress');
+                                }
+                            }
+                        }
+                    }
+                    setTimeout(() => { window.location.reload(); }, 600);
                 } else { 
+                    if (select) { select.value = prevValue; }
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
                 }
             }).catch(error => { 
-                hideLoading(); 
+                if (select) { 
+                    select.disabled = false; 
+                    select.value = prevValue;
+                }
                 console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
+                showNotification('danger', 'Network error. Please try again.');
             });
         }
 
         // Inline Field Editor (For Counts and Time)
         function updateInlineField(ceId, field, value, element = null) {
+            // Check CE, REF, and FQA are all assigned & Completed before allowing 'Moved'
+            if (field === 'remarks' && value === 'Moved') {
+                const rowEl = document.getElementById('row-' + ceId);
+                if (rowEl) {
+                    const ceSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ce'"));
+                    const refSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ref'"));
+                    const fqaSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'fqa'"));
+
+                    const ceTm = rowEl.querySelector('.content-select-' + ceId);
+                    const refTm = rowEl.querySelector('.images-select-' + ceId);
+                    const fqaTm = rowEl.querySelector('.fqa-select-' + ceId);
+
+                    const ceHasBadge = ceSel && ceSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+                    const refHasBadge = refSel && refSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+                    const fqaHasBadge = fqaSel && fqaSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+
+                    const ceOk = ceSel && ceSel.value === 'Completed' && ((ceTm && ceTm.value !== '') || ceHasBadge);
+                    const refOk = refSel && refSel.value === 'Completed' && ((refTm && refTm.value !== '') || refHasBadge);
+                    const fqaOk = fqaSel && fqaSel.value === 'Completed' && ((fqaTm && fqaTm.value !== '') || fqaHasBadge);
+
+                    if (!ceOk || !refOk || !fqaOk) {
+                        if (element) {
+                            element.value = element.getAttribute('data-prev') || '';
+                        }
+                        showNotification('danger', 'Cannot move! CE, REF, and FQA must all have a TM assigned and be marked Completed.');
+                        return;
+                    }
+                }
+            }
             
             // --- BACKDATE PREVENTION LOGIC START ---
             if ((field.includes('start_time') || field.includes('end_time')) && value !== '') {
@@ -1450,7 +1743,7 @@ require 'header.php';
                 const currentTime = currentHour + ':' + currentMinute;
 
                 // Compare selected time with current time (Forces ONLY current time)
-                if (value !== currentTime) {   // <---- INDHA LINE-A IPPADI MAATHUNGA
+                if (value !== currentTime) {
                     if (element) {
                         element.value = currentTime; 
                         value = currentTime;
@@ -1461,7 +1754,6 @@ require 'header.php';
             }
             // --- BACKDATE PREVENTION LOGIC END ---
 
-            showLoading();
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1469,13 +1761,39 @@ require 'header.php';
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
-                if (data.success) { showNotification('success', 'Value updated successfully!'); } 
-                else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+                if (data.success) { 
+                    if (element) {
+                        element.setAttribute('data-prev', value);
+                    }
+                    if (field === 'remarks' && value === 'Moved') {
+                        showNotification('success', 'Job moved to LE Assign successfully!');
+                        const rowEl = document.getElementById('row-' + ceId);
+                        if (rowEl) {
+                            rowEl.style.transition = 'all 0.4s ease';
+                            rowEl.style.opacity = '0';
+                            setTimeout(() => { 
+                                rowEl.remove(); 
+                            }, 400);
+                        }
+                    } else {
+                        showNotification('success', 'Value updated successfully!'); 
+                    }
+                } 
+                else { 
+                    if (element) {
+                        element.value = element.getAttribute('data-prev') || '';
+                    }
+                    showNotification('danger', data.message || 'Update failed'); 
+                }
+            }).catch(error => { 
+                console.error('Error:', error); 
+                if (element) {
+                    element.value = element.getAttribute('data-prev') || '';
+                }
+            });
         }
         
-        // Quick assign function
+        // Quick assign function with instant TM badge update
         function quickAssign(ceId, jobId, type, selectElement) {
             const selectedValue = selectElement.value;
             if (!selectedValue) return;
@@ -1502,19 +1820,46 @@ require 'header.php';
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
                     document.getElementById('row-' + ceId).classList.add('assigned');
-                    setTimeout(() => { window.location.reload(); }, 800); // Reload to show new badge
+                    selectElement.options[0].text = 'Change TM';
+
+                    // Update status dropdown and badge tag in DOM dynamically
+                    const cell = selectElement.closest('.assignment-cell');
+                    if (cell) {
+                        const statusSelect = cell.querySelector('select.form-select');
+                        if (statusSelect && statusSelect.value === 'Need to Assign') {
+                            statusSelect.value = 'In Progress';
+                            statusSelect.setAttribute('data-prev', 'In Progress');
+                        }
+
+                        let badge = cell.querySelector('.tm-badge');
+                        const iconClass = type === 'content' ? 'fa-file-alt' : (type === 'images' ? 'fa-image' : 'fa-search');
+                        if (badge) {
+                            badge.className = 'tm-badge in-progress mb-1';
+                            badge.innerHTML = `<i class="fas ${iconClass}"></i> ${selectedValue}`;
+                        } else {
+                            const badgeDiv = document.createElement('div');
+                            badgeDiv.className = 'tm-badge in-progress mb-1';
+                            badgeDiv.title = typeLabel + ' TM';
+                            badgeDiv.innerHTML = `<i class="fas ${iconClass}"></i> ${selectedValue}`;
+                            const smallName = document.createElement('small');
+                            smallName.className = 'text-muted d-block mb-1';
+                            smallName.textContent = tmName;
+                            selectElement.parentNode.insertBefore(badgeDiv, selectElement);
+                            selectElement.parentNode.insertBefore(smallName, selectElement);
+                        }
+                    }
                 } else {
                     showNotification('danger', 'Error: ' + data.message);
                     selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
-                hideLoading(); selectElement.disabled = false;
+                hideLoading(); 
+                selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 selectElement.value = selectElement.getAttribute('data-previous') || '';
             });
         }
-        
         // Show full assignment modal
         function showFullAssignment(ceId, jobId) {
             const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));

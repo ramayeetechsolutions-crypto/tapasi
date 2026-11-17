@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // Helper functions
 function formatDateTime($datetime, $format = 'd-m-Y H:i') {
@@ -38,6 +37,16 @@ function formatDateOnly($date, $format = 'd-m-Y') {
 require 'db.php';
 session_start();
 
+// Ensure journal & issue columns exist in jobs table
+$check_j_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_j_col && $check_j_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_i_col = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_i_col && $check_i_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+
 // Auto-add priority column if not exists to avoid Unknown column error
 $check_priority = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'priority'");
 if ($check_priority && $check_priority->num_rows == 0) {
@@ -53,15 +62,19 @@ if (!$current_user) {
     exit;
 }
 
-// First, get the logged-in user's employee_name
+// First, get the logged-in user's employee_name and reporting manager
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 $stmt_user->bind_param("s", $current_user);
 $stmt_user->execute();
-$stmt_user->bind_result($user_employee_name);
+$stmt_user->bind_result($logged_in_name, $user_reporting_manager);
 $stmt_user->fetch();
 $stmt_user->close();
+
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
 if (!$user_employee_name) {
     echo "<div class='alert alert-warning'>User profile not found. Please contact administrator.</div>";
@@ -72,14 +85,25 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
-$dir  = $_GET['dir'] ?? 'DESC';
-$dir  = strtoupper($dir)==='ASC' ? 'ASC' : 'DESC';
-
 $valid_sorts = ['job_id','j.job_date','client_name','journal_issue','process'];
 if (!in_array($sort, $valid_sorts)) $sort = 'j.job_date';
+
+$default_dir = ($sort === 'j.job_date') ? 'DESC' : 'ASC';
+$dir  = $_GET['dir'] ?? $default_dir;
+$dir  = strtoupper($dir)==='ASC' ? 'ASC' : 'DESC';
+
+$sort_map = [
+    'job_id'        => 'j.job_id',
+    'j.job_date'    => 'j.job_date',
+    'client_name'   => "COALESCE(NULLIF(c.team_client_name, ''), c.client_name)",
+    'journal_issue' => "COALESCE(NULLIF(j.issue, ''), j.journal_issue)",
+    'process'       => 'process'
+];
+$order_col = $sort_map[$sort] ?? 'j.job_date';
 
 // Process stage mapping - keeping only CE related
 $processStageMap = [
@@ -91,12 +115,14 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE reporting_manager = ?");
-$stmt_team->bind_param("s", $user_employee_name);
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active' ORDER BY employee_name ASC");
+$stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
 $stmt_team->execute();
 $res_team = $stmt_team->get_result();
 while ($row_team = $res_team->fetch_assoc()) {
     $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+    $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
 }
 $stmt_team->close();
 
@@ -141,6 +167,9 @@ if (!empty($allowed_process_ids)) {
     $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
 }
 
+// FIX: Only show jobs that have 'CE' in their process name
+$where[] = "jm.job_name LIKE '%CE%'";
+
 // Search query filter
 if ($q) {
     $where[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ?)";
@@ -175,6 +204,15 @@ if ($to_date) {
     $types .= "s";
 }
 
+// Employee filter (Checks Content, Img/Ref, or assigned_to)
+if ($filter_emp) {
+    $where[] = "(ce.assigned_to_content = ? OR ce.assigned_to_img = ? OR j.assigned_to = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "sss";
+}
+
 // Build WHERE SQL
 $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
@@ -194,14 +232,14 @@ if ($emp_res) {
 // SAFE QUERY: Using only existing columns in database
 $sql = "SELECT 
     -- Jobs table fields
-    j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal_issue, j.article,
+    j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal, j.issue, j.journal_issue, j.article,
     jm.job_name AS process, j.dispatch_date, j.file_path as jfile_path, j.assigned_to, j.due_date,
     j.word_count,
     
     -- CE table fields
    ce.eq as ce_eq, ce.ref as ce_ref, ce.images as ce_images, ce.tables_count as ce_tables,
     ce.ce_date, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time, ce.done_by AS ce_done_by, ce.status AS ce_status,
-    ce.assigned_to_content, ce.assigned_to_img, ce.priority,
+    ce.assigned_to_content, ce.assigned_to_img, ce.priority, ce.remarks as ce_remarks, 
     
     -- From job_uploads table
     ju.upload_date, ju.upload_by, ju.file_path 
@@ -219,7 +257,7 @@ LEFT JOIN (
 ) ju ON ju.job_id = j.job_id
 
 $where_sql
-ORDER BY $sort $dir";
+ORDER BY $order_col $dir, j.job_id DESC";
 
 $stmt = $mysqli->prepare($sql);
 if (!$stmt) die("Prepare failed: ".$mysqli->error);
@@ -264,7 +302,9 @@ if ($results->num_rows > 0) {
     }
 }
 
+require 'header.php';
 ?>
+<br><br><br>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"/>
 <!-- Select2 CSS -->
@@ -281,18 +321,98 @@ if ($results->num_rows > 0) {
     border: 1px solid #5a6268 !important;
 }
 
-/* Select2 Custom Style */
-.select2-container .select2-selection--single
-    height: 31px !important;
+/* Select2 Custom Style - Exactly matching CE Assign page (26px height & 11px font) */
+.select2-container .select2-selection--single {
+    height: 26px !important;
+    min-height: 26px !important;
     border: 1px solid #dee2e6 !important;
     border-radius: 0.25rem !important;
+    background-color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
 }
+/* Active / Open Focus Blue Ring */
+.select2-container--default.select2-container--open .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    outline: 0 !important;
+}
+/* Top Box Text (Matched to 11px font like CE Assign) */
 .select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 29px !important;
-    font-size: 0.875rem !important;
+    line-height: 24px !important;
+    font-size: 11px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    color: #212529 !important;
+    padding-left: 0.5rem !important;
+    padding-right: 1.75rem !important;
 }
+/* Arrow matching other dropdowns */
 .select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 29px !important;
+    height: 24px !important;
+    right: 6px !important;
+    width: 14px !important;
+    top: 1px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    display: none !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow::after {
+    content: "" !important;
+    display: inline-block !important;
+    width: 10px !important;
+    height: 10px !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-size: 10px 10px !important;
+    background-position: center !important;
+}
+/* Dropdown options box */
+.select2-dropdown {
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    background-color: #fff !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    margin-top: 1px !important;
+    overflow: hidden !important;
+}
+/* Search box */
+.select2-container--default .select2-search--dropdown {
+    padding: 4px 6px !important;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    font-size: 11px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    padding: 3px 6px !important;
+    height: 24px !important;
+    outline: none !important;
+}
+.select2-results__options {
+    overflow-x: hidden !important;
+}
+/* Options list */
+.select2-container--default .select2-results__option {
+    font-size: 11px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    padding: 4px 10px !important;
+    color: #212529 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+/* Selected & Hover item */
+.select2-container--default .select2-results__option--highlighted,
+.select2-container--default .select2-results__option--highlighted[aria-selected],
+.select2-container--default .select2-results__option[aria-selected="true"],
+.select2-container--default .select2-results__option--selected {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
 }
 
 table td,th { vertical-align: middle; padding: 6px 8px; white-space: nowrap; font-size: 0.9rem; }
@@ -380,13 +500,15 @@ table td {
 <?php
 function getStatusBadge($status, $username = '', $emp_map = []) {
     $st = trim((string)$status);
-    if (empty($st)) $st = 'WIP';
+    if (empty($st)) $st = 'Need to Assign';
     
     if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
         $badge = '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Completed</span>';
+    } elseif (strcasecmp($st, 'Need to Assign') === 0) {
+        $badge = '<span class="badge" style="background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Need to Assign</span>';
     } else {
-        // WIP / In Progress / Need to Assign -> Orange
-        $label = (strcasecmp($st, 'In Progress') === 0 || strcasecmp($st, 'WIP') === 0) ? 'WIP' : h($st);
+        // In Progress / WIP -> Orange
+        $label = (strcasecmp($st, 'WIP') === 0) ? 'In Progress' : h($st);
         $badge = '<span class="badge" style="background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . $label . '</span>';
     }
     
@@ -400,8 +522,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     return $badge;
 }
 ?>
-
-<?php require 'header.php';?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -457,8 +577,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             $displayed_clients = [];
                             while ($cli = $clients_result->fetch_assoc()): 
                                 $display_name = !empty($cli['team_client_name']) ? $cli['team_client_name'] : $cli['client_name'];
-                                
-                                // Oru thadava mattum print aaga check pandrom
                                 if (!in_array($display_name, $displayed_clients)):
                                     $displayed_clients[] = $display_name;
                             ?>
@@ -482,6 +600,18 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="CE+XML" <?=$filter_process==='CE+XML'?'selected':''?>>CE+XML</option>
                     </select>
                 </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 
                 <div class="col-md-2">
                     <label class="form-label small mb-1">From Date</label>
@@ -503,22 +633,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     </select>
                 </div>
                 
-                <!-- <div class="col-md-1">
-                    <label class="form-label small mb-1">Order</label>
-                    <select name="dir" class="form-select form-select-sm">
-                        <option value="DESC" <?=$dir==='DESC'?'selected':''?>>Desc</option>
-                        <option value="ASC" <?=$dir==='ASC'?'selected':''?>>Asc</option>
-                    </select>
-                </div> -->
-                
                 <div class="col-md-2">
                     <label class="form-label small mb-1 d-block">&nbsp;</label>
-                    <button class="btn btn-primary btn-sm" type="submit">
-                        <i class="fas fa-search"></i> Filter
-                    </button>
-                    <a href="job_management.php" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-times"></i> Clear
-                    </a>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-primary btn-sm" type="submit">
+                            <i class="fas fa-search"></i> Filter
+                        </button>
+                        <a href="jobmgmt_ce.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>
@@ -535,6 +659,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Received Date</th>
                             <th>CE Completed Date</th>
                             <th>Client</th>
+                            <th>Journal</th>
                             <th>Issue</th>
                             <th>Articles</th>
                             <th>EQ</th>
@@ -542,6 +667,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
+                            <th>Remarks</th>
                             <th>CE Status</th>
                             <th>Word Count</th>
                             <th>REF Status</th>
@@ -561,9 +687,38 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                        <?php if (count($all_jobs) > 0): 
                             $i=1; 
                             foreach($all_jobs as $row): 
-                                $ce_stat = !empty($row['ce_status']) ? $row['ce_status'] : 'WIP';
-                                $ref_stat = !empty($row['assigned_to_img']) ? ($row['ce_status'] ?? 'WIP') : 'WIP';
-                                $fqa_stat = ($ce_stat === 'Completed') ? 'Completed' : 'WIP';
+                                $raw_ce_status = trim((string)($row['ce_status'] ?? ''));
+                                $fqa_user = $row['assigned_to'] ?? '';
+                                if ($fqa_user === $user_employee_name || $fqa_user === $logged_in_name || !isset($emp_map[$fqa_user])) {
+                                    $fqa_user = '';
+                                }
+
+                                // CE Status: Completed / In Progress / Need to Assign
+                                if (in_array($raw_ce_status, ['CE Done', 'CE & REF Done', 'Completed', 'Done'])) {
+                                    $ce_stat = 'Completed';
+                                } elseif (!empty(trim((string)($row['assigned_to_content'] ?? '')))) {
+                                    $ce_stat = 'In Progress';
+                                } else {
+                                    $ce_stat = 'Need to Assign';
+                                }
+
+                                // REF Status: Completed / In Progress / Need to Assign
+                                if (in_array($raw_ce_status, ['REF Done', 'CE & REF Done', 'Completed', 'Done'])) {
+                                    $ref_stat = 'Completed';
+                                } elseif (!empty(trim((string)($row['assigned_to_img'] ?? '')))) {
+                                    $ref_stat = 'In Progress';
+                                } else {
+                                    $ref_stat = 'Need to Assign';
+                                }
+
+                                // FQA Status: Completed / In Progress / Need to Assign
+                                if (in_array($raw_ce_status, ['Completed', 'Done'])) {
+                                    $fqa_stat = 'Completed';
+                                } elseif (!empty($fqa_user)) {
+                                    $fqa_stat = 'In Progress';
+                                } else {
+                                    $fqa_stat = 'Need to Assign';
+                                }
                                 
                                 // TAT Calculation (Current Date - Received Date)
                                 $tat_display = '—';
@@ -592,8 +747,11 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 1. Client -->
                             <td><?=h($row['team_client_name'] ?: $row['client_name'])?></td>
 
+                            <!-- Journal -->
+                            <td><?= h(!empty($row['journal']) ? $row['journal'] : $row['journal_issue']) ?></td>
+
                             <!-- 2. Issue -->
-                            <td><?=h($row['journal_issue'])?></td>
+                            <td><?= !empty($row['issue']) ? h($row['issue']) : '—' ?></td>
 
                             <!-- 3. Articles -->
                             <td><?=h($row['article'])?></td>
@@ -613,6 +771,15 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 8. Due Date -->
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
 
+                            <!-- Remarks -->
+                            <td>
+                                <?php if (!empty($row['ce_remarks'])): ?>
+                                    <span class="badge bg-light text-dark border"><?= h($row['ce_remarks']) ?></span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+
                             <!-- 9. CE Status (Orange: WIP / Green: Completed) -->
                             <td><?= getStatusBadge($ce_stat, $row['assigned_to_content'] ?? '', $emp_map) ?></td>
 
@@ -625,8 +792,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 12. REF Count -->
                             <td><?=h($row['ce_ref'] ?? '0')?></td>
 
-                            <!-- 13. FQA Status (Orange: WIP / Green: Completed) -->
-                            <td><?= getStatusBadge($fqa_stat, $row['assigned_to'] ?? '', $emp_map) ?></td>
+                            <!-- 13. FQA Status -->
+                            <td><?= getStatusBadge($fqa_stat, $fqa_user, $emp_map) ?></td>
 
                             <!-- CE Times -->
                             <td><?= !empty($row['ce_start_time']) ? date('H:i', strtotime($row['ce_start_time'])) : '—' ?></td>
@@ -653,7 +820,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             </td>
                         </tr>
                         <?php endforeach; else: ?>
-                        <tr><td colspan="23" class="text-center">No jobs found assigned to you.</td></tr>
+                        <tr><td colspan="24" class="text-center">No jobs found assigned to you.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

@@ -418,7 +418,7 @@ foreach ($performance_data as &$emp) {
 
         <!-- Performance Chart -->
         <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Chart - Week <?= $week ?>, <?= $year ?></h5>
             </div>
             <div class="card-body">
@@ -430,13 +430,13 @@ foreach ($performance_data as &$emp) {
 
         <!-- Weekly Report Table -->
         <div class="card">
-            <div class="card-header bg-dark text-white">
+            <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0"><i class="fas fa-table me-2"></i>Weekly Production Details</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
-                        <thead class="table-dark">
+                        <thead>
                             <tr>
                                 <th>S.No</th>
                                 <th>ID</th>

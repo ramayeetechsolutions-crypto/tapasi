@@ -1,14 +1,13 @@
-<br><br>
 <?php
 // Start session BEFORE any output
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-require 'db.php'; 
+require_once 'db.php'; 
 
 // ---------- Helpers ----------
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function formatDate($d){ 
-    return (!empty($d) && $d != '0000-00-00') ? date('d M, Y', strtotime($d)) : '—'; 
+    return (!empty($d) && $d != '0000-00-00') ? date('d-m-Y', strtotime($d)) : '—'; 
 }
 function redirect_with($params=[]){
     $base='process_master.php';
@@ -68,240 +67,260 @@ if($mode === 'edit' && isset($_GET['id'])){
 
 $processes = $mysqli->query("SELECT * FROM process_master ORDER BY created_date DESC");
 
+$pageTitle = "Process Master";
+$currentPage = "process_master.php";
 require 'header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Google Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<style>
+    body {
+        background-color: var(--light, #f5f7fa);
+    }
+    .main-content {
+        margin-top: 70px;
+        padding: 25px 4%;
+        transition: all 0.3s ease;
+    }
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 10px 18px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .page-title-container h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+        border: 1px solid #6c757d !important;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        padding: 12px 14px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    }
+    .table thead tr th:first-child {
+        border-top-left-radius: 8px;
+    }
+    .table thead tr th:last-child {
+        border-top-right-radius: 8px;
+    }
+    .table tbody td {
+        font-size: 13.5px;
+        padding: 12px 14px;
+        vertical-align: middle;
+        color: #333333;
+        background-color: #ffffff;
+    }
+    .table-container {
+        overflow: visible;
+    }
+    .status-pill {
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: none;
+        transition: 0.2s;
+    }
+    .status-active { background: #dcfce7; color: #166534; }
+    .status-inactive { background: #fee2e2; color: #991b1b; }
+    .status-pill:hover { opacity: 0.8; transform: translateY(-1px); }
 
-    <style>
-        :root {
-            --primary-bg: #f8fafc;
-            --accent-color: #6366f1; /* Modern Indigo */
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
+    .btn-action {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: 0.2s;
+        text-decoration: none;
+    }
+    .btn-edit { background: #fef9c3; color: #854d0e; }
+    .btn-delete { background: #fee2e2; color: #991b1b; border: none; }
+    .btn-action:hover { transform: scale(1.1); }
+    .btn-header-action {
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        border: 1px solid #ced4da !important;
+        font-weight: 600 !important;
+        padding: 6px 16px !important;
+        border-radius: 6px !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-size: 14px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+    .btn-header-action:hover {
+        background-color: #f8f9fa !important;
+        color: #0d6efd !important;
+    }
+    .btn-header-action i {
+        color: #0d6efd !important;
+        margin-right: 6px !important;
+    }
+    .btn-header-action span {
+        color: #212529 !important;
+        font-weight: 600 !important;
+    }
+</style>
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--primary-bg);
-            color: #1e293b;
-        }
+<main class="main-content">
+    <div class="container-fluid p-0">
 
-        .container { max-width: 1100px; padding-top: 40px; }
+        <!-- Alert Messages -->
+        <?php if(!empty($_GET['msg'])): ?>
+            <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
+                <i class="fa-solid fa-circle-info me-2"></i> <?= h($_GET['msg']) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
-        /* Card Styling */
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-        }
+        <?php if($mode === 'add' || $mode === 'edit'): ?>
+            <!-- FORM VIEW -->
+            <div class="page-title-container">
+                <h1>
+                    <i class="fa-solid fa-gears"></i> <?= $mode === 'edit' ? 'Update Process' : 'New Process Definition' ?>
+                </h1>
+                <a href="process_master.php" class="btn-header-action">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </a>
+            </div>
 
-        /* Modern Table */
-        .table-container {
-            background: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
-        }
-
-        .table thead th {
-            background-color: #707981 !important;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.025em;
-            color: white !important;
-            padding: 15px;
-            border: 1px solid #5a6268 !important;
-        }
-
-        .table tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        /* Status Badges */
-        .status-pill {
-            padding: 4px 12px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border: none;
-            transition: 0.2s;
-        }
-        .status-active { background: #dcfce7; color: #166534; }
-        .status-inactive { background: #fee2e2; color: #991b1b; }
-        .status-pill:hover { opacity: 0.8; transform: translateY(-1px); }
-
-        /* Action Buttons */
-        .btn-action {
-            width: 32px;
-            height: 32px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: 0.2s;
-            text-decoration: none;
-        }
-        .btn-edit { background: #fef9c3; color: #854d0e; }
-        .btn-delete { background: #fee2e2; color: #991b1b; border: none; }
-        .btn-action:hover { transform: scale(1.1); }
-
-        /* Form Styling */
-        .form-label { font-weight: 500; color: #334155; }
-        .form-control {
-            border-radius: 8px;
-            padding: 10px 15px;
-            border: 1px solid #e2e8f0;
-        }
-        .form-control:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .page-header {
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container mb-5">
-    
-    <!-- Alert Messages -->
-    <?php if(!empty($_GET['msg'])): ?>
-        <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show border-0 shadow-sm" role="alert">
-            <i class="fa-solid fa-circle-info me-2"></i> <?= h($_GET['msg']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if($mode === 'add' || $mode === 'edit'): ?>
-        <!-- FORM VIEW -->
-        <div class="row justify-content-center">
-            <div class="col-lg-6">
-                <div class="card p-4 p-md-5">
-                    <div class="text-center mb-4">
-                        <div class="bg-light d-inline-block p-3 rounded-circle mb-3">
-                            <i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-folder-plus' ?> fa-2x text-primary"></i>
-                        </div>
-                        <h4 class="fw-bold"><?= $mode === 'edit' ? 'Update Process' : 'New Process Definition' ?></h4>
-                        <p class="text-muted small">Standardize your workflow by defining process details.</p>
-                    </div>
-                    
-                    <form method="post">
-                        <input type="hidden" name="action" value="<?= $mode === 'edit' ? 'edit' : 'add' ?>">
-                        <?php if ($mode === 'edit'): ?>
-                            <input type="hidden" name="process_id" value="<?= $editProcess['process_id'] ?>">
-                        <?php endif; ?>
-
-                        <div class="mb-3">
-                            <label class="form-label">Process Name <span class="text-danger">*</span></label>
-                            <input type="text" name="process_name" class="form-control" placeholder="e.g. Quality Inspection" required value="<?= h($editProcess['process_name'] ?? '') ?>">
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">Description</label>
-                            <textarea name="process_description" rows="3" class="form-control" placeholder="Describe the steps or purpose..."><?= h($editProcess['process_description'] ?? '') ?></textarea>
+            <div class="row justify-content-center">
+                <div class="col-lg-6">
+                    <div class="card p-4 p-md-5 shadow-sm border-0" style="border-radius: 12px;">
+                        <div class="text-center mb-4">
+                            <div class="bg-light d-inline-block p-3 rounded-circle mb-3">
+                                <i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-folder-plus' ?> fa-2x text-primary"></i>
+                            </div>
+                            <h4 class="fw-bold"><?= $mode === 'edit' ? 'Update Process' : 'New Process Definition' ?></h4>
+                            <p class="text-muted small">Standardize your workflow by defining process details.</p>
                         </div>
                         
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary py-2 fw-semibold">
-                                <?= $mode === 'edit' ? 'Update Details' : 'Save Process' ?>
-                            </button>
-                            <a href="process_master.php" class="btn btn-link text-muted text-decoration-none">Back to list</a>
-                        </div>
-                    </form>
+                        <form method="post">
+                            <input type="hidden" name="action" value="<?= $mode === 'edit' ? 'edit' : 'add' ?>">
+                            <?php if ($mode === 'edit'): ?>
+                                <input type="hidden" name="process_id" value="<?= $editProcess['process_id'] ?>">
+                            <?php endif; ?>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Process Name <span class="text-danger">*</span></label>
+                                <input type="text" name="process_name" class="form-control" placeholder="e.g. Quality Inspection" required value="<?= h($editProcess['process_name'] ?? '') ?>">
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Description</label>
+                                <textarea name="process_description" rows="3" class="form-control" placeholder="Describe the steps or purpose..."><?= h($editProcess['process_description'] ?? '') ?></textarea>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary py-2 fw-semibold">
+                                    <?= $mode === 'edit' ? 'Update Details' : 'Save Process' ?>
+                                </button>
+                                <a href="process_master.php" class="btn btn-link text-muted text-decoration-none">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        </div>
 
-    <?php else: ?>
-        <!-- TABLE VIEW -->
-        <div class="page-header">
-            <div>
-                <h3 class="fw-bold mb-1">Process Master</h3>
-                <p class="text-muted small mb-0">Total Processes: <?= $processes->num_rows ?></p>
+        <?php else: ?>
+            <!-- Process Master Header Banner with Ash Color -->
+            <div class="page-title-container">
+                <h1>
+                    <i class="fa-solid fa-gears"></i> Process Master
+                </h1>
+                <a href="process_master.php?mode=add" class="btn-header-action">
+                    <i class="fa fa-plus"></i>
+                    <span>Add Process</span>
+                </a>
             </div>
-            <a href="process_master.php?mode=add" class="btn btn-primary px-4 shadow-sm">
-                <i class="fa fa-plus me-2"></i>Add Process
-            </a>
-        </div>
-        
-        <div class="table-container shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th width="60" class="text-center">S.No</th>
-                            <th>Process Details</th>
-                            <th class="text-center">Status</th>
-                            <th>Metadata</th>
-                            <th width="120" class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if($processes && $processes->num_rows): $i=0; while($row=$processes->fetch_assoc()): $i++; ?>
-                            <tr>
-                                <td class="text-center text-muted small"><?= $i ?></td>
-                                <td>
-                                    <div class="fw-bold text-dark"><?= h($row['process_name']) ?></div>
-                                    <div class="text-muted extra-small" style="font-size: 0.8rem;"><?= h($row['process_description'] ?: 'No description provided') ?></div>
-                                </td>
-                                <td class="text-center">
-                                    <form method="post">
-                                        <input type="hidden" name="action" value="toggle">
-                                        <input type="hidden" name="process_id" value="<?= $row['process_id'] ?>">
-                                        <button type="submit" class="status-pill <?= $row['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>" onclick="return confirm('Change status?')">
-                                            <i class="fa-solid fa-circle me-1" style="font-size: 0.5rem;"></i> <?= $row['status'] ?>
-                                        </button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <div class="small"><i class="fa-regular fa-user me-1 text-muted"></i> <?= h($row['created_by']) ?></div>
-                                    <div class="text-muted" style="font-size: 0.75rem;"><i class="fa-regular fa-calendar me-1"></i> <?= formatDate($row['created_date']) ?></div>
-                                </td>
-                                <td class="text-center">
-                                    <a href="process_master.php?mode=edit&id=<?= $row['process_id'] ?>" class="btn-action btn-edit me-1" title="Edit">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </a>
-                                    <form method="post" class="d-inline" onsubmit="return confirm('Delete this process?')">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="process_id" value="<?= $row['process_id'] ?>">
-                                        <button class="btn-action btn-delete" title="Delete">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endwhile; else: ?>
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    <i class="fa-solid fa-inbox fa-3x mb-3 opacity-25"></i>
-                                    <p>No processes found. Click "Add Process" to start.</p>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+            
+            <!-- Process Table -->
+            <div class="card shadow-sm border-0 mb-4" style="border-radius: 8px; overflow: visible;">
+                <div class="card-body p-0" style="overflow: visible;">
+                    <div class="table-container" style="overflow: visible;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th width="70" class="text-center">S.NO</th>
+                                    <th>PROCESS DETAILS</th>
+                                    <th class="text-center" style="width: 130px;">STATUS</th>
+                                    <th>METADATA</th>
+                                    <th width="120" class="text-center">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if($processes && $processes->num_rows): $i=0; while($row=$processes->fetch_assoc()): $i++; ?>
+                                    <tr>
+                                        <td class="text-center text-muted small"><?= $i ?></td>
+                                        <td>
+                                            <div class="fw-bold text-dark"><?= h($row['process_name']) ?></div>
+                                            <div class="text-muted extra-small" style="font-size: 0.8rem;"><?= h($row['process_description'] ?: 'No description provided') ?></div>
+                                        </td>
+                                        <td class="text-center">
+                                            <form method="post">
+                                                <input type="hidden" name="action" value="toggle">
+                                                <input type="hidden" name="process_id" value="<?= $row['process_id'] ?>">
+                                                <button type="submit" class="status-pill <?= $row['status'] === 'Active' ? 'status-active' : 'status-inactive' ?>" onclick="return confirm('Change status?')">
+                                                    <i class="fa-solid fa-circle me-1" style="font-size: 0.5rem;"></i> <?= $row['status'] ?>
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <div class="small"><i class="fa-regular fa-user me-1 text-muted"></i> <?= h($row['created_by']) ?></div>
+                                            <div class="text-muted" style="font-size: 0.75rem;"><i class="fa-regular fa-calendar me-1"></i> <?= formatDate($row['created_date']) ?></div>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="process_master.php?mode=edit&id=<?= $row['process_id'] ?>" class="btn-action btn-edit me-1" title="Edit">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+                                            <form method="post" class="d-inline" onsubmit="return confirm('Delete this process?')">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="process_id" value="<?= $row['process_id'] ?>">
+                                                <button class="btn-action btn-delete" title="Delete">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted">
+                                            <i class="fa-solid fa-inbox fa-3x mb-3 opacity-25"></i>
+                                            <p>No processes found. Click "Add Process" to start.</p>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-    <?php endif; ?>
+        <?php endif; ?>
 
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    </div>
+</main>

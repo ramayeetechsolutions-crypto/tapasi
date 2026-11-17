@@ -11,6 +11,20 @@ error_reporting(E_ALL);
 
 require 'db.php';
 
+// Auto-add separate journal and issue columns if not exists
+$check_journal = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'journal'");
+if ($check_journal && $check_journal->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN journal VARCHAR(255) NULL DEFAULT NULL AFTER client_id");
+}
+$check_issue = $mysqli->query("SHOW COLUMNS FROM jobs LIKE 'issue'");
+if ($check_issue && $check_issue->num_rows == 0) {
+    $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
+}
+$check_ap_job = $mysqli->query("SHOW COLUMNS FROM ap_assign LIKE 'job_id'");
+if ($check_ap_job && $check_ap_job->num_rows == 0) {
+    $mysqli->query("ALTER TABLE ap_assign ADD COLUMN job_id INT(11) NULL DEFAULT NULL AFTER id");
+}
+
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
 }
@@ -39,19 +53,25 @@ function redirect_to($params = []) {
 }
 
 function formatDate($date, $format = 'd-m-Y') {
-    if (!$date) return '';
-    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
-    return $dateObj ? $dateObj->format($format) : $date;
+    if (empty($date) || $date === '0000-00-00' || $date === '0000-00-00 00:00:00') return '';
+    $ts = strtotime($date);
+    return $ts ? date($format, $ts) : $date;
 }
 
 $processStageMap = [
     'CE'          => ['CE','LE'],
     'PAG'         => ['PAG','QC'],
+    'TS'          => ['PAG','QC'],
     'CE+PAG'      => ['CE','LE','PAG','QC'],
+    'CE+TS'       => ['CE','LE','PAG','QC'],
     'CE+PAG+XML'  => ['CE','LE','PAG','QC','XML'],
     'CE+XML'      => ['CE','LE','XML'],
     'PAG+XML'     => ['PAG','QC','XML'],
     'XML'         => ['XML'],
+    'AP'          => ['AP'],
+    'MINORCORRECTIONS' => ['AP'],
+    'HEAVYCORRECTIONS' => ['AP'],
+    'AOPCORRECTIONS'   => ['AP']
 ];
 
 $skillHierarchy = [
@@ -77,18 +97,19 @@ $logged_user = $_SESSION['username'] ?? '';
 $role_name = $_SESSION['role_name'] ?? '';
 
 $search_client = trim($_GET['search_client'] ?? '');
-$sort = $_GET['sort'] ?? 'job_id';
+$sort = $_GET['sort'] ?? 'job_date';
 $dir = strtoupper($_GET['dir'] ?? 'DESC');
 if (!in_array($dir, ['ASC', 'DESC'], true)) $dir = 'DESC';
 
-$allowed_sorts = ['job_id', 'job_date', 'client_name', 'job_name', 'article', 'assigned_to', 'due_date'];
-if (!in_array($sort, $allowed_sorts, true)) $sort = 'job_id';
+$allowed_sorts = ['job_date', 'client_name', 'article', 'due_date'];
+if (!in_array($sort, $allowed_sorts, true)) $sort = 'job_date';
 
 $default_due_date = date('Y-m-d H:i:s', strtotime('+5 days'));
 
-// Load all processes
+// Load all processes (Hide AP processes from normal jobs)
 $all_processes = [];
-$res = $mysqli->query("SELECT job_id, job_name FROM job_master WHERE status='Active' ORDER BY job_name");
+$ap_exclude = "'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing', 'AP'";
+$res = $mysqli->query("SELECT job_id, job_name FROM job_master WHERE status='Active' AND job_name NOT IN ($ap_exclude) ORDER BY job_name");
 if (!$res) die('Error loading processes: ' . $mysqli->error);
 while ($r = $res->fetch_assoc()) $all_processes[$r['job_id']] = $r['job_name'];
 
@@ -121,11 +142,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $job_id = (int)($_POST['job_id'] ?? 0);
     $job_date = $_POST['job_date'] ?: date('Y-m-d');
     $client_id = (int)($_POST['client_id'] ?? 0);
-    $journal = trim($_POST['journal_issue'] ?? '');
+    $journal_name = trim($_POST['journal'] ?? '');
+    $issue_name = trim($_POST['issue'] ?? '');
+    $journal = trim($journal_name . ($issue_name !== '' ? ' ' . $issue_name : ''));
     $mail_subject = trim($_POST['mail_subject'] ?? '');
     $notes = trim($_POST['notes'] ?? '');
     $queries = trim($_POST['queries'] ?? '');
-    $due_date = $default_due_date;
+    $due_date = !empty($_POST['due_date']) ? $_POST['due_date'] : $default_due_date;
+    
+    if (!empty($due_date) && !empty($job_date)) {
+        if (substr($due_date, 0, 10) < substr($job_date, 0, 10)) {
+            redirect_to(['msg' => 'Due date cannot be before Job date', 'type' => 'danger']);
+        }
+    }
     
     if ($action === 'add') {
         // Validation
@@ -151,6 +180,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['wordcount_textarea']) && !empty(trim($_POST['wordcount_textarea']))) {
                 $raw_wordcounts = trim($_POST['wordcount_textarea']);
                 $word_counts = array_filter(array_map('trim', explode("\n", $raw_wordcounts)), 'strlen');
+            }
+            if (empty($word_counts)) {
+                redirect_to(['msg' => 'Word count is required for each article', 'type' => 'danger']);
             }
             
             // Combine articles with their word counts
@@ -194,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = $stmt->get_result();
         
         if ($row = $res->fetch_assoc()) {
-            $assigned_to = $row['reporting_manager']; // Assign to current user
+            $assigned_to = !empty($row['reporting_manager']) ? $row['reporting_manager'] : $row['employee_name']; // Assign to current user / TL
         }
         $stmt->close();
         
@@ -224,13 +256,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Insert job
             $stmt = $mysqli->prepare("
                 INSERT INTO jobs (
-                    job_date, client_id, journal_issue, mail_subject, article, process_id,
+                    job_date, client_id, journal, issue, journal_issue, mail_subject, article, process_id,
                     assigned_to, assigned_ce, assigned_le, assigned_pag,
                     assigned_qc, assigned_xml, due_date, due_date_ce,
                     due_date_le, due_date_pag, due_date_qc,
                     notes, queries, word_count
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             if (!$stmt) {
                 $errors[] = 'Error preparing jobs insert: ' . $mysqli->error;
@@ -250,9 +282,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $assigned_to_tm = ''; // Empty as removed
 
             $stmt->bind_param(
-                'sisssssssssssssssssi',
+                'sisssssisssssssssssssi',
                 $job_date,
                 $client_id,
+                $journal_name,
+                $issue_name,
                 $journal,
                 $mail_subject,
                 $article,
@@ -335,6 +369,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt7->bind_param("isssss", $new_job_id, $job_date, $client_name, $journal, $article, $process_name);
                     $stmt7->execute();
                     $stmt7->close();
+
+                    // --- AUTO-CREATE QC_CRX TABLE IF NOT EXISTS ---
+$mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `job_id` int DEFAULT NULL,
+  `date` date DEFAULT NULL,
+  `client` varchar(255) DEFAULT NULL,
+  `journal_issue` varchar(255) DEFAULT NULL,
+  `article` varchar(255) DEFAULT NULL,
+  `process` varchar(100) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'Need to Assign',
+  `assigned_to_qc` varchar(50) DEFAULT NULL,
+  `qc_start_time` time DEFAULT NULL,
+  `qc_end_time` time DEFAULT NULL,
+  `qc_date` datetime DEFAULT NULL,
+  `rtat` int DEFAULT 0,
+  `atat` int DEFAULT 0,
+  `path` varchar(500) DEFAULT NULL,
+  `priority` varchar(50) DEFAULT NULL,
+  `dispatch_date` date DEFAULT NULL,
+  `upload_by` varchar(50) DEFAULT NULL,
+  `done_by` varchar(50) DEFAULT NULL,
+  `qc_crx_stage` varchar(50) DEFAULT NULL,
+  `pag_crx_stage` varchar(50) DEFAULT NULL,
+  `pag_crx_assigned_to` varchar(50) DEFAULT NULL,
+  `pag_crx_start_time` time DEFAULT NULL,
+  `pag_crx_end_time` time DEFAULT NULL,
+  `img_tab_stage` varchar(50) DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `last_updated` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_job_id` (`job_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                    // QC_CRX
+                    $stmt_crx = $mysqli->prepare("
+                        INSERT INTO qc_crx 
+                        (job_id, date, client, journal_issue, article, process, status, created_at, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?, 'Need to Assign', NOW(), NOW())
+                    ");
+                    if ($stmt_crx) {
+                        $stmt_crx->bind_param("isssss", $new_job_id, $job_date, $client_name, $journal, $article, $process_name);
+                        $stmt_crx->execute();
+                        $stmt_crx->close();
+                    }
+                }
+                // --- ADD THIS NEW BLOCK FOR AP PROCESS ---
+                if (strpos(strtoupper($process_name), 'AP') !== false) {
+                    // Ensure job_id column exists in ap_assign table
+                    $check_job_id = $mysqli->query("SHOW COLUMNS FROM ap_assign LIKE 'job_id'");
+                    if ($check_job_id && $check_job_id->num_rows == 0) {
+                        $mysqli->query("ALTER TABLE ap_assign ADD COLUMN job_id INT NULL DEFAULT NULL AFTER id");
+                    }
+                    
+                    $stmt_ap = $mysqli->prepare("
+                        INSERT INTO ap_assign 
+                        (job_id, date, client, mail_subject, process, articles, process_status, supplements_status, status, created_at, last_updated) 
+                        VALUES (?, ?, ?, ?, ?, ?, 'Need to Assign', 'Need to Assign', 'In Process', NOW(), NOW())
+                    ");
+                    if ($stmt_ap) {
+                        $stmt_ap->bind_param("isssss", $new_job_id, $job_date, $client_name, $mail_subject, $process_name, $article);
+                        $stmt_ap->execute();
+                        $stmt_ap->close();
+                    }
                 }
             } else {
                 $errors[] = "Failed to insert article '{$article}': " . $stmt->error;
@@ -366,6 +464,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$article || !$process_id) {
             redirect_to(['msg' => 'Article and Process are required', 'type' => 'danger']);
         }
+        if ($word_count <= 0) {
+            redirect_to(['msg' => 'Word count is required and must be greater than 0', 'type' => 'danger']);
+        }
 
         // Check for duplicates excluding current job
         $checkSql = "SELECT COUNT(*) FROM jobs WHERE journal_issue = ? AND article = ? AND job_id != ?";
@@ -382,9 +483,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Update the job record
-        $stmt = $mysqli->prepare("UPDATE jobs SET job_date=?, client_id=?, journal_issue=?, mail_subject=?, article=?, process_id=?, due_date=?, notes=?, queries=?, word_count=? WHERE job_id=?");
+        $stmt = $mysqli->prepare("UPDATE jobs SET job_date=?, client_id=?, journal=?, issue=?, journal_issue=?, mail_subject=?, article=?, process_id=?, due_date=?, notes=?, queries=?, word_count=? WHERE job_id=?");
         if (!$stmt) die('Error preparing update: ' . $mysqli->error);
-        $stmt->bind_param('sisssssssii', $job_date, $client_id, $journal, $mail_subject, $article, $process_id, $due_date, $notes, $queries, $word_count, $job_id);
+        $stmt->bind_param('sisssssisssii', $job_date, $client_id, $journal_name, $issue_name, $journal, $mail_subject, $article, $process_id, $due_date, $notes, $queries, $word_count, $job_id);
         if (!$stmt->execute()) {
             die('Update failed: ' . $stmt->error);
         }
@@ -393,14 +494,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect_to(['msg' => 'Job updated successfully', 'type' => 'success']);
     } 
     elseif ($action === 'delete') {
-        $stmt = $mysqli->prepare("DELETE FROM jobs WHERE job_id = ?");
-        if (!$stmt) die('Error preparing delete: ' . $mysqli->error);
-        $stmt->bind_param('i', $job_id);
-        if (!$stmt->execute()) {
-            die('Deletion failed: ' . $stmt->error);
+        // Cascade delete related records across all assigning and stage tables
+        $tables_to_clean = [
+            'ce',
+            'le',
+            'pag',
+            'qc',
+            'qc_crx',
+            'ap_assign',
+            'wk_cs',
+            'wk_le',
+            'wk_ts',
+            'unique_xml_jobs',
+            'job_uploads',
+            'job_uploads_qc',
+            'job_uploads_xml',
+            'job_time_tracking',
+            'jobs'
+        ];
+        
+        foreach ($tables_to_clean as $tbl) {
+            $del_stmt = $mysqli->prepare("DELETE FROM `$tbl` WHERE `job_id` = ?");
+            if ($del_stmt) {
+                $del_stmt->bind_param('i', $job_id);
+                $del_stmt->execute();
+                $del_stmt->close();
+            }
         }
-        $stmt->close();
-        redirect_to(['msg' => 'Job deleted', 'type' => 'warning']);
+        
+        redirect_to(['msg' => 'Job and all related stage assignments deleted', 'type' => 'warning']);
     }
 }
 
@@ -410,8 +532,9 @@ $where_clauses = [];
 $params = [];
 $types = '';
 
-// ADDED FIX: Hide XML Team jobs from this view
-$where_clauses[] = "p.job_name != 'XML'";
+// ADDED FIX: Hide XML Team & AP Team jobs from this view
+$ap_exclude = "'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing', 'AP'";
+$where_clauses[] = "p.job_name != 'XML' AND p.job_name NOT IN ($ap_exclude)";
 
 if (!empty($search_client)) {
     $where_clauses[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ?)";
@@ -425,12 +548,13 @@ if ($where_clauses) {
     $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
 }
 
-$sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article, 
+$sql = "SELECT j.job_id, j.job_date, j.journal, j.issue, j.journal_issue, j.mail_subject, j.article, 
                j.assigned_to, j.notes, j.queries, j.word_count,
                j.assigned_ce, j.assigned_le, j.assigned_pag, j.assigned_qc, j.assigned_xml, 
                j.due_date, j.process_id, c.client_name, c.team_client_name, p.job_name,
                ce.status AS ce_status, le.status AS le_status, 
                pag.status AS pag_status, qc.status AS qc_status,
+               ap.process_member AS assigned_ap, ap.process_status AS ap_status,
                CASE 
                    WHEN p.job_name = 'CE' THEN 
                        CASE 
@@ -439,7 +563,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                            WHEN j.assigned_ce IS NOT NULL AND j.assigned_le IS NOT NULL THEN 'Completed'
                            ELSE 'In Progress'
                        END
-                   WHEN p.job_name = 'PAG' THEN 
+                   WHEN p.job_name IN ('PAG', 'TS') THEN 
                        CASE 
                            WHEN j.assigned_pag IS NULL AND j.assigned_qc IS NULL THEN 'Pending'
                            WHEN j.assigned_qc IS NULL THEN 'In Progress'
@@ -452,7 +576,7 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                            WHEN j.assigned_xml IS NOT NULL THEN 'Completed'
                            ELSE 'Pending'
                        END
-                   WHEN p.job_name IN ('CE+PAG', 'CE+PAG+XML') THEN 
+                   WHEN p.job_name IN ('CE+PAG', 'CE+TS', 'CE+PAG+XML') THEN 
                        CASE 
                            WHEN j.assigned_ce IS NULL AND j.assigned_le IS NULL AND j.assigned_pag IS NULL AND j.assigned_qc IS NULL THEN 'Pending'
                            WHEN j.assigned_ce IS NOT NULL AND j.assigned_le IS NOT NULL AND j.assigned_pag IS NOT NULL AND j.assigned_qc IS NOT NULL THEN 'Completed'
@@ -466,6 +590,12 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
                                 (j.assigned_pag IS NOT NULL AND j.assigned_qc IS NOT NULL AND j.assigned_xml IS NOT NULL) THEN 'Completed'
                            ELSE 'In Progress'
                        END
+                   WHEN p.job_name = 'AP' OR p.job_name LIKE '%Corrections%' THEN
+                       CASE
+                           WHEN ap.process_member IS NULL OR ap.process_member = '' THEN 'Pending'
+                           WHEN ap.process_status = 'Completed' THEN 'Completed'
+                           ELSE 'In Progress'
+                       END
                    ELSE 'Pending'
                END as status
         FROM jobs j
@@ -475,8 +605,9 @@ $sql = "SELECT j.job_id, j.job_date, j.journal_issue, j.mail_subject, j.article,
         LEFT JOIN le ON j.job_id = le.job_id
         LEFT JOIN pag ON j.job_id = pag.job_id
         LEFT JOIN qc ON j.job_id = qc.job_id
+        LEFT JOIN ap_assign ap ON j.job_id = ap.job_id
         $where_sql
-        ORDER BY $sort $dir";
+        ORDER BY " . ($sort === 'job_date' ? "j.job_date DESC, j.job_id DESC" : "$sort $dir, j.job_date DESC, j.job_id DESC");
 
 if ($where_sql && $types) {
     $stmt = $mysqli->prepare($sql);
@@ -544,7 +675,7 @@ require 'header.php';
         }
         
         .form-card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #707981; /* Grey color matching table header */
             padding: 0.75rem 1.25rem;
             color: white;
         }
@@ -630,20 +761,23 @@ require 'header.php';
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #0d6efd; /* Standard Blue */
             border: none;
             border-radius: 8px;
             padding: 0.4rem 1rem;
             font-weight: 500;
             font-size: 0.85rem;
             letter-spacing: 0.025em;
-            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
             transition: all 0.15s ease;
+            color: white;
         }
         
         .btn-primary:hover {
+            background-color: #0b5ed7; /* Darker Blue on hover */
             transform: translateY(-1px);
-            box-shadow: 0 3px 6px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 3px 6px rgba(13, 110, 253, 0.4);
+            color: white;
         }
         
         .btn-outline-secondary {
@@ -1028,7 +1162,7 @@ require 'header.php';
                                 <div class="col-md-4">
                                     <label class="form-label">Due Date</label>
                                     <input type="date" name="due_date" class="form-control" 
-                                           value="<?= h($mode === 'edit' ? $edit_job['due_date'] : date('Y-m-d', strtotime('+5 days'))) ?>">
+                                           value="<?= h($mode === 'edit' ? (!empty($edit_job['due_date']) && $edit_job['due_date'] !== '0000-00-00 00:00:00' ? date('Y-m-d', strtotime($edit_job['due_date'])) : '') : date('Y-m-d', strtotime('+5 days'))) ?>">
                                 </div>
                                 
                                 <div class="col-md-4">
@@ -1068,16 +1202,25 @@ require 'header.php';
                             </div>
                             
                             <div class="row g-2">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">
-                                        Journal / Issue <span class="required-asterisk">*</span>
+                                        Journal <span class="required-asterisk">*</span>
                                     </label>
-                                    <input type="text" name="journal_issue" class="form-control" required 
-                                           value="<?= h($mode === 'edit' ? $edit_job['journal_issue'] : '') ?>" 
-                                           placeholder="e.g., Nature V25">
+                                    <input type="text" name="journal" class="form-control" required 
+                                           value="<?= h($mode === 'edit' ? (!empty($edit_job['journal']) ? $edit_job['journal'] : $edit_job['journal_issue']) : '') ?>" 
+                                           placeholder="e.g., Nature">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        Issue
+                                    </label>
+                                    <input type="text" name="issue" class="form-control" 
+                                           value="<?= h($mode === 'edit' ? ($edit_job['issue'] ?? '') : '') ?>" 
+                                           placeholder="e.g., V25">
                                 </div>
                                 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Mail Subject</label>
                                     <input type="text" name="mail_subject" class="form-control" 
                                            value="<?= h($mode === 'edit' ? $edit_job['mail_subject'] : $mail_subject); ?>" 
@@ -1123,11 +1266,11 @@ require 'header.php';
                                                placeholder="Article title">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Word Count</label>
+                                        <label class="form-label">Word Count <span class="required-asterisk">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text"><i class="fas fa-calculator"></i></span>
-                                            <input type="number" name="word_count" class="form-control" 
-                                                   value="<?= h($edit_job['word_count'] ?? 0) ?>" min="0" placeholder="0">
+                                            <input type="number" name="word_count" class="form-control" required 
+                                                   value="<?= h($edit_job['word_count'] ?? '') ?>" min="1">
                                         </div>
                                     </div>
                                 </div>
@@ -1139,7 +1282,7 @@ require 'header.php';
                                         <div class="form-check">
                                             <input class="form-check-input" type="radio" name="input_method" 
                                                    id="methodTextarea" value="textarea" checked onclick="toggleInputMethod()">
-                                            <label class="form-check-label" for="methodTextarea">
+                                             <label class="form-check-label" for="methodTextarea">
                                                 <i class="fas fa-pencil-alt me-1"></i> Textarea
                                             </label>
                                         </div>
@@ -1162,37 +1305,45 @@ require 'header.php';
                                                 Articles <span class="required-asterisk">*</span>
                                             </h6>
                                             <textarea name="articles_textarea" class="form-control" 
-                                                      rows="3" placeholder="Article 1&#10;Article 2&#10;Article 3"><?= h($_POST['articles_textarea'] ?? '') ?></textarea>
+                                                      rows="3"><?= h($_POST['articles_textarea'] ?? '') ?></textarea>
                                         </div>
                                         
                                         <div class="textarea-wrapper">
                                             <h6>
                                                 <i class="fas fa-calculator"></i>
-                                                Word Counts
+                                                Word Counts <span class="required-asterisk">*</span>
                                             </h6>
                                             <textarea name="wordcount_textarea" class="form-control" 
-                                                      rows="3" placeholder="1500&#10;2500&#10;3200"><?= h($_POST['wordcount_textarea'] ?? '') ?></textarea>
+                                                      rows="3"><?= h($_POST['wordcount_textarea'] ?? '') ?></textarea>
                                         </div>
                                     </div>
                                     
                                     <div class="info-box">
                                         <i class="fas fa-info-circle"></i>
-                                        Line 1 → Article 1, Line 2 → Article 2, etc. Default word count: 0
+                                        Line 1 → Article 1, Line 2 → Article 2, etc. Word count is required.
                                     </div>
                                 </div>
                                 
                                 <!-- Individual Fields Method (Hidden by Default) -->
                                 <div id="individualMethod" style="display:none;">
+                                    <div class="row g-2 mb-2 fw-semibold px-2" style="font-size:0.8rem; color:#334155;">
+                                        <div class="col-md-7">
+                                            <i class="fas fa-file-lines me-1" style="color: #667eea;"></i> Articles <span class="required-asterisk">*</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <i class="fas fa-calculator me-1" style="color: #667eea;"></i> Word Counts <span class="required-asterisk">*</span>
+                                        </div>
+                                        <div class="col-md-1"></div>
+                                    </div>
                                     <div id="articleFields">
                                         <div class="article-card">
                                             <div class="row g-2 align-items-center">
                                                 <div class="col-md-7">
-                                                    <input type="text" name="article_individual[]" class="form-control form-control-sm" 
-                                                           placeholder="Article title">
+                                                    <input type="text" name="article_individual[]" class="form-control form-control-sm">
                                                 </div>
                                                 <div class="col-md-4">
                                                     <input type="number" name="article_word_count[]" class="form-control form-control-sm" 
-                                                           min="0" value="0" placeholder="WC">
+                                                           min="1">
                                                 </div>
                                                 <div class="col-md-1">
                                                     <button type="button" class="btn btn-outline-danger btn-sm w-100" 
@@ -1253,6 +1404,7 @@ require 'header.php';
             <!-- Filter Form -->
             <div class="filter-form">
                 <form method="get" class="row g-2 align-items-end">
+                    <input type="hidden" name="dir" value="DESC">
                     <div class="col-md-4">
     <label class="form-label">Search Client</label>
     <select name="search_client" class="form-select form-select-sm">
@@ -1310,7 +1462,8 @@ require 'header.php';
                                 <th>S.No</th>
                                 <th>Date</th>
                                 <th>Client</th>
-                                <th>Journal/Issue</th>
+                                <th>Journal</th>
+                                <th>Issue</th>
                                 <th>Article</th>
                                 <th>Process</th>
                                 <th>Job Assign</th>
@@ -1332,7 +1485,8 @@ require 'header.php';
                                     <td><?= $i; ?></td>
                                     <td><?= formatDate($job['job_date']) ?></td>
                                     <td><?= h($job['team_client_name'] ?: $job['client_name']) ?></td>
-                                    <td><?= h($job['journal_issue']) ?></td>
+                                    <td><?= h(!empty($job['journal']) ? $job['journal'] : $job['journal_issue']) ?></td>
+                                    <td><?= !empty($job['issue']) ? h($job['issue']) : '<span class="text-muted">-</span>' ?></td>
                                     <td><?= h($job['article']) ?></td>
                                     <td><?= h($job['job_name']) ?></td>
                                     
@@ -1347,7 +1501,8 @@ require 'header.php';
                                             'LE'  => 'bg-info',
                                             'PAG' => 'bg-success',
                                             'QC'  => 'bg-warning',
-                                            'XML' => 'bg-danger'
+                                            'XML' => 'bg-danger',
+                                            'AP'  => 'bg-dark'
                                         ];
 
                                         foreach ($stages as $stage):
@@ -1497,12 +1652,11 @@ require 'header.php';
             newField.innerHTML = `
                 <div class="row g-2 align-items-center">
                     <div class="col-md-7">
-                        <input type="text" name="article_individual[]" class="form-control form-control-sm" 
-                               placeholder="Article title">
+                        <input type="text" name="article_individual[]" class="form-control form-control-sm">
                     </div>
                     <div class="col-md-4">
                         <input type="number" name="article_word_count[]" class="form-control form-control-sm" 
-                               min="0" value="0" placeholder="WC">
+                               min="1">
                     </div>
                     <div class="col-md-1">
                         <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeArticleField(this)">
@@ -1538,9 +1692,18 @@ require 'header.php';
         
         // Form validation
         document.getElementById('jobForm')?.addEventListener('submit', function(e) {
-            const methodIndividual = document.getElementById('methodIndividual');
-            const processSelect = document.querySelector('select[name="process_id"]');
+            const jobDateInput = document.querySelector('input[name="job_date"]');
+            const dueDateInput = document.querySelector('input[name="due_date"]');
             
+            if (jobDateInput && dueDateInput && jobDateInput.value && dueDateInput.value) {
+                if (dueDateInput.value < jobDateInput.value) {
+                    alert('Due date cannot be before Job date.');
+                    e.preventDefault();
+                    return false;
+                }
+            }
+            
+            const processSelect = document.querySelector('select[name="process_id"]');
             if (!processSelect || !processSelect.value) {
                 alert('Please select a process.');
                 e.preventDefault();
@@ -1554,22 +1717,52 @@ require 'header.php';
                 return false;
             }
             
-            const journalInput = document.querySelector('input[name="journal_issue"]');
+            const journalInput = document.querySelector('input[name="journal"]');
             if (!journalInput || !journalInput.value.trim()) {
-                alert('Please enter a journal/issue.');
+                alert('Please enter a journal.');
                 e.preventDefault();
                 return false;
             }
+
+            const actionInput = document.querySelector('input[name="action"]');
+            const action = actionInput ? actionInput.value : '';
+
+            // In Edit Mode, validate single article and word count
+            if (action === 'edit') {
+                const articleInput = document.querySelector('input[name="article"]');
+                if (!articleInput || !articleInput.value.trim()) {
+                    alert('Please enter an article title.');
+                    e.preventDefault();
+                    return false;
+                }
+                const wordCountInput = document.querySelector('input[name="word_count"]');
+                if (!wordCountInput || !wordCountInput.value.trim() || parseInt(wordCountInput.value) <= 0) {
+                    alert('Please enter a valid word count greater than 0.');
+                    e.preventDefault();
+                    return false;
+                }
+                return true;
+            }
             
+            // In Add Mode
+            const methodIndividual = document.getElementById('methodIndividual');
             if (methodIndividual && methodIndividual.checked) {
                 const articleInputs = document.querySelectorAll('input[name="article_individual[]"]');
+                const wcInputs = document.querySelectorAll('input[name="article_word_count[]"]');
                 let hasArticles = false;
                 
-                articleInputs.forEach((input) => {
-                    if (input.value.trim() !== '') {
+                for (let i = 0; i < articleInputs.length; i++) {
+                    const artVal = articleInputs[i].value.trim();
+                    const wcVal = wcInputs[i] ? wcInputs[i].value.trim() : '';
+                    if (artVal !== '') {
                         hasArticles = true;
+                        if (!wcVal || isNaN(parseInt(wcVal)) || parseInt(wcVal) <= 0) {
+                            alert(`Please enter a valid word count greater than 0 for article: "${artVal}".`);
+                            e.preventDefault();
+                            return false;
+                        }
                     }
-                });
+                }
                 
                 if (!hasArticles) {
                     alert('Please enter at least one article.');
@@ -1592,14 +1785,24 @@ require 'header.php';
                 }
                 
                 const wordcountTextarea = document.querySelector('textarea[name="wordcount_textarea"]');
-                if (wordcountTextarea && wordcountTextarea.value.trim() !== '') {
-                    const wordcountLines = wordcountTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
-                    for (let i = 0; i < wordcountLines.length; i++) {
-                        if (isNaN(parseInt(wordcountLines[i]))) {
-                            alert(`Word count on line ${i+1} is not a valid number.`);
-                            e.preventDefault();
-                            return false;
-                        }
+                if (!wordcountTextarea || wordcountTextarea.value.trim() === '') {
+                    alert('Please enter word count.');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const wordcountLines = wordcountTextarea.value.trim().split('\n').filter(line => line.trim() !== '');
+                if (wordcountLines.length === 0) {
+                    alert('Please enter valid word count.');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                for (let i = 0; i < wordcountLines.length; i++) {
+                    if (isNaN(parseInt(wordcountLines[i])) || parseInt(wordcountLines[i]) <= 0) {
+                        alert(`Word count on line ${i+1} is not a valid number greater than 0.`);
+                        e.preventDefault();
+                        return false;
                     }
                 }
             }
@@ -1610,6 +1813,20 @@ require 'header.php';
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateRemoveButtons();
+
+            const jobDateInput = document.querySelector('input[name="job_date"]');
+            const dueDateInput = document.querySelector('input[name="due_date"]');
+            if (jobDateInput && dueDateInput) {
+                if (jobDateInput.value) {
+                    dueDateInput.min = jobDateInput.value;
+                }
+                jobDateInput.addEventListener('change', function() {
+                    dueDateInput.min = this.value;
+                    if (dueDateInput.value && dueDateInput.value < this.value) {
+                        dueDateInput.value = this.value;
+                    }
+                });
+            }
         });
     </script>
 

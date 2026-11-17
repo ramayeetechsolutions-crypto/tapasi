@@ -23,6 +23,15 @@ foreach ($check_columns as $col => $definition) {
     }
 }
 
+// Fetch all active employees for Employee filter
+$all_employees = [];
+$emp_filter_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
+if ($emp_filter_res) {
+    while ($e_row = $emp_filter_res->fetch_assoc()) {
+        $all_employees[] = $e_row;
+    }
+}
+
 // --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
@@ -30,7 +39,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $new_status = trim($_POST['status']);
 
     // Fetch current times
-    $get_stat = $mysqli->prepare("SELECT qc_start_time, qc_end_time FROM qc WHERE id = ?");
+    $get_stat = $mysqli->prepare("SELECT job_id, assigned_to_qc, qc_start_time, qc_end_time FROM qc WHERE id = ?");
     $get_stat->bind_param("i", $qc_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
@@ -48,6 +57,23 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $stmt->bind_param("si", $new_status, $qc_id);
     
     if ($stmt->execute()) {
+        
+        // When completed, sync to qc_crx so it appears in QC-CRX Assign page
+        if ($new_status === 'Completed' && !empty($curr_data['job_id'])) {
+            $jid = (int)$curr_data['job_id'];
+            $chk_crx = $mysqli->query("SELECT id FROM qc_crx WHERE job_id = $jid");
+            if ($chk_crx && $chk_crx->num_rows > 0) {
+                $stmt_crx = $mysqli->prepare("UPDATE qc_crx SET status = 'Completed', assigned_to_qc = ?, qc_start_time = ?, qc_end_time = ?, qc_date = NOW(), last_updated = NOW() WHERE job_id = ?");
+                $stmt_crx->bind_param("sssi", $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time'], $jid);
+                $stmt_crx->execute();
+                $stmt_crx->close();
+            } else {
+                $stmt_crx = $mysqli->prepare("INSERT INTO qc_crx (job_id, status, assigned_to_qc, qc_start_time, qc_end_time, qc_date, created_at, last_updated) VALUES (?, 'Completed', ?, ?, ?, NOW(), NOW(), NOW())");
+                $stmt_crx->bind_param("isss", $jid, $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time']);
+                $stmt_crx->execute();
+                $stmt_crx->close();
+            }
+        }
         echo json_encode(['success' => true, 'status' => $new_status]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -86,6 +112,21 @@ function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
 }
 
+// Green badge for completed-type statuses, otherwise the given default badge class
+if (!function_exists('simpleStatusBadge')) {
+    function simpleStatusBadge($status, $default = 'Pending', $defaultClass = 'bg-secondary') {
+        $st = trim((string)$status);
+        if ($st === '') $st = $default;
+        $done = ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done', 'W-Complete', 'ID_Complete'];
+        foreach ($done as $d) {
+            if (strcasecmp($st, $d) === 0) {
+                return '<span class="badge" style="background-color: #28a745; color: white;">' . h($st) . '</span>';
+            }
+        }
+        return '<span class="badge ' . $defaultClass . '">' . h($st) . '</span>';
+    }
+}
+
 function formatDate($date, $format = 'd-m-Y') {
     if (!$date) return '';
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
@@ -111,19 +152,31 @@ if ($current_user_id) {
     }
 }
 
+// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
+$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
+
+// Employee map for name display (PUDHUSA ADD PANNATHU)
+$emp_map = [];
+$emp_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master");
+if ($emp_res) {
+    while ($e = $emp_res->fetch_assoc()) {
+        $emp_map[$e['employee_username']] = $e['employee_name'];
+    }
+}
+
 // Get all employees under the same reporting manager with TM role
 $tms = [];
-if ($reporting_manager) {
+if ($effective_manager) {
     $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
                  FROM employee_master em 
                  LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
+                 WHERE ((em.reporting_manager = ? OR em.reporting_manager = ?) AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
                  OR (em.employee_name LIKE '%Manjuparkavi%' AND em.status = 'Active')
                  ORDER BY em.employee_name";
     
     $stmt = $mysqli->prepare($tm_query);
     if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
+        $stmt->bind_param("ss", $effective_manager, $current_user_name);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($tm = $result->fetch_assoc()) {
@@ -214,6 +267,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 // Get filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$employee_filter = isset($_GET['employee']) ? trim($_GET['employee']) : '';
 $qc_tm_filter = isset($_GET['qc_tm']) ? trim($_GET['qc_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'qc.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
@@ -258,6 +312,21 @@ if (!empty($qc_tm_filter)) {
     $types .= 's';
 }
 
+if (!empty($employee_filter)) {
+    // Strictly filter only employees visibly displayed on screen
+    $where_conditions[] = "(
+        qc.assigned_to_qc = ? 
+        OR (COALESCE(NULLIF(pag.assigned_to_pag, ''), NULLIF(j.assigned_pag, ''), NULLIF(pag.done_by, '')) COLLATE utf8mb4_general_ci) = ? 
+        OR (COALESCE(NULLIF(le.assigned_to_le_qc, ''), NULLIF(le.assigned_to_le, ''), NULLIF(j.assigned_le, ''), NULLIF(le.done_by, '')) COLLATE utf8mb4_general_ci) = ? 
+        OR (COALESCE(NULLIF(ce.assigned_to_content, ''), NULLIF(j.assigned_ce, ''), NULLIF(ce.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR qc.upload_by = ?
+    )";
+    for ($k = 0; $k < 5; $k++) {
+        $params[] = $employee_filter;
+    }
+    $types .= 'sssss';
+}
+
 $where_sql = implode(' AND ', $where_conditions);
 
 // Main query (Updated to fetch CE, LE, PAG columns for new table structure)
@@ -273,11 +342,21 @@ $qc_query = "SELECT qc.*,
                     c.team_client_name,
                     c.client_id,
                     p.job_name as process_name,
+                    j.assigned_ce,
+                    j.assigned_le,
+                    j.assigned_pag,
                     ce.ce_date as ce_moved_date,
                     ce.status as ce_status,
+                    ce.done_by as ce_table_done_by,
+                    ce.assigned_to_content as ce_assigned_to,
                     le.status as le_status,
                     le.last_updated as le_moved_date,
+                    le.done_by as le_table_done_by,
+                    le.assigned_to_le as le_assigned_to,
+                    le.assigned_to_le_qc as le_qc_assigned_to,
                     pag.created_at as pag_received_date,
+                    pag.done_by as pag_table_done_by,
+                    pag.assigned_to_pag as pag_assigned_to,
                     pag.eq, pag.pages, pag.images, pag.tables_count, pag.status as pag_status,
                     qc.rtat, qc.atat,
                     (SELECT upload_by FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as job_upload_by,
@@ -316,7 +395,11 @@ $stats_query = "SELECT
                     SUM(CASE WHEN qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != '' THEN 1 ELSE 0 END) as qc_assigned
                 FROM qc 
                 LEFT JOIN jobs j ON qc.job_id = j.job_id
+                LEFT JOIN client_master c ON j.client_id = c.client_id
                 LEFT JOIN job_master p ON j.process_id = p.job_id
+                LEFT JOIN ce ON j.job_id = ce.job_id
+                LEFT JOIN le ON j.job_id = le.job_id
+                LEFT JOIN pag ON j.job_id = pag.job_id
                 WHERE $where_sql";
 
 $stats_stmt = $mysqli->prepare($stats_query);
@@ -502,7 +585,18 @@ require 'header.php';
                         <?php endif; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small">Employee</label>
+                    <select name="employee" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        <?php foreach ($all_employees as $emp): ?>
+                            <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
+                                <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small">QC TM</label>
                     <select name="qc_tm" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
@@ -595,9 +689,56 @@ require 'header.php';
                                     <td><?= h($row['tables_count'] ?? '0') ?></td>
                                     
                                     <!-- Other Statuses -->
-                                    <td><span class="badge bg-secondary"><?= h($row['ce_status'] ?? 'Pending') ?></span></td>
-                                    <td><span class="badge bg-secondary"><?= h($row['le_status'] ?? 'Pending') ?></span></td>
-                                    <td><span class="badge bg-info"><?= h($row['pag_status'] ?? 'Pending') ?></span></td>
+                                    <?php 
+                                        $ce_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']);
+                                        $ce_cls = $ce_done ? 'bg-success' : 'bg-secondary';
+                                        $ce_emp = !empty($row['ce_assigned_to']) ? $row['ce_assigned_to'] : (!empty($row['assigned_ce']) ? $row['assigned_ce'] : ($row['ce_table_done_by'] ?? ''));
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $ce_cls ?>"><?= h($row['ce_status'] ?? 'Pending') ?></span>
+                                        <?php if (!empty($ce_emp)): 
+                                            $ce_name = $emp_map[$ce_emp] ?? '';
+                                            $ce_display = $ce_name ? h($ce_name) . " (" . h($ce_emp) . ")" : h($ce_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $ce_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+
+                                    <?php 
+                                        $le_done = in_array($row['le_status'] ?? '', ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done']);
+                                        $le_cls = $le_done ? 'bg-success' : 'bg-secondary';
+                                        $le_emp = !empty($row['le_qc_assigned_to']) ? $row['le_qc_assigned_to'] : (!empty($row['le_assigned_to']) ? $row['le_assigned_to'] : (!empty($row['assigned_le']) ? $row['assigned_le'] : ($row['le_table_done_by'] ?? '')));
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $le_cls ?>"><?= h($row['le_status'] ?? 'Pending') ?></span>
+                                        <?php if (!empty($le_emp)): 
+                                            $le_name = $emp_map[$le_emp] ?? '';
+                                            $le_display = $le_name ? h($le_name) . " (" . h($le_emp) . ")" : h($le_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $le_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+
+                                    <?php 
+                                        $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']);
+                                        $pag_cls = $pag_done ? 'bg-success' : 'bg-info';
+                                        $pag_emp = !empty($row['pag_assigned_to']) ? $row['pag_assigned_to'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_table_done_by'] ?? ''));
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $pag_cls ?>"><?= h($row['pag_status'] ?? 'Pending') ?></span>
+                                        <?php if (!empty($pag_emp)): 
+                                            $pag_name = $emp_map[$pag_emp] ?? '';
+                                            $pag_display = $pag_name ? h($pag_name) . " (" . h($pag_emp) . ")" : h($pag_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $pag_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     
                                     <!-- QC Assignment Column -->
                                     <?php 
@@ -750,6 +891,44 @@ require 'header.php';
         // Show loading overlay
         function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
         function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+
+        // Scroll Position Preservation
+        function saveScrollPositions() {
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                sessionStorage.setItem('exec_qc_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('exec_qc_assign_table_y', tableResp.scrollTop);
+            }
+            sessionStorage.setItem('exec_qc_assign_win_x', window.scrollX || 0);
+            sessionStorage.setItem('exec_qc_assign_win_y', window.scrollY || 0);
+        }
+
+        function restoreScrollPositions() {
+            const tableX = sessionStorage.getItem('exec_qc_assign_table_x');
+            const tableY = sessionStorage.getItem('exec_qc_assign_table_y');
+            const winX = sessionStorage.getItem('exec_qc_assign_win_x');
+            const winY = sessionStorage.getItem('exec_qc_assign_win_y');
+            
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp && tableX !== null) {
+                tableResp.scrollLeft = parseFloat(tableX);
+                if (tableY !== null) tableResp.scrollTop = parseFloat(tableY);
+            }
+            if (winX !== null || winY !== null) {
+                window.scrollTo(parseFloat(winX || 0), parseFloat(winY || 0));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreScrollPositions();
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                tableResp.addEventListener('scroll', () => {
+                    sessionStorage.setItem('exec_qc_assign_table_x', tableResp.scrollLeft);
+                }, { passive: true });
+            }
+        });
+        window.addEventListener('beforeunload', saveScrollPositions);
 
         // Status Update Function
         function updateStatus(qcId, newStatus) {

@@ -91,6 +91,12 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `qc_crx` (
   KEY `idx_job_id` (`job_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+// Auto-add is_moved column if not exists
+$check_is_moved = $mysqli->query("SHOW COLUMNS FROM qc_crx LIKE 'is_moved'");
+if ($check_is_moved && $check_is_moved->num_rows == 0) {
+    $mysqli->query("ALTER TABLE qc_crx ADD COLUMN is_moved TINYINT(1) NOT NULL DEFAULT 0");
+}
+
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES); }
@@ -102,15 +108,19 @@ if (!$current_user) {
     exit;
 }
 
-// First, get the logged-in user's employee_name
+// First, get the logged-in user's employee_name and reporting manager
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 $stmt_user->bind_param("s", $current_user);
 $stmt_user->execute();
-$stmt_user->bind_result($user_employee_name);
+$stmt_user->bind_result($logged_in_name, $user_reporting_manager);
 $stmt_user->fetch();
 $stmt_user->close();
+
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
 if (!$user_employee_name) {
     echo "<div class='alert alert-warning'>User profile not found. Please contact administrator.</div>";
@@ -121,6 +131,7 @@ if (!$user_employee_name) {
 $q = trim($_GET['q'] ?? '');
 $filter_client = trim($_GET['client'] ?? '');
 $filter_process = trim($_GET['process'] ?? '');
+$filter_emp = trim($_GET['filter_emp'] ?? '');
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
 $sort = $_GET['sort'] ?? 'j.job_date';
@@ -141,14 +152,16 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = ?");
+$unique_team_members = [];
+$stmt_team = $mysqli->prepare("SELECT employee_username, employee_name FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active' ORDER BY employee_name ASC");
 if ($stmt_team) {
-    $stmt_team->bind_param("s", $user_employee_name);
+    $stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
     $stmt_team->execute();
     $res_team = $stmt_team->get_result();
     while ($row_team = $res_team->fetch_assoc()) {
         if (!empty($row_team['employee_username'])) {
             $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_username']) . "'";
+            $unique_team_members[$row_team['employee_username']] = $row_team['employee_name'];
         }
         if (!empty($row_team['employee_name'])) {
             $team_users[] = "'" . $mysqli->real_escape_string($row_team['employee_name']) . "'";
@@ -206,6 +219,9 @@ if (!empty($allowed_process_ids)) {
     $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
 }
 
+// FIX: Show everything EXCEPT standalone 'CE'
+$where[] = "jm.job_name != 'CE'";
+
 // Search query filter
 if ($q) {
     $where[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ?)";
@@ -240,6 +256,18 @@ if ($to_date) {
     $types .= "s";
 }
 
+// Employee filter (QC Assign / CRX Assign / Uploaded By)
+if ($filter_emp) {
+    $where[] = "(qc.assigned_to_qc = ? OR qc_crx.assigned_to_qc = ? OR qc_crx.pag_crx_assigned_to = ? OR qc.upload_by = ? OR qc_crx.upload_by = ? OR j.assigned_to = ?)";
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $params[] = $filter_emp;
+    $types .= "ssssss";
+}
+
 // Build WHERE SQL
 $where_sql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
@@ -257,7 +285,7 @@ $sql = "SELECT
     pag.status as pag_status, pag.created_at as pag_received_date, pag.done_by as pag_done_by, pag.assigned_to_pag as pag_assigned_to,
     pag.eq, pag.pages, pag.images, pag.tables_count,
     
-    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by,
+    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.is_moved, qc_crx.assigned_to_qc as crx_assigned_to_qc,
     
     ju.upload_date, ju.file_path 
 FROM jobs j
@@ -505,6 +533,18 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="PAG+QC+XML" <?=$filter_process==='PAG+QC+XML'?'selected':''?>>TS+QC+XML</option>
                     </select>
                 </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Employee</label>
+                    <select name="filter_emp" class="form-select form-select-sm">
+                        <option value="">All Team Members</option>
+                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                            <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
+                                <?= h($ename) ?> (<?= h($uname) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 
                 <div class="col-md-2">
                     <label class="form-label small mb-1">From Date</label>
@@ -567,7 +607,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Process</th>
                             <th>CE Status</th>
                             <th>LE Status</th>
-                            <th>PAG Status</th>
+                            <th>TS Status</th>
                             <th>QC Assign</th>
                             <th>QC Start</th>
                             <th>QC End</th>
@@ -581,6 +621,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>IMG_TAB_Stage</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th>Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -638,12 +679,19 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
 
                             <!-- PAG Status (Green when Completed + Completed By Who) -->
                             <?php 
-                                $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']);
+                                $pag_is_crx_done = in_array($row['pag_crx_stage'] ?? '', ['PAG_CRX_Compelete', 'Completed', 'Done']);
+                                $pag_done = in_array($row['pag_status'] ?? '', ['Completed', 'Done']) || $pag_is_crx_done;
+                                
+                                $pag_display_status = $pag_done ? 'Completed' : ($row['pag_status'] ?? 'Need to Assign');
+                                if ($pag_display_status === 'Pending' || empty($pag_display_status)) {
+                                    $pag_display_status = 'Need to Assign';
+                                }
                                 $pag_cls = $pag_done ? 'bg-success' : 'bg-info';
-                                $pag_emp = !empty($row['pag_assigned_to']) ? $row['pag_assigned_to'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_done_by'] ?? ''));
+                                
+                                $pag_emp = !empty($row['pag_assigned_to']) ? $row['pag_assigned_to'] : (!empty($row['pag_crx_assigned_to']) ? $row['pag_crx_assigned_to'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_done_by'] ?? '')));
                             ?>
                             <td>
-                                <span class="badge <?= $pag_cls ?>"><?= h($row['pag_status'] ?? 'Pending') ?></span>
+                                <span class="badge <?= $pag_cls ?>"><?= h($pag_display_status) ?></span>
                                 <?php if (!empty($pag_emp)): 
                                     $pag_name = $emp_map[$pag_emp] ?? '';
                                     $pag_display = $pag_name ? h($pag_name) . " (" . h($pag_emp) . ")" : h($pag_emp);
@@ -653,7 +701,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     </div>
                                 <?php endif; ?>
                             </td>
-                            
                             <!-- QC Process & Times -->
                             <td><?= getStatusBadge($row['qc_status'] ?? 'Need to Assign', $row['assigned_to_qc'] ?? '', $emp_map) ?></td>
                             <td><?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '—' ?></td>
@@ -666,28 +713,26 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- Dispatch & Upload -->
                             <td><?= !empty($row['dispatch_date']) && $row['dispatch_date'] != '0000-00-00 00:00:00' ? formatDateOnly(substr($row['dispatch_date'], 0, 10), 'd-m-Y') : '—' ?></td>
                             <?php 
-                                // QC Completed = QC row. CRX columns must show dash.
-                                // Only show CRX data when QC is NOT Completed AND QC_CRX stage IS Moved.
                                 $qc_completed = in_array(($row['qc_status'] ?? ''), ['Completed', 'Done']);
-                                $is_crx_moved = !$qc_completed && (($row['qc_crx_stage'] ?? '') === 'Moved');
-                                $up_by = $is_crx_moved ? ($row['crx_upload_by'] ?? '') : ($row['qc_upload_by'] ?? '');
+                                $is_crx_moved = (!empty($row['is_moved']) && $row['is_moved'] == 1) || (($row['qc_crx_stage'] ?? '') === 'Moved');
+                                $up_by = !empty($row['crx_upload_by']) ? $row['crx_upload_by'] : ($row['qc_upload_by'] ?? '');
                             ?>
                             <td>
                                 <?php echo !empty($up_by) ? h($emp_map[$up_by] ?? $up_by) : '—'; ?>
                             </td>
                             
-                            <!-- QC_CRX_Stage Column (ONLY FOR QC_CRX JOBS) -->
+                            <!-- QC_CRX_Stage Column (Display stage text only, like IMG_TAB_Stage) -->
                             <td>
                                 <?php 
-                                    if ($is_crx_moved) {
-                                        echo '<span class="badge bg-success text-white">Moved</span>';
+                                    $qc_stage_val = ($row['qc_crx_stage'] === 'Moved') ? '' : ($row['qc_crx_stage'] ?? '');
+                                    if ($is_crx_moved && !empty($qc_stage_val)) {
+                                        echo h($qc_stage_val);
                                     } else {
                                         echo '—';
                                     }
                                 ?>
                             </td>
-
-                            <!-- PAG_CRX_Stage Column (Stage + Member only, NO TIME - ONLY FOR QC_CRX JOBS) -->
+<!-- PAG_CRX_Stage Column (Stage + Member only, NO TIME - ONLY FOR QC_CRX JOBS) -->
                             <td>
                                 <?php if ($is_crx_moved && !empty($row['pag_crx_stage'])): ?>
                                     <div class="fw-semibold"><?= h($row['pag_crx_stage']) ?></div>
@@ -734,6 +779,16 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     —
                                 <?php endif; ?>
                             </td>
+                            
+                            <!-- Status Column (Moved indicator) -->
+                            <td class="text-center">
+                                <?php if ($is_crx_moved): ?>
+                                    <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-paper-plane me-1"></i> Moved</span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+
                             <!-- TAT Column -->
                             <?php
                                 $qc_done = in_array($row['qc_status'] ?? '', ['Completed', 'Done']);
@@ -746,7 +801,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             </td>
                         </tr>
                         <?php endforeach; else: ?>
-                        <tr><td colspan="24" class="text-center">No jobs found assigned to you.</td></tr>
+                        <tr><td colspan="25" class="text-center">No jobs found assigned to you.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

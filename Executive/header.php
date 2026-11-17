@@ -23,6 +23,8 @@ require 'db.php'; // Ensure db connection is available
 $employee_id = $_SESSION['uid'] ?? 0; 
 $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 $currentPage = basename($_SERVER['PHP_SELF']);
+// Release session lock early to prevent session file blocking across requests/tabs
+session_write_close();
 
 // --- DATABASE LOGIC FOR DYNAMIC MENU ---
 
@@ -415,6 +417,8 @@ if ($result && $row = $result->fetch_assoc()) {
             50% { opacity: 0; }
         }
     </style>
+    <!-- Tapasi Global Typography & Font Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 </head>
 <body>
     <header>
@@ -499,41 +503,25 @@ if ($result && $row = $result->fetch_assoc()) {
                             </li>
                         </ul>
                     </li>  
-                    <!-- Jobs Dropdown -->
+                    <!-- Jobs Dropdown (UQ Team Only - other teams show till Reports) -->
+                    <?php if (($user_team_id ?? 0) == 2): ?>
                     <li>
                         <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
                         <ul class="nav-dropdown">
-                            <?php if ($show_faq): ?>
-                            <!-- <li>
-                                <a href="final_job.php" class="<?= $currentPage === 'final_job.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-chart-line"></i> Job Progress (FQA)
-                                </a>
-                            </li> -->
-                            <?php endif; ?>
-                            
-                            <?php if ($show_pag): ?>
                             <li>
-                                <a href="alljobs_qc.php" class="<?= $currentPage === 'alljobs_qc.php' ? 'active' : '' ?>">
-                                    <i class="fas fa-clipboard-check"></i> QC Check
-                                </a>
-                            </li>
-                            <?php endif;?>
-
-                            <li>
-                                <a href="<?= (($user_team_id ?? 0) == 2) ? '../SubTL/' : '' ?>job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>">
+                                <a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>">
                                     <i class="fas fa-chart-pie"></i> Input & Output
                                 </a>
                             </li>
                             <li>
-                                <a href="<?= (($user_team_id ?? 0) == 2) ? '../SubTL/' : '' ?>tm_queries.php">
+                                <a href="tm_queries.php">
                                     <i class="fas fa-question-circle"></i> Queries
                                 </a>
                             </li>
                         </ul>
                     </li>
-                    
-                    
-                    <?php if (($user_team_id ?? 0) == 2): include __DIR__ . '/../uq_process_nav.php'; endif; ?>
+                    <?php include __DIR__ . '/../uq_executive_nav.php'; ?>
+                    <?php endif; ?>
                     </ul>
             </nav>
             

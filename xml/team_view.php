@@ -238,8 +238,8 @@ $mysqli->close();
             <div class="page-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h2><i class="fas fa-sitemap me-3"></i>Team Master</h2>
-                        <div class="subtitle">View organizational structure, team sizes, and assigned XML processes</div>
+                        <h2 class="text-white"><i class="fas fa-sitemap me-3 text-white"></i>Team Master</h2>
+                        <div class="subtitle text-white">View organizational structure, team sizes, and assigned XML processes</div>
                     </div>
                     <div class="text-white-50">
                         <small><i class="fas fa-info-circle me-1"></i>Click <i class="fas fa-plus-circle"></i> to expand team details</small>

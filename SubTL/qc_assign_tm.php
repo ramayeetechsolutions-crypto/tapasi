@@ -23,6 +23,15 @@ foreach ($check_columns as $col => $definition) {
     }
 }
 
+// Fetch all active employees for Employee filter
+$all_employees = [];
+$emp_filter_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
+if ($emp_filter_res) {
+    while ($e_row = $emp_filter_res->fetch_assoc()) {
+        $all_employees[] = $e_row;
+    }
+}
+
 // --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
@@ -30,7 +39,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $new_status = trim($_POST['status']);
 
     // Fetch current times
-    $get_stat = $mysqli->prepare("SELECT qc_start_time, qc_end_time FROM qc WHERE id = ?");
+    $get_stat = $mysqli->prepare("SELECT job_id, assigned_to_qc, qc_start_time, qc_end_time FROM qc WHERE id = ?");
     $get_stat->bind_param("i", $qc_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
@@ -51,6 +60,23 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         $stmt->bind_param("si", $new_status, $qc_id);
     
     if ($stmt->execute()) {
+        
+        // When completed, sync to qc_crx so it appears in QC-CRX Assign page
+        if ($new_status === 'Completed' && !empty($curr_data['job_id'])) {
+            $jid = (int)$curr_data['job_id'];
+            $chk_crx = $mysqli->query("SELECT id FROM qc_crx WHERE job_id = $jid");
+            if ($chk_crx && $chk_crx->num_rows > 0) {
+                $stmt_crx = $mysqli->prepare("UPDATE qc_crx SET status = 'Completed', assigned_to_qc = ?, qc_start_time = ?, qc_end_time = ?, qc_date = NOW(), last_updated = NOW() WHERE job_id = ?");
+                $stmt_crx->bind_param("sssi", $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time'], $jid);
+                $stmt_crx->execute();
+                $stmt_crx->close();
+            } else {
+                $stmt_crx = $mysqli->prepare("INSERT INTO qc_crx (job_id, status, assigned_to_qc, qc_start_time, qc_end_time, qc_date, created_at, last_updated) VALUES (?, 'Completed', ?, ?, ?, NOW(), NOW(), NOW())");
+                $stmt_crx->bind_param("isss", $jid, $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time']);
+                $stmt_crx->execute();
+                $stmt_crx->close();
+            }
+        }
         echo json_encode(['success' => true, 'status' => $new_status]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -149,25 +175,27 @@ if ($emp_res) {
     }
 }
 
-// Get all employees under the same reporting manager with TM role
+// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
 $tms = [];
-if ($reporting_manager) {
-    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-                 FROM employee_master em 
-                 LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
-                 OR (em.employee_name LIKE '%Manjuparkavi%' AND em.status = 'Active')
-                 ORDER BY em.employee_name";
-    
-    $stmt = $mysqli->prepare($tm_query);
-    if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($tm = $result->fetch_assoc()) {
-            $tms[] = $tm;
-        }
-        $stmt->close();
+$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+             FROM employee_master em 
+             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+             WHERE em.status = 'Active' 
+             AND (
+                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
+                 OR em.employee_name LIKE '%Bragadeeshwaran%'
+                 OR em.employee_username = 'TPS002'
+                 OR em.employee_name LIKE '%Jayachandran%'
+                 OR em.reporting_manager LIKE '%Jayachandran%'
+                 OR em.employee_username IN ('TPS005', 'TPS032')
+                 OR em.employee_name LIKE '%Dhanalakshmi%'
+                 OR em.employee_name LIKE '%Manjuparkavi%'
+             )
+             ORDER BY em.employee_name ASC";
+$res_tms = $mysqli->query($tm_query);
+if ($res_tms) {
+    while ($tm = $res_tms->fetch_assoc()) {
+        $tms[] = $tm;
     }
 }
 
@@ -252,6 +280,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 // Get filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$employee_filter = isset($_GET['employee']) ? trim($_GET['employee']) : '';
 $qc_tm_filter = isset($_GET['qc_tm']) ? trim($_GET['qc_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'qc.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
@@ -294,6 +323,21 @@ if (!empty($qc_tm_filter)) {
     $where_conditions[] = "qc.assigned_to_qc = ?";
     $params[] = $qc_tm_filter;
     $types .= 's';
+}
+
+if (!empty($employee_filter)) {
+    // Strictly filter only employees visibly displayed on screen
+    $where_conditions[] = "(
+        qc.assigned_to_qc = ? 
+        OR (COALESCE(NULLIF(pag.assigned_to_pag, ''), NULLIF(j.assigned_pag, ''), NULLIF(pag.done_by, '')) COLLATE utf8mb4_general_ci) = ? 
+        OR (COALESCE(NULLIF(le.assigned_to_le_qc, ''), NULLIF(le.assigned_to_le, ''), NULLIF(j.assigned_le, ''), NULLIF(le.done_by, '')) COLLATE utf8mb4_general_ci) = ? 
+        OR (COALESCE(NULLIF(ce.assigned_to_content, ''), NULLIF(j.assigned_ce, ''), NULLIF(ce.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR qc.upload_by = ?
+    )";
+    for ($k = 0; $k < 5; $k++) {
+        $params[] = $employee_filter;
+    }
+    $types .= 'sssss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -364,7 +408,11 @@ $stats_query = "SELECT
                     SUM(CASE WHEN qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != '' THEN 1 ELSE 0 END) as qc_assigned
                 FROM qc 
                 LEFT JOIN jobs j ON qc.job_id = j.job_id
+                LEFT JOIN client_master c ON j.client_id = c.client_id
                 LEFT JOIN job_master p ON j.process_id = p.job_id
+                LEFT JOIN ce ON j.job_id = ce.job_id
+                LEFT JOIN le ON j.job_id = le.job_id
+                LEFT JOIN pag ON j.job_id = pag.job_id
                 WHERE $where_sql";
 
 $stats_stmt = $mysqli->prepare($stats_query);
@@ -550,7 +598,18 @@ require 'header.php';
                         <?php endif; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small">Employee</label>
+                    <select name="employee" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        <?php foreach ($all_employees as $emp): ?>
+                            <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
+                                <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small">QC TM</label>
                     <select name="qc_tm" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
@@ -856,6 +915,44 @@ require 'header.php';
         // Show loading overlay
         function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
         function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+
+        // Scroll Position Preservation
+        function saveScrollPositions() {
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                sessionStorage.setItem('subtl_qc_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('subtl_qc_assign_table_y', tableResp.scrollTop);
+            }
+            sessionStorage.setItem('subtl_qc_assign_win_x', window.scrollX || 0);
+            sessionStorage.setItem('subtl_qc_assign_win_y', window.scrollY || 0);
+        }
+
+        function restoreScrollPositions() {
+            const tableX = sessionStorage.getItem('subtl_qc_assign_table_x');
+            const tableY = sessionStorage.getItem('subtl_qc_assign_table_y');
+            const winX = sessionStorage.getItem('subtl_qc_assign_win_x');
+            const winY = sessionStorage.getItem('subtl_qc_assign_win_y');
+            
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp && tableX !== null) {
+                tableResp.scrollLeft = parseFloat(tableX);
+                if (tableY !== null) tableResp.scrollTop = parseFloat(tableY);
+            }
+            if (winX !== null || winY !== null) {
+                window.scrollTo(parseFloat(winX || 0), parseFloat(winY || 0));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreScrollPositions();
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                tableResp.addEventListener('scroll', () => {
+                    sessionStorage.setItem('subtl_qc_assign_table_x', tableResp.scrollLeft);
+                }, { passive: true });
+            }
+        });
+        window.addEventListener('beforeunload', saveScrollPositions);
 
         // Status Update Function
         function updateStatus(qcId, newStatus) {

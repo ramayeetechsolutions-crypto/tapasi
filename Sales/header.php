@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -22,6 +22,8 @@ $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 // Helper arrays to keep parent menu highlighted when a child page is active
 // 1. Employee Pages (Grouped together)
 $employeePages = [
+    'employee_master.php',
+    'employee_add.php',
     'employee_leave.php', 
     'employee_registration.php', 
     'employee_regby_emp.php', 
@@ -372,6 +374,8 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
             }
         }
     </style>
+    <!-- Tapasi Global Typography & Font Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 </head>
 
 <body>
@@ -447,6 +451,17 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                         <ul class="nav-dropdown">
                             <li><a href="employee_regby_emp.php"><i class="fas fa-user-edit"></i> Update Profile</a></li>
                             <li><a href="employee.php"><i class="fas fa-check-circle"></i> Verify Details</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Employee -->
+                    <li>
+                        <a href="#" onclick="return false;"
+                            class="<?php echo (in_array($currentPage, $employeePages)) ? 'active' : ''; ?>">
+                            <i class="fas fa-user-tie"></i> Employee
+                        </a>
+                        <ul class="nav-dropdown">
+                            <li><a href="employee_master.php"><i class="fas fa-id-card"></i> Profile</a></li>
                         </ul>
                     </li>
 

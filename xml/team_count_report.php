@@ -32,13 +32,26 @@ $processes_array = [
 ];
 
 // Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
 function formatDate($d) {
     if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
     return date('d-m-Y', strtotime($d));
+}
+
+if (!function_exists('formatProcessHeader')) {
+    function formatProcessHeader($name) {
+        if ($name === 'PMC JATS QC') return 'PMC JATS<br>QC';
+        if ($name === 'DOAJ /Biblat /PubMed') return 'DOAJ / Biblat<br>/ PubMed';
+        if ($name === 'Table QC') return 'Table<br>QC';
+        if ($name === 'JATS QC') return 'JATS<br>QC';
+        if ($name === 'AOP QC') return 'AOP<br>QC';
+        return h($name);
+    }
 }
 
 $current_user = $_SESSION['username'] ?? '';
@@ -136,7 +149,14 @@ if ($employees_result && $employees_result->num_rows > 0) {
 }
 
 // 2. Fetch Fixed Targets (Grouped by Process dynamically)
-$pt_sql = "SELECT tm_id, process_id, MAX(target_limit) as total_limit FROM daily_targets_xml GROUP BY tm_id, process_id";
+// FIX: Using INNER JOIN with MAX(id) to get the LATEST target revision instead of the MAX target number
+$pt_sql = "SELECT t1.tm_id, t1.process_id, t1.target_limit as total_limit 
+           FROM daily_targets_xml t1
+           INNER JOIN (
+               SELECT tm_id, process_id, MAX(id) as latest_id 
+               FROM daily_targets_xml 
+               GROUP BY tm_id, process_id
+           ) t2 ON t1.id = t2.latest_id";
 $pt_res = @$mysqli->query($pt_sql); 
 
 if ($pt_res) {
@@ -154,7 +174,13 @@ if ($pt_res) {
     }
 } else {
     // Fallback if 'process' column isn't in target table
-    $ft_sql = "SELECT tm_id, MAX(target_limit) as total_limit FROM daily_targets_xml GROUP BY tm_id";
+    $ft_sql = "SELECT t1.tm_id, t1.target_limit as total_limit 
+               FROM daily_targets_xml t1
+               INNER JOIN (
+                   SELECT tm_id, MAX(id) as latest_id 
+                   FROM daily_targets_xml 
+                   GROUP BY tm_id
+               ) t2 ON t1.id = t2.latest_id";
     $ft_res = $mysqli->query($ft_sql);
     if ($ft_res) {
         while ($row = $ft_res->fetch_assoc()) {
@@ -230,6 +256,88 @@ if (!empty($employee_details)) {
 // Master tables for dropdowns
 $teams_sql = "SELECT team_id, team_name FROM team_master ORDER BY team_name";
 $teams_result = $mysqli->query($teams_sql);
+
+/* =========================================
+   PREPARE DATA FOR CHARTS (ADDED)
+========================================= */
+
+$start_ts = strtotime($start_date);
+$end_ts = strtotime($end_date);
+$num_days_chart = max(1, floor(($end_ts - $start_ts) / 86400) + 1);
+
+$emp_chart_labels = [];
+$emp_chart_percentages = [];
+$emp_proc_datasets_raw = [];
+
+foreach($processes_array as $proc) {
+    $emp_proc_datasets_raw[$proc['process_name']] = [
+        'label' => $proc['process_name'],
+        'data' => [],
+        'raw_achieved' => [],
+        'raw_target' => [],
+        'has_data' => false
+    ];
+}
+
+foreach($employee_details as $emp_id => $emp) {
+    $sum_of_percentages = 0;
+    $has_any_data = false;
+    
+    foreach($processes_array as $proc) {
+        $p_name = $proc['process_name'];
+        $p_achieved = 0;
+        
+        foreach($dates as $date) {
+            $p_achieved += $process_daily_achieved[$emp_id][$p_name][$date] ?? 0;
+        }
+        
+        $p_daily_target = $process_targets[$emp_id][$p_name] ?? 0;
+        $p_total_target = $p_daily_target * $num_days_chart;
+        
+        $p_percent = 0;
+        if ($p_total_target > 0) {
+            $p_percent = ($p_achieved / $p_total_target) * 100;
+            $sum_of_percentages += $p_percent;
+        } elseif ($p_achieved > 0) {
+            $p_percent = 100;
+            $sum_of_percentages += 100;
+        }
+        
+        $emp_proc_datasets_raw[$p_name]['data'][] = round($p_percent, 1);
+        $emp_proc_datasets_raw[$p_name]['raw_achieved'][] = $p_achieved;
+        $emp_proc_datasets_raw[$p_name]['raw_target'][] = $p_total_target;
+        
+        if ($p_total_target > 0 || $p_achieved > 0) {
+            $emp_proc_datasets_raw[$p_name]['has_data'] = true;
+            $has_any_data = true;
+        }
+    }
+    
+    if ($has_any_data) {
+        $emp_chart_labels[] = $emp['employee_name'];
+        $emp_chart_percentages[] = round($sum_of_percentages, 0); 
+    }
+}
+
+$emp_proc_final_datasets = [];
+$color_palette = ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'];
+$c_idx = 0;
+
+foreach($emp_proc_datasets_raw as $p_name => $ds) {
+    if ($ds['has_data']) {
+        $color = $color_palette[$c_idx % count($color_palette)];
+        $emp_proc_final_datasets[] = [
+            'label' => $p_name,
+            'data' => $ds['data'],
+            'raw_achieved' => $ds['raw_achieved'],
+            'raw_target' => $ds['raw_target'],
+            'backgroundColor' => $color . 'CC',
+            'borderColor' => $color,
+            'borderWidth' => 1
+        ];
+        $c_idx++;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -237,19 +345,92 @@ $teams_result = $mysqli->query($teams_sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Team Targets Report - Team Leader</title>
+    <title>Team Report - Team Leader</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { padding: 20px; margin: 0 auto; }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); margin-bottom: 20px; }
-        .table th { background-color: #5e6b77 !important;  color: #ffffff !important; position: sticky; top: 0; z-index: 10; }
-        .employee-name { font-weight: 600; color: #2c3e50; }
+        
+        /* Table Grid & Column Border Fixes - Unified Single Table */
+        .table-container { 
+            width: 100%; 
+            max-height: 48vh; 
+            overflow: auto; 
+            position: relative;
+            border: 1px solid #dee2e6;
+        }
+
+        #processReportTable,
+        #dailyReportTable {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+
+        #processReportTable thead th,
+        #dailyReportTable thead th { 
+            background-color: #5e6b77 !important;  
+            color: #ffffff !important; 
+            position: sticky !important; 
+            top: 0 !important; 
+            z-index: 10 !important;
+            border: 1px solid #4a545e !important;
+            vertical-align: middle !important;
+            text-align: center !important;
+            padding: 6px 3px !important;
+            font-size: 0.8rem;
+            font-weight: 600;
+            line-height: 1.15;
+            white-space: normal !important;
+        }
+
+        #processReportTable td,
+        #dailyReportTable td { 
+            border: 1px solid #dee2e6 !important;
+            vertical-align: middle !important;
+            padding: 4px 2px !important; 
+            font-size: 0.78rem;
+        }
+
+        .proc-col {
+            min-width: 58px !important;
+            max-width: 75px !important;
+            text-align: center !important;
+        }
+        .proc-col-wide {
+            min-width: 78px !important;
+            max-width: 95px !important;
+            text-align: center !important;
+        }
+
+        .employee-name { font-weight: 700; font-size: 0.85rem; color: #1a252f; white-space: normal; line-height: 1.2; }
         .total-cell { background-color: #e3f2fd; }
         .daily-total { background-color: #f1f8e9; }
-        .sticky-col { position: sticky; left: 0; background-color: white; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sticky-col { 
+            position: sticky !important; 
+            left: 0 !important; 
+            background-color: #ffffff !important; 
+            z-index: 5 !important; 
+            box-shadow: 2px 0 5px rgba(0,0,0,0.12); 
+            width: 130px !important; 
+            min-width: 130px !important; 
+            max-width: 140px !important; 
+            padding: 4px 6px !important; 
+        }
+
+        #processReportTable thead th.sticky-col,
+        #dailyReportTable thead th.sticky-col {
+            z-index: 99 !important;
+            background-color: #5e6b77 !important;
+            color: #ffffff !important;
+            border: 1px solid #4a545e !important;
+        }
+        #processReportTable .fs-6 { font-size: 0.82rem !important; }
         .summary-card { color: white; border-radius: 10px; }
         .stat-number { font-size: 2rem; font-weight: bold; }
         .filter-box { background-color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
@@ -264,19 +445,51 @@ $teams_result = $mysqli->query($teams_sql);
     <div class="main-content">
         <br><br><br>
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-bullseye me-2"></i>Production Reports</h4>
+            <h4><i class="fas fa-bullseye me-2"></i>Team Report</h4>
         </div>
 
         <!-- Filter Form -->
         <div class="filter-box">
             <form method="get" class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Start Date</label>
                     <input type="date" name="start_date" class="form-control" value="<?= h($start_date) ?>">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">End Date</label>
                     <input type="date" name="end_date" class="form-control" value="<?= h($end_date) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Select Week</label>
+                    <select id="week_selector" class="form-select">
+                        <option value="">Custom Date</option>
+                        <?php
+                        $current_month = date('n');
+                        $year = date('Y');
+                        
+                        // Financial year logic: If month is Jan, Feb, or Mar, use previous year's April
+                        if ($current_month < 4) {
+                            $year--; 
+                        }
+                        
+                        // Start from the First Monday of April
+                        $dto = new DateTime("first monday of april $year");
+                        
+                        for ($w = 1; $w <= 52; $w++) {
+                            $w_start = $dto->format('Y-m-d');
+                            
+                            // End date is Saturday (+5 days from Monday)
+                            $end_dto = clone $dto;
+                            $end_dto->modify('+5 days'); 
+                            $w_end = $end_dto->format('Y-m-d');
+                            
+                            echo "<option value='{$w_start}|{$w_end}'>Week {$w} ({$w_start})</option>";
+                            
+                            // Move to next week's Monday
+                            $dto->modify('+1 week');
+                        }
+                        ?>
+                    </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Employee</label>
@@ -284,7 +497,7 @@ $teams_result = $mysqli->query($teams_sql);
                         <option value="">All Employees</option>
                         <?php foreach($employee_details as $id => $emp): ?>
                             <option value="<?= $emp['employee_id'] ?>" <?= (int)$employee_id === (int)$emp['employee_id'] ? 'selected' : '' ?>>
-                                <?= h($emp['employee_name']) ?>
+                                <?= !empty($emp['employee_username']) ? h($emp['employee_username']) . ' - ' : '' ?><?= h($emp['employee_name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -335,9 +548,12 @@ $teams_result = $mysqli->query($teams_sql);
                         <table class="table table-bordered table-striped align-middle mb-0" id="dailyReportTable">
                             <thead>
                                 <tr>
-                                    <th class="sticky-col" style="min-width: 200px; z-index: 99 !important;">Employee Name</th>
-                                    <?php foreach($processes_array as $proc): ?>
-                                        <th class="text-center" style="min-width: 100px;"><?= h($proc['process_name']) ?></th>
+                                    <th class="sticky-col" style="z-index: 99 !important;">Employee Name</th>
+                                    <?php foreach($processes_array as $proc): 
+                                        $is_wide = ($proc['process_name'] === 'DOAJ /Biblat /PubMed' || $proc['process_name'] === 'PMC JATS QC');
+                                        $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
+                                    ?>
+                                        <th class="text-center <?= $col_cls ?>"><?= formatProcessHeader($proc['process_name']) ?></th>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
@@ -406,11 +622,14 @@ $teams_result = $mysqli->query($teams_sql);
                     <table class="table table-bordered table-striped align-middle mb-0" id="processReportTable">
                         <thead>
                             <tr>
-                                <th class="sticky-col" style="min-width: 250px; z-index: 99 !important;">Employee Name</th>
-                                <?php foreach($processes_array as $proc): ?>
-                                    <th class="text-center" style="min-width: 150px;"><?= h($proc['process_name']) ?></th>
+                                <th class="sticky-col" style="z-index: 99 !important;">Employee Name</th>
+                                <?php foreach($processes_array as $proc): 
+                                    $is_wide = ($proc['process_name'] === 'DOAJ /Biblat /PubMed' || $proc['process_name'] === 'PMC JATS QC');
+                                    $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
+                                ?>
+                                    <th class="text-center <?= $col_cls ?>"><?= formatProcessHeader($proc['process_name']) ?></th>
                                 <?php endforeach; ?>
-                                <th class="table-dark text-center" style="min-width: 160px;">Overall Process %</th>
+                                <th class="table-dark text-center proc-col">Overall<br>Process %</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -434,6 +653,8 @@ $teams_result = $mysqli->query($teams_sql);
                                 
                                 <?php foreach($processes_array as $proc): 
                                     $p_name = $proc['process_name'];
+                                    $is_wide = ($p_name === 'DOAJ /Biblat /PubMed' || $p_name === 'PMC JATS QC');
+                                    $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
                                     
                                     // 1. Get Achieved for process
                                     $p_achieved = 0;
@@ -463,11 +684,11 @@ $teams_result = $mysqli->query($teams_sql);
 
                                     $cell_class = ($p_total_target > 0 && $p_achieved >= $p_total_target) ? 'text-success' : (($p_total_target > 0) ? 'text-danger' : 'text-muted');
                                 ?>
-                                    <td class="text-center">
+                                    <td class="text-center <?= $col_cls ?>">
                                         <?php if($p_total_target > 0 || $p_achieved > 0): ?>
                                             <div class="fw-bold <?= $cell_class ?> fs-6"><?= round($p_percent, 1) ?>%</div>
                                             <!-- Subtitle text formatted exactly like the screenshot calculation -->
-                                            <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                                            <div class="small text-muted" style="font-size: 0.68rem; white-space: nowrap;">
                                                 <?= number_format($p_achieved) ?> / <?= number_format($p_total_target) ?> * 100
                                             </div>
                                         <?php else: ?>
@@ -500,6 +721,52 @@ $teams_result = $mysqli->query($teams_sql);
         </div>
 
         <?php endif; ?>
+        
+        <!-- Employee Performance Charts Heading Added Here -->
+        <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+            <h4><i class="fas fa-chart-bar me-2"></i>Employee Performance Charts</h4>
+        </div>
+
+        <!-- Graphical Reports Added Here -->
+        <div class="row">
+            <!-- Chart 1: Bar Chart -->
+            <div class="col-12 mb-4">
+                <div class="card border-primary">
+                    <div class="card-header bg-white border-primary">
+                        <h5 class="mb-0 text-primary"><i class="fas fa-bars me-2"></i>Employee Process Performance (Bar Chart)</h5>
+                        <small class="text-muted">Stacked bars representing individual process calculation: (Achieved / Target) * 100</small>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 330px; width: 100%; padding: 15px;">
+                        <?php if (empty($emp_chart_labels) || empty($emp_proc_final_datasets)): ?>
+                            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                                <div><i class="fas fa-chart-bar fa-3x mb-3 d-block text-center"></i>No data available.</div>
+                            </div>
+                        <?php else: ?>
+                            <canvas id="employeeBarChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 2: Line Chart -->
+            <div class="col-12 mb-4">
+                <div class="card border-success">
+                    <div class="card-header bg-white border-success">
+                        <h5 class="mb-0 text-success"><i class="fas fa-chart-line me-2"></i>Overall Employee Performance (Line Chart)</h5>
+                        <small class="text-muted">Summing the percentages: SUM(ARRAYFORMULA(Achieved / Target * 100))</small>
+                    </div>
+                    <div class="card-body chart-container" style="position: relative; height: 330px; width: 100%; padding: 15px;">
+                        <?php if (empty($emp_chart_labels)): ?>
+                            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                                <div><i class="fas fa-chart-line fa-3x mb-3 d-block text-center"></i>No data available.</div>
+                            </div>
+                        <?php else: ?>
+                            <canvas id="employeeLineChart"></canvas>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -509,27 +776,6 @@ $teams_result = $mysqli->query($teams_sql);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            var commonOptions = {
-                paging: false, searching: false, info: false, ordering: false,
-                scrollX: true, scrollY: '60vh', scrollCollapse: true,
-                fixedColumns: { left: 1 }
-            };
-            
-            if ($('#processReportTable').length) {
-                $('#processReportTable').DataTable({
-                    ...commonOptions,
-                    scrollY: '60vh'
-                });
-            }
-            
-                        // NEW: day-wise table
-            if ($('#dailyReportTable').length) {
-                $('#dailyReportTable').DataTable({
-                    ...commonOptions,
-                    scrollY: '60vh'
-                });
-            }
-
             $('input[name="start_date"]').change(function() {
                 var startDate = new Date(this.value);
                 var endDate = new Date($('input[name="end_date"]').val());
@@ -539,6 +785,176 @@ $teams_result = $mysqli->query($teams_sql);
                     $('input[name="end_date"]').val(newEndDate.toISOString().split('T')[0]);
                 }
             });
+            // NEW: Auto-fill Start and End dates when a Week is selected
+            $('#week_selector').change(function() {
+                var val = $(this).val();
+                if (val) {
+                    var dates = val.split('|'); // Split the value to get Start (Monday) and End date (Saturday)
+                    $('input[name="start_date"]').val(dates[0]);
+                    $('input[name="end_date"]').val(dates[1]);
+                }
+            });
+
+            <?php if (!empty($emp_chart_labels)): ?>
+            const empOverallPercentages = <?= json_encode($emp_chart_percentages) ?>;
+
+            // Plugin to show overall process % on top of each stacked bar
+            const topLabelPlugin = {
+                id: 'topLabelPlugin',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    const metaList = chart.data.datasets.map((d, i) => chart.getDatasetMeta(i));
+                    chart.data.labels.forEach((label, i) => {
+                        let topY = null;
+                        let barX = null;
+                        metaList.forEach(meta => {
+                            if (meta && meta.data && meta.data[i] && !meta.hidden) {
+                                const bar = meta.data[i];
+                                if (bar.y !== undefined && (topY === null || bar.y < topY)) {
+                                    topY = bar.y;
+                                    barX = bar.x;
+                                }
+                            }
+                        });
+                        const totalVal = empOverallPercentages[i];
+                        if (topY !== null && barX !== null && totalVal !== undefined && totalVal > 0) {
+                            ctx.save();
+                            ctx.font = 'bold 11px sans-serif';
+                            ctx.fillStyle = '#1e293b';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(totalVal + '%', barX, topY - 5);
+                            ctx.restore();
+                        }
+                    });
+                }
+            };
+
+            // ----------------------------------------------------
+            // 1. BAR CHART: Employee Process Breakdowns (Stacked)
+            // ----------------------------------------------------
+            new Chart(document.getElementById('employeeBarChart').getContext('2d'), {
+                type: 'bar',
+                plugins: [topLabelPlugin],
+                data: {
+                    labels: <?= json_encode($emp_chart_labels) ?>,
+                    datasets: <?= json_encode($emp_proc_final_datasets) ?>
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 20 }
+                    },
+                    plugins: { 
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    let percent = context.raw;
+                                    let achieved = context.dataset.raw_achieved[context.dataIndex];
+                                    let target = context.dataset.raw_target[context.dataIndex];
+                                    
+                                    if(target === 0 && achieved === 0) return null;
+                                    return `${label}: ${percent}% (${achieved} / ${target} * 100)`;
+                                }
+                            },
+                            filter: function(tooltipItem) {
+                                let achieved = tooltipItem.dataset.raw_achieved[tooltipItem.dataIndex];
+                                let target = tooltipItem.dataset.raw_target[tooltipItem.dataIndex];
+                                return (target > 0 || achieved > 0);
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            stacked: true,
+                            beginAtZero: true, 
+                            suggestedMax: 100,
+                            ticks: {
+                                stepSize: 20
+                            },
+                            grace: '10%',
+                            title: { display: true, text: 'Percentage (%)' }
+                        }
+                    }
+                }
+            });
+
+            // Plugin to show values on top of points in line chart
+            const lineDataLabelPlugin = {
+                id: 'lineDataLabelPlugin',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    const meta = chart.getDatasetMeta(0);
+                    if (meta && meta.data) {
+                        meta.data.forEach((point, i) => {
+                            const val = chart.data.datasets[0].data[i];
+                            if (val !== undefined) {
+                                ctx.save();
+                                ctx.font = 'bold 11px sans-serif';
+                                ctx.fillStyle = 'rgb(25, 135, 84)';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(val + '%', point.x, point.y - 8);
+                                ctx.restore();
+                            }
+                        });
+                    }
+                }
+            };
+
+            // ----------------------------------------------------
+            // 2. LINE CHART: Employee Overall Sum
+            // ----------------------------------------------------
+            new Chart(document.getElementById('employeeLineChart').getContext('2d'), {
+                type: 'line',
+                plugins: [lineDataLabelPlugin],
+                data: {
+                    labels: <?= json_encode($emp_chart_labels) ?>,
+                    datasets: [
+                        {
+                            label: 'Sum of Process Percentages (%)',
+                            data: <?= json_encode($emp_chart_percentages) ?>,
+                            backgroundColor: 'rgba(25, 135, 84, 0.2)', 
+                            borderColor: 'rgb(25, 135, 84)',           
+                            borderWidth: 3,
+                            pointBackgroundColor: 'rgb(25, 135, 84)',
+                            pointRadius: 5,
+                            fill: true, 
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    layout: {
+                        padding: { top: 20 }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Total Overall: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 100,
+                            ticks: {
+                                stepSize: 20
+                            },
+                            grace: '10%',
+                            title: { display: true, text: 'Overall Summed %' }
+                        }
+                    }
+                } 
+            });
+            <?php endif; ?>
         });
     </script>
 </body>

@@ -17,10 +17,13 @@ if (!isset($_SESSION['teamname'])) {
 
 // Detect current page for menu highlighting
 $currentPage = basename($_SERVER['PHP_SELF']);
+// Release session lock early to prevent session file blocking across requests/tabs
+session_write_close();
 $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
-$employee_id = $_SESSION['uid']; // set at login
-//echo "SELECT process FROM employee_master WHERE employee_id = '$employee_id'";
-//die;
+$employee_id = $_SESSION['uid'] ?? 0; // set at login
+
+require_once 'db.php'; // Ensure db connection is available
+
 // Step 1: Fetch employee process IDs
 $sql = "SELECT * FROM employee_master WHERE employee_id = ?";
 $stmt = $mysqli->prepare($sql);
@@ -739,6 +742,8 @@ if ($row = $result->fetch_assoc()) {
             }
         }
     </style>
+    <!-- Tapasi Global Typography & Font Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 </head>
 <body>
     <header>
@@ -829,20 +834,16 @@ if ($row = $result->fetch_assoc()) {
     </ul>
 </li>
 
-<!-- Job Management -->
+<!-- Job Management (UQ Team Only - other teams show till Reports) -->
+<?php if ($team == 2): ?>
 <li>
     <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
     <ul class="nav-dropdown">
-        <li><a href="jobs.php"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
-        <li><a href="job_management.php"><i class="fas fa-cogs"></i> Job Process</a></li>
-        <?php if ($team == 2): ?>
-        <li><a href="../SubTL/job_management.php"><i class="fas fa-chart-pie"></i> Input & Output</a></li>
-        <li><a href="../SubTL/tm_queries.php"><i class="fas fa-question-circle"></i> Queries</a></li>
-        <?php endif; ?>
+        <li><a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>"><i class="fas fa-chart-pie"></i> Input & Output</a></li>
+        <li><a href="tm_queries.php"><i class="fas fa-question-circle"></i> Queries</a></li>
     </ul>
 </li>
-<?php if ($team == 2): ?>
-    <?php include __DIR__ . '/../uq_process_nav.php'; ?>
+<?php include __DIR__ . '/../uq_tl_nav.php'; ?>
 <?php endif; ?>
 <?php if (($tl==3) and ($team==3)): ?>
 <li>

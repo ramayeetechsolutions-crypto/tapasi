@@ -1,5 +1,3 @@
---- START OF FILE Paste April 01, 2026 - 12:33PM ---
-
 <?php
 require 'db.php'; 
 ini_set('display_errors', 1);

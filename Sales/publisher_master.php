@@ -8,6 +8,43 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start(); 
 }
 
+// Ensure publisher_master table and required columns exist automatically
+function ensure_publisher_master_schema($mysqli) {
+    $mysqli->query("CREATE TABLE IF NOT EXISTS `publisher_master` (
+        `id` int NOT NULL AUTO_INCREMENT,
+        `name` varchar(255) DEFAULT NULL,
+        `year` varchar(50) DEFAULT NULL,
+        `publisher_name` varchar(255) NOT NULL,
+        `country` varchar(100) DEFAULT NULL,
+        `contact_no` varchar(255) DEFAULT NULL,
+        `email` varchar(255) DEFAULT NULL,
+        `contact_person` varchar(255) DEFAULT NULL,
+        `designation` varchar(255) DEFAULT NULL,
+        `link` varchar(500) DEFAULT NULL,
+        `code` varchar(50) DEFAULT NULL,
+        `status` enum('active','inactive') DEFAULT 'active',
+        `created_at` datetime DEFAULT NULL,
+        `created_ip` varchar(45) DEFAULT NULL,
+        `updated_at` datetime DEFAULT NULL,
+        `updated_ip` varchar(45) DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `publisher_name` (`publisher_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci");
+
+    $requiredColumns = [
+        'name' => "VARCHAR(255) DEFAULT NULL AFTER `id`",
+        'year' => "VARCHAR(50) DEFAULT NULL AFTER `name`"
+    ];
+
+    foreach ($requiredColumns as $col => $definition) {
+        $checkCol = $mysqli->query("SHOW COLUMNS FROM `publisher_master` LIKE '$col'");
+        if ($checkCol && $checkCol->num_rows === 0) {
+            $mysqli->query("ALTER TABLE `publisher_master` ADD COLUMN `$col` $definition");
+        }
+    }
+}
+ensure_publisher_master_schema($mysqli);
+
 // Helper functions
 function h($s) { 
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
@@ -57,15 +94,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if ($k === 0) continue; // Skip Header row
 
                 // Get data from Excel columns in the new order specified
-                $sno = trim($mysqli->real_escape_string($r[0] ?? '')); 
-                $country = trim($mysqli->real_escape_string($r[1] ?? '')); 
-                $publisher_name = trim($mysqli->real_escape_string($r[2] ?? '')); 
-                $contact_no = trim($mysqli->real_escape_string($r[3] ?? '')); 
-                $email = trim($mysqli->real_escape_string($r[4] ?? '')); 
-                $contact_person = trim($mysqli->real_escape_string($r[5] ?? '')); 
-                $designation = trim($mysqli->real_escape_string($r[6] ?? '')); 
-                $link = trim($mysqli->real_escape_string($r[7] ?? '')); 
-                $status_raw = strtolower(trim($mysqli->real_escape_string($r[8] ?? 'active'))); 
+                $sno = trim((string)($r[0] ?? '')); 
+                $name = trim((string)($r[1] ?? '')); 
+                $year = trim((string)($r[2] ?? '')); 
+                $country = trim((string)($r[3] ?? '')); 
+                $publisher_name = trim((string)($r[4] ?? '')); 
+                $contact_no = trim((string)($r[5] ?? '')); 
+                $email = trim((string)($r[6] ?? '')); 
+                $contact_person = trim((string)($r[7] ?? '')); 
+                $designation = trim((string)($r[8] ?? '')); 
+                $link = trim((string)($r[9] ?? '')); 
+                $status_raw = strtolower(trim((string)($r[10] ?? 'active'))); 
                 
                 // Validate status
                 $status = ($status_raw === 'inactive') ? 'inactive' : 'active';
@@ -86,12 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $check_stmt->close();
                     
                     $stmt = $mysqli->prepare("UPDATE publisher_master SET 
-                        country = ?, contact_no = ?, email = ?, contact_person = ?, 
+                        name = ?, year = ?, country = ?, contact_no = ?, email = ?, contact_person = ?, 
                         designation = ?, link = ?, status = ?, updated_at = NOW() 
                         WHERE publisher_name = ?");
                     
-                    $stmt->bind_param("ssssssss", 
-                        $country, $contact_no, $email, $contact_person,
+                    $stmt->bind_param("ssssssssss", 
+                        $name, $year, $country, $contact_no, $email, $contact_person,
                         $designation, $link, $status, $publisher_name);
                     
                     if ($stmt->execute()) {
@@ -106,11 +145,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $check_stmt->close();
                     
                     $stmt = $mysqli->prepare("INSERT INTO publisher_master 
-                        (publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                        (name, year, publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
                     
-                    $stmt->bind_param("ssssssss", 
-                        $publisher_name, $country, $contact_no, $email, 
+                    $stmt->bind_param("ssssssssss", 
+                        $name, $year, $publisher_name, $country, $contact_no, $email, 
                         $contact_person, $designation, $link, $status);
                     
                     if ($stmt->execute()) {
@@ -168,6 +207,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'add' || $action === 'edit') {
+        $name = trim($_POST['name'] ?? '');
+        $year = trim($_POST['year'] ?? '');
         $publisher_name = trim($_POST['publisher_name'] ?? '');
         $country = trim($_POST['country'] ?? '');
         $contact_no = trim($_POST['contact_no'] ?? '');
@@ -197,11 +238,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Insert new publisher
             $stmt = $mysqli->prepare("INSERT INTO publisher_master 
-                (publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at, created_ip) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)");
+                (name, year, publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at, created_ip) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)");
             
-            $stmt->bind_param("sssssssss", 
-                $publisher_name, $country, $contact_no, $email, $contact_person, 
+            $stmt->bind_param("sssssssssss", 
+                $name, $year, $publisher_name, $country, $contact_no, $email, $contact_person, 
                 $designation, $link, $status, $_SERVER['REMOTE_ADDR']);
             
             if ($stmt->execute()) {
@@ -229,6 +270,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Update publisher
                 $sql = "UPDATE publisher_master SET 
+                        name = ?,
+                        year = ?,
                         publisher_name = ?, 
                         country = ?,
                         contact_no = ?,
@@ -243,8 +286,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $stmt = $mysqli->prepare($sql);
                 
-                $stmt->bind_param("sssssssssi", 
-                    $publisher_name, $country, $contact_no, $email, $contact_person,
+                $stmt->bind_param("sssssssssssi", 
+                    $name, $year, $publisher_name, $country, $contact_no, $email, $contact_person,
                     $designation, $link, $status, $_SERVER['REMOTE_ADDR'], $id);
                 
                 if ($stmt->execute()) {
@@ -356,7 +399,7 @@ $editPublisher = null;
 if ($mode === 'edit') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT id, publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at, created_ip, updated_at, updated_ip FROM publisher_master WHERE id = ?");
+        $stmt = $mysqli->prepare("SELECT id, name, year, publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at, created_ip, updated_at, updated_ip FROM publisher_master WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $editPublisher = $stmt->get_result()->fetch_assoc();
@@ -370,7 +413,7 @@ $q = trim($_GET['q'] ?? '');
 $fstatus = $_GET['status'] ?? '';
 
 // Build query
-$sql = "SELECT id, publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at, created_ip, updated_at, updated_ip FROM publisher_master WHERE 1=1";
+$sql = "SELECT id, name, year, publisher_name, country, contact_no, email, contact_person, designation, link, status, created_at, created_ip, updated_at, updated_ip FROM publisher_master WHERE 1=1";
 
 $cond =[];
 $params =[];
@@ -378,15 +421,17 @@ $types = '';
 
 // UPDATED SEARCH LOGIC
 if ($q !== '') {
-    $cond[] = "(publisher_name LIKE ? OR contact_no LIKE ? OR contact_person LIKE ? OR email LIKE ? OR link LIKE ? OR country LIKE ?)";
+    $cond[] = "(name LIKE ? OR year LIKE ? OR publisher_name LIKE ? OR contact_no LIKE ? OR contact_person LIKE ? OR email LIKE ? OR link LIKE ? OR country LIKE ?)";
     $like = "%$q%";
+    $params[] = $like; // name
+    $params[] = $like; // year
     $params[] = $like; // publisher_name
     $params[] = $like; // contact_no
     $params[] = $like; // contact_person
     $params[] = $like; // email
     $params[] = $like; // link
     $params[] = $like; // country (included as good measure)
-    $types .= 'ssssss';
+    $types .= 'ssssssss';
 }
 
 if ($fstatus !== '') {
@@ -523,6 +568,22 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label for="name" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       value="<?= h($editPublisher['name'] ?? '') ?>" 
+                                       placeholder="Enter name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="year" class="form-label">Year</label>
+                                <input type="text" class="form-control" id="year" name="year"
+                                       value="<?= h($editPublisher['year'] ?? '') ?>" 
+                                       placeholder="Enter year">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label for="publisher_name" class="form-label">Publisher Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="publisher_name" name="publisher_name"
                                        value="<?= h($editPublisher['publisher_name'] ?? '') ?>" 
@@ -624,7 +685,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                 <div>
                     <h6 class="mb-1"><i class="fas fa-file-excel me-2"></i>Excel Template</h6>
                     <p class="mb-0 text-muted">Download the Excel template with correct column format for import.</p>
-                    <small class="text-muted">Required columns in order: S.No, Country, Publisher Name, Contact No, E-mail, Contact Person, Designation, Link, Status</small>
+                    <small class="text-muted">Required columns in order: S.No, Name, Year, Country, Publisher Name, Contact No, E-mail, Contact Person, Designation, Link, Status</small>
                 </div>
             </div>
         </div>
@@ -673,7 +734,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
             </div>
         </div>
 
-        <!-- Publishers Table in specified order: Country, Publisher Name, Contact No, E-mail, Contact Person, Designation, Link -->
+        <!-- Publishers Table in specified order: Name, Year, Country, Publisher Name, Contact No, E-mail, Contact Person, Designation, Link -->
         <div class="card">
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -681,6 +742,8 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                         <thead class="table-light">
                             <tr>
                                 <th>S.No</th>
+                                <th>Name</th>
+                                <th>Year</th>
                                 <th>Country</th>
                                 <th>Publisher Name</th>
                                 <th>Contact No.</th>
@@ -697,6 +760,8 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                 <?php while($row = $publishers->fetch_assoc()): $i=$i+1;?>
                                 <tr>
                                     <td><?= $i; ?></td>
+                                    <td><?= h($row['name'] ?: '—') ?></td>
+                                    <td class="fw-bold text-info"><?= h($row['year'] ?: '—') ?></td>
                                     <td>
                                         <span class="fw-semibold"><?= h($row['country'] ?: '—') ?></span>
                                     </td>
@@ -768,7 +833,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="10" class="text-center py-5">
+                                    <td colspan="12" class="text-center py-5">
                                         <div class="text-muted">
                                             <i class="fas fa-building fa-3x mb-3"></i>
                                             <h5>No publishers found</h5>
@@ -820,14 +885,16 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                             <ul class="mb-0 small">
                                 <li>Excel file must have these columns IN ORDER:</li>
                                 <li>Column A: <strong>S.No</strong></li>
-                                <li>Column B: <strong>Country</strong></li>
-                                <li>Column C: <strong>Publisher Name</strong> (required)</li>
-                                <li>Column D: <strong>Contact No</strong></li>
-                                <li>Column E: <strong>E-mail</strong></li>
-                                <li>Column F: <strong>Contact Person</strong></li>
-                                <li>Column G: <strong>Designation</strong></li>
-                                <li>Column H: <strong>Link</strong></li>
-                                <li>Column I: <strong>Status</strong> (active/inactive)</li>
+                                <li>Column B: <strong>Name</strong></li>
+                                <li>Column C: <strong>Year</strong></li>
+                                <li>Column D: <strong>Country</strong></li>
+                                <li>Column E: <strong>Publisher Name</strong> (required)</li>
+                                <li>Column F: <strong>Contact No</strong></li>
+                                <li>Column G: <strong>E-mail</strong></li>
+                                <li>Column H: <strong>Contact Person</strong></li>
+                                <li>Column I: <strong>Designation</strong></li>
+                                <li>Column J: <strong>Link</strong></li>
+                                <li>Column K: <strong>Status</strong> (active/inactive)</li>
                                 <li>First row should be headers (will be skipped)</li>
                                 <li>Existing publishers will be updated based on Publisher Name</li>
                             </ul>
@@ -872,8 +939,8 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
 
         // Function to download the sample Excel (CSV) format
         function downloadSample() {
-            const headers = "S.No,Country,Publisher Name,Contact No,E-mail,Contact Person,Designation,Link,Status\n";
-            const sampleData = "1,India,Tech Publishing House,9876543210,contact@techpub.com,John Doe,Manager,techpub.com,active\n";
+            const headers = "S.No,Name,Year,Country,Publisher Name,Contact No,E-mail,Contact Person,Designation,Link,Status\n";
+            const sampleData = "1,John Smith,2025,India,Tech Publishing House,9876543210,contact@techpub.com,John Doe,Manager,techpub.com,active\n";
             
             const blob = new Blob([headers + sampleData], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);

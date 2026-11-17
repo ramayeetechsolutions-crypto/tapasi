@@ -369,6 +369,7 @@ require 'header.php';
     .card-header { border-radius: 12px 12px 0 0 !important; border-bottom: none; padding: 1rem 1.25rem; }
     .card-header.bg-gradient-primary { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; }
     .card-header.bg-gradient-dark { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
+    .card-header.bg-header-grey { background: #6c757d; color: white; }
     
     /* Form Inputs */
     .form-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 0.4rem; }
@@ -611,7 +612,7 @@ require 'header.php';
 
         <!-- DATA TABLE SECTION -->
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-gradient-dark d-flex justify-content-between align-items-center py-3">
+            <div class="card-header bg-header-grey d-flex justify-content-between align-items-center py-3">
                 <h6 class="mb-0 fw-bold text-white"><i class="fas fa-list-ul me-2"></i> Recorded Extra Charges</h6>
                 <span class="badge bg-white text-dark rounded-pill shadow-sm px-3 py-2">Total Records: <?= $result->num_rows ?></span>
             </div>

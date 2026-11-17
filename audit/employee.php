@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 require 'db.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -645,7 +644,7 @@ $stmt->close();
                  <table class="details-table">
                     <tr>
                         <td class="field-name">ID</td>
-                        <td class="field-value"><?= h($employee_data['employee_id']) ?></td>
+                        <td class="field-value"><?= h($employee_data['employee_username']) ?></td>
                     </tr>
                     <tr>
                         <td class="field-name">Name</td>

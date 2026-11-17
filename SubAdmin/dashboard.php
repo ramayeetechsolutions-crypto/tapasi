@@ -1,5 +1,5 @@
 <?php
-require 'db.php';
+require '../db.php';
 session_start();
 
 $pageTitle = "Dashboard";
@@ -489,7 +489,7 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 
 /* Grey Header Banner */
 .page-title-container {
-    background: #5e6b77; color: white; padding: 10px 20px; border-radius: 12px; margin-bottom: 10px;
+    background: var(--ash, #6c757d); color: white; padding: 10px 20px; border-radius: 12px; margin-bottom: 10px;
 }
 .page-title-container h1 { margin: 0; font-size: 2.2rem; font-weight: 700; }
 
@@ -517,7 +517,7 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 }
 
 .page-title-container {
-    background: var(--ash-dark);
+    background: var(--ash, #6c757d);
     color: white;
     padding: 10px;
     border-radius: 12px;

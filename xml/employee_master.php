@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -319,10 +318,10 @@ if ($mode === 'edit') {
 // Filters
 $q = trim($_GET['q'] ?? '');
 $fstatus = $_GET['status'] ?? '';
-$sort = $_GET['sort'] ?? 'employee_id';
+$sort = $_GET['sort'] ?? 'employee_username';
 $dir = strtolower($_GET['dir'] ?? 'asc');
-$sortable = ['employee_id','employee_name','employee_username','date_of_birth','joining_date','process','status'];
-if (!in_array($sort,$sortable,true)) $sort='employee_id';
+$sortable = ['employee_username','employee_id','employee_name','date_of_birth','joining_date','process','status'];
+if (!in_array($sort,$sortable,true)) $sort='employee_username';
 $dir = ($dir=='asc')?'asc':'desc';
 
 // TL can only see their team members
@@ -377,47 +376,131 @@ $teams = $mysqli->query("SELECT team_id, team_name FROM team_master WHERE status
 $designations = $mysqli->query("SELECT designation_id, designation_name FROM designation_master WHERE status='Active' ORDER BY designation_name");
 $processes = $mysqli->query("SELECT process_id, process_name FROM process_master WHERE status='Active' ORDER BY process_id");
 $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_master WHERE status='Active' ORDER BY process_id");
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Management - Team Lead</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .table thead th { 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            background-color: #5e6b77 !important; 
-            color: #ffffff !important; 
-            border-bottom: 2px solid #444; /* Keeps the line visible */
-        }
 
-        /* Ensures the table doesn't have overflow issues on some screens */
-        .table-responsive {
-            max-height: 80vh; /* Limits table height so scrolling happens inside the box */
-            overflow-y: auto;
-        }
-        .verification-badge { font-size: 0.75em; }
-        .btn-verify { font-size: 0.8rem; padding: 2px 8px; }
-        .image-preview { max-width: 80px; max-height: 60px; cursor: pointer; border: 1px solid #ddd; border-radius: 3px; }
-        .image-preview:hover { border-color: #007bff; }
-        .image-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
-        .modal-content { margin: auto; display: block; width: 80%; max-width: 700px; max-height: 80%; margin-top: 5%; }
-        .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
-        .section-title { font-weight: 600; color: #495057; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #dee2e6; }
-        .additional-fields-section { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <?php require 'header.php'; ?>
+$pageTitle = "Employee Profile";
+require 'header.php';
+?>
+
+<style>
+    body {
+        background-color: var(--light, #f5f7fa);
+    }
+    .main-content {
+        margin-top: 70px;
+        padding: 25px 4%;
+        transition: all 0.3s ease;
+    }
+
+    /* Ash Page Header Banner (Matching Navbar Color) */
+    .page-title-container {
+        background: var(--ash, #6c757d);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        flex-wrap: wrap;
+        gap: 15px;
+    }
     
-    <div class="container-fluid mt-3">
+    .page-title-container h1 {
+        margin: 0;
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Header Action Button (Add Employee / Back to List) */
+    .btn-header-action {
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        border: 1px solid #ced4da !important;
+        font-weight: 600 !important;
+        padding: 8px 18px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-size: 14px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .btn-header-action:hover {
+        background-color: #f8f9fa !important;
+        color: #0d6efd !important;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12) !important;
+    }
+    
+    .btn-header-action i {
+        color: #0d6efd !important;
+        margin-right: 6px !important;
+    }
+    .btn-header-action span {
+        color: #212529 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Table Styling & Sticky Header */
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table thead th {
+        position: sticky;
+        top: 70px;
+        z-index: 900;
+        background-color: var(--ash, #6c757d) !important;
+        color: white !important;
+        border: 1px solid #6c757d !important;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        padding: 12px 14px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        white-space: nowrap;
+    }
+    .table thead tr th:first-child {
+        border-top-left-radius: 8px;
+    }
+    .table thead tr th:last-child {
+        border-top-right-radius: 8px;
+    }
+    .table tbody td {
+        font-size: 13.5px;
+        padding: 12px 14px;
+        vertical-align: middle;
+        color: #333333;
+        background-color: #ffffff;
+    }
+    .table-container {
+        overflow: visible;
+    }
+
+    .verification-badge { font-size: 0.75em; }
+    .btn-verify { font-size: 0.8rem; padding: 2px 8px; }
+    .image-preview { max-width: 80px; max-height: 60px; cursor: pointer; border: 1px solid #ddd; border-radius: 3px; }
+    .image-preview:hover { border-color: #007bff; }
+    .image-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+    .modal-content { margin: auto; display: block; width: 80%; max-width: 700px; max-height: 80%; margin-top: 5%; }
+    .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
+    .section-title { font-weight: 600; color: #495057; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #dee2e6; }
+    .additional-fields-section { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; }
+</style>
+
+<main class="main-content">
+    <div class="container-fluid p-0">
         <?php if (isset($_GET['msg'])): ?>
-        <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show">
+        <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show border-0 shadow-sm">
             <?= h($_GET['msg']) ?>
             <button class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -425,12 +508,19 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
 
         <?php if ($mode === 'edit'): ?>
         
-        <!-- Edit Form -->
-        <div class="d-flex justify-content-between mb-3">
-            <h5><i class="fas fa-user-edit me-2"></i>Edit Employee: <?= h($editRow['employee_name'] ?? '') ?></h5>
-            <a href="employee_master.php" class="btn btn-sm btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
-            </a>
+        <!-- Edit Form Header Banner -->
+        <div class="page-title-container">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fas fa-user-edit"></i> Edit Employee: <?= h($editRow['employee_name'] ?? '') ?>
+                </h1>
+            </div>
+            <div>
+                <a href="employee_master.php" class="btn btn-header-action">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to List</span>
+                </a>
+            </div>
         </div>
 
         <div class="card p-4 mx-auto" style="max-width:1200px;">
@@ -583,12 +673,12 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
         <!-- Search and Filter -->
         <div class="card mb-4">
             <div class="card-body">
-                <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-4">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-md">
                         <input type="text" name="q" class="form-control form-control-sm" 
                                placeholder="Search by name or ID..." value="<?= h($q) ?>">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select name="status" class="form-select form-select-sm">
                             <option value="">All Status</option>
                             <option value="Active" <?= $fstatus==='Active'?'selected':'' ?>>Active</option>
@@ -611,11 +701,11 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
                             <option value="desc" <?= $dir=='desc'?'selected':'' ?>>Desc</option>
                         </select>
                     </div> -->
-                    <div class="col-md-12 mt-2">
-                        <button type="submit" class="btn btn-primary btn-sm me-2">
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                             <i class="fas fa-search me-1"></i> Search
                         </button>
-                        <a href="employee_master.php" class="btn btn-secondary btn-sm">
+                        <a href="employee_master.php" class="btn btn-secondary btn-sm text-nowrap">
                             <i class="fas fa-times me-1"></i> Clear
                         </a>
                     </div>
@@ -624,11 +714,11 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
         </div>
 
         <!-- Employees Table -->
-        <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
+        <div class="card border-0 shadow-sm rounded-3 mb-4" style="overflow: visible;">
+            <div class="card-body p-0" style="overflow: visible;">
+                <div class="table-container" style="overflow: visible;">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
                                 <th width="50">S. No.
                                     <a href="?<?= http_build_query(array_merge($_GET, ['sort' => 'employee_id', 'dir' => $sort == 'employee_id' && $dir == 'asc' ? 'desc' : 'asc'])) ?>" class="text-white">
@@ -645,7 +735,7 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
                                 <th width="80">Emp Verified</th>
                                 <th width="100">TL Verified</th>
                                 <th width="100">Status</th>
-                                <th width="80">Actions</th>
+                                <th width="80" class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -674,9 +764,9 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
                                 <tr>
                                     <td class="fw-bold"><?= $serial_number ?></td>
                                     <td><?= h($r['employee_username']) ?></td>
-                                    <td><?= h($r['employee_name']) ?></td>
-                                    <td><?= formatDate($r['date_of_birth']) ?></td>
-                                    <td><?= formatDate($r['joining_date']) ?></td>
+                                    <td style="white-space: nowrap;"><?= h($r['employee_name']) ?></td>
+                                    <td style="white-space: nowrap;"><?= formatDate($r['date_of_birth']) ?></td>
+                                    <td style="white-space: nowrap;"><?= formatDate($r['joining_date']) ?></td>
                                     <td><?= h($r['team_name'] ?: '—') ?></td>
                                     <td><?= h($r['designation_name'] ?: '—') ?></td>
                                     <td><?= h($process_name) ?: '—' ?></td>
@@ -765,6 +855,7 @@ $processes1 = $mysqli->query("SELECT process_id, process_name FROM process_maste
             <img class="modal-content" id="modalImage">
         </div>
     </div>
+</main>
 
     <script>
     // Image viewing functions

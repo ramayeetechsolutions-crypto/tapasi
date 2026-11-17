@@ -87,15 +87,19 @@ if (!$current_user) {
     exit;
 }
 
-// First, get the logged-in user's employee_name
+// First, get the logged-in user's employee_name and reporting manager
 $user_employee_name = '';
-$user_sql = "SELECT reporting_manager FROM employee_master WHERE employee_username = ?";
+$logged_in_name = '';
+$user_reporting_manager = '';
+$user_sql = "SELECT employee_name, reporting_manager FROM employee_master WHERE employee_username = ?";
 $stmt_user = $mysqli->prepare($user_sql);
 $stmt_user->bind_param("s", $current_user);
 $stmt_user->execute();
-$stmt_user->bind_result($user_employee_name);
+$stmt_user->bind_result($logged_in_name, $user_reporting_manager);
 $stmt_user->fetch();
 $stmt_user->close();
+
+$user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
 if (!$user_employee_name) {
     echo "<div class='alert alert-warning'>User profile not found. Please contact administrator.</div>";
@@ -156,9 +160,9 @@ $processStageMap = [
 
 // Get all team members under this reporting manager to keep their jobs visible
 $team_users = [];
-$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE reporting_manager = ?");
+$stmt_team = $mysqli->prepare("SELECT employee_username FROM employee_master WHERE (reporting_manager = ? OR reporting_manager = ?) AND status = 'Active'");
 if ($stmt_team) {
-    $stmt_team->bind_param("s", $user_employee_name);
+    $stmt_team->bind_param("ss", $user_employee_name, $logged_in_name);
     $stmt_team->execute();
     $res_team = $stmt_team->get_result();
     while ($row_team = $res_team->fetch_assoc()) {
@@ -255,12 +259,12 @@ $sql = "SELECT
     j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal_issue, j.article,
     jm.job_name AS process, qc.dispatch_date, j.file_path as jfile_path, j.assigned_to, j.assigned_ce, j.assigned_pag,
     ce.eq as ce_eq, ce.ref as ce_ref, ce.images as ce_images, ce.tables_count as ce_tables,
-    ce.ce_date, ce.done_by AS ce_done_by, ce.status AS ce_status, ce.assigned_to_content,
+    ce.ce_date, ce.done_by AS ce_done_by, ce.status AS ce_status, ce.assigned_to_content, ce.last_updated AS ce_last_updated,
     le.le_date, le.done_by AS le_done_by, le.status AS le_status,
     le.last_updated AS le_moved_date, le.assigned_to_le, le.assigned_to_le_qc, le.status_button AS le_status_button,
     le.eq AS le_eq, le.images AS le_images, le.tables_count AS le_tables,
-    pag.pag_date, pag.done_by AS pag_done_by, pag.status AS pag_status, pag.assigned_to_pag,
-    qc.qc_date, qc.done_by AS qc_done_by, qc.status AS qc_status, qc.assigned_to_qc, qc.upload_by AS qc_upload_by,
+    pag.pag_date, pag.done_by AS pag_done_by, pag.status AS pag_status, pag.assigned_to_pag, pag.last_updated AS pag_last_updated,
+    qc.qc_date, qc.done_by AS qc_done_by, qc.status AS qc_status, qc.assigned_to_qc, qc.upload_by AS qc_upload_by, qc.last_updated AS qc_last_updated,
     pag.eq AS pag_eq, pag.pages, pag.images, pag.tables_count, j.due_date, qc.rtat, qc.atat,
     ju.upload_date, COALESCE(qc.upload_by, ju.upload_by) AS upload_by, ju.file_path 
 
@@ -872,7 +876,7 @@ $le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' 
                             <!-- 3. CE TAT (Stops if CE Completed) -->
                             <?php 
                                 $ce_is_done = isStageDone($row['ce_status']);
-                                $ce_end = $ce_is_done ? $row['ce_date'] : null;
+                                $ce_end = $ce_is_done ? ($row['ce_date'] ?: $row['ce_last_updated']) : null;
                                 $ce_tat = getWorkingDaysWithoutSunday($row['job_date'], $ce_end);
                             ?>
                             <td>
@@ -896,7 +900,7 @@ $le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' 
                             <!-- 5. TS TAT (Stops if TS Completed) -->
                             <?php 
                                 $pag_is_done = isStageDone($row['pag_status']);
-                                $pag_end = $pag_is_done ? $row['pag_date'] : null;
+                                $pag_end = $pag_is_done ? ($row['pag_date'] ?: $row['pag_last_updated']) : null;
                                 $pag_tat = getWorkingDaysWithoutSunday($row['job_date'], $pag_end);
                             ?>
                             <td>
@@ -908,7 +912,7 @@ $le_is_done_flag = (isStageDone($row['le_status']) && ($row['process'] !== 'CE' 
                             <!-- 6. QC TAT (Stops if QC Completed) -->
                             <?php 
                                 $qc_is_done = isStageDone($row['qc_status']);
-                                $qc_end = $qc_is_done ? ($row['dispatch_date'] ?: $row['qc_date']) : null;
+                                $qc_end = $qc_is_done ? ($row['dispatch_date'] ?: $row['qc_date'] ?: $row['qc_last_updated']) : null;
                                 $qc_tat = getWorkingDaysWithoutSunday($row['job_date'], $qc_end);
                             ?>
                             <td>

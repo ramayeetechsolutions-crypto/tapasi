@@ -36,8 +36,10 @@ if (empty($current_user_name)) {
 }
 
 // Helper functions
-function h($s) { 
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+if (!function_exists('h')) {
+    function h($s) { 
+        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
+    }
 }
 
 function formatDate($d, $format = 'd-m-Y') {
@@ -284,15 +286,28 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .main-content {
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            padding: 20px 30px;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
         }
-        .table th {
+        /* Sticky Table Headers & Scrollable Container */
+        .table-responsive {
+            max-height: 70vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .table th,
+        #jobsTable thead th,
+        .table thead th {
+            position: sticky !important;
+            top: 0;
+            z-index: 100 !important;
             background-color: #5e6b77 !important;
             color: #ffffff !important; 
             border: 1px solid #dee2e6 !important; /* Vertical lines for header */
             text-align: center;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.3);
         }
         .table td {
             vertical-align: middle;
@@ -338,7 +353,7 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
         <div class="user-header">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <!-- <h4><i class="fas fa-tasks me-2"></i>My Jobs</h4> -->
+                    <h4 class="mb-2 text-white"><i class="fas fa-chart-line me-2 text-white"></i>Client Report</h4>
                     <div class="mt-2">
                         <span class="user-badge">User: <?= h($current_user_name) ?></span>
                         <!-- <span class="user-badge ms-2">Total Jobs: <?= $total_count ?></span> -->
@@ -426,9 +441,8 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
 
         <!-- Jobs Table -->
         <div class="card">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="jobsTable">
+            <div class="card-body p-3">
+                <table class="table table-hover align-middle mb-0" id="jobsTable">
                         <thead class="table-light">
                             <tr>
                                 <th>Date</th>
@@ -468,7 +482,6 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
                             <?php endif; ?>
                         </tbody>
                     </table>
-                </div>
             </div>
         </div>
     </div>
@@ -516,7 +529,10 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
                 "language": {
                     "emptyTable": "No error reports assigned to you yet.",
                     "search": "Search within results:"
-                }
+                },
+                "dom": "<'row mb-2'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                       "<'row'<'col-sm-12'<'table-responsive'tr>>>" +
+                       "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
             });
         });
     </script>

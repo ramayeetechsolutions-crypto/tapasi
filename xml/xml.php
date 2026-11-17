@@ -494,40 +494,63 @@ function fetchData() {
             --header-bg: #5e6b77;
         }
         
-        body {
+        html, body {
             background-color: var(--bg-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 12.5px;
             color: #2c3e50;
+            overflow-x: hidden !important;
+            max-width: 100vw;
+        }
+        .container-fluid {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        .card {
+            max-width: 100%;
+            overflow: hidden;
         }
 
         /* 1. Consistent Header Styling */
         table.dataTable {
-            border-collapse: collapse !important;
+            border-collapse: separate !important;
             border-spacing: 0 !important;
             margin-top: 0 !important;
             font-size: 12.5px;
+            width: 100% !important;
         }
 
         table.dataTable thead th { 
+            position: sticky !important;
+            top: 0;
+            z-index: 20 !important;
             background-color: var(--header-bg) !important; 
             color: #ffffff !important; 
             font-size: 12.5px;
             font-weight: 600;
             text-align: center;
-            border: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
             padding: 8px 10px !important;
             white-space: nowrap;
+        }
+        table.dataTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
 
         /* 2. Cell Padding & Text Alignments */
         table.dataTable tbody td { 
             vertical-align: middle !important; 
             text-align: center;
-            border: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
             padding: 6px 10px !important;
             white-space: nowrap;
             font-size: 12.5px;
+        }
+        table.dataTable tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
 
         /* 3. Zebra Striping matching UQ Process */
@@ -547,24 +570,24 @@ function fetchData() {
 
         /* 5. Sticky Columns for Unassigned Jobs with Exact Widths (No Gaps, No Overlap) */
         table.dataTable thead th:nth-child(1), table.dataTable tbody td:nth-child(1) {
-            position: sticky !important; left: 0; z-index: 10;
+            position: sticky !important; left: 0;
             width: 45px !important; min-width: 45px !important; max-width: 45px !important;
             box-sizing: border-box !important;
         }
         table.dataTable thead th:nth-child(2), table.dataTable tbody td:nth-child(2) {
-            position: sticky !important; left: 45px; z-index: 10;
+            position: sticky !important; left: 45px;
             width: 140px !important; min-width: 140px !important; max-width: 140px !important;
             box-sizing: border-box !important;
         }
         table.dataTable thead th:nth-child(3), table.dataTable tbody td:nth-child(3) {
-            position: sticky !important; left: 185px; z-index: 10;
+            position: sticky !important; left: 185px;
             width: 135px !important; min-width: 135px !important; max-width: 135px !important;
             box-sizing: border-box !important;
         }
         table.dataTable thead th:nth-child(4), table.dataTable tbody td:nth-child(4) {
-            position: sticky !important; left: 320px; z-index: 10;
+            position: sticky !important; left: 320px;
             width: 140px !important; min-width: 140px !important; max-width: 140px !important;
-            border-right: 2px solid #a0a5ab !important;
+            border-right: 1px solid #dee2e6 !important;
             box-sizing: border-box !important;
         }
 
@@ -573,15 +596,19 @@ function fetchData() {
         table.dataTable tbody tr:nth-child(odd) td:nth-child(-n+4) { background-color: #ffffff !important; }
         table.dataTable tbody tr:hover td:nth-child(-n+4) { background-color: #c4cbd3 !important; }
 
+        table.dataTable tbody td:nth-child(-n+4) {
+            z-index: 10 !important;
+        }
+
         /* Apply z-index only to the first 4 headers */
         table.dataTable thead th:nth-child(-n+4) {
-            z-index: 12 !important;
+            z-index: 30 !important;
             background-color: var(--header-bg) !important;
         }
 
-        /* 6. UQ Process Matching Badges */
-        .badge-article { background-color: #28a745; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-        .badge-cyan-num { background-color: #0dcaf0; color: #000; padding: 3px 8px; border-radius: 12px; font-weight: 700; font-size: 10px; min-width: 32px; display: inline-block; }
+        /* 6. Process Raw Numbers and Badges */
+        .badge-article { color: #000; font-weight: bold; font-size: 12px; }
+        .badge-cyan-num { color: #000; font-weight: 700; font-size: 12px; }
         .badge-blue-status { background-color: #0d6efd; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 10px; }
         .badge-missed { background-color: #dc3545; color: #fff; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; }
 
@@ -594,17 +621,11 @@ function fetchData() {
         }
         .notification { position: fixed; top: 20px; right: 20px; z-index: 1060; min-width: 300px; }
 
-        .dataTables_scrollBody thead {
-            visibility: collapse !important;
-            height: 0 !important;
-        }
-
-        .dataTables_scrollHead {
-            border-bottom: 0 !important;
-        }
-
-        .dataTables_scrollBody {
-            border-top: 0 !important;
+        .table-scroll-container {
+            max-height: calc(100vh - 380px);
+            overflow: auto;
+            position: relative;
+            border-top: 1px solid #dee2e6;
         }
     </style>
 
@@ -618,15 +639,15 @@ function fetchData() {
     <div class="container-fluid mt-2 px-4 pb-5">
         <div class="card mb-4">
             <!-- Header -->
-            <div class="card-header d-flex justify-content-between align-items-center py-3">
-                <h5 class="mb-0 fw-bold" style="color: #0f172a;"><i class="bi bi-table me-2 text-primary"></i>Unassigned Jobs</h5>
+            <div class="card-header d-flex justify-content-between align-items-center py-3" style="background-color: #5e6b77; border-bottom: 2px solid #475569;">
+                <h5 class="mb-0 fw-bold text-white"><i class="bi bi-table me-2 text-white"></i>Unassigned Jobs</h5>
                 <div class="d-flex align-items-center gap-3">
                     <span class="badge bg-light text-dark border px-3 py-2 fw-medium rounded-pill">
                         <i class="bi bi-person-circle text-muted me-1"></i> <?php echo h($username); ?>
                     </span>
                     <div class="form-check form-switch mb-0">
                         <input class="form-check-input" type="checkbox" id="showCompleted" <?php echo $show_completed ? 'checked' : ''; ?> onchange="toggleShowCompleted()" style="cursor: pointer;">
-                        <label class="form-check-label small fw-medium text-muted" for="showCompleted" style="cursor: pointer; padding-top:2px;">Show Completed</label>
+                        <label class="form-check-label small fw-medium text-white" for="showCompleted" style="cursor: pointer; padding-top:2px;">Show Completed</label>
                     </div>
                 </div>
             </div>
@@ -751,10 +772,7 @@ function fetchData() {
             autoWidth: false,
             ordering: false,
             pageLength: 25,
-            scrollX: true, // Enables horizontal scrolling for flat tables
-            scrollY: 'calc(100vh - 430px)',       // IDHU THAAN IMPORTANT: Table content oda height-a fix panum (e.g., 550px)
-            scrollCollapse: true,
-            dom: '<"top d-flex justify-content-between p-3"i p>rt',
+            dom: '<"top d-flex justify-content-between p-3"i p>r<"table-scroll-container"t>',
            columns:[
                { 
                     data: null, 
@@ -783,16 +801,16 @@ function fetchData() {
                     className: "text-start", 
                     render: data => `<div style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${data ? data.replace(/"/g, '&quot;') : ''}">${data || '-'}</div>` 
                 },
-                { data: 'articles', render: data => `<span class="badge-article">${data || '-'}</span>` },
+                { data: 'articles', render: data => `<span class="fw-bold text-dark" style="font-size: 12px;">${data || '-'}</span>` },
                 
-                // Cyan status badges matching UQ Process
+                // Process columns rendered as raw numbers in black text (no background, no rounded badge)
                 ...['nlm', 'jats', 'clockss', 'scielo', 'ebsco', 'pubmed', 'biblat', 'doaj', 'html', 'new_html', 'direct_html'].map(field => {
                     return {
                         data: field,
                         render: function(data) {
                             let v = (data === null || data === undefined || String(data).trim() === '' || String(data).trim() === '-') ? '-' : String(data).trim();
                             if (v === '-') return `<span class="text-muted">-</span>`;
-                            return `<span class="badge-cyan-num">${v}</span>`;
+                            return `<span class="fw-bold text-dark" style="font-size: 12px;">${v}</span>`;
                         }
                     }
                 }),
@@ -981,6 +999,10 @@ function fetchData() {
                 info: "<span class='text-muted small'>Showing _START_ to _END_ of _TOTAL_ entries</span>",
                 paginate: { previous: "<i class='bi bi-chevron-left'></i>", next: "<i class='bi bi-chevron-right'></i>" }
             }
+        });
+
+        table.on('page.dt search.dt order.dt', function () {
+            $('.table-scroll-container').scrollLeft(0);
         });
     });
 

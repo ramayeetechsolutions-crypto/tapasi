@@ -53,7 +53,8 @@ $check_columns = [
     'pag_crx_assigned_to' => "VARCHAR(100) NULL DEFAULT NULL",
     'pag_crx_start_time' => "TIME NULL DEFAULT NULL",
     'pag_crx_end_time' => "TIME NULL DEFAULT NULL",
-    'img_tab_stage' => "VARCHAR(100) NULL DEFAULT NULL"
+    'img_tab_stage' => "VARCHAR(100) NULL DEFAULT NULL",
+    'is_moved' => "TINYINT(1) DEFAULT 0"
 ];
 foreach ($check_columns as $col => $definition) {
     $check = $mysqli->query("SHOW COLUMNS FROM qc_crx LIKE '$col'");
@@ -61,6 +62,8 @@ foreach ($check_columns as $col => $definition) {
         $mysqli->query("ALTER TABLE qc_crx ADD COLUMN $col $definition");
     }
 }
+// Auto-migrate old 'Moved' data to the new is_moved column
+$mysqli->query("UPDATE qc_crx SET is_moved = 1, qc_crx_stage = NULL WHERE qc_crx_stage = 'Moved'");
 
 // --- AUTO SYNC JOBS FROM JOBS TABLE INTO QC_CRX ---
 $mysqli->query("INSERT IGNORE INTO qc_crx (job_id, date, client, journal_issue, article, process, status, created_at, last_updated)
@@ -104,7 +107,6 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     }
     exit;
 }
-
 // --- START: Inline Edit AJAX (For Time) ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     header('Content-Type: application/json');
@@ -118,10 +120,56 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             $stmt = $mysqli->prepare("UPDATE qc_crx SET $field = NULL, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("i", $qc_id);
         } else {
+            if ($field === 'qc_crx_stage' && $val === 'Moved') {
+                $mysqli->query("UPDATE qc_crx SET is_moved = 1 WHERE id = $qc_id");
+            }
             $stmt = $mysqli->prepare("UPDATE qc_crx SET $field = ?, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("si", $val, $qc_id);
         }
         if ($stmt->execute()) {
+            // Auto-sync PAG status and assigned TM to pag and jobs tables when updated in QC_CRX
+            if ($field === 'pag_crx_stage') {
+                if (in_array($val, ['PAG_CRX_Compelete', 'Completed', 'Done'])) {
+                    $j_res = $mysqli->query("SELECT job_id, pag_crx_assigned_to, pag_crx_start_time, pag_crx_end_time FROM qc_crx WHERE id = $qc_id");
+                    if ($j_row = $j_res->fetch_assoc()) {
+                        $jid = (int)$j_row['job_id'];
+                        $pag_tm = $j_row['pag_crx_assigned_to'] ?? '';
+                        $st = $j_row['pag_crx_start_time'] ?? null;
+                        $et = $j_row['pag_crx_end_time'] ?? null;
+                        $st_sql = $st ? "'$st'" : "NULL";
+                        $et_sql = $et ? "'$et'" : "NULL";
+                        if ($jid > 0) {
+                            $mysqli->query("UPDATE pag SET 
+                                status = 'Completed', 
+                                pag_status_col = 'Completed', 
+                                word_status = 'Completed',
+                                assigned_to_pag = IF(COALESCE(assigned_to_pag,'')='', '$pag_tm', assigned_to_pag),
+                                assigned_to_img = IF(COALESCE(assigned_to_img,'')='', '$pag_tm', assigned_to_img),
+                                pag_start_time = IF(pag_start_time IS NULL, $st_sql, pag_start_time),
+                                pag_end_time = IF(pag_end_time IS NULL, $et_sql, pag_end_time),
+                                img_start_time = IF(img_start_time IS NULL, $st_sql, img_start_time),
+                                img_end_time = IF(img_end_time IS NULL, $et_sql, img_end_time),
+                                last_updated = NOW() 
+                            WHERE job_id = $jid");
+                            if (!empty($pag_tm)) {
+                                $mysqli->query("UPDATE jobs SET assigned_pag = '$pag_tm' WHERE job_id = $jid");
+                            }
+                        }
+                    }
+                }
+            }
+            if ($field === 'pag_crx_assigned_to' && !empty($val)) {
+                $j_res = $mysqli->query("SELECT job_id, pag_crx_stage FROM qc_crx WHERE id = $qc_id");
+                if ($j_row = $j_res->fetch_assoc()) {
+                    $jid = (int)$j_row['job_id'];
+                    $pag_stg = $j_row['pag_crx_stage'];
+                    if ($jid > 0) {
+                        $status_sql = in_array($pag_stg, ['PAG_CRX_Compelete', 'Completed', 'Done']) ? ", status = 'Completed', pag_status_col = 'Completed', word_status = 'Completed'" : "";
+                        $mysqli->query("UPDATE pag SET assigned_to_pag = '$val', assigned_to_img = IF(COALESCE(assigned_to_img,'')='', '$val', assigned_to_img) $status_sql, last_updated = NOW() WHERE job_id = $jid");
+                        $mysqli->query("UPDATE jobs SET assigned_pag = '$val' WHERE job_id = $jid");
+                    }
+                }
+            }
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -130,6 +178,67 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
         echo json_encode(['success' => false, 'message' => 'Invalid field update']);
     }
     exit;
+}
+
+// --- START: Move to QC Report AJAX ---
+if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_to_report') {
+    header('Content-Type: application/json');
+    $qc_id = (int)$_POST['qc_id'];
+    $job_id = isset($_POST['job_id']) ? (int)$_POST['job_id'] : 0;
+    // Mark is_moved = 1 without overwriting qc_crx_stage so stage details are preserved in the report
+    $stmt = $mysqli->prepare("UPDATE qc_crx SET is_moved = 1, last_updated = NOW() WHERE id = ?");
+    $stmt->bind_param("i", $qc_id);
+    if ($stmt->execute()) {
+        $stmt->close();
+        if ($job_id > 0) {
+            $mysqli->query("UPDATE qc_crx SET is_moved = 1, last_updated = NOW() WHERE job_id = $job_id");
+            // Also ensure if pag_crx_stage is complete, pag table is marked completed
+            $c_res = $mysqli->query("SELECT pag_crx_stage, pag_crx_assigned_to, pag_crx_start_time, pag_crx_end_time FROM qc_crx WHERE id = $qc_id");
+            if ($c_row = $c_res->fetch_assoc()) {
+                if (in_array($c_row['pag_crx_stage'], ['PAG_CRX_Compelete', 'Completed', 'Done'])) {
+                    $ptm = $c_row['pag_crx_assigned_to'] ?? '';
+                    $st = $c_row['pag_crx_start_time'] ?? null;
+                    $et = $c_row['pag_crx_end_time'] ?? null;
+                    $st_sql = $st ? "'$st'" : "NULL";
+                    $et_sql = $et ? "'$et'" : "NULL";
+                    $mysqli->query("UPDATE pag SET 
+                        status = 'Completed', 
+                        pag_status_col = 'Completed', 
+                        word_status = 'Completed',
+                        assigned_to_pag = IF(COALESCE(assigned_to_pag,'')='', '$ptm', assigned_to_pag),
+                        assigned_to_img = IF(COALESCE(assigned_to_img,'')='', '$ptm', assigned_to_img),
+                        pag_start_time = IF(pag_start_time IS NULL, $st_sql, pag_start_time),
+                        pag_end_time = IF(pag_end_time IS NULL, $et_sql, pag_end_time),
+                        img_start_time = IF(img_start_time IS NULL, $st_sql, img_start_time),
+                        img_end_time = IF(img_end_time IS NULL, $et_sql, img_end_time),
+                        last_updated = NOW() 
+                    WHERE job_id = $job_id");
+                    if (!empty($ptm)) {
+                        $mysqli->query("UPDATE jobs SET assigned_pag = '$ptm' WHERE job_id = $job_id");
+                    }
+                }
+            }
+        }
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $mysqli->error]);
+    }
+    exit;
+}
+// Helper to style CRX (Orange) vs Complete (Green) dropdowns
+if (!function_exists('getStageSelectStyle')) {
+    function getStageSelectStyle($val) {
+        $val = trim((string)$val);
+        if ($val === '') return '';
+        $u = strtoupper($val);
+        if (strpos($u, 'COMPLETE') !== false || strpos($u, 'COMPELETE') !== false) {
+            return 'background-color: #198754 !important; color: #ffffff !important; font-weight: 600;';
+        }
+        if (strpos($u, 'CRX') !== false) {
+            return 'background-color: #fd7e14 !important; color: #ffffff !important; font-weight: 600;';
+        }
+        return '';
+    }
 }
 
 if (!function_exists('getWorkingDaysWithoutSunday')) {
@@ -188,6 +297,15 @@ if ($current_user_id) {
 }
 
 // Employee map for name display
+// Fetch all active employees for Employee filter
+$all_employees = [];
+$emp_filter_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
+if ($emp_filter_res) {
+    while ($e_row = $emp_filter_res->fetch_assoc()) {
+        $all_employees[] = $e_row;
+    }
+}
+
 $emp_map = [];
 $emp_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master");
 if ($emp_res) {
@@ -196,19 +314,22 @@ if ($emp_res) {
     }
 }
 
+// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
+$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
+
 // Get all employees under the same reporting manager with TM role
 $tms = [];
-if ($reporting_manager) {
+if ($effective_manager) {
     $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
                  FROM employee_master em 
                  LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
+                 WHERE ((em.reporting_manager = ? OR em.reporting_manager = ?) AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
                  OR (em.employee_name LIKE '%Manjuparkavi%' AND em.status = 'Active')
                  ORDER BY em.employee_name";
     
     $stmt = $mysqli->prepare($tm_query);
     if ($stmt) {
-        $stmt->bind_param("s", $reporting_manager);
+        $stmt->bind_param("ss", $effective_manager, $current_user_name);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($tm = $result->fetch_assoc()) {
@@ -299,6 +420,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 // Get filter parameters
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$employee_filter = isset($_GET['employee']) ? trim($_GET['employee']) : '';
 $qc_tm_filter = isset($_GET['qc_tm']) ? trim($_GET['qc_tm']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'qc.created_at';
 $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC';
@@ -308,9 +430,8 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 // 2. Process must involve PAG or LE or TS
 // 3. THE CRITICAL CONDITION: PAG phase OR LE phase must be 'Completed'
 $where_conditions = [
-    "qc.status != 'Completed'", 
-    "qc.status != 'Done'",
-    "(qc.qc_crx_stage IS NULL OR qc.qc_crx_stage != 'Moved')",
+    "(qc.status IN ('Completed', 'Done') OR EXISTS (SELECT 1 FROM qc q_chk WHERE q_chk.job_id = qc.job_id AND q_chk.status IN ('Completed', 'Done')))",
+    "(qc.is_moved = 0 OR qc.is_moved IS NULL)",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'CE+TS', 'CE+TS+XML', 'TS', 'TS+XML', 'LE', 'CE+LE', 'CE+LE+XML', 'CE+PAG+LE')",
     "(
         EXISTS (SELECT 1 FROM pag WHERE pag.job_id = qc.job_id AND (pag.status = 'Completed' OR pag.status = 'Done'))
@@ -322,26 +443,52 @@ $params = [];
 $types = '';
 
 if (!empty($search)) {
-    $where_conditions[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR qc.journal_issue LIKE ? OR qc.article LIKE ? OR qc.process LIKE ?)";
+    $where_conditions[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR qc.journal_issue LIKE ? OR qc.article LIKE ? OR qc.process LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ? OR p.job_name LIKE ?)";
     $search_term = "%$search%";
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $types .= 'sssss';
+    for ($i = 0; $i < 8; $i++) {
+        $params[] = $search_term;
+    }
+    $types .= 'ssssssss';
 }
 
 if (!empty($status_filter)) {
-    $where_conditions[] = "qc.status = ?";
-    $params[] = $status_filter;
-    $types .= 's';
+    if ($status_filter === 'Completed') {
+        $where_conditions[] = "(qc.status = 'Completed' OR qc.qc_crx_stage IN ('QC_Complete', 'QC_RECRX_COMPLETE') OR qc.pag_crx_stage = 'PAG_CRX_Compelete')";
+    } elseif ($status_filter === 'In Progress') {
+        $where_conditions[] = "(qc.status = 'In Progress' OR qc.qc_crx_stage IN ('QC_CRX', 'QC_RECRX') OR qc.pag_crx_stage = 'Assign PAG-CRX' OR (qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != ''))";
+    } elseif ($status_filter === 'Need to Assign') {
+        $where_conditions[] = "(qc.status = 'Need to Assign' OR qc.qc_crx_stage IS NULL OR qc.qc_crx_stage = '' OR qc.assigned_to_qc IS NULL OR qc.assigned_to_qc = '')";
+    } else {
+        $where_conditions[] = "(qc.status = ? OR qc.qc_crx_stage = ? OR qc.pag_crx_stage = ?)";
+        $params[] = $status_filter;
+        $params[] = $status_filter;
+        $params[] = $status_filter;
+        $types .= 'sss';
+    }
 }
 
 if (!empty($qc_tm_filter)) {
-    $where_conditions[] = "qc.assigned_to_qc = ?";
+    $where_conditions[] = "(qc.assigned_to_qc = ? OR j.assigned_qc = ? OR qc.pag_crx_assigned_to = ?)";
     $params[] = $qc_tm_filter;
-    $types .= 's';
+    $params[] = $qc_tm_filter;
+    $params[] = $qc_tm_filter;
+    $types .= 'sss';
+}
+
+if (!empty($employee_filter)) {
+    // Strictly filter only employees visibly displayed on screen (QC TM, PAG-CRX, PAG TM, LE TM, CE Content, Upload By)
+    $where_conditions[] = "(
+        (COALESCE(NULLIF(qc.assigned_to_qc, ''), NULLIF(q_orig.assigned_to_qc, '')) COLLATE utf8mb4_general_ci) = ?
+        OR qc.pag_crx_assigned_to = ?
+        OR (COALESCE(NULLIF(pag.assigned_to_pag, ''), NULLIF(j.assigned_pag, ''), NULLIF(pag.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR (COALESCE(NULLIF(le.assigned_to_le_qc, ''), NULLIF(le.assigned_to_le, ''), NULLIF(j.assigned_le, ''), NULLIF(le.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR (COALESCE(NULLIF(ce.assigned_to_content, ''), NULLIF(j.assigned_ce, ''), NULLIF(ce.done_by, '')) COLLATE utf8mb4_general_ci) = ?
+        OR qc.upload_by = ?
+    )";
+    for ($k = 0; $k < 6; $k++) {
+        $params[] = $employee_filter;
+    }
+    $types .= 'ssssss';
 }
 
 $where_sql = implode(' AND ', $where_conditions);
@@ -375,6 +522,7 @@ $qc_query = "SELECT qc.*,
                     pag.done_by as pag_table_done_by,
                     pag.assigned_to_pag as pag_assigned_to,
                     pag.eq, pag.pages, pag.images, pag.tables_count, pag.status as pag_status,
+                    q_orig.assigned_to_qc as orig_qc_tm, q_orig.status as orig_qc_status,
                     qc.rtat, qc.atat,
                     (SELECT upload_by FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as job_upload_by,
                     (SELECT upload_date FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as upload_date,
@@ -386,7 +534,8 @@ $qc_query = "SELECT qc.*,
              LEFT JOIN ce ON j.job_id = ce.job_id
              LEFT JOIN le ON j.job_id = le.job_id
              LEFT JOIN pag ON j.job_id = pag.job_id
-             WHERE $where_sql
+              LEFT JOIN qc q_orig ON qc.job_id = q_orig.job_id
+              WHERE $where_sql
              ORDER BY $sort $dir";
 
 $stmt = $mysqli->prepare($qc_query);
@@ -407,12 +556,17 @@ $status_result = $mysqli->query($status_query);
 // Get count statistics (Using same conditions for accuracy)
 $stats_query = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN qc.status = 'Need to Assign' THEN 1 ELSE 0 END) as need_assign,
-                    SUM(CASE WHEN qc.status = 'In Progress' THEN 1 ELSE 0 END) as in_progress,
+                    SUM(CASE WHEN qc.status = 'Need to Assign' OR qc.qc_crx_stage IS NULL OR qc.qc_crx_stage = '' OR qc.assigned_to_qc IS NULL OR qc.assigned_to_qc = '' THEN 1 ELSE 0 END) as need_assign,
+                    SUM(CASE WHEN qc.status = 'In Progress' OR qc.qc_crx_stage IN ('QC_CRX', 'QC_RECRX') OR qc.pag_crx_stage = 'Assign PAG-CRX' THEN 1 ELSE 0 END) as in_progress,
                     SUM(CASE WHEN qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != '' THEN 1 ELSE 0 END) as qc_assigned
                 FROM qc_crx qc 
                 LEFT JOIN jobs j ON qc.job_id = j.job_id
+                LEFT JOIN client_master c ON j.client_id = c.client_id
                 LEFT JOIN job_master p ON j.process_id = p.job_id
+                LEFT JOIN ce ON j.job_id = ce.job_id
+                LEFT JOIN le ON j.job_id = le.job_id
+                LEFT JOIN pag ON j.job_id = pag.job_id
+                LEFT JOIN qc q_orig ON qc.job_id = q_orig.job_id
                 WHERE $where_sql";
 
 $stats_stmt = $mysqli->prepare($stats_query);
@@ -509,7 +663,7 @@ require 'header.php';
                         QC_CRX Assign
                     </h4>
                     <!-- <p class="mb-0 text-muted small">
-                        Assign QC tasks to team members under <?= h($reporting_manager) ?>. 
+                        Assign QC tasks to team members under <?= h($effective_manager) ?>. 
                         <em>(Jobs appear here ONLY after the PAG phase is 100% completed)</em>
                     </p> -->
                 </div>
@@ -585,20 +739,26 @@ require 'header.php';
                            value="<?= h($search) ?>">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small">Status</label>
+                                        <label class="form-label small">Status</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
-                        <?php if ($status_result): ?>
-                            <?php while ($status = $status_result->fetch_assoc()): ?>
-                                <option value="<?= h($status['status']) ?>" 
-                                    <?= $status_filter == $status['status'] ? 'selected' : '' ?>>
-                                    <?= h($status['status']) ?>
-                                </option>
-                            <?php endwhile; ?>
-                        <?php endif; ?>
+                        <option value="Completed" <?= $status_filter == 'Completed' ? 'selected' : '' ?>>Completed</option>
+                        <option value="In Progress" <?= $status_filter == 'In Progress' ? 'selected' : '' ?>>In Progress</option>
+                        <option value="Need to Assign" <?= $status_filter == 'Need to Assign' ? 'selected' : '' ?>>Need to Assign</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <label class="form-label small">Employee</label>
+                    <select name="employee" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        <?php foreach ($all_employees as $emp): ?>
+                            <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
+                                <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small">QC TM</label>
                     <select name="qc_tm" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
@@ -656,7 +816,7 @@ require 'header.php';
                             <th>CE Status</th>
                             <th>LE Status</th>
                             <th>PAG</th>
-                            <th style="min-width: 250px;">QC</th>
+                            <th>QC</th>
                             <th>Due Date</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
@@ -667,6 +827,7 @@ require 'header.php';
                             <th>IMG_TAB_Stage</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th style="min-width: 80px; text-align: center;">Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -746,56 +907,22 @@ require 'header.php';
                                         <?php endif; ?>
                                     </td>
                                     
-                                    <!-- QC Assignment Column -->
+                                    <!-- QC Column (Static Badge & TM from QC Assign) -->
                                     <?php 
-                                        $qc_done = in_array($qc_stat, ['Completed']);
-                                        $qc_inprogress = (!$qc_done && !empty($row['assigned_to_qc']));
-                                        $qc_curr_status = 'Need to Assign';
-                                        $qc_badge_cls = 'pending';
-                                        
-                                        if ($qc_done) { 
-                                            $qc_curr_status = 'Completed'; 
-                                            $qc_badge_cls = 'completed'; 
-                                        } elseif ($qc_inprogress) { 
-                                            $qc_curr_status = 'In Progress'; 
-                                            $qc_badge_cls = 'in-progress'; 
-                                        }
+                                        $qc_emp = !empty($row['assigned_to_qc']) ? $row['assigned_to_qc'] : ($row['orig_qc_tm'] ?? '');
+                                        $qc_display_status = in_array($row['status'] ?? '', ['Completed', 'Done']) ? $row['status'] : (!empty($row['orig_qc_status']) ? $row['orig_qc_status'] : 'Completed');
+                                        $qc_badge_cls = in_array($qc_display_status, ['Completed', 'Done']) ? 'bg-success' : 'bg-info';
                                     ?>
-                                    <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
-                                        <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 100%; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, this.value)">
-                                                <option value="Need to Assign" <?= ($qc_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
-                                                <option value="In Progress" <?= ($qc_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
-                                                <option value="Completed" <?= ($qc_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
-                                            </select>
-                                        </div>
-
-                                        <?php if (!empty($row['assigned_to_qc'])): ?>
-                                            <div class="tm-badge <?= $qc_badge_cls ?> mb-1" title="Assigned for QC">
-                                                <i class="fas fa-search"></i> <?= h($row['assigned_to_qc']) ?>
+                                    <td>
+                                        <span class="badge <?= $qc_badge_cls ?>"><?= h($qc_display_status) ?></span>
+                                        <?php if (!empty($qc_emp)): 
+                                            $qc_name = $emp_map[$qc_emp] ?? '';
+                                            $qc_display = $qc_name ? h($qc_name) . " (" . h($qc_emp) . ")" : h($qc_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $qc_display ?>
                                             </div>
-                                            <small class="text-dark d-block mb-1" style="font-weight: 600;">
-                                                <?php 
-                                                $found_name = '';
-                                                foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_qc']) { $found_name = $tm['employee_name']; break; } }
-                                                echo h($found_name ?: $row['assigned_to_qc']);
-                                                ?>
-                                            </small>
                                         <?php endif; ?>
-
-                                        <select class="assign-select mt-1 qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, this)">
-                                            <option value=""><?= !empty($row['assigned_to_qc']) ? 'Change QC TM' : 'Assign LE-QC' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
-                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_qc'] == $tm['employee_username']) ? 'selected' : '' ?>>
-                                                    <?= h($tm['employee_name']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        
-                                        <div class="d-flex gap-1 mt-2">
-                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_start_time', t, this);">
-                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_end_time']) ? date('H:i', strtotime($row['qc_end_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_end_time', t, this);">
-                                        </div>
                                     </td>
                                     
                                     <!-- Tail Columns -->
@@ -822,14 +949,13 @@ require 'header.php';
                                     
                                     <!-- QC_CRX_Stage Column -->
                                     <td>
-                                        <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px;" 
-                                                onchange="updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value); if(this.value === 'Moved') { setTimeout(() => window.location.reload(), 500); }">
+                                        <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px; <?= getStageSelectStyle($row['qc_crx_stage'] ?? '') ?>" 
+                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value);">
                                             <option value="">Select</option>
                                             <option value="QC_CRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_CRX') ? 'selected' : '' ?>>QC_CRX</option>
                                             <option value="QC_Complete" <?= (($row['qc_crx_stage'] ?? '') == 'QC_Complete') ? 'selected' : '' ?>>QC_Complete</option>
                                             <option value="QC_RECRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_RECRX') ? 'selected' : '' ?>>QC_RECRX</option>
                                             <option value="QC_RECRX_COMPLETE" <?= (($row['qc_crx_stage'] ?? '') == 'QC_RECRX_COMPLETE') ? 'selected' : '' ?>>QC_RECRX_COMPLETE</option>
-                                            <option value="Moved" <?= (($row['qc_crx_stage'] ?? '') == 'Moved') ? 'selected' : '' ?>>Moved</option>
                                         </select>
                                     </td>
 
@@ -837,8 +963,8 @@ require 'header.php';
                                     <td style="min-width: 180px; vertical-align: top; padding: 6px;">
                                         <div class="space-y-1">
                                             <!-- Stage Dropdown -->
-                                            <select class="form-select form-select-sm p-0 px-1 mb-1" style="font-size: 11px; width: 100%; height: 22px;" 
-                                                    onchange="updateInlineField(<?= $row['id'] ?>, 'pag_crx_stage', this.value)">
+                                            <select class="form-select form-select-sm p-0 px-1 mb-1" style="font-size: 11px; width: 100%; height: 22px; <?= getStageSelectStyle($row['pag_crx_stage'] ?? '') ?>" 
+                                                    onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'pag_crx_stage', this.value)">
                                                 <option value="">Select Stage</option>
                                                 <option value="PAG_CRX" <?= (($row['pag_crx_stage'] ?? '') == 'PAG_CRX') ? 'selected' : '' ?>>PAG_CRX</option>
                                                 <option value="PAG_CRX_Compelete" <?= (($row['pag_crx_stage'] ?? '') == 'PAG_CRX_Compelete') ? 'selected' : '' ?>>PAG_CRX_Compelete</option>
@@ -873,8 +999,8 @@ require 'header.php';
 
                                     <!-- IMG_TAB_Stage Column -->
                                     <td>
-                                        <select class="form-select form-select-sm p-1" style="min-width: 120px; font-size: 11px;" 
-                                                onchange="updateInlineField(<?= $row['id'] ?>, 'img_tab_stage', this.value)">
+                                        <select class="form-select form-select-sm p-1" style="min-width: 120px; font-size: 11px; <?= getStageSelectStyle($row['img_tab_stage'] ?? '') ?>" 
+                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'img_tab_stage', this.value)">
                                             <option value="">Select</option>
                                             <option value="IMG_CRX" <?= (($row['img_tab_stage'] ?? '') == 'IMG_CRX') ? 'selected' : '' ?>>IMG_CRX</option>
                                             <option value="IMG_COMPLETE" <?= (($row['img_tab_stage'] ?? '') == 'IMG_COMPLETE') ? 'selected' : '' ?>>IMG_COMPLETE</option>
@@ -889,7 +1015,7 @@ require 'header.php';
                                         $path_class = '';
                                         if (strtoupper($path_val) === 'CRX') {
                                             $path_class = 'bg-warning text-dark'; // ORANGE
-                                        } elseif ($qc_curr_status === 'Completed' && !empty($path_val)) {
+                                        } elseif (in_array($row['status'] ?? '', ['Completed', 'Done']) && !empty($path_val)) {
                                             $path_class = 'bg-success text-white'; // GREEN
                                         }
                                     ?>
@@ -905,6 +1031,16 @@ require 'header.php';
                                             <option value="Urgent" <?= (($row['priority'] ?? '') == 'Urgent') ? 'selected' : '' ?>>Urgent</option>
                                         </select>
                                     </td>
+                                    <!-- Status Column with Move Button -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <button type="button" class="btn btn-sm btn-success move-btn-<?= $row['id'] ?>"
+                                                style="font-size: 11px; padding: 3px 10px; font-weight: 600; border-radius: 4px;"
+                                                onclick="moveToReport(<?= $row['id'] ?>, <?= $row['job_id'] ?>)"
+                                                title="Move to QC Report">
+                                            <i class="fas fa-paper-plane me-1"></i> Move
+                                        </button>
+                                    </td>
+
                                     <!-- TAT Column -->
                                     <?php
                                         $qc_done = in_array($row['status'] ?? '', ['Completed', 'Done']);
@@ -919,7 +1055,7 @@ require 'header.php';
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="20" class="empty-state">
+                                <td colspan="26" class="empty-state">
                                     <i class="fas fa-check-circle"></i>
                                     <h6>No Pending QC Assignments</h6>
                                     <p class="text-muted small">All jobs have been assigned, or there are no jobs that have completed the PAG phase yet.</p>
@@ -940,7 +1076,7 @@ require 'header.php';
                             <i class="fas fa-list me-1"></i> Showing <?= $qc_result->num_rows ?> ready job(s)
                         </small>
                         <small class="text-muted">
-                            Reporting Manager: <strong><?= h($reporting_manager) ?></strong>
+                            Reporting Manager: <strong><?= h($effective_manager) ?></strong>
                         </small>
                     </div>
                 </div>
@@ -967,9 +1103,101 @@ require 'header.php';
             setTimeout(() => { notification.remove(); }, 5000);
         }
         
+        // Stage Dynamic Color Application
+        function applyStageColor(element) {
+            if (!element) return;
+            const val = (element.value || '').toUpperCase();
+            if (val.includes('COMPLETE') || val.includes('COMPELETE')) {
+                element.style.setProperty('background-color', '#198754', 'important');
+                element.style.setProperty('color', '#ffffff', 'important');
+                element.style.setProperty('font-weight', '600', 'important');
+            } else if (val.includes('CRX')) {
+                element.style.setProperty('background-color', '#fd7e14', 'important');
+                element.style.setProperty('color', '#ffffff', 'important');
+                element.style.setProperty('font-weight', '600', 'important');
+            } else {
+                element.style.removeProperty('background-color');
+                element.style.removeProperty('color');
+                element.style.removeProperty('font-weight');
+            }
+        }
+
+        // Move to QC Report
+        function moveToReport(qcId, jobId) {
+            if (!confirm('Are you sure you want to move this job to QC Report?')) {
+                return;
+            }
+            showLoading();
+            fetch('?', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'ajax=move_to_report&qc_id=' + qcId + '&job_id=' + jobId
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    showNotification('success', 'Moved to QC Report successfully!');
+                    const rowElem = document.getElementById('row-' + qcId);
+                    if (rowElem) {
+                        rowElem.style.transition = 'all 0.5s';
+                        rowElem.style.opacity = '0';
+                        setTimeout(() => { rowElem.remove(); }, 500);
+                    } else {
+                        setTimeout(() => window.location.reload(), 500);
+                    }
+                } else {
+                    showNotification('danger', 'Error moving to report: ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('danger', 'Error processing request');
+            });
+        }
+
         // Show loading overlay
         function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
         function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+
+        // Scroll Position Preservation
+        function saveScrollPositions() {
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                sessionStorage.setItem('subtl_qccrx_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('subtl_qccrx_assign_table_y', tableResp.scrollTop);
+            }
+            sessionStorage.setItem('subtl_qccrx_win_x', window.scrollX || 0);
+            sessionStorage.setItem('subtl_qccrx_win_y', window.scrollY || 0);
+        }
+
+        function restoreScrollPositions() {
+            const tableX = sessionStorage.getItem('subtl_qccrx_assign_table_x');
+            const tableY = sessionStorage.getItem('subtl_qccrx_assign_table_y');
+            const winX = sessionStorage.getItem('subtl_qccrx_win_x');
+            const winY = sessionStorage.getItem('subtl_qccrx_win_y');
+            
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp && tableX !== null) {
+                tableResp.scrollLeft = parseFloat(tableX);
+                if (tableY !== null) tableResp.scrollTop = parseFloat(tableY);
+            }
+            if (winX !== null || winY !== null) {
+                window.scrollTo(parseFloat(winX || 0), parseFloat(winY || 0));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreScrollPositions();
+            const tableResp = document.querySelector('.table-responsive');
+            if (tableResp) {
+                tableResp.addEventListener('scroll', () => {
+                    sessionStorage.setItem('subtl_qccrx_assign_table_x', tableResp.scrollLeft);
+                }, { passive: true });
+            }
+        });
+        window.addEventListener('beforeunload', saveScrollPositions);
 
         // Status Update Function
         function updateStatus(qcId, newStatus) {

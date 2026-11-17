@@ -1,6 +1,6 @@
 <?php
 // dashboard.php
-require 'db.php';
+require '../db.php'; 
 session_start();
 
 $pageTitle = "Dashboard";
@@ -473,7 +473,7 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 
 /* Dashboard Header */
 .dashboard-header {
-    background: #495057;
+    background: var(--ash, #6c757d);
     border-radius: var(--border-radius);
     margin-bottom: 25px;
     border: none;
