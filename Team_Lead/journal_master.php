@@ -9,10 +9,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Helper functions
-if (!function_exists('h')) {
-    function h($s) { 
-        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
-    }
+function h($s) { 
+    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); 
 }
 
 function formatDate($d) {
@@ -30,7 +28,7 @@ function redirect_with($params =[]) {
 // Fetch client list for dropdown
 function getClients($mysqli) {
     $clients =[];
-    $sql = "SELECT client_id, client_name, team_client_name, company_name FROM client_master WHERE status = 'Active' ORDER BY team_client_name";
+    $sql = "SELECT client_id, client_name, company_name FROM client_master WHERE status = 'Active' ORDER BY client_name";
     $result = $mysqli->query($sql);
     if ($result) {
         while ($row = $result->fetch_assoc()) {
@@ -40,10 +38,10 @@ function getClients($mysqli) {
     return $clients;
 }
 
-// Fetch team list from team_master (Only WK and UQ)
+// Fetch team list from team_master
 function getTeams($mysqli) {
-    $teams = [];
-    $sql = "SELECT team_id, team_name FROM team_master WHERE status = 'Active' AND team_name IN ('WK', 'UQ') ORDER BY FIELD(team_name, 'WK', 'UQ')";
+    $teams =[];
+    $sql = "SELECT team_id, team_name FROM team_master WHERE status = 'Active' ORDER BY team_name";
     $result = $mysqli->query($sql);
     if ($result) {
         while ($row = $result->fetch_assoc()) {
@@ -62,7 +60,7 @@ function getMonths() {
 }
 
 // Handle POST actions
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     // ---------------------------------------------------------
@@ -71,78 +69,31 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if ($action === 'import_excel') {
         if (isset($_FILES['excel_file']) && $_FILES['excel_file']['error'] === 0) {
             
-            // Multi-format Parser (SimpleXLSX, SimpleXLS, and CSV)
-            $tmpFile = $_FILES['excel_file']['tmp_name'];
-            $fileName = $_FILES['excel_file']['name'];
-            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-
-            $rows = null;
-
-            // 1. Try SimpleXLSX for .xlsx files
+            // Locate the SimpleXLSX Library
             $libPath = dirname(__DIR__) . '/simplexlsx-master/src/SimpleXLSX.php';
+            // Fallback paths just in case
             if (!file_exists($libPath)) $libPath = dirname(__DIR__) . '/simplexlsx-master/SimpleXLSX.php';
-            if (!file_exists($libPath)) $libPath = 'simplexls-master/src/SimpleXLSX.php';
-            if (!file_exists($libPath)) $libPath = __DIR__ . '/simplexlsx-master/src/SimpleXLSX.php';
+            if (!file_exists($libPath)) $libPath = 'simplexlsx-master/src/SimpleXLSX.php';
 
-            if (file_exists($libPath)) {
-                require_once $libPath;
-                if (class_exists('Shuchkin\SimpleXLSX')) {
-                    $xlsx = Shuchkin\SimpleXLSX::parse($tmpFile);
-                    if ($xlsx) {
-                        $rows = $xlsx->rows();
-                    }
-                } elseif (class_exists('SimpleXLSX')) {
-                    $xlsx = SimpleXLSX::parse($tmpFile);
-                    if ($xlsx) {
-                        $rows = $xlsx->rows();
-                    }
-                }
+            if (!file_exists($libPath)) {
+                redirect_with(['msg' => 'Library file not found.', 'type' => 'danger']);
             }
+            
+            require_once $libPath;
 
-            // 2. If not parsed, try SimpleXLS for .xls (legacy binary format)
-            if (!$rows) {
-                $xlsLib = dirname(__DIR__) . '/simplexls-master/src/SimpleXLS.php';
-                if (!file_exists($xlsLib)) $xlsLib = dirname(__DIR__) . '/simplexls-master/SimpleXLS.php';
-                if (!file_exists($xlsLib)) $xlsLib = 'simplexls-master/src/SimpleXLS.php';
-                if (!file_exists($xlsLib)) $xlsLib = __DIR__ . '/simplexls-master/src/SimpleXLS.php';
-
-                if (file_exists($xlsLib)) {
-                    require_once $xlsLib;
-                    if (class_exists('Shuchkin\SimpleXLS')) {
-                        $xls = Shuchkin\SimpleXLS::parse($tmpFile);
-                        if ($xls) {
-                            $rows = $xls->rows();
-                        }
-                    } elseif (class_exists('SimpleXLS')) {
-                        $xls = SimpleXLS::parse($tmpFile);
-                        if ($xls) {
-                            $rows = $xls->rows();
-                        }
-                    }
-                }
-            }
-
-            // 3. Fallback: Parse as CSV or text format (e.g. downloaded sample)
-            if (!$rows) {
-                $csvRows = [];
-                if (($handle = fopen($tmpFile, "r")) !== FALSE) {
-                    while (($data = fgetcsv($handle, 10000, ",", '"', "\\")) !== FALSE) {
-                        if (count($data) === 1 && strpos($data[0], ';') !== false) {
-                            $data = str_getcsv($data[0], ';');
-                        } elseif (count($data) === 1 && strpos($data[0], "\t") !== false) {
-                            $data = str_getcsv($data[0], "\t");
-                        }
-                        $csvRows[] = $data;
-                    }
-                    fclose($handle);
-                }
-                if (!empty($csvRows) && count($csvRows) > 1) {
-                    $rows = $csvRows;
-                }
+            // Initialize Parser
+            $xlsx = null;
+            if (class_exists('Shuchkin\SimpleXLSX')) {
+                $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+            } elseif (class_exists('SimpleXLSX')) {
+                $xlsx = SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+            } else {
+                redirect_with(['msg' => 'Class SimpleXLSX not found.', 'type' => 'danger']);
             }
 
             // Process Rows
-            if ($rows && is_array($rows)) {
+            if ($xlsx) {
+                $rows = $xlsx->rows();
                 $imported_count = 0;
                 $updated_count = 0;
                 $skipped_count = 0;
@@ -150,11 +101,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 
                 // Pre-fetch clients and teams to map names to IDs quickly
                 $clients_map =[];
-                $res = $mysqli->query("SELECT client_id, client_name, team_client_name FROM client_master");
+                $res = $mysqli->query("SELECT client_id, client_name FROM client_master");
                 if($res) {
                     while($row = $res->fetch_assoc()) {
                         $clients_map[strtolower(trim($row['client_name']))] = $row['client_id'];
-                        if (!empty($row['team_client_name'])) $clients_map[strtolower(trim($row['team_client_name']))] = $row['client_id'];
                     }
                 }
 
@@ -185,17 +135,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                         continue;
                     }
 
-                    // Resolve Client ID (or auto-create in client_master if not found)
+                    // Resolve Client ID
                     $client_id = $clients_map[strtolower($client_raw)] ?? 0;
-                    if ($client_id === 0 && !empty($client_raw)) {
-                        $ins_c = $mysqli->prepare("INSERT INTO client_master (client_name, team_client_name, template, tds_percentage, igst, status, created_date) VALUES (?, ?, '', 0.00, 0.00, 'Active', NOW())");
-                        $ins_c->bind_param("ss", $client_raw, $client_raw);
-                        if ($ins_c->execute()) {
-                            $client_id = (int)$mysqli->insert_id;
-                            $clients_map[strtolower($client_raw)] = $client_id;
-                        }
-                        $ins_c->close();
-                    }
                     if ($client_id === 0) {
                         $skipped_count++;
                         $error_details[] = "Row " . ($k + 1) . ": Client '$client_raw' not found in database";
@@ -268,7 +209,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     }
     
     if ($action === 'add' || $action === 'edit') {
-        $client_name_input = trim($_POST['client_name'] ?? '');
+        $client_id = (int)trim($_POST['client_id'] ?? '');
         $team_id = (int)trim($_POST['team_id'] ?? '');
         $wk_new_journals = trim($_POST['wk_new_journals'] ?? '');
         $year_volume_issue = trim($_POST['year_volume_issue'] ?? '');
@@ -277,31 +218,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $month = trim($_POST['month'] ?? '');
         $status = trim($_POST['status'] ?? 'Active');
         
-        if (empty($client_name_input)) {
-            redirect_with(['msg' => 'Client Name is required.', 'type' => 'danger']);
-        }
-        
-        // Find or create client_id by client_name
-        $client_id = 0;
-        $c_stmt = $mysqli->prepare("SELECT client_id FROM client_master WHERE client_name = ? OR team_client_name = ? LIMIT 1");
-        $c_stmt->bind_param("ss", $client_name_input, $client_name_input);
-        $c_stmt->execute();
-        $c_res = $c_stmt->get_result();
-        if ($c_res->num_rows > 0) {
-            $client_id = (int)$c_res->fetch_assoc()['client_id'];
-        } else {
-            // Automatically add new client to client_master
-            $ins_c = $mysqli->prepare("INSERT INTO client_master (client_name, team_client_name, template, tds_percentage, igst, status, created_date) VALUES (?, ?, '', 0.00, 0.00, 'Active', NOW())");
-            $ins_c->bind_param("ss", $client_name_input, $client_name_input);
-            if ($ins_c->execute()) {
-                $client_id = (int)$mysqli->insert_id;
-            }
-            $ins_c->close();
-        }
-        $c_stmt->close();
-        
         if ($client_id === 0) {
-            redirect_with(['mode' => $action, 'msg' => 'Unable to process or save Client Name.', 'type' => 'danger']);
+            redirect_with(['msg' => 'Client selection is required.', 'type' => 'danger']);
         }
         
         if (empty($wk_new_journals)) {
@@ -309,14 +227,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         }
         
         if ($action === 'add') {
-            $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ?");
-            $check_stmt->bind_param("is", $client_id, $wk_new_journals);
+            $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ? AND pubcode = ?");
+            $check_stmt->bind_param("iss", $client_id, $wk_new_journals, $pubcode);
             $check_stmt->execute();
             $check_stmt->store_result();
             
             if ($check_stmt->num_rows > 0) {
                 $check_stmt->close();
-                redirect_with(['msg' => 'Journal entry already exists for this client with same journal name.', 'type' => 'danger']);
+                redirect_with(['msg' => 'Journal entry already exists for this client with same journal and pubcode.', 'type' => 'danger']);
             }
             $check_stmt->close();
             
@@ -324,7 +242,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $stmt->bind_param("iissssss", $client_id, $team_id, $wk_new_journals, $year_volume_issue, $pubcode, $issn, $month, $status);
             
             if ($stmt->execute()) {
-                redirect_with(['msg' => "Journal entry for '$client_name_input' added successfully", 'type' => 'success']);
+                $client_stmt = $mysqli->prepare("SELECT client_name FROM client_master WHERE client_id = ?");
+                $client_stmt->bind_param("i", $client_id);
+                $client_stmt->execute();
+                $client_stmt->bind_result($client_name);
+                $client_stmt->fetch();
+                $client_stmt->close();
+                
+                redirect_with(['msg' => "Journal entry for '$client_name' added successfully", 'type' => 'success']);
             } else {
                 redirect_with(['msg' => 'Error adding journal entry: ' . $stmt->error, 'type' => 'danger']);
             }
@@ -335,14 +260,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $id = (int)($_POST['id'] ?? 0);
             
             if ($id > 0) {
-                $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ? AND id != ?");
-                $check_stmt->bind_param("isi", $client_id, $wk_new_journals, $id);
+                $check_stmt = $mysqli->prepare("SELECT id FROM journal_master WHERE client_id = ? AND wk_new_journals = ? AND pubcode = ? AND id != ?");
+                $check_stmt->bind_param("issi", $client_id, $wk_new_journals, $pubcode, $id);
                 $check_stmt->execute();
                 $check_stmt->store_result();
                 
                 if ($check_stmt->num_rows > 0) {
                     $check_stmt->close();
-                    redirect_with(['msg' => 'Journal entry already exists for this client with same journal name.', 'type' => 'danger']);
+                    redirect_with(['msg' => 'Journal entry already exists for this client with same journal and pubcode.', 'type' => 'danger']);
                 }
                 $check_stmt->close();
                 
@@ -415,7 +340,7 @@ $editEntry = null;
 if ($mode === 'edit') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT jm.id, jm.client_id, jm.team_id, jm.wk_new_journals, jm.year_volume_issue, jm.pubcode, jm.issn, jm.month, jm.status, jm.created_date, jm.updated_date, cm.client_name, cm.team_client_name, cm.company_name, tm.team_name FROM journal_master jm JOIN client_master cm ON jm.client_id = cm.client_id LEFT JOIN team_master tm ON jm.team_id = tm.team_id WHERE jm.id = ?");
+        $stmt = $mysqli->prepare("SELECT jm.id, jm.client_id, jm.team_id, jm.wk_new_journals, jm.year_volume_issue, jm.pubcode, jm.issn, jm.month, jm.status, jm.created_date, jm.updated_date, cm.client_name, cm.company_name, tm.team_name FROM journal_master jm JOIN client_master cm ON jm.client_id = cm.client_id LEFT JOIN team_master tm ON jm.team_id = tm.team_id WHERE jm.id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $editEntry = $stmt->get_result()->fetch_assoc();
@@ -438,7 +363,7 @@ if (!in_array($sort, $allowed_sorts)) {
 
 // Build query
 $sql = "SELECT jm.id, jm.client_id, jm.team_id, jm.wk_new_journals, jm.year_volume_issue, jm.pubcode, jm.issn, jm.month, jm.status, jm.created_date, jm.updated_date, 
-               cm.client_name, cm.team_client_name, cm.company_name, tm.team_name 
+               cm.client_name, cm.company_name, tm.team_name 
         FROM journal_master jm 
         JOIN client_master cm ON jm.client_id = cm.client_id
         LEFT JOIN team_master tm ON jm.team_id = tm.team_id";
@@ -447,10 +372,10 @@ $params = [];
 $types = '';
 
 if ($q !== '') {
-    $cond[] = "(cm.client_name LIKE ? OR cm.team_client_name LIKE ? OR cm.company_name LIKE ? OR jm.wk_new_journals LIKE ? OR jm.year_volume_issue LIKE ? OR jm.pubcode LIKE ? OR jm.issn LIKE ? OR tm.team_name LIKE ? OR jm.month LIKE ?)";
+    $cond[] = "(cm.client_name LIKE ? OR cm.company_name LIKE ? OR jm.wk_new_journals LIKE ? OR jm.year_volume_issue LIKE ? OR jm.pubcode LIKE ? OR jm.issn LIKE ? OR tm.team_name LIKE ? OR jm.month LIKE ?)";
     $like = "%$q%";
-    $params = array_fill(0, 9, $like);
-    $types .= str_repeat('s', 9);
+    $params = array_fill(0, 8, $like);
+    $types .= str_repeat('s', 8);
 }
 
 if ($fstatus === 'Active' || $fstatus === 'Inactive') {
@@ -508,8 +433,8 @@ $months = getMonths();
             margin: 0 auto;
         }
         .table th {
-            background-color: #5e6b77 !important;
-            color: #ffffff !important;
+            background-color: #2c3e50;
+            color: white;
             border: none;
         }
         .table td {
@@ -590,10 +515,21 @@ $months = getMonths();
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="client_name" class="form-label">Client Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="client_name" name="client_name" 
-                                       value="<?= isset($editEntry['team_client_name']) && !empty($editEntry['team_client_name']) ? h($editEntry['team_client_name']) : (isset($editEntry['client_name']) ? h($editEntry['client_name']) : '') ?>" 
-                                       placeholder="Enter client name" autocomplete="off" required>
+                                <label for="client_id" class="form-label">Client ID <span class="text-danger">*</span></label>
+                                <select class="form-control" id="client_id" name="client_id" required <?= $mode === 'edit' ? 'disabled' : '' ?>>
+                                    <option value="">-- Select Client --</option>
+                                    <?php foreach($clients as $client): ?>
+                                        <option value="<?= $client['client_id'] ?>" 
+                                            <?= ($mode === 'edit' && isset($editEntry['client_id']) && $editEntry['client_id'] == $client['client_id']) ? 'selected' : '' ?>>
+                                            <?= h($client['client_name']) ?> 
+                                            <?= !empty($client['company_name']) ? ' - ' . h($client['company_name']) : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if($mode === 'edit'): ?>
+                                    <input type="hidden" name="client_id" value="<?= isset($editEntry['client_id']) ? $editEntry['client_id'] : '' ?>">
+                                <?php endif; ?>
+                                <div class="form-text">Select the client for this journal entry</div>
                             </div>
                         </div>
                         
@@ -608,15 +544,17 @@ $months = getMonths();
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <div class="form-text">Select the team responsible</div>
                             </div>
                         </div>
                         
                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label for="wk_new_journals" class="form-label">New Journals<span class="text-danger">*</span></label>
+                                <label for="wk_new_journals" class="form-label">WK_NEW Journals <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="wk_new_journals" name="wk_new_journals" 
                                        value="<?= isset($editEntry['wk_new_journals']) ? h($editEntry['wk_new_journals']) : '' ?>" 
-                                       placeholder="Enter journal name" autocomplete="off" required>
+                                       placeholder="Enter journal name" required>
+                                <div class="form-text">Enter the name of the new journal</div>
                             </div>
                         </div>
                         
@@ -625,15 +563,43 @@ $months = getMonths();
                                 <label for="year_volume_issue" class="form-label">Year_Volume_Issue</label>
                                 <input type="text" class="form-control" id="year_volume_issue" name="year_volume_issue" 
                                        value="<?= isset($editEntry['year_volume_issue']) ? h($editEntry['year_volume_issue']) : '' ?>" 
-                                       placeholder="e.g., 2024_01_01" autocomplete="off">
+                                       placeholder="e.g., 2024_01_01">
+                                <div class="form-text">Enter year, volume and issue details</div>
                             </div>
                         </div>
                         
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="month" class="form-label">Date / Month</label>
-                                <input type="date" class="form-control" id="month" name="month" 
-                                       value="<?= isset($editEntry['month']) ? h($editEntry['month']) : '' ?>">
+                                <label for="pubcode" class="form-label">Pubcode</label>
+                                <input type="text" class="form-control" id="pubcode" name="pubcode" 
+                                       value="<?= isset($editEntry['pubcode']) ? h($editEntry['pubcode']) : '' ?>" 
+                                       placeholder="Enter publication code">
+                                <div class="form-text">Enter the publication code</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="issn" class="form-label">ISSN</label>
+                                <input type="text" class="form-control" id="issn" name="issn" 
+                                       value="<?= isset($editEntry['issn']) ? h($editEntry['issn']) : '' ?>" 
+                                       placeholder="e.g., 1234-5678">
+                                <div class="form-text">Enter the International Standard Serial Number</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="month" class="form-label">Month</label>
+                                <select class="form-control" id="month" name="month">
+                                    <option value="">-- Select Month --</option>
+                                    <?php foreach($months as $month_option): ?>
+                                        <option value="<?= h($month_option) ?>" <?= (isset($editEntry['month']) && $editEntry['month'] === $month_option) ? 'selected' : '' ?>>
+                                            <?= h($month_option) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text">Select the publication month</div>
                             </div>
                         </div>
                         
@@ -664,14 +630,14 @@ $months = getMonths();
         <!-- View Mode -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4><i class="fas fa-newspaper me-2"></i>Assigned New Journals</h4>
+                <h4><i class="fas fa-newspaper me-2"></i>Journal Master</h4>
                 <p class="text-muted mb-0">Manage journals | Import Excel to bulk add/update</p>
             </div>
             <div>
-                <button type="button" class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                <button type="button" class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-excel me-2"></i> Import Excel
                 </button>
-                <a href="journal_master.php?mode=add" class="btn btn-primary btn-sm">
+                <a href="journal_master.php?mode=add" class="btn btn-success btn-sm">
                     <i class="fas fa-plus me-1"></i> Add New
                 </a>
             </div>
@@ -683,11 +649,11 @@ $months = getMonths();
                 <form method="get" class="row g-3 align-items-center">
                     <div class="col-md-4">
                         <input type="text" name="q" class="form-control form-control-sm" 
-                               placeholder="Sort by client, journal, pubcode, ISSN, team, or month..." value="<?= h($q) ?>">
+                               placeholder="Search by client, journal, pubcode, ISSN, team, or month..." value="<?= h($q) ?>">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <select name="status" class="form-select form-select-sm">
-                            <option value="">Sort by Status</option>
+                            <option value="">All Status</option>
                             <option value="Active" <?= $fstatus === 'Active' ? 'selected' : '' ?>>Active</option>
                             <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                         </select>
@@ -705,15 +671,15 @@ $months = getMonths();
                             <option value="jm.updated_date" <?= $sort === 'jm.updated_date' ? 'selected' : '' ?>>Sort by Updated Date</option>
                         </select>
                     </div>
-                    <!--div class="col-md-2">
+                    <!-- <div class="col-md-2">
                         <select name="dir" class="form-select form-select-sm">
                             <option value="asc" <?= $dir === 'asc' ? 'selected' : '' ?>>Ascending</option>
                             <option value="desc" <?= $dir === 'desc' ? 'selected' : '' ?>>Descending</option>
                         </select>
-                    </div-->
-                    <div class="col-md-3">
+                    </div> -->
+                    <div class="col-md-12 mt-2">
                         <button type="submit" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-search me-1"></i> Filter
+                            <i class="fas fa-search me-1"></i> Search
                         </button>
                         <a href="journal_master.php" class="btn btn-secondary btn-sm">
                             <i class="fas fa-times me-1"></i> Clear
@@ -731,84 +697,21 @@ $months = getMonths();
                         <!-- Table headings matched exactly to required order -->
                         <thead class="table-light">
                             <tr>
-                                <th>S.No</th>
-                                <th>Team</th>
                                 <th>Client ID</th>
-                                <!-- <th>WK_NEW Journals</th> -->
-                                <th>New Journals</th>
-                                <th>Year_Vol_Issue</th>
-                                <!-- <th>Pubcode</th>
-                                <th>ISSN</th> -->
-                                <th>Month & Year</th>
+                                <th>Team</th>
+                                <th>WK_NEW Journals</th>
+                                <th>Year_Volume_Issue</th>
+                                <th>Pubcode</th>
+                                <th>ISSN</th>
+                                <th>Month</th>
                                 <th width="100">Status</th>
                                 <th width="120" class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-    <?php if($entries && $entries->num_rows > 0): $i=0;?>
-        <?php while($row = $entries->fetch_assoc()): $i=$i+1;?>
-        <tr>
-            <td><?= $i ?></td>
-            <!-- Team Column -->
-            <td>
-                <?php if(!empty($row['team_name'])): ?>
-                    <span class="badge bg-primary team-badge"><?= h($row['team_name']) ?></span>
-                <?php else: ?>
-                    <span class="text-muted">—</span>
-                <?php endif; ?>
-            </td>
-            <!-- Team Client Name Column -->
-            <td>
-                <span class="fw-semibold"><?= h($row['team_client_name'] ?: $row['client_name']) ?></span>
-            </td>
-            <!-- Journal Name (New Journals) Column -->
-            <td class="journal-cell" title="<?= h($row['wk_new_journals']) ?>">
-                <?= !empty($row['wk_new_journals']) ? h($row['wk_new_journals']) : '—' ?>
-            </td>
-            <!-- Year_Vol_Issue Column -->
-            <td>
-                <?= !empty($row['year_volume_issue']) ? h($row['year_volume_issue']) : '<span class="text-muted">—</span>' ?>
-            </td>
-            <!-- Month Column -->
-            <td>
-                <?= !empty($row['month']) ? h($row['month']) : '<span class="text-muted">—</span>' ?>
-            </td>
-            <!-- Status Column -->
-            <td>
-                <form method="post" style="display:inline;">
-                    <input type="hidden" name="action" value="toggle">
-                    <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                    <button type="submit" class="btn btn-sm <?= $row['status'] === 'Active' ? 'btn-success' : 'btn-danger' ?>">
-                        <?= h($row['status']) ?>
-                    </button>
-                </form>
-            </td>
-            <!-- Actions Column -->
-            <td class="text-center">
-                <div class="btn-group btn-group-sm" role="group">
-                    <a href="journal_master.php?mode=edit&id=<?= (int)$row['id'] ?>" class="btn btn-primary" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure?')">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                        <button type="submit" class="btn btn-danger" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <tr><td colspan="7" class="text-center py-5">No entries found</td></tr>
-    <?php endif; ?>
-</tbody>
-                        <!-- <tbody>
-                            <?php if($entries && $entries->num_rows > 0): $i=0;?>
-                                <?php while($row = $entries->fetch_assoc()): $i=$i+1;?>
+                            <?php if($entries && $entries->num_rows > 0): ?>
+                                <?php while($row = $entries->fetch_assoc()): ?>
                                 <tr>
-                                    <td> <?= $i ?></td>
                                     <td>
                                         <span class="fw-semibold"><?= h($row['client_name']) ?></span>
                                         <?php if(!empty($row['company_name'])): ?>
@@ -894,7 +797,7 @@ $months = getMonths();
                                     </td>
                                 </tr>
                             <?php endif; ?>
-                        </tbody> -->
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -921,8 +824,8 @@ $months = getMonths();
                         <div class="row">
                             <div class="col-md-8">
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold">Select Excel / CSV File (.xlsx, .xls, .csv)</label>
-                                    <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
+                                    <label class="form-label fw-bold">Select Excel File (.xlsx)</label>
+                                    <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
                                     <small class="text-muted">Maximum file size: 5MB</small>
                                 </div>
                             </div>
