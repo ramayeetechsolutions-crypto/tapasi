@@ -436,7 +436,8 @@ if (!$entries) {
     <style>
         /* Ash Page Header Banner (Matching Navbar Color) */
         .page-title-container {
-            background: var(--ash, #6c757d);
+            background-color: #6c757d !important;
+            background: #6c757d !important;
             color: white;
             padding: 12px 20px;
             border-radius: 12px;
@@ -470,7 +471,7 @@ if (!$entries) {
         }
 
         .page-title-container i {
-            color: white;
+            color: #ffffff !important;
         }
 
         body {
@@ -528,6 +529,8 @@ if (!$entries) {
             padding: 0.15rem 0.5rem;
         }
     </style>
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
 </head>
 <body>
     <?php require 'header.php'; ?>
@@ -543,8 +546,8 @@ if (!$entries) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-file-alt me-2"></i><?= $mode === 'edit' ? 'Edit Article Error Entry' : 'Add New Article Error Entry' ?></h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-file-alt me-2"></i><?= $mode === 'edit' ? 'Edit Article Error Entry' : 'Add New Article Error Entry' ?></h4>
             <a href="error_entry_internal.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -740,9 +743,9 @@ if (!$entries) {
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="page-title-container">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
             <div>
-                <h4 class="mb-0 text-white"><i class="fas fa-file-alt me-2"></i>Internal Error</h4>
+                <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-file-alt me-2"></i>Internal Error</h4>
             </div>
             <div>
                 <button type="button" class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">

@@ -367,7 +367,8 @@ if (!$entries) $entries = false;
     <style>
         /* Ash Page Header Banner (Matching Navbar Color) */
         .page-title-container {
-            background: var(--ash, #6c757d);
+            background-color: #6c757d !important;
+            background: #6c757d !important;
             color: white;
             padding: 12px 20px;
             border-radius: 12px;
@@ -401,7 +402,7 @@ if (!$entries) $entries = false;
         }
 
         .page-title-container i {
-            color: white;
+            color: #ffffff !important;
         }
 
         body {
@@ -452,6 +453,8 @@ if (!$entries) $entries = false;
             transform: scale(1.1);
         }
     </style>
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
 </head>
 <body>
     <?php require 'header.php'; ?>
@@ -466,8 +469,8 @@ if (!$entries) $entries = false;
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry' : 'Add New Error Log Entry' ?></h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry' : 'Add New Error Log Entry' ?></h4>
             <a href="error_entry.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -659,8 +662,8 @@ if (!$entries) $entries = false;
 
         <?php else: ?>
 
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-bug me-2"></i>Error Logs</h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i>Error Logs</h4>
             <div>
                  <button type="button" class="btn btn-warning btn-sm text-black" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-import me-1"></i> Import Excel
