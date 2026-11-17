@@ -44,34 +44,37 @@ $sql = "
             ), ''
         ) AS executives,
         COUNT(DISTINCT e.employee_id) AS team_size
-    FROM employee_master tl
-    LEFT JOIN employee_master e 
-        ON e.employee_id != tl.employee_id
-    LEFT JOIN team_master t 
-        ON e.team_id = t.team_id
-    WHERE (
-        tl.employee_id = $sess_uid
-        OR tl.employee_username = '$sess_user' 
-        OR CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci LIKE '%$ename%'
-    )
-    AND (
-        e.employee_id IS NULL 
-        OR (
-            (e.user_role_id = 4 OR e.user_role_id = 11)
-            AND (e.status = 'Active' OR e.status IS NULL)
-            AND (
-                t.team_name LIKE '%UQ%' 
-                OR e.team_id = 2
-                OR e.process LIKE '%UQ%' 
-                OR EXISTS (
-                    SELECT 1 FROM process_master pm 
-                    WHERE FIND_IN_SET(pm.process_id, e.process) 
-                    AND pm.process_name LIKE '%UQ%'
+    FROM employee_master me
+    INNER JOIN employee_master tl 
+        ON tl.user_role_id = 3
+        AND (
+            tl.employee_id = me.employee_id
+            OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+            OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+            OR EXISTS (
+                SELECT 1 FROM employee_master sub
+                WHERE (
+                    CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(sub.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                    OR CAST(me.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(sub.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
                 )
-                OR CAST(e.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
-                OR CAST(e.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                AND (
+                    CAST(sub.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+                    OR CAST(sub.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+                )
             )
         )
+    LEFT JOIN employee_master e 
+        ON e.employee_id != tl.employee_id
+        AND (e.user_role_id = 4 OR e.user_role_id = 11)
+        AND (e.status = 'Active' OR e.status IS NULL)
+        AND (
+            CAST(e.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
+            OR CAST(e.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
+        )
+    WHERE (
+        me.employee_id = $sess_uid
+        OR me.employee_username = '$sess_user' 
+        OR ('$ename' != '' AND CAST(me.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci LIKE '%$ename%')
     )
     GROUP BY tl.employee_username, tl.employee_name
     ORDER BY tl.employee_name;
@@ -268,6 +271,16 @@ $sql = "
             font-size: 12px;
             font-weight: 600;
         }
+
+        .process-badge {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid #d4ac0d;
+        }
         
         .team-leader-badge {
             background-color: #e74c3c;
@@ -386,7 +399,7 @@ $sql = "
             <div class="page-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h2><i class="fas fa-sitemap me-3"></i>Team Master</h2>
+                        <h2 class="text-white"><i class="fas fa-sitemap me-3 text-white"></i>Team Master</h2>
                         <div class="subtitle">View organizational structure, team sizes, and assigned CE processes</div>
                     </div>
                     <div class="text-white-50">
