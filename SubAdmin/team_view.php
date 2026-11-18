@@ -1,9 +1,8 @@
 <?php 
 // employee_group_concat.php
-require 'header.php';
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require 'db.php';
-
-if (session_status() === PHP_SESSION_NONE) session_start();
+require 'header.php';
 
 // --- PHP Database Query (Modified) ---
 // Note: We use '::' to separate employee details (Name::ID) and '|||' to separate records.
@@ -30,8 +29,8 @@ $json_data = json_encode($data);
 $mysqli->close();
 ?>
 
-<div class="main-content">
-    <div class="job-master-container container-fluid py-4">
+<div class="main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
+    <div class="job-master-container container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
         
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">

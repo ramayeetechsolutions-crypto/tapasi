@@ -236,7 +236,7 @@ if (isset($_POST['import_btn'])) {
 ?>
 
 <!-- HTML CONTENT -->
-<div class="container" style="margin-top: 120px; position: relative; z-index: 1; min-height: calc(100vh - 120px);">
+<div class="container main-content" style="padding-top: 0 !important; margin-top: 0 !important; position: relative; z-index: 1;">
 
     <?php if (!$libraryLoaded): ?>
     <div class="alert alert-danger shadow-sm mb-4">

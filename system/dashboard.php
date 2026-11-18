@@ -1,4 +1,3 @@
-<br><br><br>
 <?php 
 // 1. Include the Database Connection
 require 'db.php'; 

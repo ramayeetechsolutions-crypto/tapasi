@@ -230,7 +230,7 @@ if (isset($_POST['import_btn'])) {
 ?>
 
 <!-- HTML CONTENT -->
-<div class="container py-5" style="margin-top: 120px; position: relative; z-index: 1;">
+<div class="container main-content" style="padding-top: 0 !important; margin-top: 0 !important; position: relative; z-index: 1;">
 
     <?php if (!$libraryLoaded): ?>
     <div class="alert alert-danger shadow-sm">

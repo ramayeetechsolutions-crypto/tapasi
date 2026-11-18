@@ -1,4 +1,3 @@
-﻿<br><br><br>
 <?php
 require 'db.php';
 ini_set('display_errors', 1);

@@ -170,7 +170,6 @@ $sql = "SELECT e.employee_id, e.employee_name, e.employee_username, e.email, e.p
 $employees_result = $mysqli->query($sql);
 
 ?>
-<br><br><br>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -223,7 +222,7 @@ $employees_result = $mysqli->query($sql);
 <body>
     <?php require 'header.php'; ?>
 
-    <div class="container-fluid mt-3">
+    <div class="container-fluid main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
         <?php if (isset($_GET['msg'])): ?>
         <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show">
             <?= h($_GET['msg']) ?>

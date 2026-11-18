@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // dashboard.php - Compact Client Dashboard
 require 'db.php';

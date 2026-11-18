@@ -222,9 +222,9 @@ require 'header.php';
 
 <?php if($mode==='add'||$mode==='edit'): ?>
 <!-- Add/Edit Form -->
-<div class="page-title-container">
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
   <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
-  <a href="client_master.php" class="btn btn-sm btn-secondary">Back</a>
+  <a href="client_master.php" class="btn btn-sm btn-outline-light text-white">Back</a>
 </div>
 <div class="card mb-3 mx-auto" style="max-width:900px;">
   <div class="card-body">
@@ -290,9 +290,9 @@ require 'header.php';
 
 <?php else: ?>
 
-<div class="page-title-container">
-  <h5 class="mb-0 text-white">Client Master</h5>
-  <a href="client_master.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add</a>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
+  <h5 class="mb-0 text-white"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Client Master</h5>
+  <a href="client_master.php?mode=add" class="btn btn-sm btn-primary"><i class="fa fa-plus me-1"></i> Add Client</a>
 </div>
 
 <!-- Filter Form -->

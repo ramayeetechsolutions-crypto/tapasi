@@ -851,7 +851,7 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
 <body>
     <?php require 'header.php'; ?>
     
-    <div class="container-fluid mt-3">
+    <div class="container-fluid main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
         <?php if (isset($_GET['msg'])): ?>
         <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show">
             <?= h($_GET['msg']) ?>
@@ -875,8 +875,8 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="page-title-container">
-            <h5 class="mb-0 text-white"><i class="fas fa-users me-2"></i>Employee Master</h5>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h5 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-users me-2" style="color: #ffffff !important;"></i>Employee Master</h5>
             <a href="employee_master.php?mode=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Add Employee
             </a>
