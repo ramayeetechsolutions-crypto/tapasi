@@ -85,6 +85,16 @@ $current_user_id = $_SESSION['uid'] ?? 0;
 $current_username = $_SESSION['username'] ?? '';
 $role_name = $_SESSION['role_name'] ?? '';
 
+// Check if current user is Team Lead or SubTL (Managers can reassign & assign others)
+$current_folder = basename(__DIR__);
+$is_tl_or_subtl = false;
+if ($current_folder === 'Team_Lead' || $current_folder === 'SubTL') {
+    $is_tl_or_subtl = true;
+    if (isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'TM') {
+        $is_tl_or_subtl = false;
+    }
+}
+
 // Get reporting manager for current user
 $reporting_manager = '';
 $current_user_name = '';
@@ -230,6 +240,25 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     
     try {
         if (empty($assigned_to)) { throw new Exception('Please select an LE Member'); }
+        
+        // Permission check: Executives can only self-assign to unassigned jobs. Only SubTL/TL can assign others or reassign.
+        if (!$is_tl_or_subtl) {
+            $chk_stmt = $mysqli->prepare("SELECT assigned_to_le, assigned_to_le_qc FROM le WHERE id = ?");
+            $chk_stmt->bind_param("i", $le_id);
+            $chk_stmt->execute();
+            $chk_res = $chk_stmt->get_result()->fetch_assoc();
+            $chk_stmt->close();
+            
+            $existing_assigned = ($type === 'le_qc') ? ($chk_res['assigned_to_le_qc'] ?? '') : ($chk_res['assigned_to_le'] ?? '');
+            
+            if (!empty($existing_assigned)) {
+                throw new Exception('Only SubTL and Team Lead have access to reassign members.');
+            }
+            if ($assigned_to !== $current_username) {
+                throw new Exception('Only SubTL and Team Lead have access to assign to other members.');
+            }
+        }
+        
         $mysqli->begin_transaction();
         
         // 1. Update LE table (Stronger condition to handle all empty/pending states)
@@ -845,7 +874,7 @@ require 'header.php';
     </div>
 
     <!-- Notification Container -->
-    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 999999;"></div>
 
     <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-4">
@@ -1228,7 +1257,10 @@ require 'header.php';
                                         <?php endif; ?>
                                         </div>
                                         
-                                        <select class="assign-select mt-1 le-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
+                                        <select class="assign-select mt-1 le-select-<?= $row['id'] ?>" 
+                                                data-assigned="<?= h($row['assigned_to_le'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_le'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
                                             <option value=""><?= !empty($row['assigned_to_le']) ? 'Change LE TM' : 'Assign LE' ?></option>
                                             <?php foreach ($les as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= ($row['assigned_to_le'] == $le['employee_username']) ? 'selected' : '' ?>>
@@ -1286,7 +1318,10 @@ require 'header.php';
                                         <?php endif; ?>
                                         </div>
                                         
-                                        <select class="assign-select mt-1 le-qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
+                                        <select class="assign-select mt-1 le-qc-select-<?= $row['id'] ?>" 
+                                                data-assigned="<?= h($row['assigned_to_le_qc'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_le_qc'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
                                             <option value=""><?= !empty($row['assigned_to_le_qc']) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
                                             <?php foreach ($les as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= (($row['assigned_to_le_qc'] ?? '') == $le['employee_username']) ? 'selected' : '' ?>>
@@ -1583,27 +1618,53 @@ require 'header.php';
         
         // Quick assign function (In-Place, No Reload)
         function quickAssign(leId, jobId, type, selectElement) {
-            const selectedValue = selectElement.value;
-            if (!selectedValue) return;
+            const selectedValue = (selectElement.value || '').trim();
+            const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
+            const currentUsername = <?= json_encode($current_username) ?>;
+            const assignedVal = (selectElement.getAttribute('data-assigned') || '').trim();
+            const prevVal = (selectElement.getAttribute('data-previous') || assignedVal).trim();
+            
+            // If empty selection (e.g. clicked "Change TM"), revert back to assignedVal
+            if (!selectedValue) {
+                selectElement.value = assignedVal;
+                return;
+            }
+            
+            // Permission check for Executive
+            if (!isTlOrSubtl) {
+                if (assignedVal !== '') {
+                    showNotification('warning', 'Only SubTL and Team Lead have access to reassign members.');
+                    selectElement.value = assignedVal;
+                    selectElement.setAttribute('data-previous', assignedVal);
+                    return;
+                }
+                if (selectedValue !== currentUsername) {
+                    showNotification('warning', 'Only SubTL and Team Lead have access to assign to other members.');
+                    selectElement.value = '';
+                    selectElement.setAttribute('data-previous', '');
+                    return;
+                }
+            }
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const leName = selectedOption.getAttribute('data-name') || selectedValue;
             
             let typeLabel = (type === 'le_qc') ? 'LE-QC' : 'LE';
             
-            selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
             
             fetch('le_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=quick_assign&le_id=' + leId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
+                body: 'ajax=quick_assign&le_id=' + encodeURIComponent(leId) + '&job_id=' + encodeURIComponent(jobId) + '&type=' + encodeURIComponent(type) + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
                 selectElement.disabled = false;
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${leName} successfully!`);
+                    selectElement.setAttribute('data-assigned', selectedValue);
+                    selectElement.setAttribute('data-previous', selectedValue);
                     
                     const row = document.getElementById('row-' + leId);
                     if (row) {
@@ -1639,14 +1700,16 @@ require 'header.php';
                         }
                     }
                 } else {
-                    showNotification('danger', 'Error: ' + data.message);
-                    selectElement.value = selectElement.getAttribute('data-previous') || '';
+                    showNotification('danger', data.message || 'Assignment failed');
+                    selectElement.value = assignedVal || '';
+                    selectElement.setAttribute('data-previous', assignedVal || '');
                 }
             })
             .catch(error => {
                 selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
-                selectElement.value = selectElement.getAttribute('data-previous') || '';
+                selectElement.value = assignedVal || '';
+                selectElement.setAttribute('data-previous', assignedVal || '');
             });
         }
       
