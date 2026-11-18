@@ -225,6 +225,20 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     // ADDED: eq, images, and tables_count to allowed fields for inline editing
     $allowed_fields = ['eq', 'images', 'tables_count', 'le_start_time', 'le_end_time', 'le_qc_start_time', 'le_qc_end_time', 'word_count', 'wc_exref', 'status_button', 'priority'];
     if (in_array($field, $allowed_fields)) {
+        if ($field === 'status_button' && $val === 'Moved') {
+            $chk_stmt = $mysqli->prepare("SELECT status FROM le WHERE id = ?");
+            $chk_stmt->bind_param("i", $le_id);
+            $chk_stmt->execute();
+            $chk_res = $chk_stmt->get_result()->fetch_assoc();
+            $chk_stmt->close();
+            
+            $chk_status = $chk_res['status'] ?? '';
+            $is_fully_done = in_array($chk_status, ['Completed', 'Done', 'LE & LE-QC Done']);
+            if (!$is_fully_done) {
+                echo json_encode(['success' => false, 'message' => 'Cannot move! Please complete both LE Assignment and LE-QC Assignment first.']);
+                exit;
+            }
+        }
         // Safe binding for time columns to avoid MySQL errors
         if ($val === '') {
             $stmt = $mysqli->prepare("UPDATE le SET $field = NULL, last_updated = NOW() WHERE id = ?");
@@ -1342,7 +1356,7 @@ require 'header.php';
                                     <!-- Status Button Column -->
                                     <td>
                                         <?php $sb_val = $row['status_button'] ?? ''; ?>
-                                        <select class="form-select form-select-sm p-1 <?= $sb_val === 'Moved' ? 'bg-success text-white' : '' ?>" style="font-size: 10px; width: 95px; height: 22px; padding: 0 2px;" onchange="updateInlineField(<?= $row['id'] ?>, 'status_button', this.value); this.className='form-select form-select-sm p-1 ' + (this.value==='Moved'?'bg-success text-white':'');">
+                                        <select class="form-select form-select-sm p-1 <?= $sb_val === 'Moved' ? 'bg-success text-white' : '' ?>" style="font-size: 10px; width: 95px; height: 22px; padding: 0 2px;" data-previous="<?= h($sb_val) ?>" onfocus="this.setAttribute('data-previous', this.value)" onchange="updateInlineField(<?= $row['id'] ?>, 'status_button', this.value, this); this.className='form-select form-select-sm p-1 ' + (this.value==='Moved'?'bg-success text-white':'');">
                                             <option value="">Select</option>
                                             <?php 
                                             $sb_options = ['Yet to move', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk rename', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Chk Updated Instruction', 'Moved'];
@@ -1581,6 +1595,35 @@ require 'header.php';
                 }
             }
 
+            if (field === 'status_button' && value === 'Moved') {
+                const rowEl = document.getElementById('row-' + leId);
+                let leDone = false;
+                let leQcDone = false;
+                if (rowEl) {
+                    const selects = Array.from(rowEl.querySelectorAll('select'));
+                    const leSelect = selects.find(s => {
+                        let oc = s.getAttribute('onchange') || '';
+                        return oc.includes("'le'") && !oc.includes("'le_qc'");
+                    });
+                    const leqcSelect = selects.find(s => {
+                        let oc = s.getAttribute('onchange') || '';
+                        return oc.includes("'le_qc'");
+                    });
+                    leDone = leSelect ? (leSelect.value === 'Completed') : false;
+                    leQcDone = leqcSelect ? (leqcSelect.value === 'Completed') : false;
+                }
+
+                if (!leDone || !leQcDone) {
+                    showNotification('danger', 'Cannot move! Please complete both LE Assignment and LE-QC Assignment first.');
+                    if (element) {
+                        const prevVal = element.getAttribute('data-previous') || '';
+                        element.value = prevVal;
+                        element.className = 'form-select form-select-sm p-1 ' + (prevVal === 'Moved' ? 'bg-success text-white' : '');
+                    }
+                    return;
+                }
+            }
+
             fetch('alljobs.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1589,6 +1632,9 @@ require 'header.php';
             .then(response => response.json())
             .then(data => {
                 if (data.success) { 
+                    if (element) {
+                        element.setAttribute('data-previous', value);
+                    }
                     if (field === 'status_button' && value === 'Moved') {
                         showNotification('success', 'Job moved to LE Report & Input/Output successfully!');
                         const rowEl = document.getElementById('row-' + leId);
@@ -1605,8 +1651,22 @@ require 'header.php';
                         showNotification('success', 'Updated successfully!'); 
                     }
                 } 
-                else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { console.error('Error:', error); });
+                else { 
+                    showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); 
+                    if (element) {
+                        const prevVal = element.getAttribute('data-previous') || '';
+                        element.value = prevVal;
+                        element.className = 'form-select form-select-sm p-1 ' + (prevVal === 'Moved' ? 'bg-success text-white' : '');
+                    }
+                }
+            }).catch(error => { 
+                console.error('Error:', error); 
+                if (element) {
+                    const prevVal = element.getAttribute('data-previous') || '';
+                    element.value = prevVal;
+                    element.className = 'form-select form-select-sm p-1 ' + (prevVal === 'Moved' ? 'bg-success text-white' : '');
+                }
+            });
         }
         
         // Quick assign function (In-Place, No Reload)
