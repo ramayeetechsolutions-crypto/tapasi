@@ -828,13 +828,12 @@ $months = getMonths();
                     <a href="journal_master.php?mode=edit&id=<?= (int)$row['id'] ?>" class="btn btn-primary" title="Edit">
                         <i class="fas fa-edit"></i>
                     </a>
-                    <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure?')">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                        <button type="submit" class="btn btn-danger" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </form>
+                    <button type="button" class="btn btn-danger btn-delete-journal" 
+                            data-id="<?= (int)$row['id'] ?>" 
+                            data-name="<?= htmlspecialchars($row['wk_new_journals'] ?? '', ENT_QUOTES, 'UTF-8') ?>" 
+                            title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </td>
         </tr>
@@ -1010,9 +1009,57 @@ $months = getMonths();
         </div>
     </div>
 
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow border-0">
+                <div class="modal-header text-white" style="background-color: #5e6b77;">
+                    <h5 class="modal-title fw-bold" id="deleteModalLabel">
+                        <i class="fas fa-trash-alt me-2"></i>Delete Journal
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="journal_master.php">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="id" id="deleteJournalId" value="">
+                    <div class="modal-body text-center py-4">
+                        <i class="fas fa-exclamation-circle text-danger mb-3" style="font-size: 3.5rem;"></i>
+                        <h5 class="fw-bold text-dark mb-2">Do you want to delete this journal?</h5>
+                        <p class="text-muted mb-1 px-3" id="deleteJournalNameText" style="word-break: break-word; font-weight: 500;"></p>
+                        <p class="text-muted small mb-0">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer justify-content-center bg-light">
+                        <button type="button" class="btn btn-secondary px-4 fw-medium" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger px-4 fw-medium">
+                            <i class="fas fa-trash me-1"></i> Delete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Delete modal trigger
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn-delete-journal');
+                if (!btn) return;
+                const id = btn.getAttribute('data-id');
+                const name = btn.getAttribute('data-name');
+                document.getElementById('deleteJournalId').value = id;
+                const nameEl = document.getElementById('deleteJournalNameText');
+                if (nameEl) {
+                    nameEl.textContent = name ? `Journal: "${name}"` : '';
+                }
+                const modalEl = document.getElementById('deleteModal');
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                modal.show();
+            });
+
             // Auto-dismiss alerts after 5 seconds
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {
