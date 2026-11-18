@@ -152,6 +152,16 @@ $current_user_id = $_SESSION['uid'] ?? 0;
 $current_username = $_SESSION['username'] ?? '';
 $role_name = $_SESSION['role_name'] ?? '';
 
+// Check if current user is Team Lead or SubTL (Managers can reassign & assign others)
+$current_folder = basename(__DIR__);
+$is_tl_or_subtl = false;
+if ($current_folder === 'Team_Lead' || $current_folder === 'SubTL') {
+    $is_tl_or_subtl = true;
+    if (isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'TM') {
+        $is_tl_or_subtl = false;
+    }
+}
+
 // Get reporting manager for current user
 $reporting_manager = '';
 $current_user_name = '';
@@ -212,6 +222,24 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     try {
         if (empty($assigned_to)) {
             throw new Exception('Please select a TM');
+        }
+        
+        // Permission check: Executives can only self-assign to unassigned jobs. Only SubTL/TL can assign others or reassign.
+        if (!$is_tl_or_subtl) {
+            $chk_stmt = $mysqli->prepare("SELECT assigned_to_qc FROM qc WHERE id = ?");
+            $chk_stmt->bind_param("i", $qc_id);
+            $chk_stmt->execute();
+            $chk_res = $chk_stmt->get_result()->fetch_assoc();
+            $chk_stmt->close();
+            
+            $existing_assigned = $chk_res['assigned_to_qc'] ?? '';
+            
+            if (!empty($existing_assigned)) {
+                throw new Exception('Only SubTL and Team Lead have access to reassign members.');
+            }
+            if ($assigned_to !== $current_username) {
+                throw new Exception('Only SubTL and Team Lead have access to assign to other members.');
+            }
         }
         
         // Start transaction
@@ -480,7 +508,7 @@ require 'header.php';
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 9999; }
         .loading-overlay.active { display: flex; }
         .loading-spinner { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        .notification { position: fixed; top: 20px; right: 20px; z-index: 10000; min-width: 300px; animation: slideIn 0.3s ease; }
+        .notification { position: fixed; top: 20px; right: 20px; z-index: 999999; min-width: 300px; animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
@@ -496,7 +524,7 @@ require 'header.php';
     </div>
 
     <!-- Notification Container -->
-    <div id="notificationContainer"></div>
+    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 999999;"></div>
 
     <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-4">
@@ -789,7 +817,10 @@ require 'header.php';
                                             </small>
                                         <?php endif; ?>
 
-                                        <select class="assign-select mt-1 qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, this)">
+                                        <select class="assign-select mt-1 qc-select-<?= $row['id'] ?>" 
+                                                data-assigned="<?= h($row['assigned_to_qc'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_qc'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, this)">
                                             <option value=""><?= !empty($row['assigned_to_qc']) ? 'Change QC TM' : 'Assign LE-QC' ?></option>
                                             <?php foreach ($tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_qc'] == $tm['employee_username']) ? 'selected' : '' ?>>
@@ -1018,16 +1049,37 @@ require 'header.php';
         
         // Quick assign function
         function quickAssign(qcId, jobId, selectElement) {
-            const selectedValue = selectElement.value;
+            const selectedValue = (selectElement.value || '').trim();
+            const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
+            const currentUsername = <?= json_encode($current_username) ?>;
+            const assignedVal = (selectElement.getAttribute('data-assigned') || '').trim();
+            const prevVal = (selectElement.getAttribute('data-previous') || assignedVal).trim();
             
-            if (!selectedValue) return;
+            // If empty selection, revert back to assignedVal
+            if (!selectedValue) {
+                selectElement.value = assignedVal;
+                return;
+            }
+            
+            // Permission check for Executive
+            if (!isTlOrSubtl) {
+                if (assignedVal !== '') {
+                    showNotification('warning', 'Only SubTL and Team Lead have access to reassign members.');
+                    selectElement.value = assignedVal;
+                    selectElement.setAttribute('data-previous', assignedVal);
+                    return;
+                }
+                if (selectedValue !== currentUsername) {
+                    showNotification('warning', 'Only SubTL and Team Lead have access to assign to other members.');
+                    selectElement.value = '';
+                    selectElement.setAttribute('data-previous', '');
+                    return;
+                }
+            }
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const tmName = selectedOption.getAttribute('data-name') || selectedValue;
             
-          
-            
-            selectElement.setAttribute('data-previous', selectedValue);
             showLoading();
             selectElement.disabled = true;
             
@@ -1035,7 +1087,7 @@ require 'header.php';
             fetch('?', { // Self-posting
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=quick_assign&qc_id=' + qcId + '&job_id=' + jobId + '&assigned_to=' + encodeURIComponent(selectedValue)
+                body: 'ajax=quick_assign&qc_id=' + encodeURIComponent(qcId) + '&job_id=' + encodeURIComponent(jobId) + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
@@ -1044,13 +1096,14 @@ require 'header.php';
                 
                 if (data.success) {
                     showNotification('success', `QC assigned to ${tmName} successfully!`);
+                    selectElement.setAttribute('data-assigned', selectedValue);
+                    selectElement.setAttribute('data-previous', selectedValue);
                     document.getElementById('row-' + qcId).classList.add('assigned');
                     setTimeout(() => { window.location.reload(); }, 500); // Reloads to apply Purple Color & In Progress status
-                    
                 } else {
-                    showNotification('danger', 'Error: ' + data.message);
-                    const previousValue = selectElement.getAttribute('data-previous') || '';
-                    selectElement.value = previousValue;
+                    showNotification('danger', data.message || 'Assignment failed');
+                    selectElement.value = assignedVal || '';
+                    selectElement.setAttribute('data-previous', assignedVal || '');
                 }
             })
             .catch(error => {
@@ -1058,8 +1111,8 @@ require 'header.php';
                 selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 console.error('Error:', error);
-                const previousValue = selectElement.getAttribute('data-previous') || '';
-                selectElement.value = previousValue;
+                selectElement.value = assignedVal || '';
+                selectElement.setAttribute('data-previous', assignedVal || '');
             });
         }
     </script>
