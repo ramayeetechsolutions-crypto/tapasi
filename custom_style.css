@@ -390,20 +390,20 @@ table td select,
 
 /* =========================================================================
    7. NAVBAR CLEARANCE & SPACE BETWEEN NAVBAR AND HEADER
-   The fixed top navbar is 70px tall. We ensure a consistent 15px
+   The fixed top navbar is 70px tall. We ensure a consistent 20px-25px
    breathing space below the navbar across all logins and pages so headers
-   never touch the navbar, while avoiding excessive gaps on Jobs / Input-Output.
+   never touch the navbar.
    ========================================================================= */
 
 /* Ensure body content starts below the fixed top navbar (70px) with comfortable breathing room */
 body {
-    padding-top: 76px !important;
+    padding-top: 92px !important;
 }
 
 /* For pages using .main-content wrapper, normalize margin-top */
 .main-content {
     margin-top: 0 !important;
-    padding-top: 0 !important;
+    padding-top: 15px !important;
 }
 
 /* For direct container elements under body */
@@ -412,8 +412,7 @@ body > .container-fluid,
 body > .wrapper,
 body > .content-wrapper,
 body > main {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
+    margin-top: 12px !important;
 }
 
 /* Ensure page header banners, cards and title containers have clean top margins */
@@ -422,7 +421,7 @@ body > main {
 .header-card,
 .user-info,
 .page-header {
-    margin-top: 0 !important;
+    margin-top: 10px !important;
 }
 
 /* For cards at top of container */
@@ -430,51 +429,7 @@ body > .container > .card:first-child,
 body > .container-fluid > .card:first-child,
 .main-content > .container > .card:first-child,
 .main-content > .container-fluid > .card:first-child {
-    margin-top: 0 !important;
-}
-
-/* =========================================================================
-   8. NAVBAR DROPDOWN ACTIVE & HOVER STYLES
-   Ensures that active dropdown items (e.g. Input & Output under Jobs)
-   have high contrast with pure white text and icons against the dark
-   ash background, preventing illegible dark-on-dark text in all logins.
-   ========================================================================= */
-
-/* Active item inside any nav-dropdown or dropdown-menu across all logins */
-.nav-dropdown a.active,
-.nav-dropdown a.active *,
-.nav-dropdown a.active i,
-.nav-dropdown a.active span,
-.dropdown-menu a.active,
-.dropdown-menu a.active *,
-.dropdown-menu a.active i,
-.dropdown-menu a.active span {
-    background-color: #5a6268 !important;
-    color: #ffffff !important;
-}
-
-/* Hovering over an active dropdown item */
-.nav-dropdown a.active:hover,
-.nav-dropdown a.active:hover *,
-.nav-dropdown a.active:hover i,
-.nav-dropdown a.active:hover span,
-.dropdown-menu a.active:hover,
-.dropdown-menu a.active:hover *,
-.dropdown-menu a.active:hover i,
-.dropdown-menu a.active:hover span {
-    background-color: #495057 !important;
-    color: #ffffff !important;
-}
-
-/* Hovering over inactive dropdown items */
-.nav-dropdown li a:hover:not(.active),
-.dropdown-menu li a:hover:not(.active) {
-    background-color: #f8f9fa !important;
-    color: #0d6efd !important;
-}
-.nav-dropdown li a:hover:not(.active) i,
-.dropdown-menu li a:hover:not(.active) i {
-    color: #0d6efd !important;
+    margin-top: 10px !important;
 }
 
 /* Prevent padding issues when printing */

@@ -189,20 +189,6 @@ $currentPage = basename($_SERVER['PHP_SELF']); // e.g., job_master.php
             color: var(--primary);
             border-bottom-color: #f0f0f0;
         }
-        .nav-dropdown a.active,
-        .nav-dropdown a.active i,
-        .nav-dropdown a.active span {
-            background-color: var(--ash-dark, #5a6268) !important;
-            color: #ffffff !important;
-        }
-
-        .nav-dropdown a.active:hover,
-        .nav-dropdown a.active:hover i,
-        .nav-dropdown a.active:hover span {
-            background-color: #495057 !important;
-            color: #ffffff !important;
-        }
-
 
         /* Header Right */
         .header-right {
