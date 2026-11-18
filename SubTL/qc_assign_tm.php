@@ -485,9 +485,7 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <br><br><br>
-    
-    <!-- Loading Overlay -->
+<!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
             <div class="spinner-border text-primary mb-2" role="status">
@@ -500,12 +498,12 @@ require 'header.php';
     <!-- Notification Container -->
     <div id="notificationContainer"></div>
 
-    <div class="page-header">
+    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1" style="font-weight: 700; color: #1e293b;">
-                        <i class="fas fa-table me-2" style="color: #667eea;"></i>
+                    <h4 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
+                        <i class="fas fa-table me-2" style="color: #ffffff !important;"></i>
                         QC Assign
                     </h4>
                     <!-- <p class="mb-0 text-muted small">
@@ -514,7 +512,7 @@ require 'header.php';
                     </p> -->
                 </div>
                 <div>
-                    <a href="jobs.php" class="btn btn-outline-secondary btn-sm me-2">
+                    <a href="jobs.php" class="btn btn-outline-light text-white btn-sm me-2">
                         <i class="fas fa-arrow-left me-1"></i> Back to Jobs
                     </a>
                     <span class="badge bg-primary">

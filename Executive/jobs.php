@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // Start a session if one is not already active
 if (session_status() === PHP_SESSION_NONE) {
@@ -1104,7 +1103,7 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
+    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>

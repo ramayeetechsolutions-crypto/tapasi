@@ -490,22 +490,21 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <br><br><br>
-    <div class="loading-overlay" id="loadingOverlay">
+<div class="loading-overlay" id="loadingOverlay">
         <div class="spinner-border text-primary" role="status"></div>
     </div>
 
     <!-- Page Header (1:1 to WK TS Assign) -->
-    <div class="page-header">
+    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-0 fw-bold" style="color: #1e293b;">
-                        <i class="fas fa-layer-group me-2" style="color: #1e4b85;"></i>AP Assign
+                    <h4 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
+                        <i class="fas fa-layer-group me-2" style="color: #ffffff !important;"></i>AP Assign
                     </h4>
                 </div>
                 <div>
-                    <a href="jobs.php" class="btn btn-outline-secondary btn-sm me-2">
+                    <a href="jobs.php" class="btn btn-outline-light text-white btn-sm me-2">
                         <i class="fas fa-arrow-left me-1"></i> Back to Jobs
                     </a>
                     <span class="badge bg-primary">

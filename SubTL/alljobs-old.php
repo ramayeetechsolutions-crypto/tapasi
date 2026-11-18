@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 session_start();
 // NOTE: Ensure 'db.php' contains your database connection logic ($mysqli variable)

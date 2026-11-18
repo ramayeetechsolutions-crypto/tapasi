@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // pag.php
 session_start();

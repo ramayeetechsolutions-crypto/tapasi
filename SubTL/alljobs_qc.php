@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 session_start();
 // NOTE: Ensure 'db.php' contains your database connection logic ($mysqli variable)
@@ -299,7 +298,7 @@ require 'header.php';
     }
     </style>
     
-    <div class="container-fluid mt-3">
+    <div class="container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important;">
                 <h5 class="card-title mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-tasks me-2" style="color: #ffffff !important;"></i> QC Jobs Management</h5>
