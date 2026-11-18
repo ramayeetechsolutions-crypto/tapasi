@@ -534,7 +534,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
         <h2 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
             <i class="fas fa-file-alt me-2" style="color: #ffffff !important;"></i>LE Report
         </h2>
-    </div> -->
     </div>
 
     <!-- Dashboard Cards -->
