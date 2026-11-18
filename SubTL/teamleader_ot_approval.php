@@ -230,26 +230,28 @@ include 'header.php';
         box-shadow: 0 2px 4px rgba(0,0,0,0.08);
         margin-bottom: 15px;
         display: flex !important;
-        align-items: center !important;
-        gap: 14px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
     }
     
     .stat-card .stat-number {
         font-size: 24px;
         font-weight: bold;
         color: #2196F3;
-        line-height: 1;
-        margin: 0;
-        flex-shrink: 0;
+        line-height: 1.2;
+        margin: 0 0 6px 0 !important;
+        display: block;
     }
     
     .stat-card .stat-label {
         font-size: 12px;
         color: #666;
         text-transform: uppercase;
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 0.5px;
         margin: 0;
+        display: block;
     }
     
     /* Status filter tabs */

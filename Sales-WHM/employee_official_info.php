@@ -102,7 +102,7 @@ $total_pages = ceil($count_row['total'] / $results_per_page);
             color: white;
         }
 
-    .main-content { margin-top: 60px; }
+    .main-content { margin-top: 0 !important; }
     .table-responsive { overflow-x: auto; }
     .table thead th { background-color: #f8f9fa; color: #495057; font-weight: 600; font-size: 0.85rem; white-space: nowrap; border-bottom: 2px solid #dee2e6; vertical-align: middle; text-align: center; }
     .table tbody td { font-size: 0.9rem; vertical-align: middle; white-space: nowrap; color: #333; padding: 10px 15px; text-align: center; }
@@ -120,11 +120,11 @@ $total_pages = ceil($count_row['total'] / $results_per_page);
     .doc-preview { border: 1px solid #ddd; padding: 4px; background: #fff; border-radius: 4px; max-height: 80px; max-width: 120px; }
 </style>
 
-<div class="container-fluid main-content py-4">
-    <div class="page-title-container">
-      <h4 class=" mb-0 text-white"><i class="fa fa-briefcase"></i> Official Employee Info</h4>
+<div class="container-fluid main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+      <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fa fa-briefcase me-2" style="color: #ffffff !important;"></i>Official Employee Info</h4>
       <div>
-          <a href="?export=true" class="btn btn-outline-success shadow-sm me-2"><i class="fa fa-download"></i> Export CSV</a>
+          <a href="?export=true" class="btn btn-success text-white shadow-sm me-2"><i class="fa fa-download me-1 text-white"></i> Export CSV</a>
       </div>
     </div>
 

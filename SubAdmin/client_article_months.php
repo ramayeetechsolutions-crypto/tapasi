@@ -277,10 +277,14 @@ if ($export_type === 'excel') {
         .stat-card {
             background: white;
             border-radius: 8px;
-            padding: 20px;
+            padding: 16px 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-left: 4px solid #3498db;
             margin-bottom: 15px;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
         }
         .stat-card.articles { border-left-color: #2ecc71; }
         .stat-card.pages { border-left-color: #e74c3c; }
@@ -290,12 +294,18 @@ if ($export_type === 'excel') {
             font-size: 28px;
             font-weight: bold;
             color: #2c3e50;
+            margin-bottom: 6px !important;
+            line-height: 1.2;
+            display: block;
         }
         .stat-label {
-            font-size: 14px;
+            font-size: 13px;
             color: #7f8c8d;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            margin: 0;
+            display: block;
+            font-weight: 700;
         }
         .table th {
             /* background-color: #34495e; */

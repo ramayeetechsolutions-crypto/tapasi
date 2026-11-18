@@ -384,8 +384,8 @@ require 'header.php';
         background-color: var(--light, #f5f7fa);
     }
     .main-content {
-        margin-top: 70px;
-        padding: 25px 4%;
+        margin-top: 0 !important;
+        padding: 10px 4% !important;
         transition: all 0.3s ease;
     }
 
@@ -495,7 +495,7 @@ require 'header.php';
     .additional-fields-section { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; }
 </style>
 
-<main class="main-content">
+<main class="main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
     <div class="container-fluid p-0">
         <?php if (isset($_GET['msg'])): ?>
         <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show border-0 shadow-sm">
@@ -507,7 +507,7 @@ require 'header.php';
         <?php if ($mode === 'edit'): ?>
         
         <!-- Edit Form Header Banner -->
-        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
                 <h1 class="mb-0" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
                     <i class="fas fa-user-edit me-2" style="color: #ffffff !important;"></i>Edit Employee: <?= h($editRow['employee_name'] ?? '') ?>
@@ -664,7 +664,7 @@ require 'header.php';
         <?php else: ?>
 
         <!-- View Mode Header Banner (Ash matching Navbar) -->
-        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
                 <h1 class="mb-0" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
                     <i class="fas fa-users me-2" style="color: #ffffff !important;"></i>Employee Profile

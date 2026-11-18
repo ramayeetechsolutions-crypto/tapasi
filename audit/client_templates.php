@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 
 error_reporting(E_ALL);

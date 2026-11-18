@@ -106,9 +106,9 @@ $result = $mysqli->query($query);
 require 'header.php';
 ?>
 
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<div class="container-fluid main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
 
-    <div class="page-title-container">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
             <h3 class="fw-bold mb-0 text-white"><i class="fas fa-user-shield me-2"></i>Employee Master (Super Admin)</h3>
             <p class="mb-0 mb-0 text-white-50 small">Manage Salary, Statutory Eligibility, and Exit Details.</p>

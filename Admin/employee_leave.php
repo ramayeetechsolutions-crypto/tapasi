@@ -174,27 +174,27 @@ include 'header.php';
     }
 </style>
 
-<div class="container-fluid main-content py-4" style="margin-top: 60px;">
+<div class="container-fluid main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
 
     <!-- Page Header & Buttons -->
-    <div class="page-title-container">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h4 class=" mb-0 text-white"><i class="fa fa-clock-o"></i> My OT & Permissions</h4>
-            <p class="small mb-0 mb-0 text-white-50 small">Submit and track your requests. Manage your OT credits.</p>
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fa fa-clock-o me-2" style="color: #ffffff !important;"></i>My OT & Permissions</h4>
+            <p class="small mb-0 text-white-50" style="color: rgba(255, 255, 255, 0.85) !important;">Submit and track your requests. Manage your OT credits.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
             
             <!-- OT Credits Summary -->
             <div class="card border-0 shadow-sm bg-gradient-primary text-white" style="background: linear-gradient(45deg, #2196F3, #21CBF3);">
                 <div class="card-body py-2 px-3">
-                    <small class="d-block">Available OT Credits</small>
-                    <h5 class="mb-0"><?php echo getOTCredits($mysqli, $employee_username); ?> hours</h5>
+                    <small class="d-block text-white" style="color: #ffffff !important;">Available OT Credits</small>
+                    <h5 class="mb-0 text-white" style="color: #ffffff !important;"><?php echo getOTCredits($mysqli, $employee_username); ?> hours</h5>
                 </div>
             </div>
             
             <!-- Button to Open Modal -->
-            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#applyOTModal">
-                <i class="fa fa-plus-circle"></i> New Request
+            <button class="btn btn-success text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#applyOTModal">
+                <i class="fa fa-plus-circle text-white"></i> New Request
             </button>
         </div>
     </div>

@@ -36,7 +36,7 @@ foreach ($header_paths as $path) {
 ?>
 
 <!-- HTML CONTENT -->
-<div class="container py-5" style="margin-top: 120px; position: relative; z-index: 1;">
+<div class="container main-content" style="padding-top: 0 !important; margin-top: 0 !important; position: relative; z-index: 1;">
     
     <!-- Main Card -->
     <div class="card shadow-lg border-0 rounded-4 overflow-hidden">

@@ -1,10 +1,8 @@
 <?php 
 // employee_group_concat.php
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require 'db.php';
 require 'header.php';
-
-
-if (session_status() === PHP_SESSION_NONE) session_start();
 
 $ename = $mysqli->real_escape_string($_SESSION["ename"] ?? ($_SESSION["username"] ?? ''));
 $sess_user = $mysqli->real_escape_string($_SESSION["username"] ?? '');
@@ -109,6 +107,8 @@ $mysqli->close();
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-1.13.6/datatables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Global Tapasi Stylesheet -->
+    <link rel="stylesheet" href="../custom_style.css">
     
     <style>
         .job-master-container {
@@ -116,7 +116,7 @@ $mysqli->close();
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin: 20px;
+            margin: 15px 0;
         }
         
         #teamTable thead th {
@@ -326,7 +326,7 @@ $mysqli->close();
     </style>
 </head>
 <body>
-    <div class="main-content" style="margin-top: 80px;">
+    <div class="main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
         <div class="job-master-container">
             <div class="page-header">
                 <div class="d-flex justify-content-between align-items-center">

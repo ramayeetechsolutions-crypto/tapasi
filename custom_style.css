@@ -189,6 +189,111 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     font-weight: 500 !important;
 }
 
+/* High-contrast action buttons inside dark ash headers across all logins */
+.page-title-container .btn-outline-success,
+.page-header .btn-outline-success,
+.user-header .btn-outline-success,
+.header-card .btn-outline-success {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-success *,
+.page-header .btn-outline-success *,
+.user-header .btn-outline-success *,
+.header-card .btn-outline-success * {
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-success:hover,
+.page-header .btn-outline-success:hover,
+.user-header .btn-outline-success:hover,
+.header-card .btn-outline-success:hover {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+    color: #ffffff !important;
+}
+
+.page-title-container .btn-outline-primary,
+.page-header .btn-outline-primary,
+.user-header .btn-outline-primary,
+.header-card .btn-outline-primary {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-primary *,
+.page-header .btn-outline-primary *,
+.user-header .btn-outline-primary *,
+.header-card .btn-outline-primary * {
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-primary:hover,
+.page-header .btn-outline-primary:hover,
+.user-header .btn-outline-primary:hover,
+.header-card .btn-outline-primary:hover {
+    background-color: #0b5ed7 !important;
+    border-color: #0a58ca !important;
+    color: #ffffff !important;
+}
+
+.page-title-container .btn-outline-secondary,
+.page-header .btn-outline-secondary,
+.user-header .btn-outline-secondary,
+.header-card .btn-outline-secondary {
+    background-color: transparent !important;
+    border-color: rgba(255, 255, 255, 0.75) !important;
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-secondary *,
+.page-header .btn-outline-secondary *,
+.user-header .btn-outline-secondary *,
+.header-card .btn-outline-secondary * {
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-secondary:hover,
+.page-header .btn-outline-secondary:hover,
+.user-header .btn-outline-secondary:hover,
+.header-card .btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+.page-title-container .btn-secondary,
+.page-header .btn-secondary,
+.user-header .btn-secondary,
+.header-card .btn-secondary {
+    background-color: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    color: #ffffff !important;
+}
+.page-title-container .btn-secondary *,
+.page-header .btn-secondary *,
+.user-header .btn-secondary *,
+.header-card .btn-secondary * {
+    color: #ffffff !important;
+}
+.page-title-container .btn-secondary:hover,
+.page-header .btn-secondary:hover,
+.user-header .btn-secondary:hover,
+.header-card .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+.page-title-container .btn-outline-light,
+.page-header .btn-outline-light,
+.user-header .btn-outline-light,
+.header-card .btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.85) !important;
+    color: #ffffff !important;
+}
+.page-title-container .btn-outline-light *,
+.page-header .btn-outline-light *,
+.user-header .btn-outline-light *,
+.header-card .btn-outline-light * {
+    color: #ffffff !important;
+}
+
 /* User header banners (e.g. client_report.php) */
 .user-header {
     background: #6c757d !important;
@@ -341,13 +446,51 @@ table td select,
 }
 
 /* =========================================================================
-   4. STAT / KPI LABELS & TABS
+   4. STAT / KPI CARDS, LABELS & TABS
+   Stacks number on top line and label text on the next line below it
+   across all stat cards in all logins.
    ========================================================================= */
+.stat-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 4px !important;
+}
+
+/* For cards that contain a dedicated icon container (.stat-icon), keep icon and info side-by-side */
+.stat-card.compact-card,
+.stat-card:has(.stat-icon),
+.stat-card:has(.stat-info) {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+}
+
+.stat-card .stat-number,
+.stat-number {
+    font-family: var(--erp-font-family) !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #2c3e50 !important;
+    margin-right: 0 !important;
+    margin-bottom: 4px !important;
+    line-height: 1.2 !important;
+    display: block !important;
+    width: 100% !important;
+}
+
 .stat-card .stat-label,
 .kpi-label {
     font-family: var(--erp-font-family) !important;
     color: #000000 !important;
     font-weight: 700 !important;
+    font-size: 11px !important;
+    margin: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 
 .status-filter .nav-link {
@@ -400,18 +543,29 @@ body {
     padding-top: 76px !important;
 }
 
-/* For pages using .main-content wrapper, normalize margin-top */
-.main-content {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-/* For direct container elements under body */
+/* For pages using .main-content wrapper or containers, normalize margin-top and padding-top */
+.main-content,
+main.main-content,
+div.main-content,
+.container-fluid.main-content,
+.container.main-content,
 body > .container,
 body > .container-fluid,
 body > .wrapper,
 body > .content-wrapper,
-body > main {
+body > main,
+.container.mt-3,
+.container-fluid.mt-3,
+.container.mt-4,
+.container-fluid.mt-4,
+.container.mt-5,
+.container-fluid.mt-5,
+.container.py-3,
+.container-fluid.py-3,
+.container.py-4,
+.container-fluid.py-4,
+.container.py-5,
+.container-fluid.py-5 {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
@@ -421,7 +575,8 @@ body > main {
 .user-header,
 .header-card,
 .user-info,
-.page-header {
+.page-header,
+.content-header {
     margin-top: 0 !important;
 }
 
@@ -475,6 +630,146 @@ body > .container-fluid > .card:first-child,
 .nav-dropdown li a:hover:not(.active) i,
 .dropdown-menu li a:hover:not(.active) i {
     color: #0d6efd !important;
+}
+
+/* =========================================================================
+   9. DATATABLES "SHOW ENTRIES" SELECT DROPDOWN FIX ACROSS ALL LOGINS
+   Fixes the issue where the dropdown arrow/chevron overlaps the entry
+   count number (e.g. "10") inside DataTables length selector across
+   ALL logins and modules.
+   ========================================================================= */
+
+/* DataTables length select dropdown (Supports both DataTables v1.x and v2.x) */
+.dataTables_length select,
+div.dataTables_wrapper div.dataTables_length select,
+.dataTables_wrapper .dataTables_length select,
+.dt-length select,
+div.dt-container div.dt-length select,
+.dt-container .dt-length select,
+select[name$="_length"],
+select[name*="_length"],
+.dataTables_wrapper select.form-select,
+div.dataTables_wrapper select.form-select,
+.dt-container select.form-select,
+div.dt-container select.form-select,
+.dataTables_length select.form-select,
+.dataTables_length select.form-select-sm,
+.dt-length select.form-select,
+.dt-length select.form-select-sm {
+    display: inline-block !important;
+    width: auto !important;
+    min-width: 68px !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+    padding: 3px 26px 3px 10px !important;
+    font-size: var(--erp-general-text-size, 11px) !important;
+    font-family: var(--erp-font-family) !important;
+    color: #212529 !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    background-color: #ffffff !important;
+    cursor: pointer !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+    /* Clean custom down-arrow SVG positioned neatly on the right */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 8px center !important;
+    background-size: 11px 9px !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    margin: 0 4px !important;
+    text-align: left !important;
+}
+
+.dataTables_length select:focus,
+div.dataTables_wrapper div.dataTables_length select:focus,
+.dataTables_wrapper .dataTables_length select:focus,
+.dt-length select:focus,
+div.dt-container div.dt-length select:focus,
+.dt-container .dt-length select:focus,
+select[name$="_length"]:focus,
+select[name*="_length"]:focus {
+    border-color: #86b7fe !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Ensure dataTables_length wrapper and label align text properly */
+.dataTables_length,
+div.dataTables_wrapper div.dataTables_length,
+.dataTables_wrapper .dataTables_length,
+.dt-length,
+div.dt-container div.dt-length,
+.dt-container .dt-length,
+.dataTables_length label,
+div.dataTables_wrapper div.dataTables_length label,
+.dt-length label,
+div.dt-container div.dt-length label {
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: var(--erp-general-text-size, 11px) !important;
+    font-family: var(--erp-font-family) !important;
+    color: #212529 !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 500 !important;
+}
+
+/* DataTables search box styling consistency */
+.dataTables_filter input,
+div.dataTables_wrapper div.dataTables_filter input,
+.dataTables_wrapper .dataTables_filter input,
+.dt-search input,
+div.dt-container div.dt-search input,
+.dt-container .dt-search input {
+    display: inline-block !important;
+    width: auto !important;
+    min-width: 150px !important;
+    padding: 3px 10px !important;
+    font-size: var(--erp-general-text-size, 11px) !important;
+    font-family: var(--erp-font-family) !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 4px !important;
+    background-color: #ffffff !important;
+    margin-left: 6px !important;
+    line-height: 1.5 !important;
+    box-sizing: border-box !important;
+}
+
+.dataTables_filter input:focus,
+div.dataTables_wrapper div.dataTables_filter input:focus,
+.dataTables_wrapper .dataTables_filter input:focus,
+.dt-search input:focus,
+div.dt-container div.dt-search input:focus,
+.dt-container .dt-search input:focus {
+    border-color: #86b7fe !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.dataTables_filter,
+div.dataTables_wrapper div.dataTables_filter,
+.dataTables_wrapper .dataTables_filter,
+.dt-search,
+div.dt-container div.dt-search,
+.dt-container .dt-search,
+.dataTables_filter label,
+div.dataTables_wrapper div.dataTables_filter label,
+.dt-search label,
+div.dt-container div.dt-search label {
+    font-size: var(--erp-general-text-size, 11px) !important;
+    font-family: var(--erp-font-family) !important;
+    color: #212529 !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 500 !important;
+}
+
+/* Compact / small form selects general protection against arrow overlap */
+.form-select-sm,
+select.form-select-sm {
+    min-width: 65px;
+    padding-right: 24px !important;
 }
 
 /* Prevent padding issues when printing */

@@ -391,7 +391,7 @@ $stmt->close();
 <body>
     <?php require 'header.php'; ?>
     
-    <div class="container-fluid mt-3">
+    <div class="container-fluid main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
         <?php if (isset($_GET['msg'])): ?>
         <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show">
             <?= h($_GET['msg']) ?>
@@ -402,9 +402,9 @@ $stmt->close();
         <?php if ($mode==='edit'): ?>
         
         <!-- Edit Form -->
-        <div class="page-title-container">
-            <h5 class="mb-0 text-white"><i class="fas fa-user me-2"></i>Edit My Details</h5>
-            <a href="employee.php" class="btn btn-sm btn-secondary">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-edit me-2" style="color: #ffffff !important;"></i>Edit My Details</h5>
+            <a href="employee.php" class="btn btn-sm btn-secondary text-white">
                 <i class="fas fa-arrow-left me-1"></i> Back to View
             </a>
         </div>
@@ -635,8 +635,8 @@ $stmt->close();
         }
         ?>
         
-        <div class="page-title-container">
-            <h5 class="mb-0 text-white"><i class="fas fa-user me-2"></i>My Employee Details</h5>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-check me-2" style="color: #ffffff !important;"></i>My Employee Details</h5>
             <div class="d-flex gap-2">
                 <?php if ($employee_data && $employee_data['emp_confirm'] == 0): ?>
                     <form method="post" style="display:inline" onsubmit="return confirm('Are you sure you want to verify your details? Once verified, you cannot edit them again.')">

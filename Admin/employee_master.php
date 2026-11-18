@@ -296,13 +296,13 @@ hr.my-1 {
 </style>
 </head>
 <body>
-<div class="container mt-3">
+<div class="container main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
 <?php if (isset($_GET['msg'])): ?>
 <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show"><?= h($_GET['msg']) ?><button class="btn-close" data-bs-dismiss="alert"></button></div>
 <?php endif; ?>
 
 <?php if ($mode==='add'||$mode==='edit'): ?>
-<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;"><?= $mode==='edit'?'Edit':'Add' ?> Employee</h5><a href="employee_master.php" class="btn btn-sm btn-secondary">Back</a></div>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;"><?= $mode==='edit'?'Edit':'Add' ?> Employee</h5><a href="employee_master.php" class="btn btn-sm btn-secondary text-white">Back</a></div>
 <div class="card p-4 mx-auto" style="max-width:900px;">
 <form method="post" class="row g-3" onsubmit="return checkPasswordMatch()">
     <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
@@ -439,7 +439,7 @@ document.addEventListener('DOMContentLoaded',()=>{const roleSelect=document.getE
 </script>
 
 <?php else: ?>
-<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;">Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;">Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>
     <div class="d-flex flex-wrap gap-2 mb-3">
 <input type="text" id="searchInput" class="form-control form-control-sm" style="width:250px" placeholder="Search" value="<?=h($q)?>">
 <select id="statusSelect" class="form-select form-select-sm" style="width:120px;">
