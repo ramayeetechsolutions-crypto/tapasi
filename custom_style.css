@@ -543,19 +543,31 @@ body {
     padding-top: 92px !important;
 }
 
-/* For pages using .main-content wrapper, normalize margin-top */
-.main-content {
-    margin-top: 0 !important;
-    padding-top: 15px !important;
-}
-
-/* For direct container elements under body */
+/* For pages using .main-content wrapper or containers, normalize margin-top and padding-top */
+.main-content,
+main.main-content,
+div.main-content,
+.container-fluid.main-content,
+.container.main-content,
 body > .container,
 body > .container-fluid,
 body > .wrapper,
 body > .content-wrapper,
-body > main {
-    margin-top: 12px !important;
+body > main,
+.container.mt-3,
+.container-fluid.mt-3,
+.container.mt-4,
+.container-fluid.mt-4,
+.container.mt-5,
+.container-fluid.mt-5,
+.container.py-3,
+.container-fluid.py-3,
+.container.py-4,
+.container-fluid.py-4,
+.container.py-5,
+.container-fluid.py-5 {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 
 /* Ensure page header banners, cards and title containers have clean top margins */
@@ -563,8 +575,9 @@ body > main {
 .user-header,
 .header-card,
 .user-info,
-.page-header {
-    margin-top: 10px !important;
+.page-header,
+.content-header {
+    margin-top: 0 !important;
 }
 
 /* For cards at top of container */
