@@ -4,19 +4,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
     if(isset($_SESSION['uid'])) $exeid=$_SESSION['uid'];
 }
-$current_user_id = $_SESSION['uid'] ?? 0;
-$current_username = $_SESSION['username'] ?? '';
-$role_name = $_SESSION['role_name'] ?? '';
-
-// Role & permission configuration:
-$current_folder = basename(__DIR__);
-$is_tl_or_subtl = false;
-if ($current_folder === 'Team_Lead' || $current_folder === 'SubTL') {
-    $is_tl_or_subtl = true;
-    if (isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'TM') {
-        $is_tl_or_subtl = false;
-    }
-}
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -237,45 +224,12 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     $le_id = (int)$_POST['le_id'];
     $job_id = (int)$_POST['job_id'];
     $type = $_POST['type'] ?? 'le'; 
-    $assigned_to = trim($_POST['assigned_to'] ?? '');
+    $assigned_to = trim($_POST['assigned_to']);
     
     $response = ['success' => false, 'message' => ''];
     
     try {
         if (empty($assigned_to)) { throw new Exception('Please select an LE Member'); }
-        if (!in_array($type, ['le', 'le_qc'])) { throw new Exception('Invalid assignment type'); }
-        
-        // Fetch current LE record
-        $get_le = $mysqli->prepare("SELECT id, job_id, status, assigned_to_le, assigned_to_le_qc FROM le WHERE id = ?");
-        $get_le->bind_param("i", $le_id);
-        $get_le->execute();
-        $res = $get_le->get_result();
-        if ($res->num_rows == 0) throw new Exception('LE record not found');
-        $le_row = $res->fetch_assoc();
-        $real_job_id = (int)$le_row['job_id'];
-        $get_le->close();
-
-        $already_assigned = '';
-        if ($type === 'le') {
-            $already_assigned = trim($le_row['assigned_to_le'] ?? '');
-        } elseif ($type === 'le_qc') {
-            $already_assigned = trim($le_row['assigned_to_le_qc'] ?? '');
-        }
-
-        // Permission check for Executive
-        if (!$is_tl_or_subtl) {
-            // Once assigned, Executive cannot change/reassign
-            if (!empty($already_assigned)) {
-                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to reassign members.']);
-                exit;
-            }
-            // Unassigned task: Executive can ONLY assign themself
-            if ($assigned_to !== $current_username) {
-                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to assign to other members.']);
-                exit;
-            }
-        }
-
         $mysqli->begin_transaction();
         
         // 1. Update LE table (Stronger condition to handle all empty/pending states)
@@ -891,7 +845,7 @@ require 'header.php';
     </div>
 
     <!-- Notification Container -->
-    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 999999;"></div>
+    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 
     <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-4">
@@ -1274,14 +1228,8 @@ require 'header.php';
                                         <?php endif; ?>
                                         </div>
                                         
-                                        <?php 
-                                            $assigned_le = trim($row['assigned_to_le'] ?? '');
-                                        ?>
-                                        <select class="assign-select mt-1 le-select-<?= $row['id'] ?>" 
-                                                data-assigned="<?= h($assigned_le) ?>" 
-                                                data-previous="<?= h($assigned_le) ?>" 
-                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
-                                            <option value=""><?= !empty($assigned_le) ? 'Change LE TM' : 'Assign LE' ?></option>
+                                        <select class="assign-select mt-1 le-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
+                                            <option value=""><?= !empty($row['assigned_to_le']) ? 'Change LE TM' : 'Assign LE' ?></option>
                                             <?php foreach ($les as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= ($row['assigned_to_le'] == $le['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($le['employee_name']) ?> (<?= h($le['employee_username']) ?>)
@@ -1338,14 +1286,8 @@ require 'header.php';
                                         <?php endif; ?>
                                         </div>
                                         
-                                        <?php 
-                                            $assigned_leqc = trim($row['assigned_to_le_qc'] ?? '');
-                                        ?>
-                                        <select class="assign-select mt-1 le-qc-select-<?= $row['id'] ?>" 
-                                                data-assigned="<?= h($assigned_leqc) ?>" 
-                                                data-previous="<?= h($assigned_leqc) ?>" 
-                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
-                                            <option value=""><?= !empty($assigned_leqc) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
+                                        <select class="assign-select mt-1 le-qc-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
+                                            <option value=""><?= !empty($row['assigned_to_le_qc']) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
                                             <?php foreach ($les as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= (($row['assigned_to_le_qc'] ?? '') == $le['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($le['employee_name']) ?> (<?= h($le['employee_username']) ?>)
@@ -1630,53 +1572,27 @@ require 'header.php';
         
         // Quick assign function (In-Place, No Reload)
         function quickAssign(leId, jobId, type, selectElement) {
-            const selectedValue = (selectElement.value || '').trim();
-            const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
-            const currentUsername = <?= json_encode($current_username) ?>;
-            const assignedVal = (selectElement.getAttribute('data-assigned') || '').trim();
-            const prevVal = (selectElement.getAttribute('data-previous') || assignedVal).trim();
-            
-            // If empty selection (e.g. clicked "Change TM"), revert back to assignedVal
-            if (!selectedValue) {
-                selectElement.value = assignedVal;
-                return;
-            }
-            
-            // Permission check for Executive
-            if (!isTlOrSubtl) {
-                if (assignedVal !== '') {
-                    showNotification('warning', 'Only SubTL and Team Lead have access to reassign members.');
-                    selectElement.value = assignedVal;
-                    selectElement.setAttribute('data-previous', assignedVal);
-                    return;
-                }
-                if (selectedValue !== currentUsername) {
-                    showNotification('warning', 'Only SubTL and Team Lead have access to assign to other members.');
-                    selectElement.value = '';
-                    selectElement.setAttribute('data-previous', '');
-                    return;
-                }
-            }
+            const selectedValue = selectElement.value;
+            if (!selectedValue) return;
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const leName = selectedOption.getAttribute('data-name') || selectedValue;
             
             let typeLabel = (type === 'le_qc') ? 'LE-QC' : 'LE';
             
+            selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
             
             fetch('le_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=quick_assign&le_id=' + encodeURIComponent(leId) + '&job_id=' + encodeURIComponent(jobId) + '&type=' + encodeURIComponent(type) + '&assigned_to=' + encodeURIComponent(selectedValue)
+                body: 'ajax=quick_assign&le_id=' + leId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
                 selectElement.disabled = false;
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${leName} successfully!`);
-                    selectElement.setAttribute('data-assigned', selectedValue);
-                    selectElement.setAttribute('data-previous', selectedValue);
                     
                     const row = document.getElementById('row-' + leId);
                     if (row) {
@@ -1710,16 +1626,14 @@ require 'header.php';
                         }
                     }
                 } else {
-                    showNotification('danger', data.message || 'Assignment failed');
-                    selectElement.value = assignedVal || '';
-                    selectElement.setAttribute('data-previous', assignedVal || '');
+                    showNotification('danger', 'Error: ' + data.message);
+                    selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
                 selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
-                selectElement.value = assignedVal || '';
-                selectElement.setAttribute('data-previous', assignedVal || '');
+                selectElement.value = selectElement.getAttribute('data-previous') || '';
             });
         }
       

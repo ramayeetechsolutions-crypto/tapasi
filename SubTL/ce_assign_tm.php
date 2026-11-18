@@ -8,16 +8,6 @@ $current_username = $_SESSION['username'] ?? '';
 $role_name = $_SESSION['role_name'] ?? '';
 if (isset($_SESSION['uid'])) $exeid = $_SESSION['uid'];
 
-// Role & permission configuration:
-$current_folder = basename(__DIR__);
-$is_tl_or_subtl = false;
-if ($current_folder === 'Team_Lead' || $current_folder === 'SubTL') {
-    $is_tl_or_subtl = true;
-    if (isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'TM') {
-        $is_tl_or_subtl = false;
-    }
-}
-
 // Release session lock early to allow parallel AJAX requests without blocking
 session_write_close();
 
@@ -196,7 +186,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
 
             $fqa_user = trim($check_row['fqa_tm'] ?? '');
             $fqa_assigned = false;
-            if (!empty($fqa_user) && !in_array($fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL'])) {
+            if (!empty($fqa_user) && !in_array($fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL', $current_username])) {
                 $emp_chk = $mysqli->prepare("SELECT 1 FROM employee_master WHERE employee_username = ? LIMIT 1");
                 if ($emp_chk) {
                     $emp_chk->bind_param("s", $fqa_user);
@@ -250,17 +240,18 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     
     $ce_id = (int)$_POST['ce_id'];
     $job_id = (int)$_POST['job_id'];
-    $type = $_POST['type'] ?? ''; // 'content', 'images', or 'fqa'
-    $assigned_to = trim($_POST['assigned_to'] ?? '');
+    $type = $_POST['type']; // 'content', 'images', or 'fqa'
+    $assigned_to = trim($_POST['assigned_to']);
     
     $response = ['success' => false, 'message' => ''];
     
     try {
         if (empty($assigned_to)) { throw new Exception('Please select a TM'); }
-        if (!in_array($type, ['content', 'images', 'fqa'])) { throw new Exception('Invalid assignment type'); }
         
-        // Fetch CE record, real job_id, and current assignments
-        $get_ce = $mysqli->prepare("SELECT ce.id, ce.job_id, ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to AS fqa_tm FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+        $mysqli->begin_transaction();
+        
+        // Fetch CE record and real job_id
+        $get_ce = $mysqli->prepare("SELECT id, job_id, status FROM ce WHERE id = ?");
         $get_ce->bind_param("i", $ce_id);
         $get_ce->execute();
         $res = $get_ce->get_result();
@@ -269,33 +260,6 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $real_job_id = (int)$ce_row['job_id'];
         $current_status = $ce_row['status'];
         $get_ce->close();
-
-        // Determine currently assigned TM for this type
-        $already_assigned = '';
-        if ($type === 'content') {
-            $already_assigned = trim($ce_row['assigned_to_content'] ?? '');
-        } elseif ($type === 'images') {
-            $already_assigned = trim($ce_row['assigned_to_img'] ?? '');
-        } elseif ($type === 'fqa') {
-            $raw_fqa = trim($ce_row['fqa_tm'] ?? '');
-            if (!in_array($raw_fqa, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL'])) {
-                $already_assigned = $raw_fqa;
-            }
-        }
-
-        // Permission check for Executive
-        if (!$is_tl_or_subtl) {
-            if (!empty($already_assigned)) {
-                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to reassign members.']);
-                exit;
-            }
-            if ($assigned_to !== $current_username) {
-                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to assign to other members.']);
-                exit;
-            }
-        }
-
-        $mysqli->begin_transaction();
 
         // Target field in CE table
         if ($type == 'content') {
@@ -1418,16 +1382,10 @@ require 'header.php';
                                             </small>
                                         <?php endif; ?>
                                         
-                                        <?php 
-                                            $assigned_content = trim($row['assigned_to_content'] ?? '');
-                                        ?>
-                                        <select class="assign-select mt-1 content-select-<?= $row['id'] ?>" 
-                                                data-assigned="<?= h($assigned_content) ?>" 
-                                                data-previous="<?= h($assigned_content) ?>" 
-                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'content', this)">
-                                            <option value=""><?= !empty($assigned_content) ? 'Change Content TM' : 'Assign Content' ?></option>
+                                        <select class="assign-select mt-1 content-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'content', this)">
+                                            <option value=""><?= !empty($row['assigned_to_content']) ? 'Change Content TM' : 'Assign Content' ?></option>
                                             <?php foreach ($tms as $tm): ?>
-                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($assigned_content == $tm['employee_username']) ? 'selected' : '' ?>>
+                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_content'] == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
                                                 </option>
                                             <?php endforeach; ?>
@@ -1488,16 +1446,10 @@ require 'header.php';
                                             </small>
                                         <?php endif; ?>
                                         
-                                        <?php 
-                                            $assigned_img = trim($row['assigned_to_img'] ?? '');
-                                        ?>
-                                        <select class="assign-select mt-1 images-select-<?= $row['id'] ?>" 
-                                                data-assigned="<?= h($assigned_img) ?>" 
-                                                data-previous="<?= h($assigned_img) ?>" 
-                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'images', this)">
-                                            <option value=""><?= !empty($assigned_img) ? 'Change REF TM' : 'Assign REF' ?></option>
+                                        <select class="assign-select mt-1 images-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'images', this)">
+                                            <option value=""><?= !empty($row['assigned_to_img']) ? 'Change REF TM' : 'Assign REF' ?></option>
                                             <?php foreach ($tms as $tm): ?>
-                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($assigned_img == $tm['employee_username']) ? 'selected' : '' ?>>
+                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_img'] == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
                                                 </option>
                                             <?php endforeach; ?>
@@ -1519,7 +1471,7 @@ require 'header.php';
                                         <?php 
                                             $raw_fqa_user = $row['assigned_to'] ?? '';
                                             // Check if it's the default TL name from job entry (Not a real assigned TM)
-                                            $is_tl_default = (in_array($raw_fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL']) || ($raw_fqa_user === $reporting_manager && !empty($reporting_manager)));
+                                            $is_tl_default = ($raw_fqa_user === $current_user_name || $raw_fqa_user === $reporting_manager || $raw_fqa_user === 'T.G. Bragadeeshwaran' || $raw_fqa_user === $current_username);
                                             
                                             $fqa_user = $is_tl_default ? '' : $raw_fqa_user;
                                             $fqa_done = ($row['status'] === 'Completed' && !empty($fqa_user));
@@ -1535,7 +1487,6 @@ require 'header.php';
                                                 $fqa_curr_status = 'In Progress';
                                                 $fqa_badge_cls = 'in-progress'; // Purple
                                             }
-                                            $assigned_fqa = trim($fqa_user ?? '');
                                         ?>
                                         
                                         <div class="mb-1">
@@ -1557,10 +1508,7 @@ require 'header.php';
                                             </small>
                                         <?php endif; ?>
                                         
-                                        <select class="assign-select mt-1 fqa-select-<?= $row['id'] ?>" 
-                                                data-assigned="<?= h($assigned_fqa) ?>" 
-                                                data-previous="<?= h($assigned_fqa) ?>" 
-                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'fqa', this)">
+                                        <select class="assign-select mt-1 fqa-select-<?= $row['id'] ?>" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'fqa', this)">
                                             <option value=""><?= !empty($fqa_user) ? 'Change FQA TM' : 'Assign FQA' ?></option>
                                             <?php foreach ($tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($fqa_user == $tm['employee_username']) ? 'selected' : '' ?>>
@@ -1917,36 +1865,8 @@ require 'header.php';
         
         // Quick assign function with instant TM badge update
         function quickAssign(ceId, jobId, type, selectElement) {
-            const selectedValue = (selectElement.value || '').trim();
-            const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
-            const currentUsername = <?= json_encode($current_username) ?>;
-            const assignedVal = (selectElement.getAttribute('data-assigned') || '').trim();
-            const prevVal = (selectElement.getAttribute('data-previous') || assignedVal).trim();
-            
-            // If empty selection (e.g. clicked "Change TM"), revert back to assignedVal
-            if (!selectedValue) {
-                selectElement.value = assignedVal;
-                return;
-            }
-            
-            // Permission check for Executive
-            if (!isTlOrSubtl) {
-                // Rule 1: Once assigned, Executive cannot change/reassign
-                if (assignedVal !== '') {
-                    showNotification('warning', 'Only SubTL and Team Lead have access to reassign members.');
-                    selectElement.value = assignedVal;
-                    selectElement.setAttribute('data-previous', assignedVal);
-                    return;
-                }
-                
-                // Rule 2: Unassigned task: Executive can ONLY assign themself
-                if (selectedValue !== currentUsername) {
-                    showNotification('warning', 'Only SubTL and Team Lead have access to assign to other members.');
-                    selectElement.value = '';
-                    selectElement.setAttribute('data-previous', '');
-                    return;
-                }
-            }
+            const selectedValue = selectElement.value;
+            if (!selectedValue) return;
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const tmName = selectedOption.getAttribute('data-name') || selectedValue;
@@ -1955,29 +1875,23 @@ require 'header.php';
             if(type === 'images') typeLabel = 'Images';
             if(type === 'fqa') typeLabel = 'FQA';
             
-            showLoading();
+            selectElement.setAttribute('data-previous', selectedValue);
             selectElement.disabled = true;
             
             fetch('ce_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=quick_assign&ce_id=' + encodeURIComponent(ceId) + '&job_id=' + encodeURIComponent(jobId) + '&type=' + encodeURIComponent(type) + '&assigned_to=' + encodeURIComponent(selectedValue)
+                body: 'ajax=quick_assign&ce_id=' + ceId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
                 hideLoading();
                 selectElement.disabled = false;
                 if (data.success) {
-                    if (typeof updateStatsCards === 'function') {
-                        updateStatsCards(data.stats);
-                    }
+                    updateStatsCards(data.stats);
                     showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
                     document.getElementById('row-' + ceId).classList.add('assigned');
-                    selectElement.setAttribute('data-assigned', selectedValue);
-                    selectElement.setAttribute('data-previous', selectedValue);
-                    if (selectElement.options.length > 0) {
-                        selectElement.options[0].text = `Change ${typeLabel} TM`;
-                    }
+                    selectElement.options[0].text = 'Change TM';
 
                     // Update status dropdown and badge tag in DOM dynamically
                     const cell = selectElement.closest('.assignment-cell');
@@ -2006,17 +1920,15 @@ require 'header.php';
                         }
                     }
                 } else {
-                    showNotification('danger', data.message || 'Failed to assign TM');
-                    selectElement.value = assignedVal || '';
-                    selectElement.setAttribute('data-previous', assignedVal || '');
+                    showNotification('danger', 'Error: ' + data.message);
+                    selectElement.value = selectElement.getAttribute('data-previous') || '';
                 }
             })
             .catch(error => {
                 hideLoading(); 
                 selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
-                selectElement.value = assignedVal || '';
-                selectElement.setAttribute('data-previous', assignedVal || '');
+                selectElement.value = selectElement.getAttribute('data-previous') || '';
             });
         }
         // Show full assignment modal
