@@ -172,6 +172,7 @@ if ($today_stmt) {
     $today_stmt->close();
 }
 
+$current_user_name = $_SESSION['adminname'] ?? $_SESSION['ename'] ?? $_SESSION['username'] ?? 'Admin';
 $ename = $current_user_name; // Set this for the welcome message
 
 $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_count;
