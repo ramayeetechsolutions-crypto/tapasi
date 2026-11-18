@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // ap_progress.php - Display ALL AP Records
 require 'db.php';

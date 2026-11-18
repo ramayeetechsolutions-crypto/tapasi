@@ -1,4 +1,3 @@
-<br><br>
 <?php
 // ap_progress.php
 require 'db.php';

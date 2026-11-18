@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 require 'db.php';
 session_start();
@@ -278,9 +277,9 @@ if (!$queries) {
     </style>
 </head>
 <body>
-    <div class="main-content">
+    <div class="main-content" style="padding-top: 0 !important; margin-top: 0 !important;">
         <!-- User Info Panel -->
-        <div class="user-info d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important;">
+        <div class="user-info d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
             <div>
                 <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-circle me-2" style="color: #ffffff !important;"></i>Welcome, <?= h($current_name) ?>!</h5>
                 <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;"><i class="fas fa-id-card me-1" style="color: #ffffff !important;"></i><?= h($current_username) ?> | Employee Query Portal</small>

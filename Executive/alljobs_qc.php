@@ -379,7 +379,7 @@ while ($job = $jobs_res->fetch_assoc()) {
         border-bottom: none !important;
     }
   </style>
-  <div class="container-fluid mt-3">
+  <div class="container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
         </div>

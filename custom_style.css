@@ -397,7 +397,7 @@ table td select,
 
 /* Ensure body content starts below the fixed top navbar (70px) with comfortable breathing room */
 body {
-    padding-top: 85px !important;
+    padding-top: 76px !important;
 }
 
 /* For pages using .main-content wrapper, normalize margin-top */
@@ -413,12 +413,14 @@ body > .wrapper,
 body > .content-wrapper,
 body > main {
     margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 
 /* Ensure page header banners, cards and title containers have clean top margins */
 .page-title-container,
 .user-header,
 .header-card,
+.user-info,
 .page-header {
     margin-top: 0 !important;
 }

@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // Start a session if one is not already active
 if (session_status() === PHP_SESSION_NONE) {

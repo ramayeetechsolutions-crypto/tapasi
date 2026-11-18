@@ -362,7 +362,6 @@ if ($results->num_rows > 0) {
 
 require 'header.php';
 ?>
-<br><br><br>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"/>
 <!-- Select2 CSS -->
@@ -611,12 +610,12 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     return $badge;
 }
 ?>
-<div class="container-fluid">
-    <!-- <div class="page-title-container"> -->
-        <h2 class="mb-0 text-white">TS Report</h2>
-        <!-- <div class="team-leader-badge">
-            <i class="fas fa-user-tie me-1"></i> <?= h($user_employee_name) ?>
-        </div> -->
+<div class="container-fluid" style="padding-top: 0 !important; margin-top: 0 !important;">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <h2 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
+            <i class="fas fa-file-alt me-2" style="color: #ffffff !important;"></i>TS Report
+        </h2>
+    </div> -->
     </div>
 
     <!-- Dashboard Cards -->

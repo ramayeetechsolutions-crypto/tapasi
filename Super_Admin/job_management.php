@@ -1,4 +1,3 @@
-<br><br><br>
 <?php
 // Add these helper functions at the top
 function formatDateTime($datetime, $format = 'd-m-Y H:i') {
