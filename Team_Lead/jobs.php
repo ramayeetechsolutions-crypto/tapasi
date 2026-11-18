@@ -105,9 +105,9 @@ if (!in_array($sort, $allowed_sorts, true)) $sort = 'job_date';
 
 $default_due_date = date('Y-m-d H:i:s', strtotime('+5 days'));
 
-// Load all processes (Hide sub-AP processes from normal jobs, keep AP)
+// Load all processes (Hide AP processes from normal jobs)
 $all_processes = [];
-$ap_exclude = "'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing'";
+$ap_exclude = "'Heavy Corrections', 'Minor Corrections', 'AOP Corrections', 'AOP Date Update', 'InDesign Package', 'Bleed Mark Application', 'TOC Preparation', 'Combined PDF Creation', 'Combined Corrections', 'DOI Processing', 'AP'";
 $res = $mysqli->query("SELECT job_id, job_name FROM job_master WHERE status='Active' AND job_name NOT IN ($ap_exclude) ORDER BY job_name");
 if (!$res) die('Error loading processes: ' . $mysqli->error);
 while ($r = $res->fetch_assoc()) $all_processes[$r['job_id']] = $r['job_name'];

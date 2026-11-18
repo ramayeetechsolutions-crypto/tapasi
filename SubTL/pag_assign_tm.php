@@ -53,18 +53,12 @@ $check_columns = [
     'images' => "VARCHAR(50) NULL DEFAULT '0'",
     'tables_count' => "VARCHAR(50) NULL DEFAULT '0'",
     'pages' => "VARCHAR(50) NULL DEFAULT '0'",
-    'word_pages' => "VARCHAR(50) NULL DEFAULT '0'",
     'word_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
     'pag_status_col' => "VARCHAR(100) DEFAULT 'Need to Assign'",
     'table_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
     'table_start_time' => "TIME NULL DEFAULT NULL",
     'table_end_time' => "TIME NULL DEFAULT NULL",
     'assigned_to_table' => "VARCHAR(100) NULL DEFAULT NULL",
-    'table_fqa_pages' => "VARCHAR(50) NULL DEFAULT '0'",
-    'table_fqa_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
-    'table_fqa_start_time' => "TIME NULL DEFAULT NULL",
-    'table_fqa_end_time' => "TIME NULL DEFAULT NULL",
-    'assigned_to_table_fqa' => "VARCHAR(100) NULL DEFAULT NULL",
     'remarks' => "VARCHAR(255) NULL DEFAULT NULL",
     'note' => "VARCHAR(255) NULL DEFAULT NULL",
     'path' => "VARCHAR(255) NULL DEFAULT NULL",
@@ -82,6 +76,16 @@ foreach ($check_columns as $col => $definition) {
 $current_user_id = $_SESSION['uid'] ?? 0;
 $current_username = $_SESSION['username'] ?? '';
 $role_name = $_SESSION['role_name'] ?? '';
+
+// Check if current user is Team Lead or SubTL (Managers can reassign & assign others)
+$current_folder = basename(__DIR__);
+$is_tl_or_subtl = false;
+if ($current_folder === 'Team_Lead' || $current_folder === 'SubTL') {
+    $is_tl_or_subtl = true;
+    if (isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'TM') {
+        $is_tl_or_subtl = false;
+    }
+}
 
 // Get reporting manager for current user
 $reporting_manager = '';
@@ -188,8 +192,25 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'word_pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'table_fqa_pages', 'table_fqa_status', 'table_fqa_start_time', 'table_fqa_end_time', 'assigned_to_table_fqa', 'remarks', 'note', 'path', 'priority'];
+    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'remarks', 'note', 'path', 'priority'];
     if (in_array($field, $allowed_fields)) {
+        if ($field === 'assigned_to_table' && !$is_tl_or_subtl && $val !== '') {
+            $chk_stmt = $mysqli->prepare("SELECT assigned_to_table FROM pag WHERE id = ?");
+            $chk_stmt->bind_param("i", $pag_id);
+            $chk_stmt->execute();
+            $chk_res = $chk_stmt->get_result()->fetch_assoc();
+            $chk_stmt->close();
+            
+            $existing_table = $chk_res['assigned_to_table'] ?? '';
+            if (!empty($existing_table)) {
+                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to reassign members.']);
+                exit;
+            }
+            if ($val !== $current_username) {
+                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to assign to other members.']);
+                exit;
+            }
+        }
         if ($val === '') {
             $stmt = $mysqli->prepare("UPDATE pag SET $field = NULL, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("i", $pag_id);
@@ -219,6 +240,25 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     $response = ['success' => false, 'message' => ''];
     try {
         if (empty($assigned_to)) throw new Exception('Please select a TM');
+        
+        // Permission check: Executives can only self-assign to unassigned jobs. Only SubTL/TL can assign others or reassign.
+        if (!$is_tl_or_subtl) {
+            $chk_stmt = $mysqli->prepare("SELECT assigned_to_pag, assigned_to_img FROM pag WHERE id = ?");
+            $chk_stmt->bind_param("i", $pag_id);
+            $chk_stmt->execute();
+            $chk_res = $chk_stmt->get_result()->fetch_assoc();
+            $chk_stmt->close();
+            
+            $existing_assigned = ($type === 'pag') ? ($chk_res['assigned_to_pag'] ?? '') : ($chk_res['assigned_to_img'] ?? '');
+            
+            if (!empty($existing_assigned)) {
+                throw new Exception('Only SubTL and Team Lead have access to reassign members.');
+            }
+            if ($assigned_to !== $current_username) {
+                throw new Exception('Only SubTL and Team Lead have access to assign to other members.');
+            }
+        }
+        
         $mysqli->begin_transaction();
         
         $field = ($type == 'pag') ? 'assigned_to_pag' : 'assigned_to_img';
@@ -466,7 +506,7 @@ require 'header.php';
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 9999; }
         .loading-overlay.active { display: flex; }
         .loading-spinner { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        .notification { position: fixed; top: 20px; right: 20px; z-index: 10000; min-width: 300px; animation: slideIn 0.3s ease; }
+        .notification { position: fixed; top: 20px; right: 20px; z-index: 999999; min-width: 300px; animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
@@ -482,7 +522,7 @@ require 'header.php';
     </div>
 
     <!-- Notification Container -->
-    <div id="notificationContainer"></div>
+    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 999999;"></div>
 
     <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
         <div class="container-fluid px-4">
@@ -666,7 +706,6 @@ require 'header.php';
                             <th>Images</th>
                             <th>Remarks</th>
                             <th>Tables</th>
-                            <th>Table_FQA</th>
                             <th>Process</th>
                             <th>Due Date</th>
                             <th>FQA Status</th>
@@ -768,7 +807,10 @@ require 'header.php';
                                     
                                     <!-- NEW ASSIGN TM DROPDOWN -->
                                     <div class="mb-1">
-                                        <select class="assign-select mt-1 w-100" onchange="updateInlineField(<?= $row['id'] ?>, 'assigned_to_table', this.value)">
+                                        <select class="assign-select mt-1 w-100" 
+                                                data-assigned="<?= h($row['assigned_to_table'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_table'] ?? '') ?>"
+                                                onchange="updateInlineField(<?= $row['id'] ?>, 'assigned_to_table', this.value, this)">
                                             <option value=""><?= !empty($row['assigned_to_table']) ? 'Change TM' : 'Assign TM' ?></option>
                                             <?php foreach ($tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" <?= (($row['assigned_to_table'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
@@ -782,42 +824,7 @@ require 'header.php';
                                     <div class="d-flex gap-1 mt-1">
                                         <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table Start" value="<?= !empty($row['table_start_time']) ? date('H:i', strtotime($row['table_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_start_time', t, this);">
                                         <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table End" value="<?= !empty($row['table_end_time']) ? date('H:i', strtotime($row['table_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_end_time', t, this);">
-                                    </div>
-                                    </td>
-
-                                    <!-- Table_FQA (Pages, Status Dropdown, Assign TM & Times) -->
-                                    <td class="assignment-cell" style="padding: 8px; vertical-align: top; min-width: 130px;">
-                                        <!-- Pages Input -->
-                                        <div class="mb-1">
-                                            <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Pages" min="0" value="<?= h($row['table_fqa_pages'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'table_fqa_pages', this.value)">
-                                        </div>
-
-                                        <!-- Status Dropdown -->
-                                        <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateInlineField(<?= $row['id'] ?>, 'table_fqa_status', this.value)">
-                                                <option value="Need to Assign" <?= (($row['table_fqa_status'] ?? 'Need to Assign') == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
-                                                <option value="FQA_Inprocess" <?= (($row['table_fqa_status'] ?? '') == 'FQA_Inprocess') ? 'selected' : '' ?>>FQA_Inprocess</option>
-                                                <option value="FQA_Complete" <?= (($row['table_fqa_status'] ?? '') == 'FQA_Complete') ? 'selected' : '' ?>>FQA_Complete</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Assign TM Dropdown -->
-                                        <div class="mb-1">
-                                            <select class="assign-select mt-1 w-100" onchange="updateInlineField(<?= $row['id'] ?>, 'assigned_to_table_fqa', this.value)">
-                                                <option value=""><?= !empty($row['assigned_to_table_fqa']) ? 'Change TM' : 'Assign TM' ?></option>
-                                                <?php foreach ($tms as $tm): ?>
-                                                    <option value="<?= h($tm['employee_username']) ?>" <?= (($row['assigned_to_table_fqa'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
-                                                        <?= h($tm['employee_name']) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-
-                                        <!-- Start & End Time Inputs -->
-                                        <div class="d-flex gap-1 mt-1">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table FQA Start" value="<?= !empty($row['table_fqa_start_time']) ? date('H:i', strtotime($row['table_fqa_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_fqa_start_time', t, this);">
-                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table FQA End" value="<?= !empty($row['table_fqa_end_time']) ? date('H:i', strtotime($row['table_fqa_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_fqa_end_time', t, this);">
-                                        </div>
+                                            </div>
                                     </td>
                                     
                                     <!-- Process -->
@@ -887,11 +894,6 @@ require 'header.php';
                                         elseif ($word_inprogress) { $word_badge_cls = 'in-progress'; }
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
-                                        <!-- Pages Entry Input (Like Tables Count) -->
-                                        <div class="mb-1">
-                                            <input type="number" class="form-control form-control-sm p-1 text-center" style="width: 130px; height: 22px; font-size: 11px;" placeholder="Pages" min="0" value="<?= h($row['word_pages'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'word_pages', this.value)">
-                                        </div>
-
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value)">
                                                 <option value="Need to Assign" <?= ($word_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
@@ -914,7 +916,10 @@ require 'header.php';
                                             </small>
                                         <?php endif; ?>
 
-                                        <select class="assign-select mt-1" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'word', this)">
+                                        <select class="assign-select mt-1" 
+                                                data-assigned="<?= h($row['assigned_to_img'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_img'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'word', this)">
                                             <option value=""><?= !empty($row['assigned_to_img']) ? 'Change TM' : 'Assign TM' ?></option>
                                             <?php foreach ($tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_img'] == $tm['employee_username']) ? 'selected' : '' ?>>
@@ -960,7 +965,10 @@ require 'header.php';
                                             </small>
                                         <?php endif; ?>
 
-                                        <select class="assign-select mt-1" onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'pag', this)">
+                                        <select class="assign-select mt-1" 
+                                                data-assigned="<?= h($row['assigned_to_pag'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_pag'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'pag', this)">
                                             <option value=""><?= !empty($row['assigned_to_pag']) ? 'Change TM' : 'Assign TM' ?></option>
                                             <?php foreach ($tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_pag'] == $tm['employee_username']) ? 'selected' : '' ?>>
@@ -1143,6 +1151,23 @@ require 'header.php';
 
         // Inline Field Editor (For Time and Counts)
         function updateInlineField(pagId, field, value, element = null) {
+            if (field === 'assigned_to_table') {
+                const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
+                const currentUsername = <?= json_encode($current_username) ?>;
+                const assignedVal = element ? (element.getAttribute('data-assigned') || '').trim() : '';
+                if (!isTlOrSubtl) {
+                    if (assignedVal !== '') {
+                        showNotification('warning', 'Only SubTL and Team Lead have access to reassign members.');
+                        if (element) element.value = assignedVal;
+                        return;
+                    }
+                    if (value && value !== currentUsername) {
+                        showNotification('warning', 'Only SubTL and Team Lead have access to assign to other members.');
+                        if (element) element.value = '';
+                        return;
+                    }
+                }
+            }
             if ((field.includes('start_time') || field.includes('end_time')) && value !== '') {
                 const now = new Date();
                 const currentHour = String(now.getHours()).padStart(2, '0');
@@ -1162,23 +1187,61 @@ require 'header.php';
             .then(response => response.json())
             .then(data => {
                 hideLoading();
-                if (data.success) { showNotification('success', 'Updated successfully!'); } 
-                else { showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); }
-            }).catch(error => { hideLoading(); console.error('Error:', error); });
+                if (data.success) { 
+                    showNotification('success', 'Updated successfully!'); 
+                    if (field === 'assigned_to_table' && element) {
+                        element.setAttribute('data-assigned', value);
+                        element.setAttribute('data-previous', value);
+                    }
+                } else { 
+                    showNotification('danger', 'Update failed: ' + (data.message || 'Unknown error')); 
+                    if (field === 'assigned_to_table' && element) {
+                        element.value = element.getAttribute('data-assigned') || '';
+                    }
+                }
+            }).catch(error => { 
+                hideLoading(); 
+                console.error('Error:', error); 
+                if (field === 'assigned_to_table' && element) {
+                    element.value = element.getAttribute('data-assigned') || '';
+                }
+            });
         }
         
         // Quick assign function
         function quickAssign(pagId, jobId, type, selectElement) {
-            const selectedValue = selectElement.value;
+            const selectedValue = (selectElement.value || '').trim();
+            const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
+            const currentUsername = <?= json_encode($current_username) ?>;
+            const assignedVal = (selectElement.getAttribute('data-assigned') || '').trim();
+            const prevVal = (selectElement.getAttribute('data-previous') || assignedVal).trim();
             
-            if (!selectedValue) return;
+            // If empty selection, revert back to assignedVal
+            if (!selectedValue) {
+                selectElement.value = assignedVal;
+                return;
+            }
+            
+            // Permission check for Executive
+            if (!isTlOrSubtl) {
+                if (assignedVal !== '') {
+                    showNotification('warning', 'Only SubTL and Team Lead have access to reassign members.');
+                    selectElement.value = assignedVal;
+                    selectElement.setAttribute('data-previous', assignedVal);
+                    return;
+                }
+                if (selectedValue !== currentUsername) {
+                    showNotification('warning', 'Only SubTL and Team Lead have access to assign to other members.');
+                    selectElement.value = '';
+                    selectElement.setAttribute('data-previous', '');
+                    return;
+                }
+            }
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const tmName = selectedOption.getAttribute('data-name') || selectedValue;
             const typeLabel = type === 'pag' ? 'TS' : 'Images';
             
-           
-            selectElement.setAttribute('data-previous', selectedValue);
             showLoading();
             selectElement.disabled = true;
             
@@ -1186,7 +1249,7 @@ require 'header.php';
             fetch('?', { // Self-posting
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=quick_assign&pag_id=' + pagId + '&job_id=' + jobId + '&type=' + type + '&assigned_to=' + encodeURIComponent(selectedValue)
+                body: 'ajax=quick_assign&pag_id=' + encodeURIComponent(pagId) + '&job_id=' + encodeURIComponent(jobId) + '&type=' + encodeURIComponent(type) + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
@@ -1195,12 +1258,14 @@ require 'header.php';
                 
                 if (data.success) {
                     showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
+                    selectElement.setAttribute('data-assigned', selectedValue);
+                    selectElement.setAttribute('data-previous', selectedValue);
                     document.getElementById('row-' + pagId).classList.add('assigned');
                     setTimeout(() => { window.location.reload(); }, 800);
                 } else {
-                    showNotification('danger', 'Error: ' + data.message);
-                    const previousValue = selectElement.getAttribute('data-previous') || '';
-                    selectElement.value = previousValue;
+                    showNotification('danger', data.message || 'Assignment failed');
+                    selectElement.value = assignedVal || '';
+                    selectElement.setAttribute('data-previous', assignedVal || '');
                 }
             })
             .catch(error => {
@@ -1208,8 +1273,8 @@ require 'header.php';
                 selectElement.disabled = false;
                 showNotification('danger', 'Network error. Please try again.');
                 console.error('Error:', error);
-                const previousValue = selectElement.getAttribute('data-previous') || '';
-                selectElement.value = previousValue;
+                selectElement.value = assignedVal || '';
+                selectElement.setAttribute('data-previous', assignedVal || '');
             });
         }
     </script>
