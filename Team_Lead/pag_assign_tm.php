@@ -144,7 +144,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $new_status = trim($_POST['status']);
 
     // Fetch current times AND statuses
-    $get_stat = $mysqli->prepare("SELECT pag_start_time, pag_end_time, img_start_time, img_end_time, word_status, pag_status_col FROM pag WHERE id = ?");
+    $get_stat = $mysqli->prepare("SELECT pag_start_time, pag_end_time, img_start_time, img_end_time, word_status, pag_status_col, table_status FROM pag WHERE id = ?");
     $get_stat->bind_param("i", $pag_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
@@ -161,14 +161,25 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         }
     }
 
+    // TS (PAG) can only be marked as Completed after both Tables and Word Process are Completed
+    if ($target_type === 'pag' && $new_status === 'Completed') {
+        $word_is_done = in_array($curr_data['word_status'] ?? '', ['Completed', 'W-Complete', 'ID_Complete']);
+        $table_is_done = (($curr_data['table_status'] ?? '') === 'Completed');
+        if (!$table_is_done || !$word_is_done) {
+            echo json_encode(['success' => false, 'message' => 'Please complete both Tables and Word Process before marking TS as Completed!']);
+            exit;
+        }
+    }
+
     $col = ($target_type === 'word') ? 'word_status' : 'pag_status_col';
     
     // Check both statuses to decide main job status
     $current_word = ($target_type === 'word') ? $new_status : ($curr_data['word_status'] ?? 'Need to Assign');
     $current_pag = ($target_type === 'pag') ? $new_status : ($curr_data['pag_status_col'] ?? 'Need to Assign');
+    $current_table = $curr_data['table_status'] ?? '';
 
     $main_status = 'In Progress';
-    if (in_array($current_word, ['Completed', 'W-Complete', 'ID_Complete']) && $current_pag === 'Completed') {
+    if (in_array($current_word, ['Completed', 'W-Complete', 'ID_Complete']) && $current_pag === 'Completed' && $current_table === 'Completed') {
         $main_status = 'Completed'; // Move to TS Report
     }
     
@@ -897,7 +908,7 @@ require 'header.php';
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
                                         <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value)">
+                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($word_stat) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value, this)">
                                                 <option value="Need to Assign" <?= ($word_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="W-In process" <?= ($word_stat == 'W-In process' || $word_stat == 'In Progress') ? 'selected' : '' ?>>W-In process</option>
                                                 <option value="W-Complete" <?= ($word_stat == 'W-Complete' || $word_stat == 'Completed') ? 'selected' : '' ?>>W-Complete</option>
@@ -947,7 +958,7 @@ require 'header.php';
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
                                         <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, 'pag', this.value)">
+                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($pag_curr_status) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'pag', this.value, this)">
                                                 <option value="Need to Assign" <?= ($pag_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($pag_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($pag_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>
@@ -1112,10 +1123,28 @@ require 'header.php';
         window.addEventListener('beforeunload', saveScrollPositions);
 
         // Status Update Function
-        function updateStatus(pagId, type, newStatus) {
+        function updateStatus(pagId, type, newStatus, selectElement = null) {
+            const select = selectElement || (typeof event !== 'undefined' ? event.target : null);
+            const prevValue = select ? (select.getAttribute('data-prev') || select.value) : '';
+
             if (newStatus === 'Completed' || newStatus === 'W-Complete' || newStatus === 'ID_Complete') {
                 let row = document.getElementById('row-' + pagId);
                 if (row) {
+                    // Check if Tables and Word Process are Completed before allowing TS (pag) Completed
+                    if (type === 'pag') {
+                        let tableSelect = row.querySelector('select[onchange*="table_status"]');
+                        let wordSelect = row.querySelector('select[onchange*="\'word\'"]');
+                        
+                        let tableDone = tableSelect ? (tableSelect.value === 'Completed') : false;
+                        let wordDone = wordSelect ? ['Completed', 'W-Complete', 'ID_Complete'].includes(wordSelect.value) : false;
+
+                        if (!tableDone || !wordDone) {
+                            showNotification('danger', 'Please complete both Tables and Word Process before marking TS as Completed!');
+                            if (select) { select.value = prevValue; }
+                            return;
+                        }
+                    }
+
                     let startTitle = (type === 'pag') ? 'PAG Start' : 'Word Start';
                     let endTitle = (type === 'pag') ? 'PAG End' : 'Word End';
                     let startInput = row.querySelector('input[title="' + startTitle + '"]');
@@ -1123,7 +1152,7 @@ require 'header.php';
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
-                            setTimeout(() => { window.location.reload(); }, 1500);
+                            if (select) { select.value = prevValue; }
                             return; 
                         }
                     }
@@ -1140,14 +1169,15 @@ require 'header.php';
                 hideLoading();
                 if (data.success) {
                     showNotification('success', 'Status updated successfully!');
+                    if (select) { select.setAttribute('data-prev', newStatus); }
                     setTimeout(() => { window.location.reload(); }, 500);
                 } else { 
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
-                    setTimeout(() => { window.location.reload(); }, 1500);
+                    if (select) { select.value = prevValue; }
                 }
             }).catch(error => { 
                 hideLoading(); console.error('Error:', error); 
-                setTimeout(() => { window.location.reload(); }, 1500);
+                if (select) { select.value = prevValue; }
             });
         }
 
