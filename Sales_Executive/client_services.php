@@ -147,29 +147,23 @@ $services_list = $mysqli->query($sql);
 $filter_services_res = $mysqli->query("SELECT DISTINCT service_name FROM client_services WHERE is_active = TRUE ORDER BY service_name");
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Client Services Management</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    body { background:#f4f7f6; font-family: 'Segoe UI', sans-serif; }
-    .main-content { padding: 25px; }
+<?php
+require 'header.php';
+?>
+<style>
     .table th { background:#6c757d !important; color:white !important; font-size: 0.85rem; border: none; }
     .status-badge { font-size: 0.7rem; font-weight: 700; padding: 5px 10px; }
     .description-text { max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; cursor: help; }
     .card { border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .category-header { background: #eef2f7; padding: 8px 15px; border-radius: 5px; font-weight: bold; color: #34495e; margin-top: 15px; }
-  </style>
-</head>
-<body>
-  <?php require 'header.php'; ?>
-  
-  <div class="main-content" style="margin-top: 60px;">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold"><i class="fas fa-handshake me-2 text-primary"></i>Add-on Client Info</h3>
+</style>
+
+<div class="container-fluid py-4 main-content">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-handshake me-2" style="color: #ffffff !important;"></i>Add-on Client Info</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage client service allocations, active services, and scopes</p>
+        </div>
     </div>
 
     <?php if (isset($_GET['msg'])): ?>

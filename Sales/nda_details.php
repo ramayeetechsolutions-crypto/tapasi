@@ -614,7 +614,7 @@ require 'header.php';
 </style>
 
 <!-- UI STARTS HERE -->
-<div class="container-fluid py-4" style="margin-top: 80px;">
+<div class="container-fluid py-4 main-content">
 
     <?php if (!empty($_GET['msg'])): ?>
     <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show" role="alert">
@@ -623,17 +623,35 @@ require 'header.php';
     </div>
     <?php endif; ?>
 
+    <?php if ($mode === 'view'): ?>
+    <!-- PAGE TITLE CONTAINER AT TOP -->
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-file-contract me-2" style="color: #ffffff !important;"></i>NDA Details</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage NDA records, signed contracts, and renewal timelines</p>
+        </div>
+        <div class="d-flex gap-2">
+            <!-- Add New Action -->
+            <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="fas fa-file-excel me-2"></i> Import Excel
+            </button>
+            <a href="nda_details.php?mode=add" class="btn btn-primary text-white fw-bold btn-sm shadow-sm">
+                <i class="fas fa-plus me-2"></i> Add New NDA Record
+            </a>
+        </div>
+    </div>
+
     <!-- CONSOLIDATED NDA SUMMARY SECTION -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <div class="card-body py-3">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="rounded-circle bg-primary p-2 me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-chart-pie text-white small"></i>
-                        </div>
-                        <span class="fw-bold text-dark">NDA Performance Dashboard</span>
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header py-2 px-3 text-white d-flex align-items-center" style="background-color: #6c757d !important; background: #6c757d !important; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                    <div class="rounded-circle bg-white p-1 me-2" style="width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-chart-pie small" style="color: #6c757d;"></i>
                     </div>
+                    <span class="fw-bold text-white mb-0" style="font-size: 1rem;">NDA Performance Dashboard</span>
+                </div>
+                <div class="card-body py-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                     <div class="row g-3">
                         <div class="col-md-2 col-sm-4 col-6">
                             <div class="p-2 rounded bg-white bg-opacity-75">
@@ -681,6 +699,7 @@ require 'header.php';
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- ADD / EDIT FORM -->
     <?php if ($mode === 'edit' || $mode === 'add'): ?>
@@ -690,13 +709,13 @@ require 'header.php';
         $title = $isAdd ? '<i class="fas fa-plus-circle me-2"></i>Create New NDA Record' : '<i class="fas fa-edit me-2"></i>Update NDA Record for: ' . h($editClient['client_name'] ?? '');
         $btnText = $isAdd ? 'Save New NDA Record' : 'Update NDA Details';
     ?>
-    <div class="card mb-4 mx-auto shadow-sm" style="max-width: 950px;">
-        <a href="nda_details.php" class="btn btn-secondary btn-sm shadow-sm mb-2">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><?= $title ?></h4>
+        <a href="nda_details.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
             <i class="fas fa-arrow-left me-1"></i> Back to List
         </a>
-        <div class="card-header bg-secondary text-white">
-            <h6 class="mb-0"><?= $title ?></h6> 
-        </div>
+    </div>
+    <div class="card mb-4 mx-auto shadow-sm" style="max-width: 950px;">
         <div class="card-body p-4">
             <form method="post">
                 <input type="hidden" name="action" value="<?= $formAction ?>">
@@ -823,19 +842,6 @@ require 'header.php';
 
     <!-- LIST VIEW -->
     <?php if ($mode === 'view'): ?>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold text-dark"><i class="fas fa-file-contract text-primary me-2"></i>NDA Details</h4>
-        <div class="d-flex gap-2">
-            <!-- Add New Action -->
-            <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-                <i class="fas fa-file-excel me-2"></i> Import Excel
-            </button>
-            <a href="nda_details.php?mode=add" class="btn btn-primary text-white fw-bold btn-sm shadow-sm">
-                <i class="fas fa-plus me-2"></i> Add New NDA Record
-            </a>
-        </div>
-    </div>
-
    <!-- Filter Bar Component -->
     <div class="card shadow-sm border-0 mb-4 bg-light">
         <div class="card-body p-3">

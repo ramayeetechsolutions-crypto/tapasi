@@ -622,9 +622,9 @@ require 'header.php';
     <?php if($mode==='add'||$mode==='edit'): ?>
     
     <!-- ADD/EDIT FORM -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="fw-bold text-dark"><i class="fas fa-user-edit text-primary me-2"></i><?= $mode==='edit'?'Edit Client':'Add New Client' ?></h4>
-        <a href="client_master.php" class="btn btn-secondary btn-sm shadow-sm">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-edit me-2" style="color: #ffffff !important;"></i><?= $mode==='edit'?'Edit Client':'Add New Client' ?></h4>
+        <a href="client_master.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
             <i class="fas fa-arrow-left me-1"></i> Back to List
         </a>
     </div>
@@ -850,10 +850,10 @@ require 'header.php';
     <?php else: ?>
     
     <!-- LIST VIEW -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h4 class="fw-bold text-dark"><i class="fas fa-building text-primary me-2"></i>Client Master <?= $isPassive ? '<span class="badge bg-warning text-dark shadow-sm">Passive Clients</span>' : '' ?></h4>
-            <p class="text-muted mb-0">Manage client directory and billing configurations</p>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Client Master <?= $isPassive ? '<span class="badge bg-warning text-dark shadow-sm ms-2">Passive Clients</span>' : '' ?></h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage client directory and billing configurations</p>
         </div>
         <div>
             <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
