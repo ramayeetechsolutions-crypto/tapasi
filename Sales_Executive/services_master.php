@@ -190,8 +190,10 @@ while($r = $res->fetch_assoc()) $categories[] = $r['category'];
 <body>
     
     <?php require 'header.php'; ?>
-    <div class="container-fluid py-3" style="margin-top: 60px;">
-        <h3>Services Master</h3>
+    <div class="container-fluid py-3 main-content">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-cogs me-2" style="color: #ffffff !important;"></i>Services Master</h4>
+        </div>
         <!-- Render Secure Flash Messages -->
         <?php if (!empty($_SESSION['flash_msg'])): ?>
             <div class="alert alert-<?= h($_SESSION['flash_type'] ?? 'info') ?> alert-dismissible fade show py-2">

@@ -152,16 +152,16 @@ $result = $mysqli->query($sql);
 require 'header.php'; 
 ?>
 
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<div class="container-fluid py-4 main-content">
     
     <!-- HEADER -->
-    <div class="page-title-container">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h3 class="fw-bold  mb-0 mb-0 text-white"><i class="fas fa-file-invoice-dollar me-2"></i>Invoice Data</h3>
-            <p class=" mb-0 text-white-50 small">Manage uploaded invoice records. (Duplicates are skipped)</p>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-file-invoice-dollar me-2" style="color: #ffffff !important;"></i>Invoice Data</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage uploaded invoice records. (Duplicates are skipped)</p>
         </div>
-        <button type="button" class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
-            <i class="fas fa-file-excel me-2"></i> Import Invoices
+        <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+            <i class="fas fa-file-excel me-1"></i> Import Invoices
         </button>
     </div>
 

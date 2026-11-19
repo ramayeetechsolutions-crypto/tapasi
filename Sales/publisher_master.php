@@ -539,7 +539,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
 <body>
     <?php require 'header.php'; ?>
     
-    <div class="main-content" style="margin-top: 60px;">
+    <div class="main-content">
         <?php if (!empty($_GET['msg'])): ?>
         <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show" role="alert">
             <?= h($_GET['msg']) ?>
@@ -550,9 +550,9 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-building me-2"></i><?= $mode === 'edit' ? 'Edit Publisher' : 'Add New Publisher' ?></h4>
-            <a href="publisher_master.php" class="btn btn-secondary btn-sm">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit Publisher' : 'Add New Publisher' ?></h4>
+            <a href="publisher_master.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
         </div>
@@ -663,19 +663,16 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-building me-2"></i>Data Collection</h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Data Collection</h4>
             <div>
-                  <button type="button" class="btn btn-info btn-sm text-white" data-bs-toggle="modal" data-bs-target="#importModal">
+                  <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-import me-1"></i> Import Excel
                 </button>
 
-                <a href="publisher_master.php?mode=add" class="btn btn-success btn-sm me-2">
+                <a href="publisher_master.php?mode=add" class="btn btn-primary btn-sm shadow-sm me-2">
                     <i class="fas fa-plus me-1"></i> Add New
                 </a>
-                              <!--a href="client_followup.php" class="btn btn-primary btn-sm me-2">
-                    <i class="fas fa-plus me-1"></i> Follow Ups
-                </a-->
             </div>
         </div>
 

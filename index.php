@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 /* Redirect if already logged in */
@@ -121,6 +122,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     header("Location: Sales/dashboard.php");
                     break;
                 case "sales":
+                case "Sales":
+                case "Sales Executive":
+                case "sales executive":
+                case "SALES -EXE":
+                case "Sales - Exe":
                     $_SESSION['sales_exec']="Sales Executive";
                     $_SESSION['salesname']="Sales Executive";
                     header("Location: Sales_Executive/dashboard.php");
@@ -145,9 +151,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmt3 = $mysqli->prepare("
             SELECT e.employee_id AS id, e.employee_name AS employee_name, e.employee_username AS username, 
                    r.role_name, e.email, e.phone, e.joining_date, e.process, e.reporting_manager,
-                   e.designation_id, e.team_id, e.status
+                   e.designation_id, e.team_id, e.status, e.user_role_id
             FROM employee_master e
-            JOIN user_role_master r ON e.user_role_id = r.role_id
+            LEFT JOIN user_role_master r ON e.user_role_id = r.role_id
             WHERE e.employee_username = ? AND e.status = 'Active' AND e.password_hash = ?
             LIMIT 1
         ");
@@ -158,6 +164,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmt3->close();
 
         if ($empRow) {
+            $roleName = $empRow["role_name"] ?? '';
+            if (empty($roleName)) {
+                if ($empRow['team_id'] == 9 || $empRow['user_role_id'] == 18) {
+                    $roleName = 'sales';
+                } else if ($empRow['team_id'] == 8) {
+                    $roleName = 'IT';
+                } else if ($empRow['team_id'] == 3) {
+                    $roleName = 'TM';
+                } else {
+                    $roleName = 'TM';
+                }
+                $empRow["role_name"] = $roleName;
+            }
+
             session_regenerate_id(true);
             $_SESSION["uid"] = $empRow["id"];
             $_SESSION["username"] = $empRow["username"];
@@ -179,8 +199,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             // Record login activity
             recordLoginActivity($mysqli, $empRow["id"], 'employee', session_id());
             // Redirect based on role
-            echo $empRow["role_name"];
-            echo $empRow['team_id'];
             
             switch ($empRow["role_name"]) {
                 case "Super Admin":
@@ -211,12 +229,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $_SESSION['itname']="IT";
                         header("Location: IT/dashboard.php");
                     } else{
-                        echo "test";
-                       // die;
                         header("Location: Executive/dashboard_exec.php");
                     }
                     break;
                 case "sales":
+                case "Sales":
+                case "Sales Executive":
+                case "sales executive":
+                case "SALES -EXE":
+                case "Sales - Exe":
                     $_SESSION['sales_exec']="Sales Executive";
                     $_SESSION['salesname']="Sales Executive";
                     header("Location: Sales_Executive/dashboard.php");

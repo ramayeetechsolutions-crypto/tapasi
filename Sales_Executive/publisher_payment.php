@@ -307,29 +307,24 @@ require 'header.php';
     .badge-custom { padding: 6px 12px; font-weight: 600; font-size: 0.75rem; border-radius: 30px; }
 </style>
 
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<div class="container-fluid py-4 main-content">
     
     <!-- Page Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 bg-white p-4 shadow-sm rounded-4">
-        <div class="d-flex align-items-center">
-            <div class="icon-box">
-                <i class="fas fa-money-check-alt fa-lg"></i>
-            </div>
-            <div>
-                <h4 class="fw-bold text-dark mb-1">Sales OT</h4>
-                <p class="text-muted mb-0 small">Manage financial records & automated sales integrations</p>
-            </div>
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-database me-2" style="color: #ffffff !important;"></i>Sales OT</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage financial records & automated sales integrations</p>
         </div>
-        <div class="mt-3 mt-md-0 d-flex gap-2">
+        <div class="d-flex gap-2">
             <?php if($edit_mode || $add_mode): ?>
-                <a href="publisher_payment.php" class="btn btn-secondary btn-rounded shadow-sm">
+                <a href="publisher_payment.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
                     <i class="fas fa-arrow-left me-1"></i> Back to List
                 </a>
             <?php else: ?>
-                <button type="button" class="btn btn-warning btn shadow-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#importModal">
+                <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-excel me-1"></i> Import Excel
                 </button>
-                <a href="publisher_payment.php?add=1" class="btn btn-primary btn shadow-sm">
+                <a href="publisher_payment.php?add=1" class="btn btn-primary text-white fw-bold btn-sm shadow-sm">
                     <i class="fas fa-plus-circle me-1"></i> Add Record
                 </a>
             <?php endif; ?>

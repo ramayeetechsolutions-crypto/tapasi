@@ -404,27 +404,26 @@ require 'header.php';
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 </style>
 
-<div class="container-fluid py-4" style="margin-top: 60px; max-width: 1600px;">
+<div class="container-fluid py-4 main-content">
     
     <!-- HEADER SECTION -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h2 class="fw-bold text-dark mb-1"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Extra Charges</h2>
-            <p class="text-secondary mb-0 fs-6">Manage supplementary client billings, descriptions, and team approvals.</p>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-hand-holding-usd me-2" style="color: #ffffff !important;"></i>Extra Charges</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage supplementary client billings, descriptions, and team approvals</p>
         </div>
         <div class="d-flex gap-2">
             <?php if($mode === 'add' || $mode === 'edit'): ?>
-                <a href="extra_charges.php" class="btn btn-secondary shadow-sm">
+                <a href="extra_charges.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
                     <i class="fas fa-arrow-left me-1"></i> Back to List
                 </a>
             <?php else: ?>
-                 <button type="button" class="btn btn-outline-dark bg-white shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-                    <i class="fas fa-cloud-upload-alt me-1 text-danger"></i> Import Excel
+                <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-file-excel me-1"></i> Import Excel
                 </button>
-                <a href="extra_charges.php?mode=add" class="btn btn-primary shadow-sm">
+                <a href="extra_charges.php?mode=add" class="btn btn-primary text-white fw-bold btn-sm shadow-sm">
                     <i class="fas fa-plus me-1"></i> Add Record
                 </a>
-               
             <?php endif; ?>
         </div>
     </div>

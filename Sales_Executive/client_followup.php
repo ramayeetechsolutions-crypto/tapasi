@@ -278,15 +278,15 @@ if ($sort === 'last_status') {
 $publishers = $mysqli->query($sql);
 ?>
 
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<div class="container-fluid py-4 main-content">
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h3 class="fw-bold text-dark"><i class="fas fa-bullhorn me-2"></i>Follow-up</h3>
-            <p class="text-muted">Track interactions and manage schedules</p>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-bullhorn me-2" style="color: #ffffff !important;"></i>Follow-up</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Track interactions and manage schedules</p>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
+            <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
                 <i class="fas fa-file-excel me-1"></i> Import Excel
             </button>
         </div>

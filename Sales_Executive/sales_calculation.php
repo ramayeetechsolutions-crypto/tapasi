@@ -76,12 +76,18 @@ require 'header.php';
     }
 </style>
 
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<div class="container-fluid py-4 main-content">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-calculator me-2" style="color: #ffffff !important;"></i>Sales Calculation</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage service billing schedules and frequency breakdowns</p>
+        </div>
+    </div>
+
     <?php if($msg): ?> <div class="alert alert-success"><?= $msg ?></div> <?php endif; ?>
 
     <div class="row">
         <!-- FORM COLUMN -->
-         <h3 class="mb-0"><i class="fas fa-calculator me-2"></i>Sales Calculation</h3>
         <div class="col-lg-4">
             <div class="card shadow mb-4">
                               <div class="card-body">
