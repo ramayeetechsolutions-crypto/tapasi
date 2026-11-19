@@ -58,17 +58,17 @@ require 'header.php';
     }
 </style>
 
-<!-- Main Container with top margin to clear fixed header -->
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<!-- Main Container -->
+<div class="container-fluid py-4 main-content">
     
     <!-- PAGE HEADER: Title & Add Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h3 class="fw-bold text-dark"><i class="fas fa-calculator me-2"></i>Math Category Master</h3>
-            <p class="text-muted mb-0">Manage all available math categories and definitions</p>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-calculator me-2" style="color: #ffffff !important;"></i>Math Category Master</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage all available math categories and definitions</p>
         </div>
         <!-- Button triggers modal -->
-        <button class="btn btn-success fw-bold px-4 py-2" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+        <button class="btn btn-success fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
             <i class="fas fa-plus me-2"></i> Add New Category
         </button>
     </div>

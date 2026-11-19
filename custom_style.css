@@ -549,6 +549,8 @@ main.main-content,
 div.main-content,
 .container-fluid.main-content,
 .container.main-content,
+.dashboard-container,
+div.dashboard-container,
 body > .container,
 body > .container-fluid,
 body > .wrapper,
@@ -576,7 +578,8 @@ body > main,
 .header-card,
 .user-info,
 .page-header,
-.content-header {
+.content-header,
+.dashboard-header {
     margin-top: 0 !important;
 }
 

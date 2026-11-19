@@ -444,23 +444,22 @@ require 'header.php';
     }
 </style>
 
-<div class="container-fluid py-4" style="margin-top: 60px;">
+<div class="container-fluid py-4 main-content">
     
     <!-- PAGE HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h3 class="fw-bold text-dark mb-0"><i class="fas fa-user-times me-2"></i>Inactive Clients</h3>
-            <p class="text-muted">Manage inactive clients and import from Excel.</p>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-times me-2" style="color: #ffffff !important;"></i>Inactive Clients</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage inactive clients and import from Excel.</p>
         </div>
         
-        <div>
-             <button type="button" class="btn btn-warning text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#importModal">
-                <i class="fas fa-file-excel me-2"></i> Import Excel
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="fas fa-file-excel me-1"></i> Import Excel
             </button>
-            <a href="inactive_clients.php?mode=add" class="btn btn-success fw-bold me-2">
-                <i class="fas fa-plus me-2"></i> Mark Client Inactive
+            <a href="inactive_clients.php?mode=add" class="btn btn-primary fw-bold btn-sm shadow-sm">
+                <i class="fas fa-plus me-1"></i> Mark Client Inactive
             </a>
-           
         </div>
     </div>
 

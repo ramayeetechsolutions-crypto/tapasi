@@ -78,7 +78,7 @@ include 'header.php';
             color: white;
             padding: 12px 20px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -128,7 +128,7 @@ include 'header.php';
     }
 
     .dashboard-container {
-        padding: 90px 20px 30px 20px;
+        padding: 0 20px 30px 20px;
         width: 100%;
     }
 
@@ -235,7 +235,7 @@ include 'header.php';
 
     @media (max-width: 768px) {
         .dashboard-container {
-            padding: 80px 10px 20px 10px;
+            padding: 0 10px 20px 10px;
         }
         .dashboard-title {
             font-size: 1.3rem;

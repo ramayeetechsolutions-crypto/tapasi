@@ -109,8 +109,13 @@ require 'header.php';
 </style>
 
 <!-- Style to clear fixed header if you have one -->
-<div class="container-fluid py-4" style="margin-top: 60px;">
-    <h3>Math Charges</h3>
+<div class="container-fluid py-4 main-content">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+        <div>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-percentage me-2" style="color: #ffffff !important;"></i>Math Charges</h4>
+            <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage math equation rate cards, service processes, and pricing</p>
+        </div>
+    </div>
     
     <!-- Messages -->
     <?php if(isset($_GET['msg'])) echo "<div class='alert alert-success'>".htmlspecialchars($_GET['msg'])."</div>"; ?>

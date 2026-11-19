@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 ob_start();
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -171,7 +171,7 @@ if ($result->num_rows > 0) {
 require 'header.php';
 ?>
 
-<div class="container-fluid py-5" style="margin-top: 50px;">
+<div class="container-fluid py-3">
     <div class="row justify-content-center">
         <div class="col-lg-10">
             
