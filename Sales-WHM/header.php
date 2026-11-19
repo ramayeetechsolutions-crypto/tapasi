@@ -430,9 +430,9 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
                             <i class="fas fa-database"></i> Master
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="client_master.php"><i class="fas fa-users"></i> Client Master</a></li>
-                            <li><a href="services_master.php"><i class="fas fa-cogs"></i> Services Master</a></li>
-                            <li><a href="math_category_master.php"><i class="fas fa-layer-group"></i> Math Category Master</a></li>
+                            <li><a href="client_master.php" class="<?= $currentPage === 'client_master.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Client Master</a></li>
+                            <li><a href="services_master.php" class="<?= $currentPage === 'services_master.php' ? 'active' : '' ?>"><i class="fas fa-cogs"></i> Services Master</a></li>
+                            <li><a href="math_category_master.php" class="<?= $currentPage === 'math_category_master.php' ? 'active' : '' ?>"><i class="fas fa-layer-group"></i> Math Category Master</a></li>
                         </ul>
                     </li>
 
@@ -443,10 +443,10 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
                             <i class="fas fa-briefcase"></i> Client Management
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="nda_details.php"><i class="fas fa-file-contract"></i> NDA Details</a></li>
-                            <li><a href="client_followup.php"><i class="fas fa-headset"></i> Client Follow-up</a></li>
-                            <li><a href="client_rate_list.php"><i class="fas fa-list"></i> Client Rate List</a></li>
-                            <li><a href="inactive_clients.php"><i class="fas fa-user-times"></i> Inactive Clients</a></li>
+                            <li><a href="nda_details.php" class="<?= $currentPage === 'nda_details.php' ? 'active' : '' ?>"><i class="fas fa-file-contract"></i> NDA Details</a></li>
+                            <li><a href="client_followup.php" class="<?= $currentPage === 'client_followup.php' ? 'active' : '' ?>"><i class="fas fa-headset"></i> Client Follow-up</a></li>
+                            <li><a href="client_rate_list.php" class="<?= $currentPage === 'client_rate_list.php' ? 'active' : '' ?>"><i class="fas fa-list"></i> Client Rate List</a></li>
+                            <li><a href="inactive_clients.php" class="<?= $currentPage === 'inactive_clients.php' ? 'active' : '' ?>"><i class="fas fa-user-times"></i> Inactive Clients</a></li>
                         </ul>
                     </li>
 
@@ -457,13 +457,13 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
                             <i class="fas fa-concierge-bell"></i> Services
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="client_services.php"><i class="fas fa-diagram-project"></i> Client Services</a></li>
+                            <li><a href="client_services.php" class="<?= $currentPage === 'client_services.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Client Services</a></li>
                             <!--li><a href="client_transactions.php"><i class="fas fa-file-invoice"></i> Extra Cost Heading</a></li-->
                              <li class="nav-item">
-                        <a class="nav-link" href="invoice_data.php"><i class="fas fa-file-invoice"></i> Invoice Data</a>
+                        <a class="nav-link <?= $currentPage === 'invoice_data.php' ? 'active' : '' ?>" href="invoice_data.php"><i class="fas fa-file-invoice"></i> Invoice Data</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="error_entry.php"><i class="fas fa-file-invoice"></i> Error Log</a>
+                        <a class="nav-link <?= $currentPage === 'error_entry.php' ? 'active' : '' ?>" href="error_entry.php"><i class="fas fa-file-invoice"></i> Error Log</a>
                     </li>
                         </ul>
                     </li>
@@ -475,14 +475,14 @@ $calcPages = ['math_charges.php', 'sales_calculation.php'];
                             <i class="fas fa-calculator"></i> Calculations
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="math_charges.php"><i class="fas fa-percentage"></i> Math Charges</a></li>
+                            <li><a href="math_charges.php" class="<?= $currentPage === 'math_charges.php' ? 'active' : '' ?>"><i class="fas fa-percentage"></i> Math Charges</a></li>
                              <li class="nav-item">
-                        <a class="nav-link" href="extra_charges.php">
+                        <a class="nav-link <?= $currentPage === 'extra_charges.php' ? 'active' : '' ?>" href="extra_charges.php">
                             <i class="fas fa-hand-holding-usd"></i> Extra Charges
                         </a>
                     </li>
-                     <li><a href="sales_calculation.php"><i class="fa fa-briefcase"></i> Sales Calculation</a></li>
-                       <li><a href="publisher_payment.php"><i class="fa fa-database"></i> Sales OT</a></li>
+                     <li><a href="sales_calculation.php" class="<?= $currentPage === 'sales_calculation.php' ? 'active' : '' ?>"><i class="fa fa-briefcase"></i> Sales Calculation</a></li>
+                       <li><a href="publisher_payment.php" class="<?= $currentPage === 'publisher_payment.php' ? 'active' : '' ?>"><i class="fa fa-database"></i> Sales OT</a></li>
                         </ul>
                     </li>
                     

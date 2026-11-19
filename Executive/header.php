@@ -433,38 +433,46 @@ if ($result && $row = $result->fetch_assoc()) {
             
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
+                <?php
+                $masterPages = ['job_master.php', 'process_master.php', 'team_view.php'];
+                $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
+                $employeePages = ['employee_master.php', 'target_assignment.php'];
+                $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
+                $reportPages = ['error_entry_team.php'];
+                $jobsPages = ['job_management.php', 'tm_queries.php'];
+                ?>
                 <ul class="nav-menu">
                     <!-- Dashboard -->
                     <li>
-                        <a href="dashboard_exec.php" class="<?php echo ($currentPage == 'dashboard_exec.php') ? 'active' : ''; ?>">
+                        <a href="dashboard_exec.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php', 'dashboard_exec.php']) ? 'active' : ''; ?>">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
                         </a>
                     </li>
                     <!-- Masters -->
                     <li>
-                        <a href="#"><i class="fas fa-sitemap"></i> Master</a>
+                        <a href="#" class="<?= in_array($currentPage, $masterPages) ? 'active' : '' ?>"><i class="fas fa-sitemap"></i> Master</a>
                         <ul class="nav-dropdown">
-                            <li><a href="job_master.php"><i class="fas fa-briefcase"></i> Job</a></li>
-                            <li><a href="process_master.php"><i class="fas fa-diagram-project"></i> Process</a></li>
-                            <li><a href="team_view.php"><i class="fas fa-users"></i> Team</a></li>
+                            <li><a href="job_master.php" class="<?= $currentPage === 'job_master.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job</a></li>
+                            <li><a href="process_master.php" class="<?= $currentPage === 'process_master.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Process</a></li>
+                            <li><a href="team_view.php" class="<?= $currentPage === 'team_view.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Team</a></li>
                         </ul>
                     </li>
                     <!-- My Account Dropdown -->
                     <li>
-                        <a href="#"><i class="fas fa-user-circle"></i> My Account</a>
+                        <a href="#" class="<?= in_array($currentPage, $myAccountPages) ? 'active' : '' ?>"><i class="fas fa-user-circle"></i> My Account</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="employee_regby_emp.php">
+                                <a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>">
                                     <i class="fas fa-user-edit"></i> Update Profile
                                 </a>
                             </li>
                             <li>
-                                <a href="employee.php">
+                                <a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>">
                                     <i class="fas fa-check-circle"></i> Verify Details
                                 </a>
                             </li>
                             <li>
-                                <a href="employee_leave.php">
+                                <a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>">
                                     <i class="fas fa-calendar-alt"></i> Permission & OT
                                 </a>
                             </li>
@@ -472,34 +480,34 @@ if ($result && $row = $result->fetch_assoc()) {
                     </li>
                     <!-- Employee -->
                     <li>
-                        <a href="#"><i class="fas fa-user-tie"></i> Employee</a>
+                        <a href="#" class="<?= in_array($currentPage, $employeePages) ? 'active' : '' ?>"><i class="fas fa-user-tie"></i> Employee</a>
                         <ul class="nav-dropdown">
-                            <li><a href="employee_master.php"><i class="fas fa-id-card"></i> Profile</a></li>
-                            <li><a href="target_assignment.php"><i class="fas fa-bullseye"></i> Target</a></li>
+                            <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
+                            <li><a href="target_assignment.php" class="<?= $currentPage === 'target_assignment.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> Target</a></li>
                             <!-- <li><a href="teamleader_ot_approval.php"><i class="fas fa-bullseye"></i> OT Approvals</a></li> -->
                         </ul>
                     </li>
                     <!-- System Dropdown -->
                     <li>
-                        <a href="#"><i class="fas fa-cog"></i> System</a>
+                        <a href="#" class="<?= in_array($currentPage, $systemPages) ? 'active' : '' ?>"><i class="fas fa-cog"></i> System</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="my_system_details.php">
+                                <a href="my_system_details.php" class="<?= $currentPage === 'my_system_details.php' ? 'active' : '' ?>">
                                     <i class="fas fa-desktop"></i>System Details
                                 </a>
                             </li>
                             <li>
-                                <a href="ticketmanagementexecutive.php">
+                                <a href="ticketmanagementexecutive.php" class="<?= $currentPage === 'ticketmanagementexecutive.php' ? 'active' : '' ?>">
                                     <i class="fas fa-ticket-alt"></i> Complaints
                                 </a>
                             </li>
                         </ul>
                     </li>
                     <li>
-                        <a href="#"><i class="fas fa-file-invoice"></i> Reports</a>
+                        <a href="#" class="<?= in_array($currentPage, $reportPages) ? 'active' : '' ?>"><i class="fas fa-file-invoice"></i> Reports</a>
                         <ul class="nav-dropdown">
                           <li>
-                                <a href="error_entry_team.php">
+                                <a href="error_entry_team.php" class="<?= $currentPage === 'error_entry_team.php' ? 'active' : '' ?>">
                                     <i class="fas fa-exclamation-triangle"></i> Error Log
                                 </a>
                             </li>
@@ -508,7 +516,7 @@ if ($result && $row = $result->fetch_assoc()) {
                     <!-- Jobs Dropdown (UQ Team Only - other teams show till Reports) -->
                     <?php if (($user_team_id ?? 0) == 2): ?>
                     <li>
-                        <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
+                        <a href="#" class="<?= in_array($currentPage, $jobsPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Jobs</a>
                         <ul class="nav-dropdown">
                             <li>
                                 <a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>">
@@ -516,7 +524,7 @@ if ($result && $row = $result->fetch_assoc()) {
                                 </a>
                             </li>
                             <li>
-                                <a href="tm_queries.php">
+                                <a href="tm_queries.php" class="<?= $currentPage === 'tm_queries.php' ? 'active' : '' ?>">
                                     <i class="fas fa-question-circle"></i> Queries
                                 </a>
                             </li>
@@ -596,6 +604,117 @@ if ($result && $row = $result->fetch_assoc()) {
                 }
             });
         });
+
+        // Sticky Columns Support for Executive Assign Pages (From S.No to Articles)
+        function applyStickyAssignColumns() {
+            var isAssignPage = window.location.pathname.indexOf('assign') !== -1 || window.location.pathname.indexOf('alljobs') !== -1;
+            var tables = document.querySelectorAll('.table-sticky-assign' + (isAssignPage ? ', .table-responsive table, .table-container table' : ''));
+            if (!tables || tables.length === 0) return;
+
+            var processedTables = new Set();
+
+            tables.forEach(function(table) {
+                if (processedTables.has(table)) return;
+                processedTables.add(table);
+
+                var thead = table.querySelector('thead');
+                if (!thead) return;
+                var headerTr = thead.querySelector('tr');
+                if (!headerTr) return;
+                var ths = Array.from(headerTr.children);
+                if (ths.length === 0) return;
+
+                // 1. Locate the Articles column index
+                var articleIndex = -1;
+                for (var i = 0; i < ths.length; i++) {
+                    var text = ths[i].textContent.trim().toUpperCase();
+                    if (text === 'ARTICLES' || text === 'ARTICLE' || text.indexOf('ARTICLE') !== -1) {
+                        articleIndex = i;
+                        break;
+                    }
+                }
+                if (articleIndex === -1 && !table.classList.contains('table-sticky-assign')) {
+                    return;
+                }
+                if (articleIndex === -1) {
+                    articleIndex = 5;
+                }
+
+                table.classList.add('table-sticky-assign');
+
+                // Enforce compact 135px width on Articles column before measuring layout offsets
+                if (articleIndex !== -1 && ths[articleIndex]) {
+                    ths[articleIndex].classList.add('sticky-assign-col-last', 'col-article');
+                    ths[articleIndex].style.setProperty('width', '135px', 'important');
+                    ths[articleIndex].style.setProperty('min-width', '135px', 'important');
+                    ths[articleIndex].style.setProperty('max-width', '135px', 'important');
+                }
+
+                var tbodyRows = table.querySelectorAll('tbody tr');
+                tbodyRows.forEach(function(row) {
+                    if (articleIndex !== -1 && row.children[articleIndex]) {
+                        var c = row.children[articleIndex];
+                        c.classList.add('sticky-assign-col-last', 'col-article');
+                        c.style.setProperty('width', '135px', 'important');
+                        c.style.setProperty('min-width', '135px', 'important');
+                        c.style.setProperty('max-width', '135px', 'important');
+                    }
+                });
+
+                // 2. Measure cumulative left offsets
+                var leftOffsets = [];
+                var acc = 0;
+                for (var i = 0; i <= articleIndex; i++) {
+                    leftOffsets[i] = acc;
+                    acc += ths[i].offsetWidth;
+                }
+
+                // 3. Apply sticky left to header cells (0 to articleIndex)
+                for (var i = 0; i < ths.length; i++) {
+                    var th = ths[i];
+                    if (i <= articleIndex) {
+                        th.classList.add('sticky-assign-col');
+                        th.style.setProperty('position', 'sticky', 'important');
+                        th.style.setProperty('top', '0', 'important');
+                        th.style.setProperty('left', leftOffsets[i] + 'px', 'important');
+                        th.style.setProperty('z-index', '30', 'important');
+                        if (i === articleIndex) {
+                            th.classList.add('sticky-assign-col-last');
+                        }
+                    } else {
+                        th.classList.remove('sticky-assign-col', 'sticky-assign-col-last');
+                        th.style.setProperty('position', 'sticky', 'important');
+                        th.style.setProperty('top', '0', 'important');
+                        th.style.setProperty('z-index', '20', 'important');
+                    }
+                }
+
+                // 4. Apply sticky left to all tbody rows
+                tbodyRows.forEach(function(row) {
+                    var cells = row.children;
+                    for (var i = 0; i < cells.length; i++) {
+                        var cell = cells[i];
+                        if (i <= articleIndex) {
+                            cell.classList.add('sticky-assign-cell');
+                            cell.style.setProperty('position', 'sticky', 'important');
+                            cell.style.setProperty('left', leftOffsets[i] + 'px', 'important');
+                            cell.style.setProperty('z-index', '10', 'important');
+                            if (i === articleIndex) {
+                                cell.classList.add('sticky-assign-col-last');
+                            }
+                        } else {
+                            cell.classList.remove('sticky-assign-cell', 'sticky-assign-col-last');
+                        }
+                    }
+                });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', applyStickyAssignColumns);
+        window.addEventListener('load', applyStickyAssignColumns);
+        window.addEventListener('resize', applyStickyAssignColumns);
+        setTimeout(applyStickyAssignColumns, 200);
+        setTimeout(applyStickyAssignColumns, 600);
     </script>
 </body>
 </html>

@@ -386,6 +386,28 @@ table.dataTable thead th,
     z-index: 10 !important;
 }
 
+/* Multi-row thead support: ensure 2nd header row sticks below 1st header row instead of overlapping at top: 0 */
+.table thead tr:first-child th,
+.table-responsive table thead tr:first-child th,
+.table-container table thead tr:first-child th {
+    top: 0 !important;
+    z-index: 20 !important;
+}
+
+.table thead tr:first-child th[rowspan],
+.table-responsive table thead tr:first-child th[rowspan],
+.table-container table thead tr:first-child th[rowspan] {
+    top: 0 !important;
+    z-index: 22 !important;
+}
+
+.table thead tr:nth-child(2) th,
+.table-responsive table thead tr:nth-child(2) th,
+.table-container table thead tr:nth-child(2) th {
+    top: 31px !important;
+    z-index: 19 !important;
+}
+
 /* Ensure table containers allow sticky scroll */
 .table-responsive,
 .table-container {
@@ -737,4 +759,274 @@ select.form-select-sm {
         padding-top: 0 !important;
     }
 }
+
+/* =========================================================================
+   10. NAVBAR DROPDOWN & MENU READABILITY FIX (ALL LOGINS)
+   Fixes the issue across all logins where an active item inside .nav-dropdown
+   inherits dark ash background with unreadable dark text/icons.
+   Ensures active dropdown items have high contrast white text/icons on ash,
+   smooth rounded corners, and proper hover styling.
+   ========================================================================= */
+
+/* Prevent corner clipping on dropdown containers */
+.nav-dropdown,
+.nav-menu .nav-dropdown,
+.dropdown-menu,
+.nav-sub-dropdown {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Ensure first and last items conform cleanly to dropdown curved corners */
+.nav-dropdown li:first-child > a,
+.nav-dropdown > a:first-child,
+.dropdown-menu li:first-child > a,
+.dropdown-menu > a:first-child,
+.nav-sub-dropdown li:first-child > a,
+.nav-sub-dropdown > a:first-child {
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+}
+
+.nav-dropdown li:last-child > a,
+.nav-dropdown > a:last-child,
+.dropdown-menu li:last-child > a,
+.dropdown-menu > a:last-child,
+.nav-sub-dropdown li:last-child > a,
+.nav-sub-dropdown > a:last-child {
+    border-bottom-left-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+    border-bottom: none !important;
+}
+
+/* Active Dropdown Item: Crisp ash background with bright white text & icons */
+.nav-dropdown a.active,
+.nav-dropdown li.active > a,
+.nav-dropdown .dropdown-item.active,
+.nav-dropdown .nav-link.active,
+.nav-menu .nav-dropdown a.active,
+.nav-menu .nav-dropdown li.active > a,
+.nav-menu .nav-dropdown .dropdown-item.active,
+.nav-menu .nav-dropdown .nav-link.active,
+.dropdown-menu a.active,
+.dropdown-menu .dropdown-item.active,
+.dropdown-menu .nav-link.active,
+.dropdown-menu li.active > a,
+.nav-sub-dropdown a.active,
+.nav-sub-dropdown li.active > a {
+    background-color: #6c757d !important;
+    background: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Ensure text, icons, spans, and child elements inside active dropdown items are pure white */
+.nav-dropdown a.active *,
+.nav-dropdown li.active > a *,
+.nav-dropdown .dropdown-item.active *,
+.nav-dropdown .nav-link.active *,
+.nav-menu .nav-dropdown a.active *,
+.nav-menu .nav-dropdown li.active > a *,
+.nav-menu .nav-dropdown .dropdown-item.active *,
+.nav-menu .nav-dropdown .nav-link.active *,
+.dropdown-menu a.active *,
+.dropdown-menu .dropdown-item.active *,
+.dropdown-menu .nav-link.active *,
+.dropdown-menu li.active > a *,
+.nav-sub-dropdown a.active *,
+.nav-sub-dropdown li.active > a *,
+.nav-dropdown a.active i,
+.nav-dropdown a.active span,
+.nav-menu .nav-dropdown a.active i,
+.nav-menu .nav-dropdown a.active span,
+.dropdown-menu a.active i,
+.dropdown-menu a.active span {
+    color: #ffffff !important;
+}
+
+/* Hover state on active dropdown item */
+.nav-dropdown a.active:hover,
+.nav-dropdown li.active > a:hover,
+.nav-dropdown .dropdown-item.active:hover,
+.nav-dropdown .nav-link.active:hover,
+.nav-menu .nav-dropdown a.active:hover,
+.nav-menu .nav-dropdown li.active > a:hover,
+.nav-menu .nav-dropdown .dropdown-item.active:hover,
+.nav-menu .nav-dropdown .nav-link.active:hover,
+.dropdown-menu a.active:hover,
+.dropdown-menu .dropdown-item.active:hover,
+.dropdown-menu .nav-link.active:hover,
+.dropdown-menu li.active > a:hover,
+.nav-sub-dropdown a.active:hover,
+.nav-sub-dropdown li.active > a:hover {
+    background-color: #5a6268 !important;
+    background: #5a6268 !important;
+    color: #ffffff !important;
+}
+
+.nav-dropdown a.active:hover *,
+.nav-dropdown li.active > a:hover *,
+.nav-dropdown .dropdown-item.active:hover *,
+.nav-dropdown .nav-link.active:hover *,
+.nav-menu .nav-dropdown a.active:hover *,
+.nav-menu .nav-dropdown li.active > a:hover *,
+.nav-menu .nav-dropdown .dropdown-item.active:hover *,
+.nav-menu .nav-dropdown .nav-link.active:hover *,
+.dropdown-menu a.active:hover *,
+.dropdown-menu .dropdown-item.active:hover *,
+.dropdown-menu .nav-link.active:hover *,
+.dropdown-menu li.active > a:hover *,
+.nav-sub-dropdown a.active:hover *,
+.nav-sub-dropdown li.active > a:hover *,
+.nav-dropdown a.active:hover i,
+.nav-dropdown a.active:hover span,
+.nav-menu .nav-dropdown a.active:hover i,
+.nav-menu .nav-dropdown a.active:hover span {
+    color: #ffffff !important;
+}
+
+/* Inactive dropdown item hover */
+.nav-dropdown a:not(.active):hover,
+.nav-dropdown li:not(.active) > a:hover,
+.nav-menu .nav-dropdown a:not(.active):hover,
+.nav-menu .nav-dropdown li:not(.active) > a:hover,
+.dropdown-menu a:not(.active):hover,
+.dropdown-menu .dropdown-item:not(.active):hover {
+    background-color: #f1f3f5 !important;
+    color: #0d6efd !important;
+}
+
+.nav-dropdown a:not(.active):hover *,
+.nav-dropdown li:not(.active) > a:hover *,
+.nav-menu .nav-dropdown a:not(.active):hover *,
+.nav-menu .nav-dropdown li:not(.active) > a:hover *,
+.dropdown-menu a:not(.active):hover *,
+.dropdown-menu .dropdown-item:not(.active):hover * {
+    color: #0d6efd !important;
+}
+
+/* =========================================================================
+   11. ASSIGNMENT PAGES: FROZEN STICKY COLUMNS (S.NO TO ARTICLES)
+   Freezes columns from S.NO to Articles on horizontal scroll so they stay
+   fixed to the left while remaining columns scroll horizontally.
+   ========================================================================= */
+
+.table-sticky-assign {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    position: relative !important;
+}
+
+/* Sticky Header Cells: Vertically & Horizontally Sticky */
+.table-sticky-assign thead th.sticky-assign-col {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 30 !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    border-top: 1px solid #5a6268 !important;
+    border-bottom: 1px solid #5a6268 !important;
+    border-right: 1px solid #5a6268 !important;
+    background-clip: padding-box !important;
+    box-sizing: border-box !important;
+}
+
+/* Normal Header Cells: Vertically Sticky only */
+.table-sticky-assign thead th:not(.sticky-assign-col) {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    background-clip: padding-box !important;
+    box-sizing: border-box !important;
+}
+
+/* Sticky Body Cells: Horizontally Sticky */
+.table-sticky-assign tbody td.sticky-assign-col {
+    position: sticky !important;
+    z-index: 10 !important;
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    background-clip: padding-box !important;
+    box-sizing: border-box !important;
+}
+
+/* Non-sticky Body Cells */
+.table-sticky-assign tbody td:not(.sticky-assign-col) {
+    background-clip: padding-box !important;
+}
+
+/* Hover and Row State Support for Sticky Body Cells */
+.table-sticky-assign tbody tr:hover td.sticky-assign-col {
+    background-color: #f1f5f9 !important;
+}
+
+.table-sticky-assign tbody tr.assigned td.sticky-assign-col {
+    background-color: #f0fdf4 !important;
+}
+
+.table-sticky-assign tbody tr.assigned:hover td.sticky-assign-col {
+    background-color: #dcfce7 !important;
+}
+
+.table-sticky-assign tbody tr.row-purple td.sticky-assign-col {
+    background-color: #f5f3ff !important;
+}
+
+.table-sticky-assign tbody tr.row-purple:hover td.sticky-assign-col {
+    background-color: #ede9fe !important;
+}
+
+.table-sticky-assign tbody tr.table-warning td.sticky-assign-col {
+    background-color: #fff3cd !important;
+}
+
+.table-sticky-assign tbody tr.table-danger td.sticky-assign-col {
+    background-color: #f8d7da !important;
+}
+
+.table-sticky-assign tbody tr.table-success td.sticky-assign-col {
+    background-color: #d1e7dd !important;
+}
+
+.table-sticky-assign tbody tr.table-info td.sticky-assign-col {
+    background-color: #cff4fc !important;
+}
+
+.table-sticky-assign tbody tr.table-secondary td.sticky-assign-col {
+    background-color: #e2e3e5 !important;
+}
+
+/* Subtle border & drop-shadow boundary on the last sticky column (Articles) */
+.table-sticky-assign thead th.sticky-assign-col-last,
+.table-sticky-assign thead th.col-article {
+    width: 135px !important;
+    min-width: 135px !important;
+    max-width: 135px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    border-right: 2px solid #495057 !important;
+    box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.22) !important;
+}
+
+.table-sticky-assign tbody td.sticky-assign-col-last,
+.table-sticky-assign tbody td.col-article {
+    width: 135px !important;
+    min-width: 135px !important;
+    max-width: 135px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    border-right: 2px solid #94a3b8 !important;
+    box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12) !important;
+}
+
+
 

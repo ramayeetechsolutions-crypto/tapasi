@@ -715,26 +715,29 @@
             
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
+                <?php
+                $auditPages = ['expenses_master.php', 'client_templates.php', 'invoice_list.php', 'bankstatement.php', 'paypalstatement.php', 'expenses.php', 'tds_master.php', 'commission.php', 'salary.php', 'invoices.php', 'tds.php', 'payment.php'];
+                ?>
                 <ul class="nav-menu">
-                    <li><a href="dashboard.php" class="<?php echo ($currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="dashboard.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php']) ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                     
                    
                     <li>
-                        <a href="#" class="active"><i class="fas fa-cogs"></i> Audit</a>
+                        <a href="#" class="<?= in_array($currentPage, $auditPages) ? 'active' : '' ?>"><i class="fas fa-cogs"></i> Audit</a>
                         <ul class="nav-dropdown">
-                            <li><a href="expenses_master.php"><i class="fas fa-building"></i> Expenses Master</a></li>
-                            <li><a href="client_templates.php"><i class="fas fa-user-tag"></i> Client Templates</a></li>
-                            <li><a href="invoice_list.php"><i class="fas fa-building"></i> Invoices</a></li>
-                            <li><a href="bankstatement.php"><i class="fas fa-user-tag"></i> Bank Statement</a></li>
-                            <li><a href="paypalstatement.php"><i class="fas fa-users"></i> Paypal</a></li>
+                            <li><a href="expenses_master.php" class="<?= $currentPage === 'expenses_master.php' ? 'active' : '' ?>"><i class="fas fa-building"></i> Expenses Master</a></li>
+                            <li><a href="client_templates.php" class="<?= $currentPage === 'client_templates.php' ? 'active' : '' ?>"><i class="fas fa-user-tag"></i> Client Templates</a></li>
+                            <li><a href="invoice_list.php" class="<?= $currentPage === 'invoice_list.php' ? 'active' : '' ?>"><i class="fas fa-building"></i> Invoices</a></li>
+                            <li><a href="bankstatement.php" class="<?= $currentPage === 'bankstatement.php' ? 'active' : '' ?>"><i class="fas fa-user-tag"></i> Bank Statement</a></li>
+                            <li><a href="paypalstatement.php" class="<?= $currentPage === 'paypalstatement.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Paypal</a></li>
                          
-                            <li><a href="expenses.php"><i class="fas fa-briefcase"></i> Cash Expenses</a></li>
-                            <li><a href="tds_master.php"><i class="fas fa-file-alt"></i> TDS Members</a></li>
-                            <li><a href="commission.php"><i class="fas fa-file-alt"></i> Commission</a></li>
-                            <li><a href="salary.php"><i class="fas fa-file-alt"></i> Salary</a></li>
-                            <li><a href="invoices.php"><i class="fas fa-file-alt"></i> Generated Invoices</a></li>
-                            <li><a href="tds.php"><i class="fas fa-file-alt"></i> TDS</a></li>
-                            <li><a href="payment.php"><i class="fas fa-file-alt"></i> Invoice Payment</a></li>
+                            <li><a href="expenses.php" class="<?= $currentPage === 'expenses.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Cash Expenses</a></li>
+                            <li><a href="tds_master.php" class="<?= $currentPage === 'tds_master.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> TDS Members</a></li>
+                            <li><a href="commission.php" class="<?= $currentPage === 'commission.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Commission</a></li>
+                            <li><a href="salary.php" class="<?= $currentPage === 'salary.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Salary</a></li>
+                            <li><a href="invoices.php" class="<?= $currentPage === 'invoices.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Generated Invoices</a></li>
+                            <li><a href="tds.php" class="<?= $currentPage === 'tds.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> TDS</a></li>
+                            <li><a href="payment.php" class="<?= $currentPage === 'payment.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Invoice Payment</a></li>
                         </ul>
                     </li>
                   </ul>

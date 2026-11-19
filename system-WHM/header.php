@@ -768,44 +768,49 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
             
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
+                <?php
+                $mgmtPages = ['access_control.php', 'backup.php', 'systems.php', 'ticketmanagementsystem.php', 'ups.php', 'wfh.php'];
+                $adminPages = ['scrap.php', 'contacts.php', 'awards.php'];
+                $inventoryPages = ['accessories.php', 'mouse.php', 'keyboard.php', 'cpu.php', 'battery.php', 'monitor.php', 'laptop.php', 'ups_inventory.php'];
+                ?>
                 <ul class="nav-menu">
-                    <li><a href="dashboard.php" class="<?php echo ($currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="dashboard.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php']) ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                     
                     <!-- Management Menu -->
                     <li>
-                        <a href="#"><i class="fas fa-tools"></i> Management</a>
+                        <a href="#" class="<?= in_array($currentPage, $mgmtPages) ? 'active' : '' ?>"><i class="fas fa-tools"></i> Management</a>
                         <ul class="nav-dropdown">
-                            <li><a href="access_control.php"><i class="fa fa-lock"></i> Access Control Management</a></li>
-                            <li><a href="backup.php"><i class="fas fa-database"></i> Backup Management</a></li>
-                            <li><a href="systems.php"><i class="fas fa-desktop"></i> System Inventory</a></li>
-                            <li><a href="ticketmanagementsystem.php"><i class="fa fa-ticket"></i> Ticket Management System</a></li>
-                            <li><a href="ups.php"><i class="fas fa-battery-full"></i> UPS Management</a></li>
-                            <li><a href="wfh.php"><i class="fas fa-house-laptop"></i> WFH Management</a></li>
+                            <li><a href="access_control.php" class="<?= $currentPage === 'access_control.php' ? 'active' : '' ?>"><i class="fa fa-lock"></i> Access Control Management</a></li>
+                            <li><a href="backup.php" class="<?= $currentPage === 'backup.php' ? 'active' : '' ?>"><i class="fas fa-database"></i> Backup Management</a></li>
+                            <li><a href="systems.php" class="<?= $currentPage === 'systems.php' ? 'active' : '' ?>"><i class="fas fa-desktop"></i> System Inventory</a></li>
+                            <li><a href="ticketmanagementsystem.php" class="<?= $currentPage === 'ticketmanagementsystem.php' ? 'active' : '' ?>"><i class="fa fa-ticket"></i> Ticket Management System</a></li>
+                            <li><a href="ups.php" class="<?= $currentPage === 'ups.php' ? 'active' : '' ?>"><i class="fas fa-battery-full"></i> UPS Management</a></li>
+                            <li><a href="wfh.php" class="<?= $currentPage === 'wfh.php' ? 'active' : '' ?>"><i class="fas fa-house-laptop"></i> WFH Management</a></li>
                         </ul>
                     </li>
                     
                     <!-- Administrative Menu -->
                     <li>
-                        <a href="#"><i class="fas fa-user-shield"></i> Administrative</a>
+                        <a href="#" class="<?= in_array($currentPage, $adminPages) ? 'active' : '' ?>"><i class="fas fa-user-shield"></i> Administrative</a>
                         <ul class="nav-dropdown">
-                            <li><a href="scrap.php"><i class="fas fa-recycle"></i> Scrap Management</a></li>
-                            <li><a href="contacts.php"><i class="fas fa-address-book"></i> Contacts</a></li>
-                            <li><a href="awards.php"><i class="fas fa-award"></i> Awards</a></li>
+                            <li><a href="scrap.php" class="<?= $currentPage === 'scrap.php' ? 'active' : '' ?>"><i class="fas fa-recycle"></i> Scrap Management</a></li>
+                            <li><a href="contacts.php" class="<?= $currentPage === 'contacts.php' ? 'active' : '' ?>"><i class="fas fa-address-book"></i> Contacts</a></li>
+                            <li><a href="awards.php" class="<?= $currentPage === 'awards.php' ? 'active' : '' ?>"><i class="fas fa-award"></i> Awards</a></li>
                         </ul>
                     </li>
                     
                     <!-- Inventory Menu -->
                     <li>
-                        <a href="#"><i class="fas fa-warehouse"></i> Inventory</a>
+                        <a href="#" class="<?= in_array($currentPage, $inventoryPages) ? 'active' : '' ?>"><i class="fas fa-warehouse"></i> Inventory</a>
                         <ul class="nav-dropdown">
-                            <li><a href="accessories.php"><i class="fas fa-briefcase"></i> Accessories</a></li>
-                            <li><a href="mouse.php"><i class="fas fa-mouse"></i> Mouse</a></li>
-                            <li><a href="keyboard.php"><i class="far fa-keyboard"></i> Keyboard</a></li>
-                            <li><a href="cpu.php"><i class="fas fa-microchip"></i> CPU</a></li>
-                            <li><a href="battery.php"><i class="fas fa-battery-full"></i> Battery</a></li>
-                            <li><a href="monitor.php"><i class="fas fa-desktop me-2"></i>Monitor</a></li>
-                            <li><a href="laptop.php"><i class="fas fa-laptop me-2"></i>Laptop</a></li>
-                            <li><a href="ups_inventory.php"><i class="fas fa-car-battery me-2"></i>UPS</a></li>
+                            <li><a href="accessories.php" class="<?= $currentPage === 'accessories.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Accessories</a></li>
+                            <li><a href="mouse.php" class="<?= $currentPage === 'mouse.php' ? 'active' : '' ?>"><i class="fas fa-mouse"></i> Mouse</a></li>
+                            <li><a href="keyboard.php" class="<?= $currentPage === 'keyboard.php' ? 'active' : '' ?>"><i class="far fa-keyboard"></i> Keyboard</a></li>
+                            <li><a href="cpu.php" class="<?= $currentPage === 'cpu.php' ? 'active' : '' ?>"><i class="fas fa-microchip"></i> CPU</a></li>
+                            <li><a href="battery.php" class="<?= $currentPage === 'battery.php' ? 'active' : '' ?>"><i class="fas fa-battery-full"></i> Battery</a></li>
+                            <li><a href="monitor.php" class="<?= $currentPage === 'monitor.php' ? 'active' : '' ?>"><i class="fas fa-desktop me-2"></i>Monitor</a></li>
+                            <li><a href="laptop.php" class="<?= $currentPage === 'laptop.php' ? 'active' : '' ?>"><i class="fas fa-laptop me-2"></i>Laptop</a></li>
+                            <li><a href="ups_inventory.php" class="<?= $currentPage === 'ups_inventory.php' ? 'active' : '' ?>"><i class="fas fa-car-battery me-2"></i>UPS</a></li>
                         </ul>
                     </li>
                 </ul>

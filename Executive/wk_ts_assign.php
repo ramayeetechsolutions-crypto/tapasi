@@ -412,14 +412,14 @@ require 'header.php';
         <!-- Main Format Table (Exact Format from Image 3) -->
         <div class="bg-white rounded-3 border overflow-hidden shadow-sm">
             <div class="table-responsive">
-                <table class="table table-hover table-bordered mb-0" style="min-width: 1950px;">
+                <table class="table table-hover table-bordered mb-0 table-sticky-assign" style="min-width: 1950px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>QC Completed Date</th>
                             <th>PAG Completed Date</th>
                             <th>Recevied Date</th>
                             <th>Issue</th>
-                            <th>Articles</th>
+                            <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>Pages</th>
                             <th style="min-width: 170px;">PAG</th>
                             <th style="min-width: 170px;">QC</th>

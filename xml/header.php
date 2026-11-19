@@ -560,43 +560,51 @@ if ($row = $result->fetch_assoc()) {
             
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
+                <?php
+                $masterPages = ['job_master.php', 'process_master.php', 'team_view.php'];
+                $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
+                $employeePages = ['employee_master.php', 'target_assignment.php', 'target_executive.php', 'teamleader_ot_approval.php'];
+                $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
+                $reportPages = ['client_report.php', 'team_count_report.php', 'xml_weekly_report.php', 'error_entry_wk.php', 'error_entry_uq.php'];
+                $xmlPages = ['xml_clients.php', 'xml_unique_start.php', 'upload_xml.php', 'pubcode.php'];
+                ?>
                 <ul class="nav-menu">
-                    <li><a href="dashboard_tl.php" class="<?php echo ($currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="dashboard_tl.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php', 'dashboard_tl.php']) ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
 
                     <li>
-                        <a href="#"><i class="fas fa-sitemap"></i> Master</a>
+                        <a href="#" class="<?= in_array($currentPage, $masterPages) ? 'active' : '' ?>"><i class="fas fa-sitemap"></i> Master</a>
                         <ul class="nav-dropdown">
-                            <li><a href="job_master.php"><i class="fas fa-briefcase"></i> Job</a></li>
-                            <li><a href="process_master.php"><i class="fas fa-diagram-project"></i> Process</a></li>
+                            <li><a href="job_master.php" class="<?= $currentPage === 'job_master.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job</a></li>
+                            <li><a href="process_master.php" class="<?= $currentPage === 'process_master.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Process</a></li>
                             <!-- <li>
-                                <a class="nav-link <?= $currentPage === 'template_master.php'?>" href="template_master.php">
+                                <a class="nav-link <?= $currentPage === 'template_master.php' ? 'active' : '' ?>" href="template_master.php">
                                     <i class="fa fa-line-chart"></i> Template Master
                                 </a>
                             </li> 
                             <li>
-                                <a class="nav-link <?= $currentPage === 'specialty.php'?>" href="specialty.php">
+                                <a class="nav-link <?= $currentPage === 'specialty.php' ? 'active' : '' ?>" href="specialty.php">
                                     <i class="fa fa-line-chart"></i> Speciality Master
                                 </a>
                             </li> -->
-                            <li><a href="team_view.php"><i class="fas fa-users"></i> Team</a></li>
+                            <li><a href="team_view.php" class="<?= $currentPage === 'team_view.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Team</a></li>
                         </ul>
                     </li>
 <!-- My Account Dropdown -->
                     <li>
-                        <a href="#"><i class="fas fa-user-circle"></i> My Account</a>
+                        <a href="#" class="<?= in_array($currentPage, $myAccountPages) ? 'active' : '' ?>"><i class="fas fa-user-circle"></i> My Account</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="employee_regby_emp.php">
+                                <a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>">
                                     <i class="fas fa-user-edit"></i> Update Profile
                                 </a>
                             </li>
                             <li>
-                                <a href="employee.php">
+                                <a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>">
                                     <i class="fas fa-check-circle"></i> Verify Details
                                 </a>
                             </li>
                             <li>
-                                <a href="employee_leave.php">
+                                <a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>">
                                     <i class="fas fa-calendar-alt"></i> Permission & OT
                                 </a>
                             </li>
@@ -605,7 +613,7 @@ if ($row = $result->fetch_assoc()) {
         <!-- Employee Dropdown -->
             
                   <li>
-                        <a href="#"><i class="fas fa-user-tie"></i> Employee</a>
+                        <a href="#" class="<?= in_array($currentPage, $employeePages) ? 'active' : '' ?>"><i class="fas fa-user-tie"></i> Employee</a>
                         <ul class="nav-dropdown">
                             <?php 
                             $user_role = $_SESSION["role_name"] ?? '';
@@ -616,46 +624,46 @@ if ($row = $result->fetch_assoc()) {
                             $target_link  = $is_tl ? 'target_assignment.php' : 'target_executive.php';
                             $target_name  = $is_tl ? 'Target' : 'Production Entry';
                             ?>
-                            <li><a href="<?= $profile_link ?>"><i class="fas fa-id-card"></i> Profile</a></li>
-                            <li><a href="<?= $target_link ?>"><i class="fas fa-bullseye"></i> <?= $target_name ?></a></li>
+                            <li><a href="<?= $profile_link ?>" class="<?= $currentPage === $profile_link ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
+                            <li><a href="<?= $target_link ?>" class="<?= $currentPage === $target_link ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> <?= $target_name ?></a></li>
                             
                             <?php if ($is_tl): ?>
-                                <li><a href="teamleader_ot_approval.php"><i class="fas fa-bullseye"></i> OT Approvals</a></li>
+                                <li><a href="teamleader_ot_approval.php" class="<?= $currentPage === 'teamleader_ot_approval.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> OT Approvals</a></li>
                             <?php else: ?>
-                                <li><a href="employee_leave.php"><i class="fas fa-calendar-alt"></i> OT Claims</a></li>
+                                <li><a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>"><i class="fas fa-calendar-alt"></i> OT Claims</a></li>
                             <?php endif; ?>
                         </ul>
                     </li>
                     <li>
-                        <a href="#"><i class="fas fa-tools"></i> System</a>
+                        <a href="#" class="<?= in_array($currentPage, $systemPages) ? 'active' : '' ?>"><i class="fas fa-tools"></i> System</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="my_system_details.php">
+                                <a href="my_system_details.php" class="<?= $currentPage === 'my_system_details.php' ? 'active' : '' ?>">
                                     <i class="fas fa-desktop"></i>System Details
                                 </a>
                             </li>
-                            <li><a href="ticketmanagementexecutive.php"><i class="fas fa-headset"></i> Complaints</a></li>
+                            <li><a href="ticketmanagementexecutive.php" class="<?= $currentPage === 'ticketmanagementexecutive.php' ? 'active' : '' ?>"><i class="fas fa-headset"></i> Complaints</a></li>
                         </ul>
                     </li>
                     <li>
-                        <a href="#"><i class="fas fa-briefcase"></i> Reports</a>
+                        <a href="#" class="<?= in_array($currentPage, $reportPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Reports</a>
                         <ul class="nav-dropdown">
-                            <li><a href="client_report.php"><i class="fas fa-chart-line"></i> Client Report</a></li>
-                            <li><a href="team_count_report.php"><i class="fas fa-diagram-project"></i> Team Report</a></li>
-                            <li><a href="xml_weekly_report.php"><i class="fas fa-file-alt"></i> Production Report</a></li>
+                            <li><a href="client_report.php" class="<?= $currentPage === 'client_report.php' ? 'active' : '' ?>"><i class="fas fa-chart-line"></i> Client Report</a></li>
+                            <li><a href="team_count_report.php" class="<?= $currentPage === 'team_count_report.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Team Report</a></li>
+                            <li><a href="xml_weekly_report.php" class="<?= $currentPage === 'xml_weekly_report.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Production Report</a></li>
                             <!-- <li>
                                 <a class="nav-link" href="xml_report.php">
                                     <i class="fa fa-line-chart"></i> Graphical Reports
                                 </a>
                             </li> -->
                             <li>
-    <a class="dropdown-item" href="error_entry_wk.php">
+    <a class="dropdown-item <?= $currentPage === 'error_entry_wk.php' ? 'active' : '' ?>" href="error_entry_wk.php">
         <i class="fas fa-calculator me-2 text-muted"></i> Error Log (WK)
     </a>
 </li>
 
 <li>
-    <a class="dropdown-item" href="error_entry_uq.php">
+    <a class="dropdown-item <?= $currentPage === 'error_entry_uq.php' ? 'active' : '' ?>" href="error_entry_uq.php">
         <i class="fas fa-calculator me-2 text-muted"></i> Error Log (UQ)
     </a>
 </li>
@@ -674,7 +682,7 @@ if ($row = $result->fetch_assoc()) {
 
                     <!-- UPDATED XML JOBS SECTION -->
                     <li>
-                        <a href="#"><i class="fas fa-cogs"></i> XML Jobs</a>
+                        <a href="#" class="<?= in_array($currentPage, $xmlPages) ? 'active' : '' ?>"><i class="fas fa-cogs"></i> XML Jobs</a>
                         <ul class="nav-dropdown">
                             
                             <!-- 1. Jobs Unique -->
@@ -685,17 +693,17 @@ if ($row = $result->fetch_assoc()) {
                                 </a>
                                 <ul class="nav-sub-dropdown">
                                     <li>
-                                        <a href="xml_clients.php">
+                                        <a href="xml_clients.php" class="<?= $currentPage === 'xml_clients.php' ? 'active' : '' ?>">
                                             <i class="fas fa-users"></i> UQ Clients
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="xml_unique_start.php" >
+                                        <a href="xml_unique_start.php" class="<?= $currentPage === 'xml_unique_start.php' ? 'active' : '' ?>">
                                             <i class="fas fa-cogs"></i> UQ Process
                                         </a>
                                     </li>
                                     <li>
-                                         <a href="upload_xml.php">
+                                         <a href="upload_xml.php" class="<?= $currentPage === 'upload_xml.php' ? 'active' : '' ?>">
                                             <i class="fas fa-upload"></i> UQ Upload                                        </a>
                                     </li>
                                 </ul>
@@ -709,7 +717,7 @@ if ($row = $result->fetch_assoc()) {
                                 </a>
                                 <ul class="nav-sub-dropdown">
                                     <li>
-                                        <a href="pubcode.php" >
+                                        <a href="pubcode.php" class="<?= $currentPage === 'pubcode.php' ? 'active' : '' ?>">
                                             <i class="fas fa-code"></i> WK Pubcode
                                         </a>
                                     </li>

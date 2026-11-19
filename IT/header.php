@@ -318,8 +318,8 @@ $reportPages = ['error_entry_team.php', 'error_entry.php'];
                             <i class="fas fa-user-circle"></i> My Account
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="employee_regby_emp.php"><i class="fas fa-user-edit"></i> Update Profile</a></li>
-                            <li><a href="employee.php"><i class="fas fa-check-circle"></i> Verify Details</a></li>
+                            <li><a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>"><i class="fas fa-user-edit"></i> Update Profile</a></li>
+                            <li><a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>"><i class="fas fa-check-circle"></i> Verify Details</a></li>
                         </ul>
                     </li>
 
@@ -330,8 +330,8 @@ $reportPages = ['error_entry_team.php', 'error_entry.php'];
                             <i class="fas fa-tools"></i> System
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="my_system_details.php"><i class="fas fa-desktop"></i> System Details</a></li>
-                            <li><a href="ticketmanagementexecutive.php"><i class="fas fa-headset"></i> Complaints</a></li>
+                            <li><a href="my_system_details.php" class="<?= $currentPage === 'my_system_details.php' ? 'active' : '' ?>"><i class="fas fa-desktop"></i> System Details</a></li>
+                            <li><a href="ticketmanagementexecutive.php" class="<?= $currentPage === 'ticketmanagementexecutive.php' ? 'active' : '' ?>"><i class="fas fa-headset"></i> Complaints</a></li>
                         </ul>
                     </li>
 
@@ -342,7 +342,7 @@ $reportPages = ['error_entry_team.php', 'error_entry.php'];
                             <i class="fas fa-file-invoice"></i> Reports
                         </a>
                         <ul class="nav-dropdown">
-                            <li><a href="error_entry_team.php"><i class="fas fa-exclamation-triangle"></i> Error Log</a></li>
+                            <li><a href="error_entry_team.php" class="<?= $currentPage === 'error_entry_team.php' ? 'active' : '' ?>"><i class="fas fa-exclamation-triangle"></i> Error Log</a></li>
                         </ul>
                     </li>
 

@@ -734,47 +734,55 @@
             
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
+                <?php
+                $masterPages = ['company_master.php', 'user_role_master.php', 'user_role_master', 'client_master.php', 'job_master.php', 'employee_master.php'];
+                $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
+                $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
+                $jobsPages = ['manage_jobs.php', 'job_management.php'];
+                $invoicePages = ['list_invoice.php'];
+                ?>
                 <ul class="nav-menu">
-                    <li><a href="dashboard_md.php" class="<?php echo ($currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="dashboard_md.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php', 'dashboard_md.php']) ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                     
                     <!-- Master Main Menu -->
                      <li>
                         <a href="#"> Super Admin</a>
                         <ul class="nav-dropdown">
-                            <li><a href="change_password.php"><i class="fas fa-list"></i> Change Password</a></li>
+                            <li><a href="change_password.php" class="<?= $currentPage === 'change_password.php' ? 'active' : '' ?>"><i class="fas fa-list"></i> Change Password</a></li>
                             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                             
                         </ul>
                     </li>
 
                     <li>
-                        <a href="#" class="active"><i class="fas fa-cogs"></i> Master</a>
+                        <a href="#" class="<?= in_array($currentPage, $masterPages) ? 'active' : '' ?>"><i class="fas fa-cogs"></i> Master</a>
                         <ul class="nav-dropdown">
-                            <li><a href="company_master.php"><i class="fas fa-building"></i> Company</a></li>
-                            <li><a href="user_role_master"><i class="fas fa-user-tag"></i> User Role</a></li>
-                            <li><a href="client_master.php"><i class="fas fa-users"></i> Client</a></li>
-                            <li><a href="job_master.php"><i class="fas fa-briefcase"></i> Job</a></li>
-                            <li><a href="employee_master.php"><i class="fas fa-file-alt"></i> Employee</a></li>
+                            <li><a href="company_master.php" class="<?= $currentPage === 'company_master.php' ? 'active' : '' ?>"><i class="fas fa-building"></i> Company</a></li>
+                            <li><a href="user_role_master.php" class="<?= in_array($currentPage, ['user_role_master.php', 'user_role_master']) ? 'active' : '' ?>"><i class="fas fa-user-tag"></i> User Role</a></li>
+                            <li><a href="client_master.php" class="<?= $currentPage === 'client_master.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Client</a></li>
+                            <li><a href="job_master.php" class="<?= $currentPage === 'job_master.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job</a></li>
+                            <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Employee</a></li>
                         </ul>
                     </li>
-                    <a href="#"><i class="fas fa-briefcase"></i> My Account</a>
+                    <li>
+                        <a href="#" class="<?= in_array($currentPage, $myAccountPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> My Account</a>
                         <ul class="nav-dropdown">
-                            <li><a href="employee_regby_emp.php"><i class="fas fa-users"></i> Update</a></li>
-                            <li><a href="employee.php"><i class="fas fa-tasks"></i> Verify</a></li>
-                            <li><a href="employee_leave.php"><i class="fas fa-tasks"></i> Permission/OT</a></li>
-                            </ul>
+                            <li><a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Update</a></li>
+                            <li><a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Verify</a></li>
+                            <li><a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Permission/OT</a></li>
+                        </ul>
                     </li>
                     <!-- System Dropdown -->
                     <li>
-                        <a href="#"><i class="fas fa-cog"></i> System</a>
+                        <a href="#" class="<?= in_array($currentPage, $systemPages) ? 'active' : '' ?>"><i class="fas fa-cog"></i> System</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="my_system_details.php">
+                                <a href="my_system_details.php" class="<?= $currentPage === 'my_system_details.php' ? 'active' : '' ?>">
                                     <i class="fas fa-desktop"></i>System Details
                                 </a>
                             </li>
                             <li>
-                                <a href="ticketmanagementexecutive.php">
+                                <a href="ticketmanagementexecutive.php" class="<?= $currentPage === 'ticketmanagementexecutive.php' ? 'active' : '' ?>">
                                     <i class="fas fa-ticket-alt"></i> Complaints
                                 </a>
                             </li>
@@ -782,23 +790,23 @@
                     </li>
                     <!-- Job Management -->
                     <li>
-                        <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
+                        <a href="#" class="<?= in_array($currentPage, $jobsPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Jobs</a>
                         <ul class="nav-dropdown">
-                            <li><a href="manage_jobs.php"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
-                            <li><a href="job_management.php"><i class="fas fa-list"></i> Job Categories</a></li>
+                            <li><a href="manage_jobs.php" class="<?= $currentPage === 'manage_jobs.php' ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
+                            <li><a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>"><i class="fas fa-list"></i> Job Categories</a></li>
                         </ul>
                     </li>
                     
                     <!-- Invoice Management -->
                     <li>
-                        <a href="#"><i class="fas fa-file-invoice"></i> Invoice</a>
+                        <a href="#" class="<?= in_array($currentPage, $invoicePages) ? 'active' : '' ?>"><i class="fas fa-file-invoice"></i> Invoice</a>
                         <ul class="nav-dropdown">
-                            <li><a href="list_invoice.php"><i class="fas fa-receipt"></i> Invoices</a></li>
+                            <li><a href="list_invoice.php" class="<?= $currentPage === 'list_invoice.php' ? 'active' : '' ?>"><i class="fas fa-receipt"></i> Invoices</a></li>
                             <!--li><a href="#"><i class="fas fa-file-alt"></i> Invoice Templates</a></li-->
                         </ul>
                     </li>
                     
-                    <li><a href="reports.php" class="<?php echo ($currentPage == 'reports') ? 'active' : ''; ?>"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                    <li><a href="reports.php" class="<?php echo ($currentPage == 'reports' || $currentPage == 'reports.php') ? 'active' : ''; ?>"><i class="fas fa-chart-bar"></i> Reports</a></li>
                 </ul>
             </nav>
             

@@ -1039,7 +1039,7 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover" style="min-width: 1400px;">
+                <table class="table table-hover table-sticky-assign" style="min-width: 1400px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>S.No</th>
@@ -1048,7 +1048,7 @@ require 'header.php';
                             <th>Client</th>
                             <th>Journal</th>
                             <th>Issue</th>
-                            <th>Articles</th>
+                            <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>EQ</th>
                             <th>Images</th>
                             <th>Tables</th>
@@ -1110,7 +1110,7 @@ require 'header.php';
                                             <?= h($display_issue) ?>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">
                                         <span class="text-truncate d-block" title="<?= h($row['articles'] ?? '') ?>">
                                             <?= h($row['articles'] ?? 'N/A') ?>
                                         </span>

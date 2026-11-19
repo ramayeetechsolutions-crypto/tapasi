@@ -846,7 +846,7 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover table-bordered" style="min-width: 1200px; border-collapse: collapse;">
+                <table class="table table-hover table-bordered table-sticky-assign" style="min-width: 1200px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>LE moved Date</th>
@@ -854,7 +854,7 @@ require 'header.php';
                             <th>Recevied Date</th>
                             <th>Client</th>
                             <th>Journal</th>
-                            <th>Articles</th>
+                            <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>EQN</th>
                             <th>Pages</th>
                             <th>Images</th>
@@ -893,7 +893,7 @@ require 'header.php';
                                     <!-- Job Info -->
                                     <td><span class="fw-500"><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : ($row['client_name'] ?? 'N/A')) ?></span></td>
                                     <td><?= h($row['journal_issue'] ?? $row['jobs_issue'] ?? 'N/A') ?></td>
-                                    <td><?= h($row['article'] ?? $row['jobs_article'] ?? 'N/A') ?></td>
+                                    <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($row['article'] ?? $row['jobs_article'] ?? '') ?>"><?= h($row['article'] ?? $row['jobs_article'] ?? 'N/A') ?></td>
                                     
                                     <!-- Counts -->
                                     <td><?= h($row['eq'] ?? '0') ?></td>

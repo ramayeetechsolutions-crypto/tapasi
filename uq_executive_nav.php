@@ -2,19 +2,26 @@
 // UQ Executive Process Navigation
 // All routes point to Executive/ local files — NEVER SubTL
 $currentPage = basename($_SERVER['PHP_SELF']);
+
+$cePages = ['mail_subject_master.php', 'jobs.php', 'ce_assign_tm.php', 'jobmgmt_ce.php', 'ce_meeting.php'];
+$lePages = ['alljobs.php', 'le_assign_tm.php', 'jobmgmt_le.php', 'le_meeting.php'];
+$tsPages = ['pag_assign_tm.php', 'jobmgmt_pag.php', 'ts_meeting.php'];
+$qcPages = ['qc_assign_tm.php', 'qc_crx_assign_tm.php', 'jobmgmt_qc.php', 'qc_meeting.php'];
+$apPages = ['ap_jobs.php', 'ap_assign.php', 'jobmgmt_ap.php', 'ap_meeting.php'];
+$wkPages = ['wk_ts_assign.php', 'wk_cs_assign.php', 'wk_le_assign.php', 'wk_report.php'];
 ?>
 
 <!-- CE Section -->
 <li>
-    <a href="#"><i class="fas fa-chart-bar"></i> CE</a>
+    <a href="#" class="<?= in_array($currentPage, $cePages) ? 'active' : '' ?>"><i class="fas fa-chart-bar"></i> CE</a>
     <ul class="nav-dropdown">
         <li>
-            <a href="mail_subject_master.php">
+            <a href="mail_subject_master.php" class="<?= $currentPage === 'mail_subject_master.php' ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i> Job Entry
             </a>
         </li>
         <li>
-            <a href="jobs.php">
+            <a href="jobs.php" class="<?= $currentPage === 'jobs.php' ? 'active' : '' ?>">
                 <i class="fas fa-tasks"></i> Manage Jobs
             </a>
         </li>
@@ -38,7 +45,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- LE Section -->
 <li>
-    <a href="#"><i class="fas fa-chart-line"></i> LE</a>
+    <a href="#" class="<?= in_array($currentPage, $lePages) ? 'active' : '' ?>"><i class="fas fa-chart-line"></i> LE</a>
     <ul class="nav-dropdown">
         <li>
             <a href="alljobs.php?job=CE" class="<?= ($currentPage === 'alljobs.php') ? 'active' : '' ?>">
@@ -65,15 +72,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- TS Section -->
 <li>
-    <a href="#"><i class="fas fa-chart-pie"></i> TS</a>
+    <a href="#" class="<?= in_array($currentPage, $tsPages) ? 'active' : '' ?>"><i class="fas fa-chart-pie"></i> TS</a>
     <ul class="nav-dropdown">
         <li>
-            <a href="mail_subject_master.php">
+            <a href="mail_subject_master.php" class="<?= $currentPage === 'mail_subject_master.php' ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i> Job Entry
             </a>
         </li>
         <li>
-            <a href="jobs.php">
+            <a href="jobs.php" class="<?= $currentPage === 'jobs.php' ? 'active' : '' ?>">
                 <i class="fas fa-tasks"></i> Manage Jobs
             </a>
         </li>
@@ -97,7 +104,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- QC Section -->
 <li>
-    <a href="#"><i class="fas fa-check-double"></i> QC</a>
+    <a href="#" class="<?= in_array($currentPage, $qcPages) ? 'active' : '' ?>"><i class="fas fa-check-double"></i> QC</a>
     <ul class="nav-dropdown">
         <li>
             <a href="qc_assign_tm.php" class="<?= $currentPage === 'qc_assign_tm.php' ? 'active' : '' ?>">
@@ -124,15 +131,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- AP Section -->
 <li>
-    <a href="#"><i class="fas fa-layer-group"></i> AP</a>
+    <a href="#" class="<?= in_array($currentPage, $apPages) ? 'active' : '' ?>"><i class="fas fa-layer-group"></i> AP</a>
     <ul class="nav-dropdown">
         <li>
-            <a href="mail_subject_master.php">
+            <a href="mail_subject_master.php" class="<?= $currentPage === 'mail_subject_master.php' ? 'active' : '' ?>">
                 <i class="fas fa-envelope"></i> Job Entry
             </a>
         </li>
         <li>
-            <a href="ap_jobs.php">
+            <a href="ap_jobs.php" class="<?= $currentPage === 'ap_jobs.php' ? 'active' : '' ?>">
                 <i class="fas fa-tasks"></i> Manage Jobs
             </a>
         </li>
@@ -142,7 +149,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </a>
         </li>
         <li>
-            <a class="nav-link" href="jobmgmt_ap.php">
+            <a href="jobmgmt_ap.php" class="<?= $currentPage === 'jobmgmt_ap.php' ? 'active' : '' ?>">
                 <i class="fa fa-bar-chart"></i> AP Report
             </a>
         </li>
@@ -156,7 +163,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
 <!-- WK Section -->
 <li>
-    <a href="#"><i class="fas fa-book"></i> WK</a>
+    <a href="#" class="<?= in_array($currentPage, $wkPages) ? 'active' : '' ?>"><i class="fas fa-book"></i> WK</a>
     <ul class="nav-dropdown">
         <li>
             <a href="wk_ts_assign.php" class="<?= $currentPage === 'wk_ts_assign.php' ? 'active' : '' ?>">

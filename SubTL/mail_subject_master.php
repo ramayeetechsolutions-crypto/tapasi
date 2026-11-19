@@ -147,39 +147,56 @@ if (!empty($types)) {
         <?php endif; ?>
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
-            <div class="card">
-                <div class="card-header" style="background-color: #707981; color: white;">
-                    <h5 class="mb-0" style="color: white; font-weight: 600;"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Mail Subject</h5>
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <div>
+                    <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas <?= $mode === 'edit' ? 'fa-edit' : 'fa-plus-circle' ?> me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Mail Subject</h4>
+                    <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;"><?= $mode === 'edit' ? 'Update mail subject details' : 'Create new mail subject entry' ?></p>
                 </div>
-                <div class="card-body">
+                <div>
+                    <a href="mail_subject_master.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-4">
                     <form method="post">
                         <input type="hidden" name="action" value="<?= $mode ?>">
                         <?php if($mode === 'edit'): ?>
                             <input type="hidden" name="mail_id" value="<?= $editMailSubject['mail_id'] ?>">
                         <?php endif; ?>
                         <div class="mb-3">
-                            <label class="form-label">Mail Subject</label>
+                            <label class="form-label fw-bold">Mail Subject</label>
                             <input type="text" name="mail_subject" class="form-control" value="<?= h($editMailSubject['mail_subject'] ?? '') ?>" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Date</label>
+                            <label class="form-label fw-bold">Date</label>
                             <input type="date" name="date" class="form-control" value="<?= h($editMailSubject['date'] ?? date('Y-m-d')) ?>" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                        <a href="mail_subject_master.php" class="btn btn-secondary ms-2">Cancel</a>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Save Changes</button>
+                            <a href="mail_subject_master.php" class="btn btn-secondary px-4 fw-bold">Cancel</a>
+                        </div>
                     </form>
                 </div>
             </div>
 
         <?php else: ?>
 
-            <div class="d-flex justify-content-between mb-3">
-                <h4>Mail Subject</h4>
-                <a href="mail_subject_master.php?mode=add" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Add New</a>
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <div>
+                    <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-envelope me-2" style="color: #ffffff !important;"></i>Mail Subject</h4>
+                    <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage mail subject entries and job references</p>
+                </div>
+                <div>
+                    <a href="mail_subject_master.php?mode=add" class="btn btn-primary text-white fw-bold btn-sm shadow-sm">
+                        <i class="fas fa-plus me-1"></i> Add New
+                    </a>
+                </div>
             </div>
 
-            <div class="card">
-                <h4></h4>
+            <div class="card shadow-sm border-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <!-- <thead class="table-dark"> -->

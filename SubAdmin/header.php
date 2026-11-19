@@ -739,8 +739,17 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
             
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
+                <?php
+                $masterPages = ['company_details.php', 'language_master.php', 'team_master.php', 'designation_master.php', 'client_master.php', 'job_master.php', 'process_master.php', 'employee_master.php'];
+                $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
+                $employeePages = ['employee_master.php', 'target_assignment.php', 'teamleader_ot_approval.php'];
+                $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
+                $reportPages = ['client_report.php', 'client_article.php', 'client_article_months.php'];
+                $jobsPages = ['team_view.php', 'jobs.php', 'job_management.php', 'input_output_view.php'];
+                $invoicePages = ['gen_invoice.php'];
+                ?>
                 <ul class="nav-menu">
-                    <li><a href="dashboard.php" class="<?php echo ($currentPage == 'dashboard') ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="dashboard.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php']) ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                     
                     <!-- Master Main Menu -->
                      <!--li>
@@ -753,50 +762,50 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
                     </li-->
 
                     <li>
-                        <a href="#"><i class="fas fa-cogs"></i> Master</a>
+                        <a href="#" class="<?= in_array($currentPage, $masterPages) ? 'active' : '' ?>"><i class="fas fa-cogs"></i> Master</a>
                         <ul class="nav-dropdown">
-                            <li><a href="company_details.php"><i class="fas fa-building"></i> Company</a></li>
+                            <li><a href="company_details.php" class="<?= $currentPage === 'company_details.php' ? 'active' : '' ?>"><i class="fas fa-building"></i> Company</a></li>
                             
                             <!--li><a href="user_role_master"><i class="fas fa-user-tag"></i> User Role</a></li-->
-                              <li><a href="language_master.php"><i class="fas fa-building"></i> Language</a></li>
-                            <li><a href="team_master.php"><i class="fas fa-user-tag"></i> Team</a></li>
-                            <li><a href="designation_master.php"><i class="fas fa-user-tag"></i> Designation</a></li>
+                              <li><a href="language_master.php" class="<?= $currentPage === 'language_master.php' ? 'active' : '' ?>"><i class="fas fa-building"></i> Language</a></li>
+                            <li><a href="team_master.php" class="<?= $currentPage === 'team_master.php' ? 'active' : '' ?>"><i class="fas fa-user-tag"></i> Team</a></li>
+                            <li><a href="designation_master.php" class="<?= $currentPage === 'designation_master.php' ? 'active' : '' ?>"><i class="fas fa-user-tag"></i> Designation</a></li>
                           
-                            <li><a href="client_master.php"><i class="fas fa-users"></i> Client</a></li>
-                            <li><a href="job_master.php"><i class="fas fa-briefcase"></i> Job</a></li>
-                            <li><a href="process_master.php"><i class="fas fa-diagram-project"></i> Process</a></li>
-                            <li><a href="employee_master.php"><i class="fas fa-file-alt"></i> Employee</a></li>
+                            <li><a href="client_master.php" class="<?= $currentPage === 'client_master.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Client</a></li>
+                            <li><a href="job_master.php" class="<?= $currentPage === 'job_master.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job</a></li>
+                            <li><a href="process_master.php" class="<?= $currentPage === 'process_master.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Process</a></li>
+                            <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-file-alt"></i> Employee</a></li>
                         </ul>
                     </li>
                     <!-- My Account -->
                     <li>
-                    <a href="#"><i class="fas fa-briefcase"></i> My Account</a>
+                    <a href="#" class="<?= in_array($currentPage, $myAccountPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> My Account</a>
                         <ul class="nav-dropdown">
-                            <li><a href="employee_regby_emp.php"><i class="fas fa-users"></i> Update</a></li>
-                            <li><a href="employee.php"><i class="fas fa-tasks"></i> Verify</a></li>
-                            <li><a href="employee_leave.php"><i class="fas fa-tasks"></i> Permission/OT</a></li>
+                            <li><a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Update</a></li>
+                            <li><a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Verify</a></li>
+                            <li><a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Permission/OT</a></li>
                             </ul>
                     </li>
                     <!-- Employee -->
                     <li>
-                        <a href="#"><i class="fas fa-user-tie"></i> Employee</a>
+                        <a href="#" class="<?= in_array($currentPage, $employeePages) ? 'active' : '' ?>"><i class="fas fa-user-tie"></i> Employee</a>
                         <ul class="nav-dropdown">
-                            <li><a href="employee_master.php"><i class="fas fa-id-card"></i> Profile</a></li>
-                            <li><a href="target_assignment.php"><i class="fas fa-bullseye"></i> Target</a></li>
-                            <li><a href="teamleader_ot_approval.php"><i class="fas fa-bullseye"></i> Over Time</a></li>
+                            <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
+                            <li><a href="target_assignment.php" class="<?= $currentPage === 'target_assignment.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> Target</a></li>
+                            <li><a href="teamleader_ot_approval.php" class="<?= $currentPage === 'teamleader_ot_approval.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> Over Time</a></li>
                         </ul>
                     </li>
                     <!-- System Dropdown -->
                     <li>
-                        <a href="#"><i class="fas fa-cog"></i> System</a>
+                        <a href="#" class="<?= in_array($currentPage, $systemPages) ? 'active' : '' ?>"><i class="fas fa-cog"></i> System</a>
                         <ul class="nav-dropdown">
                             <li>
-                                <a href="my_system_details.php">
+                                <a href="my_system_details.php" class="<?= $currentPage === 'my_system_details.php' ? 'active' : '' ?>">
                                     <i class="fas fa-desktop"></i>System Details
                                 </a>
                             </li>
                             <li>
-                                <a href="ticketmanagementexecutive.php">
+                                <a href="ticketmanagementexecutive.php" class="<?= $currentPage === 'ticketmanagementexecutive.php' ? 'active' : '' ?>">
                                     <i class="fas fa-ticket-alt"></i> Complaints
                                 </a>
                             </li>
@@ -804,11 +813,11 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
                     </li>
                     <!-- Reports -->
                     <li>
-                        <a href="#"><i class="fas fa-file-invoice"></i> Reports</a>
+                        <a href="#" class="<?= in_array($currentPage, $reportPages) ? 'active' : '' ?>"><i class="fas fa-file-invoice"></i> Reports</a>
                         <ul class="nav-dropdown">
-                            <li><a href="client_report.php"><i class="fas fa-file-invoice-dollar"></i> Client Report</a></li>
-                            <li><a href="client_article.php"><i class="fas fa-file-invoice-dollar"></i> Client Article & Pages</a></li>
-                            <li><a href="client_article_months.php"><i class="fas fa-file-invoice-dollar"></i> Client Report(Month)</a></li>
+                            <li><a href="client_report.php" class="<?= $currentPage === 'client_report.php' ? 'active' : '' ?>"><i class="fas fa-file-invoice-dollar"></i> Client Report</a></li>
+                            <li><a href="client_article.php" class="<?= $currentPage === 'client_article.php' ? 'active' : '' ?>"><i class="fas fa-file-invoice-dollar"></i> Client Article & Pages</a></li>
+                            <li><a href="client_article_months.php" class="<?= $currentPage === 'client_article_months.php' ? 'active' : '' ?>"><i class="fas fa-file-invoice-dollar"></i> Client Report(Month)</a></li>
 
 <!--li><a href="gen_invoice1.php"><i class="fas fa-file-invoice"></i> Generate Invoice I/O</a></li-->
 
@@ -819,15 +828,15 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
                     
                     <!-- Job Management -->
                     <li>
-                        <a href="#"><i class="fas fa-briefcase"></i> Jobs</a>
+                        <a href="#" class="<?= in_array($currentPage, $jobsPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Jobs</a>
                         <ul class="nav-dropdown">
-                             <li><a href="team_view.php"><i class="fas fa-users"></i> Team</a></li>
+                             <li><a href="team_view.php" class="<?= $currentPage === 'team_view.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Team</a></li>
 
-<li><a href="jobs.php"><i class="fas fa-briefcase"></i> Job Status</a></li>
+<li><a href="jobs.php" class="<?= $currentPage === 'jobs.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job Status</a></li>
 
-<li><a href="job_management.php"><i class="fas fa-diagram-project"></i> Job Process</a></li>
+<li><a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Job Process</a></li>
 
-<li><a href="input_output_view.php"><i class="fas fa-exchange-alt"></i> Input Output</a></li>
+<li><a href="input_output_view.php" class="<?= $currentPage === 'input_output_view.php' ? 'active' : '' ?>"><i class="fas fa-exchange-alt"></i> Input Output</a></li>
 
 
                         </ul>
@@ -835,9 +844,9 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
                     
                     <!-- Invoice Management -->
                     <li>
-                        <a href="#"><i class="fas fa-file-invoice"></i> Invoice</a>
+                        <a href="#" class="<?= in_array($currentPage, $invoicePages) ? 'active' : '' ?>"><i class="fas fa-file-invoice"></i> Invoice</a>
                         <ul class="nav-dropdown">
-                            <li><a href="gen_invoice.php"><i class="fas fa-file-invoice-dollar"></i> Generate Invoice</a></li>
+                            <li><a href="gen_invoice.php" class="<?= $currentPage === 'gen_invoice.php' ? 'active' : '' ?>"><i class="fas fa-file-invoice-dollar"></i> Generate Invoice</a></li>
 
 <!--li><a href="gen_invoice1.php"><i class="fas fa-file-invoice"></i> Generate Invoice I/O</a></li-->
 

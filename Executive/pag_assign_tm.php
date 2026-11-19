@@ -670,7 +670,7 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover table-bordered" style="min-width: 1800px; border-collapse: collapse;">
+                <table class="table table-hover table-bordered table-sticky-assign" style="min-width: 1800px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>LE moved Date</th>
@@ -678,7 +678,7 @@ require 'header.php';
                             <th>Received Date</th>
                             <th>Client</th>
                             <th>Journals</th>
-                            <th>Articles</th>
+                            <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>EQN</th>
                             <th>Pages</th>
                             <th>Images</th>
@@ -717,7 +717,7 @@ require 'header.php';
                                     <!-- Journals -->
                                     <td><?= h($row['journal_issue'] ?? 'N/A') ?></td>
                                     <!-- Articles -->
-                                    <td><?= h($row['articles'] ?? 'N/A') ?></td>
+                                    <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($row['articles'] ?? '') ?>"><?= h($row['articles'] ?? 'N/A') ?></td>
                                     
                                     <!-- EQN, Pages, Images, Tables (Inline Editable) -->
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)"></td>

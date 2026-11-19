@@ -391,14 +391,14 @@ require 'header.php';
         <div class="card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-sticky-assign" style="border-collapse: separate; border-spacing: 0;">
                         <thead class="table-light">
                             <tr>
                                 <th>#</th>
                                 <th>Date</th>
                                 <th>Client</th>
                                 <th>Journal/Issue</th>
-                                <th>Article</th>
+                                <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Article</th>
                                 <th>Mail Subject</th>
                                 <th>Process</th>
                                 <th>Assigned TM</th>
@@ -439,7 +439,7 @@ require 'header.php';
                                     <td><?= formatDate($job['job_date']) ?></td>
                                     <td><?= h($job['client_name']) ?></td>
                                     <td><?= h($job['journal_issue']) ?></td>
-                                    <td><?= h($job['article']) ?></td>
+                                    <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($job['article'] ?? '') ?>"><?= h($job['article'] ?? '') ?></td>
                                     <td><?= h($job['mail_subject']) ?></td>
                                     <td>
                                         <span class="badge xml-badge">

@@ -604,12 +604,78 @@ require 'header.php';
 ?>
 
 <style>
-    /* Uniform black header for both header rows (main + With / W/o) */
-    .table thead.table-dark th {
+    /* Multi-row Sticky Table Header for NDA Details */
+    .nda-table-responsive {
+        max-height: 72vh !important;
+        overflow: auto !important;
+        position: relative !important;
+    }
+
+    .nda-table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100% !important;
+    }
+
+    /* All NDA header cells */
+    .table thead.table-dark th,
+    .nda-table thead th {
         background-color: #6c757d !important;
-        color: #fff !important;
-        border-color: #868e96 !important;
-        vertical-align: middle;
+        color: #ffffff !important;
+        border-color: #5a6268 !important;
+        box-sizing: border-box !important;
+        background-clip: padding-box !important;
+    }
+
+    /* Row 1 sticky header */
+    .nda-table thead tr:first-child th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 25 !important;
+        border-top: 1px solid #5a6268 !important;
+        border-bottom: 1px solid #5a6268 !important;
+        border-right: 1px solid #5a6268 !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        white-space: nowrap !important;
+    }
+
+    .nda-table thead tr:first-child th:first-child {
+        border-left: 1px solid #5a6268 !important;
+    }
+
+    /* Row 1 spanning cells (S.No, Client Name, Country, etc.) */
+    .nda-table thead tr:first-child th[rowspan="2"] {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 26 !important;
+        vertical-align: middle !important;
+    }
+
+    /* Row 2 sticky sub-headers (WITH / W/O) */
+    .nda-table thead tr:nth-child(2) th {
+        position: sticky !important;
+        top: 31px !important;
+        z-index: 24 !important;
+        background-color: #6c757d !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        border-bottom: 1px solid #5a6268 !important;
+        border-right: 1px solid #5a6268 !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Table body cell borders under separate border-collapse */
+    .nda-table tbody td {
+        border-bottom: 1px solid #e9ecef !important;
+        border-right: 1px solid #e9ecef !important;
+    }
+
+    .nda-table tbody tr td:first-child {
+        border-left: 1px solid #e9ecef !important;
     }
 </style>
 
@@ -918,8 +984,8 @@ require 'header.php';
 
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.75rem;">
+            <div class="table-responsive nda-table-responsive">
+                <table class="table table-hover table-sm align-middle mb-0 nda-table" style="font-size: 0.75rem;">
                     <thead class="table-dark">
                         <tr>
                             <th rowspan="2" class="py-2 text-center border-end align-middle">S.No</th>
@@ -959,29 +1025,29 @@ require 'header.php';
                         <!-- Row 2: Sub-headers for Split Columns using exact table-dark header style -->
                         <tr style="font-size: 0.68rem;">
                             <!-- CE+TS -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- CE+TS+XML -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- CE -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- TS -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- PDF to XML -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- HTML -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- Direct HTML -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- XML+HTML -->
-                            <th class="py-1 text-center border-end text-light fw-normal">With</th>
-                            <th class="py-1 text-center border-end text-light fw-normal">W/o</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white">
@@ -1226,6 +1292,26 @@ require 'header.php';
             }, 5000);
         });
     });
+
+    // Ensure sticky multi-row sub-headers (WITH / W/O) dynamically align seamlessly under Row 1
+    function syncStickySubheaders() {
+        var table = document.querySelector('.nda-table');
+        if (!table) return;
+        var firstRowColspanTh = table.querySelector('thead tr:first-child th[colspan]');
+        if (firstRowColspanTh) {
+            var row1Height = firstRowColspanTh.offsetHeight;
+            if (row1Height > 0) {
+                var subHeaderThs = table.querySelectorAll('thead tr:nth-child(2) th');
+                subHeaderThs.forEach(function(th) {
+                    th.style.setProperty('top', row1Height + 'px', 'important');
+                });
+            }
+        }
+    }
+    window.addEventListener('DOMContentLoaded', syncStickySubheaders);
+    window.addEventListener('load', syncStickySubheaders);
+    window.addEventListener('resize', syncStickySubheaders);
+    setTimeout(syncStickySubheaders, 200);
 </script>
 </body>
 </html>
