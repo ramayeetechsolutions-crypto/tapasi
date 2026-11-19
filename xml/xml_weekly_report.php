@@ -153,7 +153,7 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     
     // Title
     echo '<table>';
-    echo '<tr><td colspan="14" class="title">PRODUCTION REPORT</td></tr>';
+    echo '<tr><td colspan="14" class="title">MEETING REPORT</td></tr>';
     echo '<tr><td colspan="14" class="subtitle">Week: ' . $week . ', Year: ' . $year . '</td></tr>';
     echo '<tr><td colspan="14" class="subtitle">Team: ' . $team_leader_team_name . '</td></tr>';
     echo '<tr><td colspan="14">&nbsp;</td></tr>';
@@ -491,7 +491,7 @@ if ($team_stats['avg_production'] > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Production Report - Team <?= h($team_leader_team_name) ?></title>
+    <title>Meeting Report - Team <?= h($team_leader_team_name) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -568,7 +568,7 @@ if ($team_stats['avg_production'] > 0) {
         <!-- Header with Title -->
         <div class="page-title-container">
             <div>
-                <h4 class="mb-1 text-white"><i class="fas fa-file-alt me-2"></i>PRODUCTION REPORT</h4>
+                <h4 class="mb-1 text-white"><i class="fas fa-file-alt me-2"></i>MEETING REPORT</h4>
                 <p class="text-white-50 mb-0 small">Team: <?= h($team_leader_team_name) ?> | Week <?= $week ?>, <?= $year ?> (<?= date('d-m-Y', strtotime($start_date)) ?> to <?= date('d-m-Y', strtotime($end_date)) ?>)</p>
             </div>
         </div>
@@ -635,6 +635,58 @@ if ($team_stats['avg_production'] > 0) {
                             $selected = ($val === "$start_date|$end_date" || ((int)$week === $w && empty($start_date_param))) ? 'selected' : '';
                             echo "<option value='{$val}' {$selected} data-week='{$w}' data-year='{$fy_yr}'>Week {$w} ({$w_start_dmy})</option>";
                             $dto_filter->modify('+1 week');
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Select Month</label>
+                    <select id="month_selector" class="form-select form-select-sm">
+                        <option value="">Select Month</option>
+                        <?php
+                        $fy_base = date('Y');
+                        if (date('n') < 4) { $fy_base--; }
+                        $fy_months = [
+                            ['m' => 4, 'y' => $fy_base, 'name' => 'April'],
+                            ['m' => 5, 'y' => $fy_base, 'name' => 'May'],
+                            ['m' => 6, 'y' => $fy_base, 'name' => 'June'],
+                            ['m' => 7, 'y' => $fy_base, 'name' => 'July'],
+                            ['m' => 8, 'y' => $fy_base, 'name' => 'August'],
+                            ['m' => 9, 'y' => $fy_base, 'name' => 'September'],
+                            ['m' => 10, 'y' => $fy_base, 'name' => 'October'],
+                            ['m' => 11, 'y' => $fy_base, 'name' => 'November'],
+                            ['m' => 12, 'y' => $fy_base, 'name' => 'December'],
+                            ['m' => 1, 'y' => $fy_base + 1, 'name' => 'January'],
+                            ['m' => 2, 'y' => $fy_base + 1, 'name' => 'February'],
+                            ['m' => 3, 'y' => $fy_base + 1, 'name' => 'March']
+                        ];
+                        foreach ($fy_months as $fym) {
+                            $m_str = str_pad($fym['m'], 2, '0', STR_PAD_LEFT);
+                            $y_str = $fym['y'];
+                            $m_start = "{$y_str}-{$m_str}-01";
+                            $last_day = date('t', strtotime($m_start));
+                            $m_end = "{$y_str}-{$m_str}-{$last_day}";
+                            $val = "{$m_start}|{$m_end}";
+                            $selected = ($val === "$start_date|$end_date") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>{$fym['name']} {$y_str}</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Select Year</label>
+                    <select id="year_selector" class="form-select form-select-sm">
+                        <option value="">Select Year</option>
+                        <?php
+                        $curr_fy_start = (int)date('Y');
+                        if ((int)date('n') < 4) { $curr_fy_start--; }
+                        for ($fy = $curr_fy_start + 1; $fy >= $curr_fy_start - 3; $fy--) {
+                            $fy_next = $fy + 1;
+                            $fy_start_date = "$fy-04-01";
+                            $fy_end_date = "$fy_next-03-31";
+                            $val = "{$fy_start_date}|{$fy_end_date}";
+                            $selected = ($val === "$start_date|$end_date") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>{$fy} - {$fy_next} (April - March)</option>";
                         }
                         ?>
                     </select>
@@ -796,6 +848,8 @@ if ($team_stats['avg_production'] > 0) {
                 var dates = val.split('|');
                 $('input[name="start_date"]').val(dates[0]);
                 $('input[name="end_date"]').val(dates[1]);
+                $('#month_selector').val('');
+                $('#year_selector').val('');
                 var selectedWeek = $(this).find('option:selected').data('week');
                 var selectedYear = $(this).find('option:selected').data('year');
                 if (selectedWeek) {
@@ -807,17 +861,67 @@ if ($team_stats['avg_production'] > 0) {
             }
         });
 
+        // Auto-fill Start and End dates when a Month is selected
+        $('#month_selector').change(function() {
+            var val = $(this).val();
+            if (val) {
+                var dates = val.split('|');
+                $('input[name="start_date"]').val(dates[0]);
+                $('input[name="end_date"]').val(dates[1]);
+                $('#week_selector').val('');
+                $('#year_selector').val('');
+            }
+        });
+
+        // Auto-fill Start and End dates when a Year is selected
+        $('#year_selector').change(function() {
+            var val = $(this).val();
+            if (val) {
+                var dates = val.split('|');
+                $('input[name="start_date"]').val(dates[0]);
+                $('input[name="end_date"]').val(dates[1]);
+                $('#week_selector').val('');
+                $('#month_selector').val('');
+            }
+        });
+
         // Calculate dynamic maximum for Y axis so values like 121.5% have proper headroom
         const netProdData = <?= json_encode($chart_net_prod) ?>;
         const accuracyData = <?= json_encode($chart_accuracy) ?>;
         const allValues = [...netProdData, ...accuracyData].map(Number).filter(v => !isNaN(v));
         const maxVal = allValues.length ? Math.max(...allValues) : 100;
-        const computedYMax = Math.max(120, Math.ceil((maxVal + 10) / 20) * 20);
+        const computedYMax = Math.max(120, Math.ceil((maxVal + 18) / 20) * 20);
+
+        // Plugin to display percentage on top of each bar
+        const barTopLabelPlugin = {
+            id: 'barTopLabelPlugin',
+            afterDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (!meta.hidden) {
+                        meta.data.forEach((element, index) => {
+                            const val = dataset.data[index];
+                            if (val !== undefined && val !== null && !isNaN(val) && val > 0) {
+                                ctx.save();
+                                ctx.font = 'bold 11px sans-serif';
+                                ctx.fillStyle = '#1e293b';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(val + '%', element.x, element.y - 3);
+                                ctx.restore();
+                            }
+                        });
+                    }
+                });
+            }
+        };
 
         // Performance Chart
         const ctx = document.getElementById('performanceChart').getContext('2d');
         const performanceChart = new Chart(ctx, {
             type: 'bar',
+            plugins: [barTopLabelPlugin],
             data: {
                 labels: <?= json_encode($chart_labels) ?>,
                 datasets: [{

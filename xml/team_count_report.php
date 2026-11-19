@@ -379,7 +379,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Report - Team Leader</title>
+    <title>Production Report - Team Leader</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
@@ -506,7 +506,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     
     <div class="main-content">
         <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
-            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;"><i class="fas fa-bullseye me-2" style="color: #ffffff !important;"></i>Team Report</h4>
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;"><i class="fas fa-bullseye me-2" style="color: #ffffff !important;"></i>Production Report</h4>
         </div>
 
         <!-- Filter Form -->
@@ -548,6 +548,58 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                             
                             // Move to next week's Monday
                             $dto->modify('+1 week');
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Select Month</label>
+                    <select id="month_selector" class="form-select">
+                        <option value="">Select Month</option>
+                        <?php
+                        $fy_base = date('Y');
+                        if (date('n') < 4) { $fy_base--; }
+                        $fy_months = [
+                            ['m' => 4, 'y' => $fy_base, 'name' => 'April'],
+                            ['m' => 5, 'y' => $fy_base, 'name' => 'May'],
+                            ['m' => 6, 'y' => $fy_base, 'name' => 'June'],
+                            ['m' => 7, 'y' => $fy_base, 'name' => 'July'],
+                            ['m' => 8, 'y' => $fy_base, 'name' => 'August'],
+                            ['m' => 9, 'y' => $fy_base, 'name' => 'September'],
+                            ['m' => 10, 'y' => $fy_base, 'name' => 'October'],
+                            ['m' => 11, 'y' => $fy_base, 'name' => 'November'],
+                            ['m' => 12, 'y' => $fy_base, 'name' => 'December'],
+                            ['m' => 1, 'y' => $fy_base + 1, 'name' => 'January'],
+                            ['m' => 2, 'y' => $fy_base + 1, 'name' => 'February'],
+                            ['m' => 3, 'y' => $fy_base + 1, 'name' => 'March']
+                        ];
+                        foreach ($fy_months as $fym) {
+                            $m_str = str_pad($fym['m'], 2, '0', STR_PAD_LEFT);
+                            $y_str = $fym['y'];
+                            $m_start = "{$y_str}-{$m_str}-01";
+                            $last_day = date('t', strtotime($m_start));
+                            $m_end = "{$y_str}-{$m_str}-{$last_day}";
+                            $val = "{$m_start}|{$m_end}";
+                            $selected = ($val === "$start_date|$end_date") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>{$fym['name']} {$y_str}</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Select Year</label>
+                    <select id="year_selector" class="form-select">
+                        <option value="">Select Year</option>
+                        <?php
+                        $curr_fy_start = (int)date('Y');
+                        if ((int)date('n') < 4) { $curr_fy_start--; }
+                        for ($fy = $curr_fy_start + 1; $fy >= $curr_fy_start - 3; $fy--) {
+                            $fy_next = $fy + 1;
+                            $fy_start_date = "$fy-04-01";
+                            $fy_end_date = "$fy_next-03-31";
+                            $val = "{$fy_start_date}|{$fy_end_date}";
+                            $selected = ($val === "$start_date|$end_date") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>{$fy} - {$fy_next} (April - March)</option>";
                         }
                         ?>
                     </select>
@@ -853,6 +905,32 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                     var dates = val.split('|'); // Split the value to get Start (Monday) and End date (Saturday)
                     $('input[name="start_date"]').val(dates[0]);
                     $('input[name="end_date"]').val(dates[1]);
+                    $('#month_selector').val('');
+                    $('#year_selector').val('');
+                }
+            });
+
+            // Auto-fill Start and End dates when a Month is selected
+            $('#month_selector').change(function() {
+                var val = $(this).val();
+                if (val) {
+                    var dates = val.split('|');
+                    $('input[name="start_date"]').val(dates[0]);
+                    $('input[name="end_date"]').val(dates[1]);
+                    $('#week_selector').val('');
+                    $('#year_selector').val('');
+                }
+            });
+
+            // Auto-fill Start and End dates when a Year is selected
+            $('#year_selector').change(function() {
+                var val = $(this).val();
+                if (val) {
+                    var dates = val.split('|');
+                    $('input[name="start_date"]').val(dates[0]);
+                    $('input[name="end_date"]').val(dates[1]);
+                    $('#week_selector').val('');
+                    $('#month_selector').val('');
                 }
             });
 

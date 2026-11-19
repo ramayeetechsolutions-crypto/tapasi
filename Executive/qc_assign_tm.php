@@ -309,9 +309,9 @@ $where_conditions = [
     "qc.status != 'Done'",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'CE+TS', 'CE+TS+XML', 'TS', 'TS+XML', 'LE', 'CE+LE', 'CE+LE+XML', 'CE+PAG+LE')",
     "(
-        EXISTS (SELECT 1 FROM pag WHERE pag.job_id = qc.job_id AND (pag.status = 'Completed' OR pag.status = 'Done'))
+        ((p.job_name LIKE '%PAG%' OR p.job_name LIKE '%TS%') AND EXISTS (SELECT 1 FROM pag WHERE pag.job_id = qc.job_id AND (pag.status = 'Completed' OR pag.status = 'Done')))
         OR 
-        EXISTS (SELECT 1 FROM le WHERE le.job_id = qc.job_id AND le.status IN ('Completed', 'Done', 'LE-QC Done', 'LE & LE-QC Done'))
+        (p.job_name NOT LIKE '%PAG%' AND p.job_name NOT LIKE '%TS%' AND EXISTS (SELECT 1 FROM le WHERE le.job_id = qc.job_id AND le.status IN ('Completed', 'Done', 'LE-QC Done', 'LE & LE-QC Done')))
     )"
 ];
 $params = [];

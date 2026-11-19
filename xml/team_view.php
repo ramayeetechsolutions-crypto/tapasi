@@ -95,16 +95,21 @@ $mysqli->close();
         }
         
         #teamTable thead th {
-         /* background-color: #2c3e50;
-            color: white;
-            font-weight: bold;
-            border-bottom: 2px solid #1a252f;
-            padding: 12px 15px; */
             background-color: #5e6b77 !important; /* Slate Grey */
-            color: white;
+            color: white !important;
             font-weight: bold;
-            border-bottom: 2px solid #4a545e;
+            border-bottom: 2px solid #4a545e !important;
+            border-right: 1px solid #4a545e !important;
             padding: 12px 15px;
+        }
+        #teamTable thead th:last-child {
+            border-right: none !important;
+        }
+        #teamTable thead tr th:first-child {
+            border-top-left-radius: 8px;
+        }
+        #teamTable thead tr th:last-child {
+            border-top-right-radius: 8px;
         }
         
         #teamTable tbody tr { transition: background-color 0.3s ease; }
@@ -131,11 +136,28 @@ $mysqli->close();
             background-color: white;
             margin-bottom: 0;
         }
+        .inner-table thead th,
+        .inner-table thead.table-light th,
         .inner-table th {
-            background-color: #f1f3f5;
-            color: #495057;
+            background-color: #5e6b77 !important;
+            color: white !important;
             font-weight: 700;
-            border-bottom: 2px solid #dee2e6;
+            border-bottom: 2px solid #4a545e !important;
+            border-right: 1px solid #4a545e !important;
+            padding: 10px 14px;
+        }
+        .inner-table thead th:last-child,
+        .inner-table thead.table-light th:last-child,
+        .inner-table th:last-child {
+            border-right: none !important;
+        }
+        .inner-table thead tr th:first-child,
+        .inner-table thead.table-light tr th:first-child {
+            border-top-left-radius: 6px;
+        }
+        .inner-table thead tr th:last-child,
+        .inner-table thead.table-light tr th:last-child {
+            border-top-right-radius: 6px;
         }
         .inner-table td {
             vertical-align: middle;
@@ -358,7 +380,7 @@ $mysqli->close();
                                         '<th>Process Details</th>' +
                                         '<th class="text-center" style="width: 100px;">Action</th>' +
                                     '</tr>' +
-                                '</thead>'
+                                '</thead>' +
                                 '<tbody>';
                     
                     executivesArray.forEach(function(executive, index) {

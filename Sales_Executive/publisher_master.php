@@ -33,13 +33,17 @@ function ensure_publisher_master_schema($mysqli) {
 
     $requiredColumns = [
         'name' => "VARCHAR(255) DEFAULT NULL AFTER `id`",
-        'year' => "VARCHAR(50) DEFAULT NULL AFTER `name`"
+        'year' => "VARCHAR(100) DEFAULT NULL AFTER `name`"
     ];
 
     foreach ($requiredColumns as $col => $definition) {
         $checkCol = $mysqli->query("SHOW COLUMNS FROM `publisher_master` LIKE '$col'");
         if ($checkCol && $checkCol->num_rows === 0) {
             $mysqli->query("ALTER TABLE `publisher_master` ADD COLUMN `$col` $definition");
+        } else {
+            if ($col === 'year') {
+                $mysqli->query("ALTER TABLE `publisher_master` MODIFY COLUMN `year` VARCHAR(100) DEFAULT NULL");
+            }
         }
     }
 }

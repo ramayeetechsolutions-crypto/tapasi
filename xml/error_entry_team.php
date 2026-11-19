@@ -521,6 +521,7 @@ if (!$entries) {
                                 <select class="form-control select2" id="error_taken_by" name="error_taken_by"
                                         data-placeholder="Select employee">
                                     <option value=""></option>
+                                    <option value="Others" <?= ($editEntry['error_taken_by'] ?? '') === 'Others' ? 'selected' : '' ?>>Others</option>
                                     <!-- Existing entries from employee_master table -->
                                     <?php if($employees && $employees->num_rows > 0): ?>
                                         <?php $employees->data_seek(0); ?>

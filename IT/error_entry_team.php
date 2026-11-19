@@ -243,10 +243,10 @@ $filter_employee    = trim($_GET['team'] ?? $_GET['employee'] ?? '');
 $filter_status      = trim($_GET['status'] ?? '');
 $filter_sort        = trim($_GET['sort'] ?? 'id');
 
-// Build SQL query on error_log table (DESCENDING order, strictly IT section errors)
+// Build SQL query on error_log table (DESCENDING order, all error logs including IT, Sales, and Production)
 $sql = "SELECT id, week, error_date, team, department, error_taken_by, internal_external, client_name, article, error_type, error_subtype, yn, error_made_by, reason, error_photo, status, created_date 
         FROM error_log";
-$cond = ["(team = 'IT' OR department = 'IT')"];
+$cond = [];
 $params = [];
 $types = '';
 
@@ -276,10 +276,13 @@ if ($filter_article !== '') {
 }
 
 if ($filter_employee !== '') {
-    $cond[] = "(error_made_by = ? OR error_taken_by = ?)";
+    $cond[] = "(error_made_by = ? OR error_taken_by = ? OR error_made_by LIKE ? OR error_taken_by LIKE ?)";
+    $like = "%$filter_employee%";
     $params[] = $filter_employee;
     $params[] = $filter_employee;
-    $types .= 'ss';
+    $params[] = $like;
+    $params[] = $like;
+    $types .= 'ssss';
 }
 
 if ($filter_status !== '') {
@@ -312,13 +315,18 @@ if (!empty($types)) {
     $entries = $mysqli->query($sql);
 }
 
-// Fetch unique filter values for IT errors
-$unique_weeks = $mysqli->query("SELECT DISTINCT week FROM error_log WHERE week != '' AND (team = 'IT' OR department = 'IT') ORDER BY week DESC");
-$unique_clients = $mysqli->query("SELECT DISTINCT client_name FROM error_log WHERE client_name != '' AND (team = 'IT' OR department = 'IT') ORDER BY client_name ASC");
-$unique_articles = $mysqli->query("SELECT DISTINCT article FROM error_log WHERE article != '' AND (team = 'IT' OR department = 'IT') ORDER BY article ASC");
-$all_employees = $mysqli->query("SELECT employee_name AS name FROM employee_master WHERE status = 'Active' AND team_id = 8 ORDER BY employee_name ASC");
+// Fetch unique filter values across all error logs (IT, Sales, Production)
+$unique_weeks = $mysqli->query("SELECT DISTINCT week FROM error_log WHERE week != '' ORDER BY week DESC");
+$unique_clients = $mysqli->query("SELECT DISTINCT client_name FROM error_log WHERE client_name != '' ORDER BY client_name ASC");
+$unique_articles = $mysqli->query("SELECT DISTINCT article FROM error_log WHERE article != '' ORDER BY article ASC");
+// Fetch all employees/names present in error_log so dropdown matches table data
+$all_employees = $mysqli->query("SELECT DISTINCT name FROM (
+    SELECT error_made_by AS name FROM error_log WHERE error_made_by != '' AND error_made_by IS NOT NULL
+    UNION
+    SELECT error_taken_by AS name FROM error_log WHERE error_taken_by != '' AND error_taken_by IS NOT NULL
+) AS emps ORDER BY name ASC");
 if (!$all_employees || $all_employees->num_rows === 0) {
-    $all_employees = $mysqli->query("SELECT DISTINCT error_made_by AS name FROM error_log WHERE error_made_by != '' AND (team = 'IT' OR department = 'IT') ORDER BY error_made_by ASC");
+    $all_employees = $mysqli->query("SELECT employee_name AS name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
 }
 ?>
 <!DOCTYPE html>
@@ -460,7 +468,7 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                             <div class="mb-3">
                                 <label for="week" class="form-label">Week <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="week" name="week" 
-                                       value="<?= h($editEntry['week'] ?? '') ?>" 
+                                       value="<?= h($editEntry['week'] ?? ($mode === 'add' ? 'Week ' . (int)date('W') : '')) ?>" 
                                        placeholder="e.g., Week 1, Jan-2024" required>
                             </div>
                         </div>
@@ -468,7 +476,7 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                             <div class="mb-3">
                                 <label for="date" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="date" name="error_date" 
-                                       value="<?= h($editEntry['error_date'] ?? '') ?>">
+                                       value="<?= h($editEntry['error_date'] ?? ($mode === 'add' ? date('Y-m-d') : '')) ?>">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -795,8 +803,13 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                                     
                                     <!-- Photo Column -->
                                     <td class="text-center export-remove">
-                                        <?php if (!empty($row['error_photo'])): ?>
-                                            <a href="uploads/error_photos/<?= h($row['error_photo']) ?>" target="_blank" class="btn btn-sm btn-outline-info" title="View Image">
+                                        <?php if (!empty($row['error_photo'])): 
+                                            $photo_src = 'uploads/error_photos/' . $row['error_photo'];
+                                            if (!file_exists(__DIR__ . '/' . $photo_src) && file_exists(dirname(__DIR__) . '/Sales/' . $photo_src)) {
+                                                $photo_src = '../Sales/' . $photo_src;
+                                            }
+                                        ?>
+                                            <a href="<?= h($photo_src) ?>" target="_blank" class="btn btn-sm btn-outline-info" title="View Image">
                                                 <i class="fas fa-image"></i>
                                             </a>
                                         <?php else: ?>
@@ -841,8 +854,38 @@ if (!$all_employees || $all_employees->num_rows === 0) {
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
+        function updateWeekFromDate() {
+            const dateInput = document.getElementById('date') || document.getElementById('error_date');
+            const weekInput = document.getElementById('week');
+            if (!dateInput || !weekInput) return;
+            
+            const dateVal = dateInput.value;
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    // ISO 8601 week calculation
+                    const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
+                    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+                    const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+                    weekInput.value = 'Week ' + weekNo;
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             $('.select2').select2({ width: '100%', allowClear: true });
+
+            const dateEl = document.getElementById('date') || document.getElementById('error_date');
+            const weekEl = document.getElementById('week');
+            if (dateEl) {
+                dateEl.addEventListener('change', updateWeekFromDate);
+                dateEl.addEventListener('input', updateWeekFromDate);
+                if (dateEl.value && (!weekEl || !weekEl.value.trim())) {
+                    updateWeekFromDate();
+                }
+            }
         });
 
         // Export Table to Excel (SheetJS)

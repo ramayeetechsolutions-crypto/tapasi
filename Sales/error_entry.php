@@ -490,7 +490,7 @@ if (!$entries) $entries = false;
                             <div class="mb-3">
                                 <label for="week" class="form-label">Week <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="week" name="week" 
-                                       value="<?= h($editEntry['week'] ?? '') ?>" 
+                                       value="<?= h($editEntry['week'] ?? ($mode === 'add' ? 'Week ' . (int)date('W') : '')) ?>" 
                                        placeholder="e.g., Week 1, Jan-2024" required>
                             </div>
                         </div>
@@ -498,7 +498,7 @@ if (!$entries) $entries = false;
                             <div class="mb-3">
                                 <label for="error_date" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="error_date" name="error_date" 
-                                       value="<?= h($editEntry['error_date'] ?? '') ?>">
+                                       value="<?= h($editEntry['error_date'] ?? ($mode === 'add' ? date('Y-m-d') : '')) ?>">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -887,9 +887,39 @@ if (!$entries) $entries = false;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        function updateWeekFromDate() {
+            const dateInput = document.getElementById('error_date');
+            const weekInput = document.getElementById('week');
+            if (!dateInput || !weekInput) return;
+            
+            const dateVal = dateInput.value;
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    // ISO 8601 week calculation
+                    const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
+                    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+                    const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+                    weekInput.value = 'Week ' + weekNo;
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             $('.select2').select2({ width: '100%', allowClear: true, tags: true });
             $('.select2-sm').select2({ width: '100%', minimumResultsForSearch: 10 });
+
+            const dateEl = document.getElementById('error_date');
+            const weekEl = document.getElementById('week');
+            if (dateEl) {
+                dateEl.addEventListener('change', updateWeekFromDate);
+                dateEl.addEventListener('input', updateWeekFromDate);
+                if (dateEl.value && (!weekEl || !weekEl.value.trim())) {
+                    updateWeekFromDate();
+                }
+            }
         });
 
         // Generate Sample CSV Template for Download

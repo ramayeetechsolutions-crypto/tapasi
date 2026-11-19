@@ -993,11 +993,8 @@ function fetchData() {
                             } else if (val.includes('✓')) {
                                 // Completed State (Full Green Cell)
                                 $(td).attr('style', 'background-color: #198754 !important; color: #ffffff !important; font-weight: 600 !important; vertical-align: middle !important;');
-                            } else if (val.indexOf('/') === -1) {
-                                // NEW: TL assigned, TM innum click pannala -> Blue
-                                $(td).attr('style', 'background-color: #0d6efd !important; color: #ffffff !important; vertical-align: middle !important;');
                             } else {
-                                // In-Process State (Full Orange Cell)
+                                // Assigned to member State (Full Orange Cell)
                                 $(td).attr('style', 'background-color: #fd7e14 !important; color: #ffffff !important; vertical-align: middle !important;');
                             }
                         },
@@ -1024,20 +1021,9 @@ function fetchData() {
                                         </span>`;
                             }
 
-                            // NEW: TL assigned (no '/' yet) -> show name on Blue cell, TM click panna Orange aagum
-                            if (val.indexOf('/') === -1) {
-                                let rawUser = row[f + '_raw'] || '';
-                                if (rawUser === currentUser) {
-                                    return `<button type="button" class="btn btn-light btn-sm rounded-pill px-3 py-0 shadow-sm" 
-                                                style="font-size:11px; height:24px; line-height:22px; color: #0d6efd; font-weight: 700; border: none;" 
-                                                onclick="assignTask(${row.id}, '${f}')">${val}</button>`;
-                                }
-                                return `<span style="color:#fff; font-weight:700; font-size:11px;">${val}</span>`;
-                            }
-
                             // 4. Step 2: Assigned In-Progress -> White text, input, and white check button (Cell is Orange)
                             let p = val.split('/');
-                            let user = p[0] || currentUser;
+                            let user = p[0] || val || currentUser;
                             let seq = p[2] ? p[2].replace('✓', '').trim() : '';
 
                             return `<div class="d-flex align-items-center justify-content-center gap-1">

@@ -508,21 +508,27 @@ if ($current_user_name) {
                                 <select class="form-select" id="department" name="department">
                                     <option value="">Select Team</option>
                                     <?php
+                                    $hasXmlOption = false;
+                                    $defaultTeam = !empty($currentUserSystemData['team']) ? $currentUserSystemData['team'] : ($_SESSION['teamname'] ?? 'XML');
                                     if($teams):
                                         $teams->data_seek(0);
                                         while($team = $teams->fetch_assoc()):
+                                            if (strcasecmp($team['team_name'], 'XML') === 0) { $hasXmlOption = true; }
                                             $selected = '';
                                             if ($mode === 'edit' && isset($editTicket)) {
-                                                $selected = ($editTicket['department'] == $team['team_name']) ? 'selected' : '';
-                                            } elseif ($mode === 'add' && !empty($currentUserSystemData['team'])) {
-                                                $selected = ($currentUserSystemData['team'] == $team['team_name']) ? 'selected' : '';
+                                                $selected = (strcasecmp($editTicket['department'], $team['team_name']) === 0) ? 'selected' : '';
+                                            } elseif ($mode === 'add') {
+                                                $selected = (strcasecmp($defaultTeam, $team['team_name']) === 0) ? 'selected' : '';
                                             }
                                     ?>
                                         <option value="<?= h($team['team_name']) ?>" <?= $selected ?>>
                                             <?= h($team['team_name']) ?>
                                         </option>
                                     <?php endwhile;
-                                    endif; ?>
+                                    endif; 
+                                    if (!$hasXmlOption): ?>
+                                        <option value="XML" <?= (strcasecmp($defaultTeam, 'XML') === 0) ? 'selected' : '' ?>>XML</option>
+                                    <?php endif; ?>
                                 </select>
                             </div>
                         </div>
@@ -865,6 +871,8 @@ if ($current_user_name) {
                     // Fill Team dropdown
                     if (autoFillData.team && autoFillData.team.trim() !== '') {
                         $('#department').val(autoFillData.team).trigger('change');
+                    } else if (!$('#department').val()) {
+                        $('#department').val('XML').trigger('change');
                     }
                     
                     // Fill System No

@@ -468,7 +468,7 @@ if (!$entries) $entries = false;
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
-            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry (XML)' : 'Add New Error Log Entry (XML)' ?></h4>
+            <h4 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-bug me-2"></i><?= $mode === 'edit' ? 'Edit Error Log Entry (XML - WK)' : 'Add New Error Log Entry (XML - WK)' ?></h4>
             <a href="error_entry_wk.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -488,7 +488,7 @@ if (!$entries) $entries = false;
                             <div class="mb-3">
                                 <label for="week" class="form-label">Week <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="week" name="week" 
-                                       value="<?= h($editEntry['week'] ?? '') ?>" 
+                                       value="<?= h($editEntry['week'] ?? ($mode === 'add' ? 'Week ' . (int)date('W') : '')) ?>" 
                                        placeholder="e.g., Week 1, Jan-2024" required>
                             </div>
                         </div>
@@ -496,7 +496,7 @@ if (!$entries) $entries = false;
                             <div class="mb-3">
                                 <label for="error_date" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="error_date" name="error_date" 
-                                       value="<?= h($editEntry['error_date'] ?? '') ?>">
+                                       value="<?= h($editEntry['error_date'] ?? ($mode === 'add' ? date('Y-m-d') : '')) ?>">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -531,6 +531,7 @@ if (!$entries) $entries = false;
                                 <label for="error_taken_by" class="form-label">Error Taken By</label>
                                 <select class="form-control select2" id="error_taken_by" name="error_taken_by" data-placeholder="Select employee">
                                     <option value=""></option>
+                                    <option value="Others" <?= ($editEntry['error_taken_by'] ?? '') === 'Others' ? 'selected' : '' ?>>Others</option>
                                     <?php if($employees && $employees->num_rows > 0): $employees->data_seek(0); while($emp_row = $employees->fetch_assoc()): ?>
                                         <option value="<?= h($emp_row['employee_name']) ?>" <?= ($editEntry['error_taken_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '' ?>><?= h($emp_row['employee_name']) ?></option>
                                     <?php endwhile; endif; ?>
@@ -589,7 +590,7 @@ if (!$entries) $entries = false;
                                 <select class="form-control select2" id="error_subtype" name="error_subtype">
                                     <option value="">Select Error Subtype</option>
                                     <?php 
-                                        $subtypes_list =['Ack_Client', 'Ack_Sales', 'Communication Issue', 'Wrong Upload', 'Commitment not met', 'Feedback not send', 'Improper response', 'Reply late', 'Priority to same client', 'Priority to other client', 'Missed out Crx', 'Misunderstand Crx'];
+                                        $subtypes_list =['Ack_Client', 'Ack_Sales', 'Communication Issue', 'Wrong Upload', 'Commitment not met', 'Feedback not send', 'Improper response', 'Reply late', 'Priority to same client', 'Priority to other client', 'Missed out Crx', 'Misunderstand Crx', 'Others'];
                                         foreach($subtypes_list as $subtype): 
                                             $selected = (($editEntry['error_subtype'] ?? '') === $subtype) ? 'selected' : '';
                                     ?>
@@ -869,9 +870,39 @@ if (!$entries) $entries = false;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        function updateWeekFromDate() {
+            const dateInput = document.getElementById('error_date');
+            const weekInput = document.getElementById('week');
+            if (!dateInput || !weekInput) return;
+            
+            const dateVal = dateInput.value;
+            if (dateVal) {
+                const parts = dateVal.split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    // ISO 8601 week calculation
+                    const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
+                    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+                    const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+                    weekInput.value = 'Week ' + weekNo;
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             $('.select2').select2({ width: '100%', allowClear: true, tags: true });
             $('.select2-sm').select2({ width: '100%', minimumResultsForSearch: 10 });
+
+            const dateEl = document.getElementById('error_date');
+            const weekEl = document.getElementById('week');
+            if (dateEl) {
+                dateEl.addEventListener('change', updateWeekFromDate);
+                dateEl.addEventListener('input', updateWeekFromDate);
+                if (dateEl.value && (!weekEl || !weekEl.value.trim())) {
+                    updateWeekFromDate();
+                }
+            }
         });
 
         // Generate Sample CSV Template for Download

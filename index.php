@@ -530,17 +530,18 @@ function checkSessionTimeout($mysqli) {
             position: relative;
         }
 
-        .input-with-icon i {
+        .input-with-icon > i {
             position: absolute;
             left: 15px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--gray);
+            pointer-events: none;
         }
 
         .form-control {
             width: 100%;
-            padding: 14px 15px 14px 45px;
+            padding: 14px 45px 14px 45px;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             font-size: 16px;
@@ -562,6 +563,18 @@ function checkSessionTimeout($mysqli) {
             transform: translateY(-50%);
             color: var(--gray);
             cursor: pointer;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-toggle i {
+            position: static;
+            left: auto;
+            top: auto;
+            transform: none;
+            color: inherit;
         }
 
         .form-options {
