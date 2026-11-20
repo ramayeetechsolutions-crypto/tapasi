@@ -4,6 +4,22 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
+// ---------- Auto-migration for Database Columns ----------
+$check_prev_col = $mysqli->query("SHOW COLUMNS FROM nda_details LIKE 'previous_status'");
+if ($check_prev_col && $check_prev_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE nda_details ADD COLUMN previous_status VARCHAR(255) NULL AFTER revision_amount_status");
+}
+$check_prev_cm = $mysqli->query("SHOW COLUMNS FROM client_master LIKE 'previous_status'");
+if ($check_prev_cm && $check_prev_cm->num_rows == 0) {
+    $mysqli->query("ALTER TABLE client_master ADD COLUMN previous_status VARCHAR(255) NULL AFTER status");
+}
+$check_pmc_len = $mysqli->query("SHOW COLUMNS FROM nda_details LIKE 'pmc'");
+if ($check_pmc_len && $pmc_row = $check_pmc_len->fetch_assoc()) {
+    if (stripos($pmc_row['Type'], 'varchar(100)') !== false) {
+        $mysqli->query("ALTER TABLE nda_details MODIFY COLUMN pmc VARCHAR(255) NULL");
+    }
+}
+
 // ---------- Include SimpleXLSX ----------
 $libPath = dirname(__DIR__) . '/simplexlsx-master/src/SimpleXLSX.php';
 if (!file_exists($libPath)) $libPath = dirname(__DIR__) . '/simplexlsx-master/SimpleXLSX.php';
@@ -39,6 +55,7 @@ $split_services = [
     'ce_ts_xml'   => 'CE+TS+XML',
     'ce'          => 'CE',
     'ts'          => 'TS',
+    'pmc'         => 'PMC',
     'pdf_to_xml'  => 'PDF to XML',
     'html'        => 'HTML',
     'direct_html' => 'Direct HTML',
@@ -47,7 +64,6 @@ $split_services = [
 
 $single_services = [
     'workflow_all'=> 'All',
-    'pmc'         => 'PMC',
     'pubmed'      => 'PUBMED',
     'clockss'     => 'CLOCKSS',
     'scielo'      => 'SCIELO',
@@ -103,6 +119,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $count_skipped = 0;
             $errors =[];
 
+            // Detect if 30-column header with Previous Status is present
+            $has_prev_status = false;
+            if (!empty($rows[0])) {
+                foreach ($rows[0] as $h_cell) {
+                    if (stripos(trim((string)$h_cell), 'previous') !== false) {
+                        $has_prev_status = true;
+                        break;
+                    }
+                }
+            }
+
             foreach ($rows as $k => $r) {
                 if ($k === 0) continue; // Skip Header row
 
@@ -114,9 +141,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         continue;
                     }
 
-                    // Extract Country and Client Status 
+                    // Extract Country and Statuses based on header detection
                     $country = $mysqli->real_escape_string(trim($r[2] ?? ''));
-                    $client_status = $mysqli->real_escape_string(trim($r[3] ?? 'Active'));
+                    if ($has_prev_status) {
+                        $previous_status = $mysqli->real_escape_string(trim($r[3] ?? ''));
+                        $client_status   = $mysqli->real_escape_string(trim($r[4] ?? 'Active'));
+                        $nda_status      = $mysqli->real_escape_string(trim($r[5] ?? 'No'));
+                        $revision_status = $mysqli->real_escape_string(trim($r[6] ?? 'No'));
+                        $signed_date_raw = $r[7] ?? '';
+                        // Workflow Fields (indices shifted by +1)
+                        $workflow_all    = $mysqli->real_escape_string(trim($r[9] ?? ''));
+                        $ce_ts           = $mysqli->real_escape_string(trim($r[10] ?? ''));
+                        $ce_ts_xml       = $mysqli->real_escape_string(trim($r[11] ?? ''));
+                        $ce              = $mysqli->real_escape_string(trim($r[12] ?? ''));
+                        $ts              = $mysqli->real_escape_string(trim($r[13] ?? ''));
+                        $pmc             = $mysqli->real_escape_string(trim($r[14] ?? ''));
+                        $pubmed          = $mysqli->real_escape_string(trim($r[15] ?? ''));
+                        $clockss         = $mysqli->real_escape_string(trim($r[16] ?? ''));
+                        $scielo          = $mysqli->real_escape_string(trim($r[17] ?? ''));
+                        $crossref        = $mysqli->real_escape_string(trim($r[18] ?? ''));
+                        $doaj            = $mysqli->real_escape_string(trim($r[19] ?? ''));
+                        $bibilat         = $mysqli->real_escape_string(trim($r[20] ?? ''));
+                        $medes           = $mysqli->real_escape_string(trim($r[21] ?? ''));
+                        $pdf_to_xml      = $mysqli->real_escape_string(trim($r[22] ?? ''));
+                        $html            = $mysqli->real_escape_string(trim($r[23] ?? ''));
+                        $new_html        = $mysqli->real_escape_string(trim($r[24] ?? ''));
+                        $direct_html     = $mysqli->real_escape_string(trim($r[25] ?? ''));
+                        $xml_html        = $mysqli->real_escape_string(trim($r[26] ?? ''));
+                        $image           = $mysqli->real_escape_string(trim($r[27] ?? ''));
+                        $math            = $mysqli->real_escape_string(trim($r[28] ?? ''));
+                        $remarks         = $mysqli->real_escape_string(trim($r[29] ?? ''));
+                    } else {
+                        $previous_status = '';
+                        $client_status   = $mysqli->real_escape_string(trim($r[3] ?? 'Active'));
+                        $nda_status      = $mysqli->real_escape_string(trim($r[4] ?? 'No'));
+                        $revision_status = $mysqli->real_escape_string(trim($r[5] ?? 'No'));
+                        $signed_date_raw = $r[6] ?? '';
+                        // Workflow Fields
+                        $workflow_all    = $mysqli->real_escape_string(trim($r[8] ?? ''));
+                        $ce_ts           = $mysqli->real_escape_string(trim($r[9] ?? ''));
+                        $ce_ts_xml       = $mysqli->real_escape_string(trim($r[10] ?? ''));
+                        $ce              = $mysqli->real_escape_string(trim($r[11] ?? ''));
+                        $ts              = $mysqli->real_escape_string(trim($r[12] ?? ''));
+                        $pmc             = $mysqli->real_escape_string(trim($r[13] ?? ''));
+                        $pubmed          = $mysqli->real_escape_string(trim($r[14] ?? ''));
+                        $clockss         = $mysqli->real_escape_string(trim($r[15] ?? ''));
+                        $scielo          = $mysqli->real_escape_string(trim($r[16] ?? ''));
+                        $crossref        = $mysqli->real_escape_string(trim($r[17] ?? ''));
+                        $doaj            = $mysqli->real_escape_string(trim($r[18] ?? ''));
+                        $bibilat         = $mysqli->real_escape_string(trim($r[19] ?? ''));
+                        $medes           = $mysqli->real_escape_string(trim($r[20] ?? ''));
+                        $pdf_to_xml      = $mysqli->real_escape_string(trim($r[21] ?? ''));
+                        $html            = $mysqli->real_escape_string(trim($r[22] ?? ''));
+                        $new_html        = $mysqli->real_escape_string(trim($r[23] ?? ''));
+                        $direct_html     = $mysqli->real_escape_string(trim($r[24] ?? ''));
+                        $xml_html        = $mysqli->real_escape_string(trim($r[25] ?? ''));
+                        $image           = $mysqli->real_escape_string(trim($r[26] ?? ''));
+                        $math            = $mysqli->real_escape_string(trim($r[27] ?? ''));
+                        $remarks         = $mysqli->real_escape_string(trim($r[28] ?? ''));
+                    }
                     if (empty($client_status)) { $client_status = 'Active'; }
 
                     // Check if client exists in client_master (unique constraint)
@@ -127,10 +210,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $client_id = $check_client->fetch_assoc()['client_id'];
                         
                         // Optionally update country/status if needed
-                        $mysqli->query("UPDATE client_master SET country='$country', status='$client_status' WHERE client_id=$client_id");
+                        $mysqli->query("UPDATE client_master SET country='$country', status='$client_status', previous_status='$previous_status' WHERE client_id=$client_id");
                     } else {
                         // Create new client (unique entry)
-                        $sql_client = "INSERT INTO client_master (client_name, country, status) VALUES ('" . $mysqli->real_escape_string($client_name) . "', '$country', '$client_status')";
+                        $sql_client = "INSERT INTO client_master (client_name, country, status, previous_status) VALUES ('" . $mysqli->real_escape_string($client_name) . "', '$country', '$client_status', '$previous_status')";
                         if ($mysqli->query($sql_client)) {
                             $client_id = $mysqli->insert_id;
                         } else {
@@ -139,35 +222,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             continue;
                         }
                     }
-
-                    $nda_status = $mysqli->real_escape_string(trim($r[4] ?? 'No'));
-                    $revision_status = $mysqli->real_escape_string(trim($r[5] ?? 'No'));
-                    $signed_date_raw = $r[6] ?? '';
-                    
-                    // Workflow Fields (Shifted index +1 due to S.No)
-                    $workflow_all = $mysqli->real_escape_string(trim($r[8] ?? ''));
-                    $ce_ts = $mysqli->real_escape_string(trim($r[9] ?? ''));
-                    $ce_ts_xml = $mysqli->real_escape_string(trim($r[10] ?? ''));
-                    $ce = $mysqli->real_escape_string(trim($r[11] ?? ''));
-                    $ts = $mysqli->real_escape_string(trim($r[12] ?? ''));
-                    $pmc = $mysqli->real_escape_string(trim($r[13] ?? ''));
-                    $pubmed = $mysqli->real_escape_string(trim($r[14] ?? ''));
-                    $clockss = $mysqli->real_escape_string(trim($r[15] ?? ''));
-                    $scielo = $mysqli->real_escape_string(trim($r[16] ?? ''));
-                    $crossref = $mysqli->real_escape_string(trim($r[17] ?? ''));
-                    $doaj = $mysqli->real_escape_string(trim($r[18] ?? ''));
-                    $bibilat = $mysqli->real_escape_string(trim($r[19] ?? ''));
-                    $medes = $mysqli->real_escape_string(trim($r[20] ?? ''));
-                    $pdf_to_xml = $mysqli->real_escape_string(trim($r[21] ?? ''));
-                    $html = $mysqli->real_escape_string(trim($r[22] ?? ''));
-                    $new_html = $mysqli->real_escape_string(trim($r[23] ?? ''));
-                    $direct_html = $mysqli->real_escape_string(trim($r[24] ?? ''));
-                    $xml_html = $mysqli->real_escape_string(trim($r[25] ?? ''));
-                    $image = $mysqli->real_escape_string(trim($r[26] ?? ''));
-                    $math = $mysqli->real_escape_string(trim($r[27] ?? ''));
-                    
-                    // Remarks
-                    $remarks = $mysqli->real_escape_string(trim($r[28] ?? ''));
 
                     // Process Date
                     $signed_date = NULL;
@@ -184,11 +238,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                     // Always insert new NDA record (allow multiple NDAs per client)
                     $sql = "INSERT INTO nda_details (
-                            client_id, nda_status, revision_amount_status, signed_date, 
+                            client_id, previous_status, nda_status, revision_amount_status, signed_date, 
                             workflow_all, ce_ts, ce_ts_xml, ce, ts, pmc, pubmed, clockss, scielo, crossref, doaj, bibilat, medes, pdf_to_xml, html, new_html, direct_html, xml_html, image, math, remarks,
                             created_at, updated_at
                         ) VALUES (
-                            $client_id, '$nda_status', '$revision_status', $sql_date, 
+                            $client_id, '$previous_status', '$nda_status', '$revision_status', $sql_date, 
                             '$workflow_all', '$ce_ts', '$ce_ts_xml', '$ce', '$ts', '$pmc', '$pubmed', '$clockss', '$scielo', '$crossref', '$doaj', '$bibilat', '$medes', '$pdf_to_xml', '$html', '$new_html', '$direct_html', '$xml_html', '$image', '$math', '$remarks',
                             NOW(), NOW()
                         )";
@@ -256,6 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
         $client_name = $mysqli->real_escape_string(trim($_POST['client_name'] ?? ''));
         $country = $mysqli->real_escape_string(trim($_POST['country'] ?? ''));
         $client_status = $mysqli->real_escape_string($_POST['client_status'] ?? 'Active');
+        $previous_status = $mysqli->real_escape_string(trim($_POST['previous_status'] ?? ''));
 
         // NDA Fields
         $nda_status = $mysqli->real_escape_string($_POST['nda_status'] ?? 'No');
@@ -285,13 +340,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
         $ce_ts_xml   = $get_split('ce_ts_xml');
         $ce          = $get_split('ce');
         $ts          = $get_split('ts');
+        $pmc         = $get_split('pmc');
         $pdf_to_xml  = $get_split('pdf_to_xml');
         $html        = $get_split('html');
         $direct_html = $get_split('direct_html');
         $xml_html    = $get_split('xml_html');
 
         // Single-rate fields
-        $pmc = $mysqli->real_escape_string($_POST['pmc'] ?? '');
         $pubmed = $mysqli->real_escape_string($_POST['pubmed'] ?? '');
         $clockss = $mysqli->real_escape_string($_POST['clockss'] ?? '');
         $scielo = $mysqli->real_escape_string($_POST['scielo'] ?? '');
@@ -313,11 +368,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
                 $client_data = $check_client->fetch_assoc();
                 $target_client_id = $client_data['client_id'];
                 
-                // Update country/status if needed
-                $mysqli->query("UPDATE client_master SET country='$country', status='$client_status' WHERE client_id=$target_client_id");
+                // Update country/status/previous_status if needed
+                $mysqli->query("UPDATE client_master SET country='$country', status='$client_status', previous_status='$previous_status' WHERE client_id=$target_client_id");
             } else {
                 // Create new client (unique entry)
-                $sql_client = "INSERT INTO client_master (client_name, country, status) VALUES ('$client_name', '$country', '$client_status')";
+                $sql_client = "INSERT INTO client_master (client_name, country, status, previous_status) VALUES ('$client_name', '$country', '$client_status', '$previous_status')";
                 if ($mysqli->query($sql_client)) {
                     $target_client_id = $mysqli->insert_id;
                 } else {
@@ -327,11 +382,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             
             // Create the NDA record for this client (allow multiple NDAs per client)
             $sql = "INSERT INTO nda_details (
-                        client_id, nda_status, revision_amount_status, signed_date, 
+                        client_id, nda_status, revision_amount_status, previous_status, signed_date, 
                         workflow_all, ce_ts, ce_ts_xml, ce, ts, pmc, pubmed, clockss, scielo, crossref, doaj, bibilat, medes, pdf_to_xml, html, new_html, direct_html, xml_html, image, math, remarks,
                         created_at, updated_at
                     ) VALUES (
-                        $target_client_id, '$nda_status', '$revision_status', $sql_date, 
+                        $target_client_id, '$nda_status', '$revision_status', '$previous_status', $sql_date, 
                         '$workflow_all', '$ce_ts', '$ce_ts_xml', '$ce', '$ts', '$pmc', '$pubmed', '$clockss', '$scielo', '$crossref', '$doaj', '$bibilat', '$medes', '$pdf_to_xml', '$html', '$new_html', '$direct_html', '$xml_html', '$image', '$math', '$remarks',
                         NOW(), NOW()
                     )";
@@ -349,12 +404,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             
             if ($client_id > 0 && $nda_id > 0) {
                 // Update client master (keep unique)
-                $mysqli->query("UPDATE client_master SET client_name='$client_name', country='$country', status='$client_status' WHERE client_id=$client_id");
+                $mysqli->query("UPDATE client_master SET client_name='$client_name', country='$country', status='$client_status', previous_status='$previous_status' WHERE client_id=$client_id");
                 
                 // Update specific NDA record by its ID
                 $sql = "UPDATE nda_details 
                         SET nda_status = '$nda_status', 
                             revision_amount_status = '$revision_status', 
+                            previous_status = '$previous_status',
                             signed_date = $sql_date,
                             workflow_all = '$workflow_all', 
                             ce_ts = '$ce_ts', 
@@ -424,7 +480,7 @@ $editNdaId = null;
 
 // Fetch all clients for dropdown with their countries
 $all_clients =[];
-$res_clients = $mysqli->query("SELECT client_id, client_name, country, status FROM client_master ORDER BY client_name ASC");
+$res_clients = $mysqli->query("SELECT client_id, client_name, country, status, previous_status FROM client_master ORDER BY client_name ASC");
 if ($res_clients) {
     while ($c_row = $res_clients->fetch_assoc()) {
         $all_clients[] = $c_row;
@@ -515,6 +571,7 @@ if ($ref_year > 0) {
 
 $sql = "SELECT 
             nd.id as nda_id, cm.client_id, cm.client_name, cm.company_name, cm.email, cm.phone, cm.country, $status_expr as client_status,
+            COALESCE(nd.previous_status, cm.previous_status, '') as previous_status,
             IFNULL(nd.nda_status, 'No') as nda_status, 
             IFNULL(nd.revision_amount_status, 'No') as revision_amount_status, 
             nd.signed_date, nd.remarks,
@@ -793,13 +850,13 @@ require 'header.php';
                 <!-- Client Details (Unique in client_master) -->
                 <h6 class="border-bottom pb-2 text-primary fw-bold"><i class="fas fa-user-tie me-2"></i>Client Profile (Unique)</h6>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Client Name <span class="text-danger">*</span></label>
                         <?php if ($isAdd): ?>
                             <select name="client_name" id="client_select" class="form-select form-select-sm" required onchange="autoFillCountry()">
                                 <option value="">-- Select Existing Client or Type New --</option>
                                 <?php foreach($all_clients as $cl): ?>
-                                    <option value="<?= h($cl['client_name']) ?>" data-country="<?= h($cl['country'] ?? '') ?>" data-status="<?= h($cl['status'] ?? 'Active') ?>">
+                                    <option value="<?= h($cl['client_name']) ?>" data-country="<?= h($cl['country'] ?? '') ?>" data-status="<?= h($cl['status'] ?? 'Active') ?>" data-previous-status="<?= h($cl['previous_status'] ?? '') ?>">
                                         <?= h($cl['client_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -810,12 +867,16 @@ require 'header.php';
                             <small class="text-muted">Client name cannot be changed in edit mode</small>
                         <?php endif; ?>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Country</label>
                         <input type="text" name="country" id="country_input" class="form-control form-control-sm" value="<?= h($editClient['country'] ?? '') ?>" placeholder="Enter country name">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Client Status</label>
+                    <div class="col-md-3">
+                        <label class="form-label small">Previous Status</label>
+                        <input type="text" name="previous_status" id="previous_status_input" class="form-control form-control-sm" value="<?= h($editClient['previous_status'] ?? '') ?>" placeholder="Enter previous status">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Current Status</label>
                         <select name="client_status" id="status_select" class="form-select form-select-sm">
                             <option value="Active" <?= (strtolower($editClient['client_status'] ?? '') == 'active' || $isAdd) ? 'selected' : '' ?>>Active</option>
                             <option value="Inactive" <?= (strtolower($editClient['client_status'] ?? '') == 'inactive') ? 'selected' : '' ?>>Inactive</option>
@@ -934,7 +995,7 @@ require 'header.php';
                 <!-- Client Status (Active / Inactive) -->
                 <div class="col-xl-2 col-lg-3 col-md-4">
                     <select name="client_status" class="form-select form-select-sm">
-                        <option value="">Filter by Client Status</option>
+                        <option value="">Filter by Current Status</option>
                         <option value="Active" <?= $filter_status === 'Active' ? 'selected' : '' ?>>Active</option>
                         <option value="Inactive" <?= $filter_status === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                     </select>
@@ -991,7 +1052,8 @@ require 'header.php';
                             <th rowspan="2" class="py-2 text-center border-end align-middle">S.No</th>
                             <th rowspan="2" class="py-2 border-end align-middle">Client Name</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle">Country</th>
-                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Client Status">Status</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Previous Status">Previous Status</th>
+                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="Current Status">Current Status</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="NDA Status">NDA</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="Revision Amount Applicable">Rev.Amt</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle">Signed Date</th>
@@ -1003,7 +1065,7 @@ require 'header.php';
                             <th colspan="2" class="py-1 text-center border-end" title="CE+TS+XML">CE+TS+XML</th>
                             <th colspan="2" class="py-1 text-center border-end" title="CE">CE</th>
                             <th colspan="2" class="py-1 text-center border-end" title="TS">TS</th>
-                            <th rowspan="2" class="py-2 text-center border-end align-middle" title="PMC">PMC</th>
+                            <th colspan="2" class="py-1 text-center border-end" title="PMC">PMC</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="PUBMED">PUBMED</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="CLOCKSS">CLOCKSS</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="SCIELO">SCIELO</th>
@@ -1036,6 +1098,9 @@ require 'header.php';
                             <!-- TS -->
                             <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
                             <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
+                            <!-- PMC -->
+                            <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
+                            <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
                             <!-- PDF to XML -->
                             <th class="py-1 text-center border-end text-light fw-bold">WITH</th>
                             <th class="py-1 text-center border-end text-light fw-bold">W/O</th>
@@ -1060,6 +1125,7 @@ require 'header.php';
                                 $p_cetsxml  = parse_split_rate($row['ce_ts_xml'] ?? '');
                                 $p_ce       = parse_split_rate($row['ce'] ?? '');
                                 $p_ts       = parse_split_rate($row['ts'] ?? '');
+                                $p_pmc      = parse_split_rate($row['pmc'] ?? '');
                                 $p_pdfxml   = parse_split_rate($row['pdf_to_xml'] ?? '');
                                 $p_html     = parse_split_rate($row['html'] ?? '');
                                 $p_dhtml    = parse_split_rate($row['direct_html'] ?? '');
@@ -1071,6 +1137,7 @@ require 'header.php';
                                 <span class="fw-bold text-primary"><?= h($row['client_name']) ?></span>
                             </td>
                             <td class="text-center border-end"><?= !empty($row['country']) ? h($row['country']) : '-' ?></td>
+                            <td class="text-center border-end"><?= !empty($row['previous_status']) ? h($row['previous_status']) : '-' ?></td>
                             <td class="text-center border-end">
                                 <span class="badge bg-<?= strtolower($row['client_status'] ?? '') == 'active' ? 'success' : 'secondary' ?>"><?= h($row['client_status'] ?? 'Unknown') ?></span>
                             </td>
@@ -1102,8 +1169,11 @@ require 'header.php';
                             <td class="text-center border-end"><?= h($p_ts['with']) ?></td>
                             <td class="text-center border-end"><?= h($p_ts['without']) ?></td>
 
+                            <!-- PMC (Split) -->
+                            <td class="text-center border-end"><?= h($p_pmc['with']) ?></td>
+                            <td class="text-center border-end"><?= h($p_pmc['without']) ?></td>
+
                             <!-- Single Services -->
-                            <td class="text-center border-end"><?= h($row['pmc'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['pubmed'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['clockss'] ?? '') ?></td>
                             <td class="text-center border-end"><?= h($row['scielo'] ?? '') ?></td>
@@ -1162,7 +1232,7 @@ require 'header.php';
                         </tr>
                         <?php endwhile; else: ?>
                         <tr>
-                            <td colspan="31" class="text-center py-5 text-muted">
+                            <td colspan="40" class="text-center py-5 text-muted">
                                 <i class="fas fa-folder-open fa-2x mb-2 opacity-50"></i><br>
                                 No NDA records found matching the requested filters.
                             </td>
@@ -1203,18 +1273,18 @@ require 'header.php';
                         </div>
                         
                         <div class="alert alert-secondary border-0 shadow-sm">
-                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-list-ol me-2 text-primary"></i>Excel Format (29 Columns Required):</h6>
-                            <p class="mb-2 text-muted small">Columns 1(S.No) and 8(Signed Year) are ignored during import. Client names are unique in client_master, but multiple NDA records per client are allowed.</p>
+                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-list-ol me-2 text-primary"></i>Excel Format (30 Columns Required):</h6>
+                            <p class="mb-2 text-muted small">Columns 1(S.No) and 9(Signed Year) are ignored during import. Client names are unique in client_master, but multiple NDA records per client are allowed.</p>
                             <div class="table-responsive bg-white rounded border">
                                 <table class="table table-sm table-bordered mb-0 align-middle text-center small" style="font-size: 0.70rem;">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th><th>M</th><th>N</th><th>O</th><th>P</th><th>Q</th><th>R</th><th>S</th><th>T</th><th>U</th><th>V</th><th>W</th><th>X</th><th>Y</th><th>Z</th><th>AA</th><th>AB</th><th>AC</th>
+                                            <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th><th>M</th><th>N</th><th>O</th><th>P</th><th>Q</th><th>R</th><th>S</th><th>T</th><th>U</th><th>V</th><th>W</th><th>X</th><th>Y</th><th>Z</th><th>AA</th><th>AB</th><th>AC</th><th>AD</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-muted">
                                         <tr>
-                                            <td>S.No</td><td class="text-primary fw-bold">Client Name*</td><td>Country</td><td>C.Status</td><td>NDA Status</td><td>Rev amt</td><td>Signed Date</td><td>Signed Year</td><td>All</td><td>CE+TS</td><td>CE+TS+XML</td><td>CE</td><td>TS</td><td>PMC</td><td>PUBMED</td><td>CLOCKSS</td><td>SCIELO</td><td>Crossref</td><td>DOAJ</td><td>BIBILAT</td><td>MEDES</td><td>PDF to XML</td><td>HTML</td><td>New HTML</td><td>Direct HTML</td><td>XML+HTML</td><td>Image</td><td>Math</td><td>Remarks</td>
+                                            <td>S.No</td><td class="text-primary fw-bold">Client Name*</td><td>Country</td><td>Previous Status</td><td>Current Status</td><td>NDA Status</td><td>Rev amt</td><td>Signed Date</td><td>Signed Year</td><td>All</td><td>CE+TS</td><td>CE+TS+XML</td><td>CE</td><td>TS</td><td>PMC</td><td>PUBMED</td><td>CLOCKSS</td><td>SCIELO</td><td>Crossref</td><td>DOAJ</td><td>BIBILAT</td><td>MEDES</td><td>PDF to XML</td><td>HTML</td><td>New HTML</td><td>Direct HTML</td><td>XML+HTML</td><td>Image</td><td>Math</td><td>Remarks</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1243,10 +1313,15 @@ require 'header.php';
         if (selectedOption && selectedOption.value !== "") {
             var country = selectedOption.getAttribute('data-country');
             var status = selectedOption.getAttribute('data-status');
+            var prevStatus = selectedOption.getAttribute('data-previous-status');
             
             // Fill Country
             var countryInput = document.getElementById('country_input');
             if (countryInput) countryInput.value = country || '';
+
+            // Fill Previous Status
+            var prevStatusInput = document.getElementById('previous_status_input');
+            if (prevStatusInput) prevStatusInput.value = prevStatus || '';
             
             // Match Status Dropdown
             var statusSelect = document.getElementById('status_select');
@@ -1262,16 +1337,18 @@ require 'header.php';
             // Clear if -- Select -- is clicked
             var countryInput = document.getElementById('country_input');
             if (countryInput) countryInput.value = '';
+            var prevStatusInput = document.getElementById('previous_status_input');
+            if (prevStatusInput) prevStatusInput.value = '';
             var statusSelect = document.getElementById('status_select');
             if (statusSelect) statusSelect.selectedIndex = 0;
         }
     }
 
     function downloadSample() {
-        const sampleContent = "S.No,Client Name,Country,Client Status,NDA Status,Rev amt,Signed Date,Signed Year,All,CE+TS,CE+TS+XML,CE,TS,PMC,PUBMED,CLOCKSS,SCIELO,Crossref,DOAJ,BIBILAT,MEDES,PDF to XML,HTML,New HTML,Direct HTML,XML+HTML,Image,Math,Remarks\n" +
-                             "1,ABC Corp,India,Active,Yes,Yes,10/24/2025,2025,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,Standard terms applied\n" +
-                             "2,ABC Corp,India,Active,No,No,11/15/2025,2025,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,Second NDA record for same client\n" +
-                             "3,XYZ Ltd,USA,Active,Yes,Yes,10/24/2025,2025,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,Special terms";
+        const sampleContent = "S.No,Client Name,Country,Previous Status,Current Status,NDA Status,Rev amt,Signed Date,Signed Year,All,CE+TS,CE+TS+XML,CE,TS,PMC,PUBMED,CLOCKSS,SCIELO,Crossref,DOAJ,BIBILAT,MEDES,PDF to XML,HTML,New HTML,Direct HTML,XML+HTML,Image,Math,Remarks\n" +
+                             "1,ABC Corp,India,Lead,Active,Yes,Yes,10/24/2025,2025,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,Standard terms applied\n" +
+                             "2,ABC Corp,India,Active,Active,No,No,11/15/2025,2025,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,Second NDA record for same client\n" +
+                             "3,XYZ Ltd,USA,New,Active,Yes,Yes,10/24/2025,2025,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,Special terms";
         const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

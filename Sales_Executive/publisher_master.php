@@ -317,45 +317,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pub = $result->fetch_assoc()) {
                 $stmt->close();
                 
+                $client_name = !empty($pub['publisher_name']) ? $pub['publisher_name'] : (!empty($pub['name']) ? $pub['name'] : 'Client ' . $pub['id']);
+                $company_name = !empty($pub['publisher_name']) ? $pub['publisher_name'] : $client_name;
+                
                 // 2. Check if client already exists in client_master
                 $check = $mysqli->prepare("SELECT client_id FROM client_master WHERE client_name = ? OR company_name = ?");
-                $check->bind_param("ss", $pub['publisher_name'], $pub['publisher_name']);
+                $check->bind_param("ss", $client_name, $company_name);
                 $check->execute();
                 $check->store_result();
                 
                 if ($check->num_rows > 0) {
                     $check->close();
-                    redirect_with(['msg' => "Client '{$pub['publisher_name']}' already exists in Client Master.", 'type' => 'warning']);
+                    redirect_with(['msg' => "Client '{$client_name}' already exists in Client Master.", 'type' => 'warning']);
                 }
                 $check->close();
                 
-                // 3. Insert into client_master
+                // 3. Insert into client_master (including required non-null fields: template, tds_percentage, igst)
+                $remarks_text = !empty($pub['designation']) ? "Designation: " . $pub['designation'] : '';
                 $insert = $mysqli->prepare("INSERT INTO client_master 
-                    (client_name, company_name, contact_person, designation, email, phone, country, website, link, status, created_date) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
+                    (client_name, company_name, contact_person, email, phone, country, link, remarks, template, tds_percentage, igst, status, created_date) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0, 0, 'Active', NOW())");
                 
-                $insert->bind_param("sssssssss", 
-                    $pub['publisher_name'],  // Maps to client_name
-                    $pub['publisher_name'],  // Maps to company_name
-                    $pub['contact_person'],  // Maps to contact_person
-                    $pub['designation'],     // Maps to designation
-                    $pub['email'],           // Maps to email
-                    $pub['contact_no'],      // Maps to phone
-                    $pub['country'],         // Maps to country
-                    $pub['link'],            // Maps to website
-                    $pub['link']             // Maps to link
+                $contact_person = $pub['contact_person'] ?? '';
+                $email = $pub['email'] ?? '';
+                $phone = $pub['contact_no'] ?? '';
+                $country = $pub['country'] ?? '';
+                $link = $pub['link'] ?? '';
+
+                $insert->bind_param("ssssssss", 
+                    $client_name,
+                    $company_name,
+                    $contact_person,
+                    $email,
+                    $phone,
+                    $country,
+                    $link,
+                    $remarks_text
                 );
                 
                 if ($insert->execute()) {
-                    // Optional: If you want to automatically DELETE from publisher_master after moving, uncomment below:
-                    /*
-                    $del = $mysqli->prepare("DELETE FROM publisher_master WHERE id = ?");
-                    $del->bind_param("i", $id);
-                    $del->execute();
-                    $del->close();
-                    */
-                    
-                    redirect_with(['msg' => "Publisher '{$pub['publisher_name']}' successfully copied to Client Master.", 'type' => 'success']);
+                    // Do not delete from publisher_master (record remains in Data Collection)
+                    redirect_with(['msg' => "Publisher '{$client_name}' successfully copied to Client Master.", 'type' => 'success']);
                 } else {
                     redirect_with(['msg' => 'Error moving to Client Master: ' . $insert->error, 'type' => 'danger']);
                 }

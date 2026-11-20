@@ -305,7 +305,10 @@ ob_end_flush();
     </style>
 </head>
 <body>
-    <?php include 'header.php'; ?>
+    <?php 
+    include 'header.php'; 
+    $current_user = !empty($displayName) ? $displayName : $current_user;
+    ?>
     
     <!-- Dashboard -->
     <div class="container-fluid px-0">

@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                          FROM leave_applications la
                          JOIN employee_master em ON la.employee_username = em.employee_username
                          WHERE la.id = '$ot_id' 
-                         AND em.user_role_id IN (2, 3) 
+                         AND em.user_role_id IN (2, 3, 9, 10) 
                          AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
         $verify_result = $mysqli->query($verify_query);
         
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $update_sql = "UPDATE leave_applications 
                           SET status = '$status', 
                               admin_remarks = '$admin_remarks',
-                              approved_by = '$teamleader_username',
+                              approved_by = '$superadmin_username',
                               approved_at = NOW()
                           WHERE id = '$ot_id'";
             
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                          FROM leave_applications la
                          JOIN employee_master em ON la.employee_username = em.employee_username
                          WHERE la.id IN ($ids_str) 
-                         AND em.user_role_id IN (2, 3) 
+                         AND em.user_role_id IN (2, 3, 9, 10) 
                          AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
                          AND la.status = 'Pending'";
         $verify_result = $mysqli->query($verify_query);
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $update_sql = "UPDATE leave_applications 
                           SET status = '$status', 
                               admin_remarks = CONCAT(COALESCE(admin_remarks, ''), ' [Bulk: $bulk_remarks]'),
-                              approved_by = '$teamleader_username',
+                              approved_by = '$superadmin_username',
                               approved_at = NOW()
                           WHERE id IN ($ids_str) 
                           AND status = 'Pending'";
@@ -115,7 +115,7 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
                    FROM leave_applications la
                    JOIN employee_master em ON la.employee_username = em.employee_username
                    LEFT JOIN process_master pm ON la.process = pm.process_id
-                   WHERE em.user_role_id IN (2, 3) 
+                   WHERE em.user_role_id IN (2, 3, 9, 10) 
                    AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
                    ORDER BY la.from_date DESC, la.id DESC";
     
@@ -366,7 +366,7 @@ include 'header.php';
                         COUNT(DISTINCT la.employee_username) as team_members
                        FROM leave_applications la
                        JOIN employee_master em ON la.employee_username = em.employee_username
-                       WHERE em.user_role_id IN (2, 3) 
+                       WHERE em.user_role_id IN (2, 3, 9, 10) 
                        AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
         
         $stats_result = $mysqli->query($stats_query);
@@ -503,7 +503,7 @@ include 'header.php';
                                FROM leave_applications la
                                JOIN employee_master em ON la.employee_username = em.employee_username
                                LEFT JOIN process_master pm ON la.process = pm.process_id
-                               WHERE em.user_role_id IN (2, 3) 
+                               WHERE em.user_role_id IN (2, 3, 9, 10) 
                                AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
                                $status_condition
                                ORDER BY la.from_date DESC, la.id DESC";

@@ -1,48 +1,59 @@
 <?php
-// -------------------------------------------------------------
-// FILE: teamleader_ot_approval.php
-// PURPOSE: Team Leader interface to Approve/Reject OT claims
-// -------------------------------------------------------------
+// Sales/teamleader_ot_approval.php
+// PURPOSE: Sales Team Leader interface to Approve/Reject OT claims from Sales Executives
 
 require 'db.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and is a Team Leader
+// Session check
+if (!isset($_SESSION['salesname']) && !isset($_SESSION['uid'])) { 
+    header("Location: ../index.php"); 
+    exit; 
+}
+
 $teamleader_username = $_SESSION['username'] ?? '';
 $teamleader_id = $_SESSION['uid'] ?? 0;
+$displayName = $_SESSION['ename'] ?? $teamleader_username;
 
-// Get team leader's team
-$tl_query = "SELECT team_id FROM employee_master WHERE employee_username = '$teamleader_username'";
-$tl_result = $mysqli->query($tl_query);
-$teamleader_data = $tl_result->fetch_assoc();
-$teamleader_team_id = $teamleader_data['team_id'] ?? 0;
+$tl_user_esc = $mysqli->real_escape_string($teamleader_username);
+$tl_name_esc = $mysqli->real_escape_string($displayName);
+
+// Determine Sales Team ID (Default 9)
+$sales_team_id = 9;
+$t_res = $mysqli->query("SELECT team_id FROM team_master WHERE team_name = 'Sales' LIMIT 1");
+if ($t_res && $t_row = $t_res->fetch_assoc()) {
+    $sales_team_id = (int)$t_row['team_id'];
+}
+
+// Common team filter condition for Sales Executives (EXCLUDING TL themselves and EXCLUDING UQ/other teams)
+$team_filter_sql = "(em.team_id = '$sales_team_id' OR em.reporting_manager = '$tl_user_esc' OR em.reporting_manager = '$tl_name_esc') 
+                    AND em.employee_username != '$tl_user_esc'";
 
 // --- 1. HANDLE APPROVAL/REJECTION ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['action']) && isset($_POST['ot_id'])) {
-        $ot_id = $_POST['ot_id'];
+        $ot_id = (int)$_POST['ot_id'];
         $action = $_POST['action'];
         $admin_remarks = $mysqli->real_escape_string($_POST['admin_remarks'] ?? '');
         
-        // Verify OT claim belongs to team member in same team
+        // Verify OT claim belongs to a Sales team member
         $verify_query = "SELECT la.*, em.team_id 
                          FROM leave_applications la
                          JOIN employee_master em ON la.employee_username = em.employee_username
                          WHERE la.id = '$ot_id' 
-                         AND em.team_id = '$teamleader_team_id' 
-                         AND (em.user_role_id IN (4, 9, 11) OR em.reporting_manager = '$teamleader_username') 
+                         AND $team_filter_sql
                          AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
         $verify_result = $mysqli->query($verify_query);
         
-        if ($verify_result->num_rows > 0) {
+        if ($verify_result && $verify_result->num_rows > 0) {
             $status = ($action == 'approve') ? 'Approved' : 'Rejected';
             
             $update_sql = "UPDATE leave_applications 
                           SET status = '$status', 
                               admin_remarks = '$admin_remarks',
-                              approved_by = '$teamleader_username',
+                              approved_by = '$tl_user_esc',
                               approved_at = NOW()
                           WHERE id = '$ot_id'";
             
@@ -63,27 +74,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['bulk_action']) && isset($_POST['selected_claims'])) {
         $bulk_action = $_POST['bulk_action'];
         $selected_ids = $_POST['selected_claims'];
+        if (!is_array($selected_ids)) {
+            $selected_ids = explode(',', $selected_ids);
+        }
         $bulk_remarks = $mysqli->real_escape_string($_POST['bulk_remarks'] ?? '');
         
         $status = ($bulk_action == 'approve') ? 'Approved' : 'Rejected';
         $ids_str = implode(',', array_map('intval', $selected_ids));
         
-        // Verify all selected claims belong to team members AND are pending
         $verify_query = "SELECT la.id 
                          FROM leave_applications la
                          JOIN employee_master em ON la.employee_username = em.employee_username
                          WHERE la.id IN ($ids_str) 
-                         AND em.team_id = '$teamleader_team_id' 
-                         AND (em.user_role_id IN (4, 9, 11) OR em.reporting_manager = '$teamleader_username') 
+                         AND $team_filter_sql
                          AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
                          AND la.status = 'Pending'";
         $verify_result = $mysqli->query($verify_query);
         
-        if ($verify_result->num_rows > 0) {
+        if ($verify_result && $verify_result->num_rows > 0) {
             $update_sql = "UPDATE leave_applications 
                           SET status = '$status', 
                               admin_remarks = CONCAT(COALESCE(admin_remarks, ''), ' [Bulk: $bulk_remarks]'),
-                              approved_by = '$teamleader_username',
+                              approved_by = '$tl_user_esc',
                               approved_at = NOW()
                           WHERE id IN ($ids_str) 
                           AND status = 'Pending'";
@@ -102,71 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// --- 2. HANDLE EXCEL DOWNLOAD ---
-if (isset($_GET['download']) && $_GET['download'] == 'excel') {
-    // Fetch data for Excel
-    $excel_query = "SELECT 
-                    la.from_date as Date,
-                    em.employee_name as 'Employee Name',
-                    em.employee_username as 'Employee ID',
-                    la.request_type as 'Type',
-                    pm.process_name as Process,
-                    la.article as Article,
-                    la.count as Count,
-                    la.start_time as 'Start Time',
-                    la.end_time as 'End Time',
-                    la.total_hours as 'Total Hours',
-                    la.reason as Reason,
-                    la.status as Status,
-                    la.admin_remarks as Remarks,
-                    la.approved_by as 'Approved By',
-                    DATE_FORMAT(la.approved_at, '%d-%b-%Y %H:%i') as 'Approved Date'
-                   FROM leave_applications la
-                   JOIN employee_master em ON la.employee_username = em.employee_username
-                   LEFT JOIN process_master pm ON la.process = pm.process_id
-                   WHERE em.team_id = '$teamleader_team_id' 
-                   AND (em.user_role_id IN (4, 9, 11) OR em.reporting_manager = '$teamleader_username') 
-                   AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
-                   ORDER BY la.from_date DESC, la.id DESC";
-    
-    $excel_result = $mysqli->query($excel_query);
-    
-    // Generate Excel content without external libraries
-    header('Content-Type: application/vnd.ms-excel');
-    header('Content-Disposition: attachment; filename="OT_Claims_Team_' . $teamleader_team_id . '_' . date('Y-m-d') . '.xls"');
-    
-    echo '<table border="1">';
-    echo '<tr><th colspan="15" style="background-color:#4CAF50;color:white;font-size:16px;">OT CLAIMS REPORT - TEAM ' . $teamleader_team_id . '</th></tr>';
-    echo '<tr><th colspan="15">Generated on: ' . date('d-M-Y H:i:s') . ' | Generated by: ' . $teamleader_username . '</th></tr>';
-    echo '<tr>';
-    
-    // Headers
-    if ($excel_result && $excel_result->num_rows > 0) {
-        $row = $excel_result->fetch_assoc();
-        foreach (array_keys($row) as $header) {
-            echo '<th style="background-color:#f2f2f2;font-weight:bold;">' . $header . '</th>';
-        }
-        
-        // Reset pointer
-        $excel_result->data_seek(0);
-        
-        // Data rows
-        while ($row = $excel_result->fetch_assoc()) {
-            echo '<tr>';
-            foreach ($row as $cell) {
-                echo '<td>' . htmlspecialchars($cell ?? '') . '</td>';
-            }
-            echo '</tr>';
-        }
-    } else {
-        echo '<tr><td colspan="15" style="text-align:center;">No data available</td></tr>';
-    }
-    
-    echo '</table>';
-    exit();
-}
-
-// --- 3. STATUS FILTER ---
+// --- 2. STATUS FILTER ---
 $status_filter = $_GET['status'] ?? 'all'; // all, pending, approved, rejected
 $status_condition = "";
 if ($status_filter == 'pending') {
@@ -177,10 +125,21 @@ if ($status_filter == 'pending') {
     $status_condition = "AND la.status = 'Rejected'";
 }
 
+$pageTitle = "OT Approvals - Sales";
+$currentPage = "teamleader_ot_approval.php";
 include 'header.php';
 ?>
 
 <style>
+    body {
+        background-color: var(--light, #f5f7fa);
+    }
+    .main-content {
+        margin-top: 0 !important;
+        padding: 10px 4% !important;
+        transition: all 0.3s ease;
+    }
+
     /* Status Badges */
     .status-Pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .status-Approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
@@ -190,7 +149,7 @@ include 'header.php';
     .badge-ot { background-color: #6f42c1; color: white; }
     .badge-comp { background-color: #198754; color: white; }
     .badge-permission { background-color: #0dcaf0; color: #000; }
-
+    
     /* Highlight rows */
     .table-hover tbody tr:hover { background-color: rgba(0,123,255,0.1); }
     
@@ -234,7 +193,7 @@ include 'header.php';
     .stat-card .stat-number {
         font-size: 24px;
         font-weight: bold;
-        color: #2196F3;
+        color: #212529;
         line-height: 1.2;
         margin: 0 0 6px 0 !important;
         display: block;
@@ -255,6 +214,8 @@ include 'header.php';
         color: #6c757d;
         border: none;
         border-bottom: 2px solid transparent;
+        font-weight: 500;
+        padding: 8px 16px;
     }
     
     .status-filter .nav-link:hover {
@@ -338,297 +299,298 @@ include 'header.php';
     }
 </style>
 
-<div class="container-fluid main-content py-4" style="margin-top: 70px;">
+<main class="main-content">
+    <div class="container-fluid p-0">
 
-    <!-- Ash Page Header Banner (Matching Navbar Color) -->
-    <div class="page-title-container">
-        <div>
-            <h1 class="mb-0">
-                <i class="fas fa-check-circle"></i> OT Approvals
-            </h1>
-            <p class="mb-0 small opacity-75">Review and manage OT claims from your team members.</p>
-        </div>
-    </div>
-
-    <!-- Feedback Message -->
-    <?php if(isset($msg)): ?>
-        <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show" role="alert">
-            <?= $msg ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <!-- Team Statistics -->
-    <div class="row mb-4">
-        <?php
-        // Get team statistics
-        $stats_query = "SELECT 
-                        COUNT(CASE WHEN la.status = 'Pending' THEN 1 END) as pending_count,
-                        COUNT(CASE WHEN la.status = 'Approved' THEN 1 END) as approved_count,
-                        COUNT(CASE WHEN la.status = 'Rejected' THEN 1 END) as rejected_count,
-                        SUM(CASE WHEN la.status = 'Approved' THEN la.total_hours ELSE 0 END) as total_approved_hours,
-                        COUNT(DISTINCT la.employee_username) as team_members
-                       FROM leave_applications la
-                       JOIN employee_master em ON la.employee_username = em.employee_username
-                       WHERE em.team_id = '$teamleader_team_id' 
-                       AND (em.user_role_id IN (4, 9, 11) OR em.reporting_manager = '$teamleader_username') 
-                       AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
-        
-        $stats_result = $mysqli->query($stats_query);
-        $stats = $stats_result->fetch_assoc();
-        ?>
-        
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= $stats['pending_count'] ?? 0 ?></div>
-                <div class="stat-label">Pending Claims</div>
+        <!-- Ash Page Header Banner (Matching Navbar Color) -->
+        <div class="page-title-container">
+            <div>
+                <h1 class="mb-0">
+                    <i class="fas fa-check-circle"></i> OT Approvals
+                </h1>
+                <p class="mb-0 small opacity-75">Review and manage OT claims from your team members.</p>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= $stats['approved_count'] ?? 0 ?></div>
-                <div class="stat-label">Approved Claims</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= $stats['rejected_count'] ?? 0 ?></div>
-                <div class="stat-label">Rejected Claims</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?= round($stats['total_approved_hours'] ?? 0, 1) ?></div>
-                <div class="stat-label">Total Approved Hours</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Status Filter Tabs -->
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body py-2">
-            <div class="status-filter">
-                <ul class="nav nav-tabs border-0">
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'all' ? 'active' : '' ?>" href="?status=all">
-                            All Claims (<?= ($stats['pending_count'] + $stats['approved_count'] + $stats['rejected_count']) ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'pending' ? 'active' : '' ?>" href="?status=pending">
-                            Pending (<?= $stats['pending_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'approved' ? 'active' : '' ?>" href="?status=approved">
-                            Approved (<?= $stats['approved_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'rejected' ? 'active' : '' ?>" href="?status=rejected">
-                            Rejected (<?= $stats['rejected_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                </ul>
+        <!-- Feedback Message -->
+        <?php if(isset($msg)): ?>
+            <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show" role="alert">
+                <?= $msg ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        </div>
-    </div>
-
-    <!-- Bulk Action Panel (Only shown for pending claims) -->
-    <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
-    <div class="bulk-panel" id="bulkPanel" style="display: none;">
-        <form method="POST" action="" id="bulkForm">
-            <div class="row align-items-center">
-                <div class="col-md-3">
-                    <strong>Bulk Action for <span id="selectedCount">0</span> pending claims:</strong>
-                </div>
-                <div class="col-md-3">
-                    <select name="bulk_action" class="form-select" required>
-                        <option value="" selected disabled>-- Select Action --</option>
-                        <option value="approve">Approve Selected</option>
-                        <option value="reject">Reject Selected</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" name="bulk_remarks" class="form-control" placeholder="Remarks for bulk action" required>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-light w-100">Apply</button>
-                    <button type="button" class="btn btn-outline-light w-100 mt-1" onclick="clearSelection()">Cancel</button>
-                </div>
-            </div>
-            <input type="hidden" name="selected_claims[]" id="selectedClaims">
-        </form>
-    </div>
-    <?php endif; ?>
-
-    <!-- OT CLAIMS TABLE -->
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header text-white py-3" style="background-color: var(--ash, #6c757d) !important;">
-            <h6 class="mb-0 fw-bold">
-                OT Approvals - Team <?= $teamleader_team_id ?> 
-                <span class="float-end">
-                    <small>Showing: <?= ucfirst($status_filter) ?></small>
-                </span>
-            </h6>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive" style="overflow: visible;">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
-                            <th class="select-checkbox">
-                                <input type="checkbox" id="selectAll" onclick="toggleAllSelection()">
-                            </th>
-                            <?php else: ?>
-                            <th class="select-checkbox" style="width: 30px;"></th>
-                            <?php endif; ?>
-                            <th>Date</th>
-                            <th>Employee</th>
-                            <th>Type</th>
-                            <th>Process</th>
-                            <th>Article</th>
-                            <th>Time & Duration</th>
-                            <th>Count</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Remarks</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        // Fetch OT claims from same team with status filter
-                        $query = "SELECT 
-                                la.*,
-                                em.employee_name,
-                                em.process as emp_process,
-                                pm.process_name
-                               FROM leave_applications la
-                               JOIN employee_master em ON la.employee_username = em.employee_username
-                               LEFT JOIN process_master pm ON la.process = pm.process_id
-                               WHERE em.team_id = '$teamleader_team_id' 
-                               AND (em.user_role_id IN (4, 9, 11) OR em.reporting_manager = '$teamleader_username') 
-                               AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
-                               $status_condition
-                               ORDER BY la.from_date DESC, la.id DESC";
-                        
-                        $result = $mysqli->query($query);
-
-                        if ($result && $result->num_rows > 0) {
-                            while ($row = $result->fetch_assoc()) {
-                                $type_label = str_replace('_', ' ', $row['request_type']);
-                                $ot_date = date('d-M-Y', strtotime($row['from_date']));
-                                $process_display = !empty($row['process_name']) ? $row['process_name'] : $row['emp_process'];
-                                $is_pending = ($row['status'] == 'Pending');
-                                $row_class = $is_pending ? '' : ($row['status'] == 'Approved' ? 'row-approved' : 'row-rejected');
-                                ?>
-                                <tr id="row-<?= $row['id'] ?>" class="<?= $row_class ?>">
-    <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
-    <td class="select-checkbox">
-        <?php if ($is_pending): ?>
-            <input type="checkbox" class="claim-checkbox" value="<?= $row['id'] ?>" onchange="updateSelection()">
-        <?php else: ?>
-            <!-- Empty cell for non-pending claims -->
         <?php endif; ?>
-    </td>
-    <?php else: ?>
-    <td class="select-checkbox"></td>
-    <?php endif; ?>
-    
-    <td class="fw-bold"><?= $ot_date ?></td>
-    <td>
-        <div class="fw-bold"><?= htmlspecialchars((string)($row['employee_name'] ?? '')) ?></div>
-        <div class="small text-muted"><?= htmlspecialchars((string)($row['employee_username'] ?? '')) ?></div>
-    </td>
-    <td>
-        <span class="badge <?= $row['request_type'] == 'OT_Claim' ? 'badge-ot' : ($row['request_type'] == 'Permission' ? 'badge-permission' : 'badge-comp') ?>">
-            <?= $type_label ?>
-        </span>
-    </td>
-    <td>
-        <span class="badge bg-info"><?= htmlspecialchars((string)($process_display ?? '')) ?></span>
-    </td>
-    <td>
-        <?php if (!empty($row['article'])): ?>
-            <span class="badge bg-success"><?= htmlspecialchars((string)($row['article'] ?? '')) ?></span>
-        <?php else: ?>
-            <span class="text-muted">-</span>
-        <?php endif; ?>
-    </td>
-    <td>
-        <div class="small">
-            <?php if (!empty($row['start_time']) && !empty($row['end_time'])): ?>
-                <?= date('g:i A', strtotime($row['start_time'])) ?> to 
-                <?= date('g:i A', strtotime($row['end_time'])) ?>
-            <?php endif; ?>
+
+        <!-- Team Statistics -->
+        <div class="row mb-4">
+            <?php
+            // Get team statistics
+            $stats_query = "SELECT 
+                            COUNT(CASE WHEN la.status = 'Pending' THEN 1 END) as pending_count,
+                            COUNT(CASE WHEN la.status = 'Approved' THEN 1 END) as approved_count,
+                            COUNT(CASE WHEN la.status = 'Rejected' THEN 1 END) as rejected_count,
+                            SUM(CASE WHEN la.status = 'Approved' THEN la.total_hours ELSE 0 END) as total_approved_hours,
+                            COUNT(DISTINCT la.employee_username) as team_members
+                           FROM leave_applications la
+                           JOIN employee_master em ON la.employee_username = em.employee_username
+                           WHERE $team_filter_sql 
+                           AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')";
+            
+            $stats_result = $mysqli->query($stats_query);
+            $stats = $stats_result ? $stats_result->fetch_assoc() : [];
+            ?>
+            
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= $stats['pending_count'] ?? 0 ?></div>
+                    <div class="stat-label">Pending Claims</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= $stats['approved_count'] ?? 0 ?></div>
+                    <div class="stat-label">Approved Claims</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= $stats['rejected_count'] ?? 0 ?></div>
+                    <div class="stat-label">Rejected Claims</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?= round($stats['total_approved_hours'] ?? 0, 1) ?></div>
+                    <div class="stat-label">Total Approved Hours</div>
+                </div>
+            </div>
         </div>
-        <?php if (!empty($row['total_hours'])): ?>
-            <span class="badge bg-warning text-dark"><?= $row['total_hours'] ?> hrs</span>
-        <?php endif; ?>
-    </td>
-    <td class="fw-bold"><?= !empty($row['count']) ? number_format($row['count']) : '-' ?></td>
-    <td class="small text-secondary" style="max-width: 200px;">
-        <?= htmlspecialchars((string)($row['reason'] ?? '')) ?>
-    </td>
-    <td>
-        <span class="badge status-<?= $row['status'] ?>">
-            <?= $row['status'] ?>
-        </span>
-    </td>
-    <td>
-        <?php if ($is_pending): ?>
-            <input type="text" 
-                   class="form-control form-control-sm remarks-input" 
-                   id="remarks-<?= $row['id'] ?>" 
-                   placeholder="Enter remarks">
-        <?php else: ?>
-            <div class="remarks-readonly small">
-                <?= !empty($row['admin_remarks']) ? htmlspecialchars((string)($row['admin_remarks'] ?? '')) : '-' ?>
-                <?php if (!empty($row['approved_by'])): ?>
-                    <div class="text-muted mt-1">
-                        <small>By: <?= $row['approved_by'] ?></small>
-                        <?php if (!empty($row['approved_at'])): ?>
-                            <br><small><?= date('d-M-y H:i', strtotime($row['approved_at'])) ?></small>
-                        <?php endif; ?>
+
+        <!-- Status Filter Tabs -->
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-body py-2">
+                <div class="status-filter">
+                    <ul class="nav nav-tabs border-0">
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'all' ? 'active' : '' ?>" href="?status=all">
+                                All Claims (<?= (($stats['pending_count'] ?? 0) + ($stats['approved_count'] ?? 0) + ($stats['rejected_count'] ?? 0)) ?>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'pending' ? 'active' : '' ?>" href="?status=pending">
+                                Pending (<?= $stats['pending_count'] ?? 0 ?>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'approved' ? 'active' : '' ?>" href="?status=approved">
+                                Approved (<?= $stats['approved_count'] ?? 0 ?>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'rejected' ? 'active' : '' ?>" href="?status=rejected">
+                                Rejected (<?= $stats['rejected_count'] ?? 0 ?>)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Action Panel (Only shown for pending claims) -->
+        <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
+        <div class="bulk-panel" id="bulkPanel" style="display: none;">
+            <form method="POST" action="" id="bulkForm">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <strong>Bulk Action for <span id="selectedCount">0</span> pending claims:</strong>
                     </div>
-                <?php endif; ?>
-            </div>
+                    <div class="col-md-3">
+                        <select name="bulk_action" class="form-select" required>
+                            <option value="" selected disabled>-- Select Action --</option>
+                            <option value="approve">Approve Selected</option>
+                            <option value="reject">Reject Selected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" name="bulk_remarks" class="form-control" placeholder="Remarks for bulk action" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-light w-100">Apply</button>
+                        <button type="button" class="btn btn-outline-light w-100 mt-1" onclick="clearSelection()">Cancel</button>
+                    </div>
+                </div>
+                <input type="hidden" name="selected_claims[]" id="selectedClaims">
+            </form>
+        </div>
         <?php endif; ?>
-    </td>
-                                    <td>
-                                        <?php if ($is_pending): ?>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-approve" onclick="approveClaim(<?= $row['id'] ?>)">
-                                                    <i class="fa fa-check"></i> Approve
-                                                </button>
-                                                <button class="btn btn-reject" onclick="rejectClaim(<?= $row['id'] ?>)">
-                                                    <i class="fa fa-times"></i> Reject
-                                                </button>
-                                            </div>
+
+        <!-- OT CLAIMS TABLE -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header text-white py-3" style="background-color: var(--ash, #6c757d) !important;">
+                <h6 class="mb-0 fw-bold">
+                    OT Approvals - Sales Team
+                    <span class="float-end">
+                        <small>Showing: <?= ucfirst($status_filter) ?></small>
+                    </span>
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="overflow: visible;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
+                                <th class="select-checkbox">
+                                    <input type="checkbox" id="selectAll" onclick="toggleAllSelection()">
+                                </th>
+                                <?php else: ?>
+                                <th class="select-checkbox" style="width: 30px;"></th>
+                                <?php endif; ?>
+                                <th>Date</th>
+                                <th>Employee</th>
+                                <th>Type</th>
+                                <th>Process</th>
+                                <th>Article</th>
+                                <th>Time & Duration</th>
+                                <th>Count</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            // Fetch OT claims from Sales team with status filter
+                            $query = "SELECT 
+                                    la.*,
+                                    em.employee_name,
+                                    em.process as emp_process,
+                                    pm.process_name
+                                   FROM leave_applications la
+                                   JOIN employee_master em ON la.employee_username = em.employee_username
+                                   LEFT JOIN process_master pm ON la.process = pm.process_id
+                                   WHERE $team_filter_sql 
+                                   AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
+                                   $status_condition
+                                   ORDER BY la.from_date DESC, la.id DESC";
+                            
+                            $result = $mysqli->query($query);
+                            
+                            if ($result && $result->num_rows > 0) {
+                                while ($row = $result->fetch_assoc()) {
+                                    $type_label = str_replace('_', ' ', $row['request_type']);
+                                    $ot_date = date('d-M-Y', strtotime($row['from_date']));
+                                    $process_display = !empty($row['process_name']) ? $row['process_name'] : $row['emp_process'];
+                                    $is_pending = ($row['status'] == 'Pending');
+                                    $row_class = $is_pending ? '' : ($row['status'] == 'Approved' ? 'row-approved' : 'row-rejected');
+                                    ?>
+                                    <tr id="row-<?= $row['id'] ?>" class="<?= $row_class ?>">
+                                        <?php if ($status_filter == 'all' || $status_filter == 'pending'): ?>
+                                        <td class="select-checkbox">
+                                            <?php if ($is_pending): ?>
+                                                <input type="checkbox" class="claim-checkbox" value="<?= $row['id'] ?>" onchange="updateSelection()">
+                                            <?php else: ?>
+                                                <!-- Empty cell for non-pending claims -->
+                                            <?php endif; ?>
+                                        </td>
                                         <?php else: ?>
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-disabled" disabled>
-                                                    <i class="fa fa-check"></i> Approved
-                                                </button>
-                                            </div>
+                                        <td class="select-checkbox"></td>
                                         <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php
+                                        
+                                        <td class="fw-bold"><?= $ot_date ?></td>
+                                        <td>
+                                            <div class="fw-bold"><?= htmlspecialchars($row['employee_name']) ?></div>
+                                            <div class="small text-muted"><?= htmlspecialchars($row['employee_username']) ?></div>
+                                        </td>
+                                        <td>
+                                            <span class="badge <?= $row['request_type'] == 'OT_Claim' ? 'badge-ot' : ($row['request_type'] == 'Permission' ? 'badge-permission' : 'badge-comp') ?>">
+                                                <?= $type_label ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info"><?= htmlspecialchars($process_display ?? '') ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($row['article'])): ?>
+                                                <span class="badge bg-success"><?= htmlspecialchars($row['article']) ?></span>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <?php if (!empty($row['start_time']) && !empty($row['end_time'])): ?>
+                                                    <?= date('g:i A', strtotime($row['start_time'])) ?> to 
+                                                    <?= date('g:i A', strtotime($row['end_time'])) ?>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php if (!empty($row['total_hours'])): ?>
+                                                <span class="badge bg-warning text-dark"><?= $row['total_hours'] ?> hrs</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="fw-bold"><?= !empty($row['count']) ? number_format($row['count']) : '-' ?></td>
+                                        <td class="small text-secondary" style="max-width: 200px;">
+                                            <?= htmlspecialchars($row['reason'] ?? '') ?>
+                                        </td>
+                                        <td>
+                                            <span class="badge status-<?= $row['status'] ?>">
+                                                <?= $row['status'] ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if ($is_pending): ?>
+                                                <input type="text" 
+                                                       class="form-control form-control-sm remarks-input" 
+                                                       id="remarks-<?= $row['id'] ?>" 
+                                                       placeholder="Enter remarks">
+                                            <?php else: ?>
+                                                <div class="remarks-readonly small">
+                                                    <?= !empty($row['admin_remarks']) ? htmlspecialchars($row['admin_remarks']) : (!empty($row['remarks']) ? htmlspecialchars($row['remarks']) : '-') ?>
+                                                    <?php if (!empty($row['approved_by'])): ?>
+                                                        <div class="text-muted mt-1">
+                                                            <small>By: <?= $row['approved_by'] ?></small>
+                                                            <?php if (!empty($row['approved_at'])): ?>
+                                                                <br><small><?= date('d-M-y H:i', strtotime($row['approved_at'])) ?></small>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($is_pending): ?>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-approve" onclick="approveClaim(<?= $row['id'] ?>)">
+                                                        <i class="fa fa-check"></i> Approve
+                                                    </button>
+                                                    <button class="btn btn-reject" onclick="rejectClaim(<?= $row['id'] ?>)">
+                                                        <i class="fa fa-times"></i> Reject
+                                                    </button>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-disabled" disabled>
+                                                        <i class="fa fa-check"></i> <?= htmlspecialchars($row['status']) ?>
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php
+                                }
+                            } else {
+                                $colspan = ($status_filter == 'all' || $status_filter == 'pending') ? 12 : 11;
+                                echo '<tr><td colspan="' . $colspan . '" class="text-center py-4 text-muted">No OT claims found.</td></tr>';
                             }
-                        } else {
-                            $colspan = ($status_filter == 'all' || $status_filter == 'pending') ? 12 : 11;
-                            echo '<tr><td colspan="' . $colspan . '" class="text-center py-4 text-muted">No OT claims found.</td></tr>';
-                        }
-                        ?>
-                    </tbody>
-                </table>
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+
     </div>
-</div>
+</main>
 
 <!-- Hidden form for single actions -->
 <form method="POST" action="" id="actionForm" style="display: none;">
@@ -637,8 +599,6 @@ include 'header.php';
     <input type="hidden" name="admin_remarks" id="actionRemarks">
 </form>
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Single claim approval/rejection (only for pending claims)
     function approveClaim(otId) {
@@ -692,7 +652,7 @@ include 'header.php';
         const allCheckboxes = document.querySelectorAll('.claim-checkbox');
         const selectAll = document.getElementById('selectAll');
         if (selectAll) {
-            selectAll.checked = (selectedClaims.length === allCheckboxes.length);
+            selectAll.checked = (allCheckboxes.length > 0 && selectedClaims.length === allCheckboxes.length);
         }
     }
     
@@ -732,19 +692,4 @@ include 'header.php';
             bulkForm.reset();
         }
     }
-    
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set today's date max for filters if any
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Auto-hide alerts after 5 seconds
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
-    });
 </script>
