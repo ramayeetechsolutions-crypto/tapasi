@@ -333,6 +333,7 @@ div.page-header {
     background-color: #6c757d !important;
     color: #ffffff !important;
     border-radius: 12px !important;
+    padding: 12px 20px !important;
 }
 
 div.page-header h1, div.page-header h2, div.page-header h3, div.page-header h4, div.page-header h5, div.page-header h6, div.page-header i {
@@ -639,14 +640,48 @@ body > main,
 }
 
 /* Ensure page header banners, cards and title containers have clean top margins */
-.page-title-container,
 .user-header,
 .header-card,
 .user-info,
-.page-header,
 .content-header,
 .dashboard-header {
     margin-top: 0 !important;
+}
+
+/* =========================================================================
+   PAGE HEADER & BANNER LAYOUT CONSTRAINTS
+   Ensure page header / title containers match the width of the layout below
+   (preventing full-bleed 100vw edge-to-edge stretching across all logins)
+   ========================================================================= */
+body > .page-header,
+body > .page-title-container,
+body > div.page-header,
+body > div.page-title-container {
+    margin-left: 1.5rem !important;
+    margin-right: 1.5rem !important;
+    margin-top: 15px !important;
+    margin-bottom: 20px !important;
+    border-radius: 12px !important;
+    width: auto !important;
+    max-width: calc(100% - 3rem) !important;
+}
+
+body > .page-header > .container-fluid,
+body > .page-title-container > .container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.container-fluid > .page-header,
+.container-fluid > .page-title-container,
+.main-content > .page-header,
+.main-content > .page-title-container {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 20px !important;
+    width: 100% !important;
+    border-radius: 12px !important;
 }
 
 /* For cards at top of container */

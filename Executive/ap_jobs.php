@@ -1075,8 +1075,8 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
-        <div class="container-fluid px-0">
+    <div class="container-fluid px-3 pt-3">
+        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
@@ -1092,9 +1092,6 @@ require 'header.php';
                 <?php endif; ?>
             </div>
         </div>
-    </div>
-
-    <div class="container-fluid px-3">
         <?php if (!empty($_GET['msg'])): ?>
             <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show py-2">
                 <i class="fas <?= ($_GET['type'] ?? 'info') === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?> me-1"></i>
