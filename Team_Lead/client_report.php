@@ -258,14 +258,52 @@ $total_count = $count_result->fetch_assoc()['total'] ?? 0;
             max-width: 1400px;
             margin: 0 auto;
         }
-        .table th {
-            /* background-color: #2c3e50; */
-             background-color: #5e6b77 !important;
-            color: white;
-            border: none;
-        }
-        .table td {
+                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        .table th,
+        .table thead th {
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important;
+            border: 1px solid #dee2e6 !important;
+            font-weight: 600;
+            font-size: 12.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            padding: 8px 10px;
+            white-space: nowrap;
+            text-align: center;
             vertical-align: middle;
+        }
+        
+        .table td,
+        .table tbody td {
+            vertical-align: middle;
+            padding: 6px 10px;
+            font-size: 12.5px;
+            color: #334155;
+            border: 1px solid #dee2e6 !important;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        /* Visible Zebra Striping matching xml/xml_unique_start.php */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        
+        /* Full Row Hover Effect matching xml/xml_unique_start.php */
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+        
+        .table tbody tr:hover td.sticky-assign-col,
+        .table tbody tr:hover td.sticky-assign-cell {
+            background-color: #e9ecef !important;
         }
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -391,13 +429,13 @@ $total_count = $count_result->fetch_assoc()['total'] ?? 0;
         <div class="card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="jobsTable">
-                        <thead class="table-light">
+                    <table class="table table-hover table-bordered align-middle mb-0 table-sticky-assign" id="jobsTable" style="border-collapse: separate; border-spacing: 0;">
+                        <thead>
                             <tr>
                                 <th width="60">ID</th>
                                 <th width="100">Date</th>
                                 <th>Journal Issue</th>
-                                <th>Article</th>
+                                <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Article</th>
                                 <th width="100">Process</th>
                                 <th width="120">Assigned To</th>
                                 <th width="100">Due Date</th>
@@ -418,7 +456,7 @@ $total_count = $count_result->fetch_assoc()['total'] ?? 0;
                                     <td>
                                         <?= h($row['journal_issue']) ?>
                                     </td>
-                                    <td>
+                                    <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($row['article'] ?? '') ?>">
                                         <?= h($row['article']) ?>
                                     </td>
                                     <td>

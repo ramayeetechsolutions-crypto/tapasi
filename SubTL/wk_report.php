@@ -185,32 +185,13 @@ require 'header.php';
             background: white;
             font-size: 0.88rem;
         }
-        .wk-report-table th, .wk-report-table td {
-            border: 1px solid #5a6268;
-            padding: 5px 8px;
-            vertical-align: middle;
-        }
+        .wk-report-table th, .wk-report-table td { border: 1px solid #dee2e6 !important; padding: 6px 10px; vertical-align: middle; font-size: 12.5px; text-align: center; }
 
         /* Top Group Header (GREY) */
-        .wk-report-table thead tr.group-header th {
-            background-color: #707981 !important;
-            color: white !important;
-            font-weight: bold;
-            font-size: 0.92rem;
-            text-transform: uppercase;
-            text-align: center;
-            border: 1px solid #5a6268 !important;
-        }
+        .wk-report-table thead tr.group-header th { background-color: #5e6b77 !important; color: white !important; font-weight: 600; font-size: 12.5px; text-transform: uppercase; text-align: center; border: 1px solid #4f5a64 !important; }
 
         /* Sub Header (GREY) */
-        .wk-report-table thead tr.sub-header th {
-            background-color: #5a6268 !important;
-            color: white !important;
-            font-weight: bold;
-            font-size: 0.85rem;
-            text-align: center;
-            border: 1px solid #4e555b !important;
-        }
+        .wk-report-table thead tr.sub-header th { background-color: #4f5a64 !important; color: white !important; font-weight: 600; font-size: 12px; text-align: center; border: 1px solid #3d4750 !important; }
 
         /* Green target box from 2nd image */
         .badge-target {

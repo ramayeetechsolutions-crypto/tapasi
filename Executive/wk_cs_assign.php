@@ -246,25 +246,52 @@ require 'header.php';
         .stats-card.card-content { background: #dcfce7; }
         .stats-card.card-images { background: #fae8ff; }
         .stats-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; background: rgba(255,255,255,0.7); }
+                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        .table th,
         .table thead th {
-            background-color: #707981 !important; 
-            color: white !important;
-            font-weight: bold;
-            font-size: 0.85rem;
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important;
+            border: 1px solid #dee2e6 !important;
+            font-weight: 600;
+            font-size: 12.5px;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
+            padding: 8px 10px;
+            white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+        }
+        
+        .table td,
+        .table tbody td {
+            vertical-align: middle;
+            padding: 6px 10px;
+            font-size: 12.5px;
+            color: #334155;
+            border: 1px solid #dee2e6 !important;
+            text-align: center;
             white-space: nowrap;
         }
-        .table tbody td {
-            padding: 0.5rem 0.4rem;
-            font-size: 0.82rem;
-            vertical-align: middle;
-            border: 1px solid #cbd5e1;
-            background: white;
+        
+        /* Visible Zebra Striping matching xml/xml_unique_start.php */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        
+        /* Full Row Hover Effect matching xml/xml_unique_start.php */
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+        
+        .table tbody tr:hover td.sticky-assign-col,
+        .table tbody tr:hover td.sticky-assign-cell {
+            background-color: #e9ecef !important;
         }
         .tm-badge {
             display: inline-flex;

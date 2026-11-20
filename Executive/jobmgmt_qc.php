@@ -393,17 +393,53 @@ if ($results->num_rows > 0) {
         }
 
 table td { vertical-align: middle; padding: 6px 8px; white-space: nowrap; font-size: 0.9rem; }
-.table thead th {
-    background-color: #707981 !important;
-    font-weight: bold;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: white !important;
-    padding: 0.8rem 0.5rem;
-    border: 1px solid #5a6268 !important;
-    white-space: nowrap;
-}
+        /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        .table th,
+        .table thead th {
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important;
+            border: 1px solid #dee2e6 !important;
+            font-weight: 600;
+            font-size: 12.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            padding: 8px 10px;
+            white-space: nowrap;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .table td,
+        .table tbody td {
+            vertical-align: middle;
+            padding: 6px 10px;
+            font-size: 12.5px;
+            color: #334155;
+            border: 1px solid #dee2e6 !important;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        /* Visible Zebra Striping matching xml/xml_unique_start.php */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        
+        /* Full Row Hover Effect matching xml/xml_unique_start.php */
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+        
+        .table tbody tr:hover td.sticky-assign-col,
+        .table tbody tr:hover td.sticky-assign-cell {
+            background-color: #e9ecef !important;
+        }
 
 /* --- Vibrant Color Scheme --- */
 .status-in-progress {
@@ -627,15 +663,15 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height:650px; overflow:auto;">
-                <table class="table table-striped table-bordered" id="jobTable">
-                    <thead class="table-light">
+                <table class="table table-hover table-striped table-bordered table-sticky-assign" id="jobTable" style="min-width: 2400px; border-collapse: separate; border-spacing: 0;">
+                    <thead>
                         <tr>
                             <th>LE moved Date</th>
                             <th>CE moved Date</th>
                             <th>Received Date</th>
                             <th>Client</th>
                             <th>Journal</th>
-                            <th>Articles</th>
+                            <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>EQN</th>
                             <th>Pages</th>
                             <th>Images</th>
@@ -671,7 +707,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= !empty($row['pag_received_date']) ? formatDateOnly(substr($row['pag_received_date'], 0, 10), 'd-m-Y') : '—' ?></td>
                             <td><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : $row['client_name']) ?></td>
                             <td><?= h($row['journal_issue']) ?></td>
-                            <td><?= h($row['article']) ?></td>
+                            <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($row['article'] ?? '') ?>"><?= h($row['article']) ?></td>
                             <td><?= h($row['eq'] ?? '0') ?></td>
                             <td><?= h($row['pages'] ?? '0') ?></td>
                             <td><?= h($row['images'] ?? '0') ?></td>

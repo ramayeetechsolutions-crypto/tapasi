@@ -1011,10 +1011,13 @@ if ($row = $result->fetch_assoc()) {
             });
         });
 
-        // Sticky Columns Support for TL Assign Pages (From S.No to Articles)
+        // Sticky Columns Support for TL Assign & Report Pages (From S.No to Articles, except WK Report)
         function applyStickyAssignColumns() {
+            if (window.location.pathname.indexOf('wk_report') !== -1) return;
+
             var isAssignPage = window.location.pathname.indexOf('assign') !== -1 || window.location.pathname.indexOf('alljobs') !== -1;
-            var tables = document.querySelectorAll('.table-sticky-assign' + (isAssignPage ? ', .table-responsive table, .table-container table' : ''));
+            var isReportPage = window.location.pathname.indexOf('jobmgmt_') !== -1 || window.location.pathname.indexOf('report') !== -1;
+            var tables = document.querySelectorAll('.table-sticky-assign' + (isAssignPage || isReportPage ? ', .table-responsive table, .table-container table' : ''));
             if (!tables || tables.length === 0) return;
 
             var processedTables = new Set();
@@ -1034,7 +1037,7 @@ if ($row = $result->fetch_assoc()) {
                 var articleIndex = -1;
                 for (var i = 0; i < ths.length; i++) {
                     var text = ths[i].textContent.trim().toUpperCase();
-                    if (text === 'ARTICLES' || text === 'ARTICLE' || text.indexOf('ARTICLE') !== -1) {
+                    if ((text === 'ARTICLES' || text === 'ARTICLE') || (text.indexOf('ARTICLE') !== -1 && text.indexOf('COUNT') === -1)) {
                         articleIndex = i;
                         break;
                     }
@@ -1047,6 +1050,18 @@ if ($row = $result->fetch_assoc()) {
                 }
 
                 table.classList.add('table-sticky-assign');
+
+                // Ensure thead and tbody have proper stacking contexts so headers stay on top when scrolling vertically
+                if (thead) {
+                    thead.style.setProperty('position', 'sticky', 'important');
+                    thead.style.setProperty('top', '0', 'important');
+                    thead.style.setProperty('z-index', '150', 'important');
+                }
+                var tbody = table.querySelector('tbody');
+                if (tbody) {
+                    tbody.style.setProperty('position', 'relative', 'important');
+                    tbody.style.setProperty('z-index', '1', 'important');
+                }
 
                 // Enforce compact 135px width on Articles column before measuring layout offsets
                 if (articleIndex !== -1 && ths[articleIndex]) {
@@ -1083,7 +1098,9 @@ if ($row = $result->fetch_assoc()) {
                         th.style.setProperty('position', 'sticky', 'important');
                         th.style.setProperty('top', '0', 'important');
                         th.style.setProperty('left', leftOffsets[i] + 'px', 'important');
-                        th.style.setProperty('z-index', '30', 'important');
+                        th.style.setProperty('z-index', (i === articleIndex ? '165' : '160'), 'important');
+                        th.style.setProperty('background-color', '#5e6b77', 'important');
+                        th.style.setProperty('color', '#ffffff', 'important');
                         if (i === articleIndex) {
                             th.classList.add('sticky-assign-col-last');
                         }
@@ -1091,7 +1108,9 @@ if ($row = $result->fetch_assoc()) {
                         th.classList.remove('sticky-assign-col', 'sticky-assign-col-last');
                         th.style.setProperty('position', 'sticky', 'important');
                         th.style.setProperty('top', '0', 'important');
-                        th.style.setProperty('z-index', '20', 'important');
+                        th.style.setProperty('z-index', '150', 'important');
+                        th.style.setProperty('background-color', '#5e6b77', 'important');
+                        th.style.setProperty('color', '#ffffff', 'important');
                     }
                 }
 
@@ -1102,15 +1121,15 @@ if ($row = $result->fetch_assoc()) {
                     for (var i = 0; i < cells.length; i++) {
                         var cell = cells[i];
                         if (i <= articleIndex) {
-                            cell.classList.add('sticky-assign-cell');
+                            cell.classList.add('sticky-assign-col', 'sticky-assign-cell');
                             cell.style.setProperty('position', 'sticky', 'important');
                             cell.style.setProperty('left', leftOffsets[i] + 'px', 'important');
-                            cell.style.setProperty('z-index', '10', 'important');
+                            cell.style.setProperty('z-index', (i === articleIndex ? '15' : '10'), 'important');
                             if (i === articleIndex) {
                                 cell.classList.add('sticky-assign-col-last');
                             }
                         } else {
-                            cell.classList.remove('sticky-assign-cell', 'sticky-assign-col-last');
+                            cell.classList.remove('sticky-assign-col', 'sticky-assign-cell', 'sticky-assign-col-last');
                         }
                     }
                 });

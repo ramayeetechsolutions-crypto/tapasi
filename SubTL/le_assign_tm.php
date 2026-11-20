@@ -643,32 +643,52 @@ require 'header.php';
             margin-bottom: 0;
         }
         
+                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        .table th,
         .table thead th {
-            background-color: #707981 !important; 
-            color: white !important;
-            font-weight: bold;
-            font-size: 0.85rem;
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important;
+            border: 1px solid #dee2e6 !important;
+            font-weight: 600;
+            font-size: 12.5px;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
+            padding: 8px 10px;
+            white-space: nowrap;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .table td,
+        .table tbody td {
+            vertical-align: middle;
+            padding: 6px 10px;
+            font-size: 12.5px;
+            color: #334155;
+            border: 1px solid #dee2e6 !important;
+            text-align: center;
             white-space: nowrap;
         }
         
-        .table tbody td {
-            padding: 0.6rem 0.4rem;
-            font-size: 0.75rem;
-            color: #334155;
-            vertical-align: middle;
-            border-bottom: 1px solid #e2e8f0;
+        /* Visible Zebra Striping matching xml/xml_unique_start.php */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
         }
         
-        .table tbody tr:hover {
-            background-color: #f8fafc;
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
         }
         
-        .table tbody tr.assigned {
-            background-color: #f0fdf4;
+        /* Full Row Hover Effect matching xml/xml_unique_start.php */
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+        
+        .table tbody tr:hover td.sticky-assign-col,
+        .table tbody tr:hover td.sticky-assign-cell {
+            background-color: #e9ecef !important;
         }
         
         .status-badge {
@@ -1039,7 +1059,7 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover table-sticky-assign" style="min-width: 1400px; border-collapse: separate; border-spacing: 0;">
+                <table class="table table-hover table-bordered table-sticky-assign" style="min-width: 1400px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>S.No</th>
