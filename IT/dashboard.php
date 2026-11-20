@@ -69,6 +69,7 @@ $passive_percentage = $total_clients > 0 ? round(($passive_clients / $total_clie
 $inactive_percentage = $total_clients > 0 ? round(($inactive_clients / $total_clients) * 100, 1) : 0;
 
 include 'header.php';
+$current_user = !empty($displayName) ? $displayName : ($current_user ?? 'User');
 ?>
 
 <style>

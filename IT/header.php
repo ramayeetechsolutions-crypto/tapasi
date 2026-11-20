@@ -14,8 +14,36 @@ if (!isset($_SESSION['itname']) && !isset($_SESSION['infoname']) && !isset($_SES
 $currentPage = basename($_SERVER['PHP_SELF']);
 $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 
+// Fetch employee name from DB
+$displayName = $_SESSION['ename'] ?? '';
+if (empty($displayName) || $displayName === $username) {
+    if (!isset($mysqli)) {
+        require_once __DIR__ . '/../db.php';
+    }
+    if (isset($mysqli)) {
+        $u_val = $_SESSION['username'] ?? '';
+        $nStmt = $mysqli->prepare("SELECT employee_name FROM employee_master WHERE employee_username = ? LIMIT 1");
+        if ($nStmt) {
+            $nStmt->bind_param("s", $u_val);
+            $nStmt->execute();
+            $nRes = $nStmt->get_result();
+            if ($nRow = $nRes->fetch_assoc()) {
+                if (!empty($nRow['employee_name'])) {
+                    $displayName = $nRow['employee_name'];
+                    $_SESSION['ename'] = $displayName;
+                }
+            }
+            $nStmt->close();
+        }
+    }
+}
+if (empty($displayName)) {
+    $displayName = $username;
+}
+
 // Helper arrays to keep parent menu highlighted when a child page is active
-$myAccountPages = ['employee_regby_emp.php', 'employee.php'];
+$myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
+$employeePages = ['employee_master.php', 'employee_add.php'];
 $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
 $reportPages = ['error_entry_team.php', 'error_entry.php'];
 ?>
@@ -320,6 +348,18 @@ $reportPages = ['error_entry_team.php', 'error_entry.php'];
                         <ul class="nav-dropdown">
                             <li><a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>"><i class="fas fa-user-edit"></i> Update Profile</a></li>
                             <li><a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>"><i class="fas fa-check-circle"></i> Verify Details</a></li>
+                            <li><a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>"><i class="fas fa-calendar-check"></i> Permission & OT</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Employee -->
+                    <li>
+                        <a href="#" onclick="return false;"
+                            class="<?php echo (in_array($currentPage, $employeePages)) ? 'active' : ''; ?>">
+                            <i class="fas fa-user-tie"></i> Employee
+                        </a>
+                        <ul class="nav-dropdown">
+                            <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
                         </ul>
                     </li>
 

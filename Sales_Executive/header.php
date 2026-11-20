@@ -19,6 +19,33 @@ if (!isset($_SESSION['sales_exec']) && !isset($_SESSION['salesname'])) {
 $currentPage = basename($_SERVER['PHP_SELF']);
 $username = htmlspecialchars($_SESSION['username'] ?? 'User');
 
+// Fetch employee name from DB
+$displayName = $_SESSION['ename'] ?? '';
+if (empty($displayName) || $displayName === $username) {
+    if (!isset($mysqli)) {
+        require_once __DIR__ . '/../db.php';
+    }
+    if (isset($mysqli)) {
+        $u_val = $_SESSION['username'] ?? '';
+        $nStmt = $mysqli->prepare("SELECT employee_name FROM employee_master WHERE employee_username = ? LIMIT 1");
+        if ($nStmt) {
+            $nStmt->bind_param("s", $u_val);
+            $nStmt->execute();
+            $nRes = $nStmt->get_result();
+            if ($nRow = $nRes->fetch_assoc()) {
+                if (!empty($nRow['employee_name'])) {
+                    $displayName = $nRow['employee_name'];
+                    $_SESSION['ename'] = $displayName;
+                }
+            }
+            $nStmt->close();
+        }
+    }
+}
+if (empty($displayName)) {
+    $displayName = $username;
+}
+
 // Helper arrays to keep parent menu highlighted when a child page is active
 // 1. Employee Pages (Grouped together)
 $employeePages = [];
@@ -29,7 +56,7 @@ $masterPages = ['client_master.php', 'services_master.php', 'math_category_maste
 $clientPages = ['nda_details.php', 'client_followup.php', 'client_rate_list.php', 'inactive_clients.php'];
 $servicePages = ['client_services.php', 'client_transactions.php'];
 $calcPages = ['math_charges.php', 'sales_calculation.php'];
-$myAccountPages = ['employee_regby_emp.php', 'employee.php'];
+$myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
 $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
 ?>
 <!DOCTYPE html>
@@ -440,6 +467,7 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                         <ul class="nav-dropdown">
                             <li><a href="employee_regby_emp.php" class="<?= $currentPage === 'employee_regby_emp.php' ? 'active' : '' ?>"><i class="fas fa-user-edit"></i> Update Profile</a></li>
                             <li><a href="employee.php" class="<?= $currentPage === 'employee.php' ? 'active' : '' ?>"><i class="fas fa-check-circle"></i> Verify Details</a></li>
+                            <li><a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>"><i class="fas fa-calendar-check"></i> Permission & OT</a></li>
                         </ul>
                     </li>
 
