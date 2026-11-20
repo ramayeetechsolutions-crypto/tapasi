@@ -38,9 +38,11 @@ if (!function_exists('h')) {
     }
 }
 
-function formatDate($d) {
-    if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
-    return date('d-m-Y', strtotime($d));
+if (!function_exists('formatDate')) {
+    function formatDate($d) {
+        if (empty($d) || $d === '0000-00-00' || $d === '0000-00-00 00:00:00') return '—';
+        return date('d-m-Y', strtotime($d));
+    }
 }
 
 if (!function_exists('formatProcessHeader')) {
@@ -75,7 +77,8 @@ if ($result->num_rows > 0) {
 // Get filter parameters
 $start_date = $_GET['start_date'] ?? date('Y-m-01'); // First day of current month
 $end_date = $_GET['end_date'] ?? date('Y-m-t'); // Last day of current month
-$employee_id = $_GET['employee_id'] ?? '';
+$filter_employee_id = $_GET['employee_id'] ?? '';
+$employee_id = $filter_employee_id;
 $process = $_GET['process'] ?? '';
 $team_id = isset($_GET['team_id']) ? (int)$_GET['team_id'] : '';
 
@@ -145,6 +148,36 @@ $employees_result = $mysqli->query($employees_sql);
 if ($employees_result && $employees_result->num_rows > 0) {
     while ($emp = $employees_result->fetch_assoc()) {
         $employee_details[$emp['employee_id']] = $emp;
+    }
+}
+
+// Fetch all employees for dropdown (respects manager & team filter, unaffected by single employee filter)
+$dropdown_emp_cond = "em.status = 'Active'";
+if (!empty($team_id)) {
+    $dropdown_emp_cond .= " AND em.team_id = " . (int)$team_id;
+}
+$dropdown_emp_sql = "SELECT em.employee_id, em.employee_name, em.employee_username 
+                     FROM employee_master em 
+                     WHERE $manager_cond AND $dropdown_emp_cond 
+                     ORDER BY em.employee_name";
+$dropdown_emp_res = $mysqli->query($dropdown_emp_sql);
+$dropdown_employees = [];
+if ($dropdown_emp_res && $dropdown_emp_res->num_rows > 0) {
+    while ($de = $dropdown_emp_res->fetch_assoc()) {
+        $dropdown_employees[$de['employee_id']] = $de;
+    }
+}
+
+// Fetch latest target assignment / revised date for each employee
+$employee_revised_dates = [];
+$rev_sql = "SELECT tm_id, MAX(assigned_date) as last_revised_date 
+            FROM daily_targets_xml 
+            WHERE assigned_date IS NOT NULL AND assigned_date > '2000-01-01'
+            GROUP BY tm_id";
+$rev_res = $mysqli->query($rev_sql);
+if ($rev_res) {
+    while ($r_row = $rev_res->fetch_assoc()) {
+        $employee_revised_dates[$r_row['tm_id']] = $r_row['last_revised_date'];
     }
 }
 
@@ -502,7 +535,11 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
     </style>
 </head>
 <body>
-    <?php require 'header.php'; ?>
+    <?php 
+    require 'header.php'; 
+    // Restore filtered employee_id (prevent header.php from overwriting it with $_SESSION['uid'])
+    $employee_id = $filter_employee_id;
+    ?>
     
     <div class="main-content">
         <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
@@ -608,7 +645,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                     <label class="form-label">Employee</label>
                     <select name="employee_id" class="form-select">
                         <option value="">All Employees</option>
-                        <?php foreach($employee_details as $id => $emp): ?>
+                        <?php foreach($dropdown_employees as $id => $emp): ?>
                             <option value="<?= $emp['employee_id'] ?>" <?= (int)$employee_id === (int)$emp['employee_id'] ? 'selected' : '' ?>>
                                 <?= !empty($emp['employee_username']) ? h($emp['employee_username']) . ' - ' : '' ?><?= h($emp['employee_name']) ?>
                             </option>
@@ -646,83 +683,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
 
 
         
-                <!-- NEW: day-wise view (when a specific employee is selected) -->
-        <?php if ($is_tl && (int)$employee_id > 0 && count($employee_details) === 1): ?>
-            <?php 
-                $emp = reset($employee_details);
-                $emp_id = $emp['employee_id'];
-            ?>
-            <div class="card mt-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Day-Wise Performance: <?= h($emp['employee_name']) ?></h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-container">
-                        <table class="table table-bordered table-striped align-middle mb-0" id="dailyReportTable">
-                            <thead>
-                                <tr>
-                                    <th class="sticky-col" style="z-index: 99 !important;">Employee Name</th>
-                                    <?php foreach($processes_array as $proc): 
-                                        $is_wide = ($proc['process_name'] === 'DOAJ /Biblat /PubMed' || $proc['process_name'] === 'PMC JATS QC');
-                                        $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
-                                    ?>
-                                        <th class="text-center <?= $col_cls ?>"><?= formatProcessHeader($proc['process_name']) ?></th>
-                                    <?php endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php 
-                                $process_totals = [];
-                                foreach($processes_array as $proc) {
-                                    $process_totals[$proc['process_name']] = 0;
-                                }
-
-                                foreach($dates as $date): 
-                                    $daily_row_total = 0;
-                                    foreach($processes_array as $proc) {
-                                        $daily_row_total += $process_daily_achieved[$emp_id][$proc['process_name']][$date] ?? 0;
-                                    }
-
-                                    // skip days where the employee did no work
-                                    if ($daily_row_total == 0) {
-                                        continue; 
-                                    }
-                                ?>
-                                <tr>
-                                    <td class="sticky-col" style="background-color: white;">
-                                        <div class="employee-name"><?= h($emp['employee_name']) ?></div>
-                                        <div class="text-muted small">ID: <?= h($emp['employee_username']) ?></div>
-                                        <div class="text-primary small fw-bold mt-1"><i class="fas fa-calendar-alt me-1"></i><?= formatDate($date) ?></div>
-                                    </td>
-                                    <?php foreach($processes_array as $proc): 
-                                        $p_name = $proc['process_name'];
-                                        $achieved = $process_daily_achieved[$emp_id][$p_name][$date] ?? 0;
-                                        $process_totals[$p_name] += $achieved;
-                                    ?>
-                                        <td class="text-center">
-                                            <?= $achieved > 0 ? number_format($achieved) : '' ?>
-                                        </td>
-                                    <?php endforeach; ?>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                            <tfoot class="table-dark">
-                                <tr>
-                                    <td class="sticky-col text-end fw-bold" style="background-color: #212529; color: white;">Total</td>
-                                    <?php foreach($processes_array as $proc): ?>
-                                        <td class="text-center fw-bold"><?= $process_totals[$proc['process_name']] > 0 ? number_format($process_totals[$proc['process_name']]) : '0' ?></td>
-                                    <?php endforeach; ?>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-        <?php else: ?>
-        <!-- END NEW -->
-
-        <!-- NEW TABLE: Process-Wise Employee Performance -->
+        <!-- TABLE: Process-Wise Employee Performance -->
         <div class="card mt-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <div>
@@ -746,6 +707,13 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                             </tr>
                         </thead>
                         <tbody>
+                            <?php if (empty($employee_details)): ?>
+                                <tr>
+                                    <td colspan="<?= count($processes_array) + 2 ?>" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle me-1"></i> No employee records found matching the selected filters.
+                                    </td>
+                                </tr>
+                            <?php else: ?>
                             <?php 
                             // Safely calculate the actual number of days based on the date filter
                             $start_ts = strtotime($start_date);
@@ -762,6 +730,14 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                                 <td class="sticky-col" style="background-color: white;">
                                     <div class="employee-name"><?= h($emp['employee_name']) ?></div>
                                     <div class="text-muted small">ID: <?= h($emp['employee_username']) ?></div>
+                                    <?php 
+                                    $rev_date = $employee_revised_dates[$emp_id] ?? '';
+                                    if (!empty($rev_date)): 
+                                    ?>
+                                        <div class="text-secondary small mt-1" style="font-size: 0.72rem; white-space: nowrap;">
+                                            <i class="far fa-calendar-alt me-1 text-primary"></i><?= date('d-M-Y', strtotime($rev_date)) ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </td>
                                 
                                 <?php foreach($processes_array as $proc): 
@@ -827,12 +803,100 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                                 </td>
                             </tr>
                             <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
+        <!-- Day-wise breakdown (when a specific employee is selected) -->
+        <?php if (!empty($employee_id) && count($employee_details) === 1): ?>
+            <?php 
+                $emp = reset($employee_details);
+                $emp_id = $emp['employee_id'];
+                $rev_date = $employee_revised_dates[$emp_id] ?? '';
+            ?>
+            <div class="card mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Day-Wise Performance: <?= h($emp['employee_name']) ?></h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-container">
+                        <table class="table table-bordered table-striped align-middle mb-0" id="dailyReportTable">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col" style="z-index: 99 !important;">Employee Name</th>
+                                    <?php foreach($processes_array as $proc): 
+                                        $is_wide = ($proc['process_name'] === 'DOAJ /Biblat /PubMed' || $proc['process_name'] === 'PMC JATS QC');
+                                        $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
+                                    ?>
+                                        <th class="text-center <?= $col_cls ?>"><?= formatProcessHeader($proc['process_name']) ?></th>
+                                    <?php endforeach; ?>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $process_totals = [];
+                                foreach($processes_array as $proc) {
+                                    $process_totals[$proc['process_name']] = 0;
+                                }
+
+                                $rendered_daily_rows = 0;
+                                foreach($dates as $date): 
+                                    $daily_row_total = 0;
+                                    foreach($processes_array as $proc) {
+                                        $daily_row_total += $process_daily_achieved[$emp_id][$proc['process_name']][$date] ?? 0;
+                                    }
+
+                                    // skip days where the employee did no work
+                                    if ($daily_row_total == 0) {
+                                        continue; 
+                                    }
+                                    $rendered_daily_rows++;
+                                ?>
+                                <tr>
+                                    <td class="sticky-col" style="background-color: white;">
+                                        <div class="employee-name"><?= h($emp['employee_name']) ?></div>
+                                        <div class="text-muted small">ID: <?= h($emp['employee_username']) ?></div>
+                                        <div class="text-primary small fw-bold mt-1"><i class="fas fa-calendar-alt me-1"></i><?= formatDate($date) ?></div>
+                                        <?php if (!empty($rev_date)): ?>
+                                            <div class="text-secondary small mt-1" style="font-size: 0.72rem; white-space: nowrap;">
+                                                <i class="far fa-calendar-alt me-1 text-primary"></i>Rev: <?= date('d-M-Y', strtotime($rev_date)) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <?php foreach($processes_array as $proc): 
+                                        $p_name = $proc['process_name'];
+                                        $achieved = $process_daily_achieved[$emp_id][$p_name][$date] ?? 0;
+                                        $process_totals[$p_name] += $achieved;
+                                    ?>
+                                        <td class="text-center">
+                                            <?= $achieved > 0 ? number_format($achieved) : '' ?>
+                                        </td>
+                                    <?php endforeach; ?>
+                                </tr>
+                                <?php endforeach; ?>
+                                <?php if ($rendered_daily_rows === 0): ?>
+                                    <tr>
+                                        <td colspan="<?= count($processes_array) + 1 ?>" class="text-center text-muted py-4">
+                                            <i class="fas fa-info-circle me-1"></i> No daily production records found for <?= h($emp['employee_name']) ?> between <?= formatDate($start_date) ?> and <?= formatDate($end_date) ?>.
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <td class="sticky-col text-end fw-bold" style="background-color: #212529; color: white;">Total</td>
+                                    <?php foreach($processes_array as $proc): ?>
+                                        <td class="text-center fw-bold"><?= $process_totals[$proc['process_name']] > 0 ? number_format($process_totals[$proc['process_name']]) : '0' ?></td>
+                                    <?php endforeach; ?>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
         <?php endif; ?>
         
         <!-- Employee Performance Charts Heading Added Here -->
