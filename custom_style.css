@@ -814,7 +814,12 @@ select.form-select-sm {
 
 /* Prevent corner clipping on dropdown containers */
 .nav-dropdown,
-.nav-menu .nav-dropdown,
+.nav-menu .nav-dropdown {
+    border-radius: 8px !important;
+    overflow: visible !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
 .dropdown-menu,
 .nav-sub-dropdown {
     border-radius: 8px !important;
