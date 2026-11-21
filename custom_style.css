@@ -363,9 +363,7 @@ thead.bg-light th,
    ========================================================================= */
 table thead,
 .table thead {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 100 !important;
+    position: static !important;
 }
 
 table thead th,
@@ -419,6 +417,83 @@ table.dataTable thead th,
 .table-container table thead tr:nth-child(2) th {
     top: 31px !important;
     z-index: 99 !important;
+}
+
+/* =========================================================================
+   2.1 STICKY COLUMN HEADERS & CELLS (HORIZONTAL SCROLL PROTECTION)
+   Sticky left/right column headers stay pinned on top during horizontal scroll
+   and are never overlapped by incoming scrolling headers (z-index: 120 > 100)
+   ========================================================================= */
+table thead th.sticky-col-1,
+table thead th.sticky-col-2,
+table thead th.sticky-col-3,
+table thead th.sticky-col-4,
+.table thead th.sticky-col-1,
+.table thead th.sticky-col-2,
+.table thead th.sticky-col-3,
+.table thead th.sticky-col-4,
+.table-responsive table thead th.sticky-col-1,
+.table-responsive table thead th.sticky-col-2,
+.table-responsive table thead th.sticky-col-3,
+.table-responsive table thead th.sticky-col-4,
+#trackingTable thead th.sticky-col-1,
+#trackingTable thead th.sticky-col-2,
+#trackingTable thead th.sticky-col-3,
+#trackingTable thead th.sticky-col-4,
+#completedJobsTable thead th:nth-child(1),
+#completedJobsTable thead th:nth-child(2),
+#completedJobsTable thead th:nth-child(3),
+#completedJobsTable thead th:nth-child(-n+3),
+#xmlJobsTable thead th:nth-child(1),
+#xmlJobsTable thead th:nth-child(2),
+#xmlJobsTable thead th:nth-child(3),
+#xmlJobsTable thead th:nth-child(4),
+#xmlJobsTable thead th:nth-child(-n+4) {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 120 !important;
+    background-color: #5e6b77 !important;
+    color: #ffffff !important;
+    background-clip: padding-box !important;
+}
+
+/* Sticky Right Column Header (Action Header in Tracking Table) */
+#trackingTable thead th.sticky-act-col,
+#trackingTable thead th:last-child {
+    position: sticky !important;
+    top: 0 !important;
+    right: 0 !important;
+    z-index: 120 !important;
+    background-color: #5e6b77 !important;
+    color: #ffffff !important;
+    background-clip: padding-box !important;
+}
+
+/* Sticky Column Body Cells (z-index: 10, above scrolling body cells) */
+#trackingTable tbody td.sticky-col-1,
+#trackingTable tbody td.sticky-col-2,
+#trackingTable tbody td.sticky-col-3,
+#trackingTable tbody td.sticky-col-4,
+#completedJobsTable tbody td:nth-child(1),
+#completedJobsTable tbody td:nth-child(2),
+#completedJobsTable tbody td:nth-child(3),
+#completedJobsTable tbody td:nth-child(-n+3),
+#xmlJobsTable tbody td:nth-child(1),
+#xmlJobsTable tbody td:nth-child(2),
+#xmlJobsTable tbody td:nth-child(3),
+#xmlJobsTable tbody td:nth-child(4),
+#xmlJobsTable tbody td:nth-child(-n+4) {
+    position: sticky !important;
+    z-index: 10 !important;
+    background-clip: padding-box !important;
+}
+
+#trackingTable tbody td.sticky-act-col,
+#trackingTable tbody td:last-child {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 10 !important;
+    background-clip: padding-box !important;
 }
 
 /* Ensure table containers allow vertical & horizontal scroll with sticky headers */
@@ -1076,9 +1151,7 @@ select.form-select-sm {
 }
 
 .table-sticky-assign thead {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 150 !important;
+    position: static !important;
 }
 
 .table-sticky-assign tbody {

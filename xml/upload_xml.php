@@ -957,6 +957,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             width: 100% !important;
             white-space: nowrap;
         } 
+        table.dataTable thead {
+            position: static !important;
+        }
         
         /* 2. STICKY HEADERS (Top Layer) */
         table.dataTable thead th { 
@@ -967,7 +970,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             text-transform: uppercase; 
             font-size: 12.5px;
             position: sticky !important; 
-            top: 0; 
+            top: 0 !important; 
             z-index: 20 !important; 
             border-top: 1px solid #dee2e6 !important;
             border-bottom: 1px solid #dee2e6 !important;
@@ -980,17 +983,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         /* 3. STICKY COLUMNS (First 3 Columns Locked with Exact Widths) */
         table.dataTable thead th:nth-child(1), table.dataTable tbody td:nth-child(1) { 
-            position: sticky !important; left: 0;
+            position: sticky !important; left: 0 !important;
             width: 110px !important; min-width: 110px !important; max-width: 110px !important; box-sizing: border-box !important;
             overflow: hidden; text-overflow: ellipsis;
         }
         table.dataTable thead th:nth-child(2), table.dataTable tbody td:nth-child(2) { 
-            position: sticky !important; left: 110px;
+            position: sticky !important; left: 110px !important;
             width: 200px !important; min-width: 200px !important; max-width: 200px !important; box-sizing: border-box !important;
             overflow: hidden; text-overflow: ellipsis;
         }
         table.dataTable thead th:nth-child(3), table.dataTable tbody td:nth-child(3) { 
-            position: sticky !important; left: 310px;
+            position: sticky !important; left: 310px !important;
             border-right: 1px solid #dee2e6 !important;
             width: 180px !important; min-width: 180px !important; max-width: 180px !important; box-sizing: border-box !important;
             overflow: hidden; text-overflow: ellipsis;
@@ -1000,8 +1003,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             z-index: 10 !important;
         }
         table.dataTable thead th:nth-child(-n+3) { 
-            z-index: 30 !important; 
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 120 !important; 
             background-color: #5e6b77 !important; 
+            color: #ffffff !important;
         }
 
         /* 4. Group differentiation styling (Issue-wise colors) */
@@ -1019,9 +1025,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         table.dataTable tbody tr:hover td {
             background-color: #c4cbd3 !important; 
             cursor: pointer;
+            transition: background-color 0.1s ease;
         }
         table.dataTable tbody tr:hover td:nth-child(-n+3) {
-            background-color: #c4cbd3 !important;
+            background-color: #e9ecef !important;
         }
 
         /* 6. Base Cell Controls */

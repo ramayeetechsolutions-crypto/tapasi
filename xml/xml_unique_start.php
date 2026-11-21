@@ -552,18 +552,51 @@ if ($results && $results->num_rows > 0) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
     <style>
-              /* 1. Sticky Columns Setup (Locked Widths to prevent overlap) */
-        .table th.sticky-col-1, .table td.sticky-col-1 { position: sticky; left: 0; z-index: 10; min-width: 45px; max-width: 45px; }
-        .table th.sticky-col-2, .table td.sticky-col-2 { position: sticky; left: 45px; z-index: 10; min-width: 130px; max-width: 130px; }
-        .table th.sticky-col-3, .table td.sticky-col-3 { position: sticky; left: 175px; z-index: 10; min-width: 200px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-        .table th.sticky-col-4, .table td.sticky-col-4 { position: sticky; left: 375px; z-index: 10; border-right: 1px solid #dee2e6; min-width: 180px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+        #trackingTable {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        #trackingTable thead {
+            position: static !important;
+        }
 
-        /* 2. Header Colors (Dark Grey) */
+        /* 1. Sticky Columns Setup (Locked Widths to prevent overlap) */
+        .table th.sticky-col-1, .table td.sticky-col-1 { position: sticky !important; left: 0 !important; min-width: 45px; max-width: 45px; width: 45px; box-sizing: border-box !important; }
+        .table th.sticky-col-2, .table td.sticky-col-2 { position: sticky !important; left: 45px !important; min-width: 130px; max-width: 130px; width: 130px; box-sizing: border-box !important; }
+        .table th.sticky-col-3, .table td.sticky-col-3 { position: sticky !important; left: 175px !important; min-width: 200px; max-width: 200px; width: 200px; box-sizing: border-box !important; overflow: hidden; text-overflow: ellipsis; }
+        .table th.sticky-col-4, .table td.sticky-col-4 { position: sticky !important; left: 375px !important; border-right: 1px solid #dee2e6 !important; min-width: 180px; max-width: 180px; width: 180px; box-sizing: border-box !important; overflow: hidden; text-overflow: ellipsis; }
+
+        .table td.sticky-col-1,
+        .table td.sticky-col-2,
+        .table td.sticky-col-3,
+        .table td.sticky-col-4 {
+            z-index: 10 !important;
+        }
+
+        /* 2. Header Colors & Z-Index (Above scrolling headers during horizontal scroll) */
         .table thead th.sticky-col-1, 
         .table thead th.sticky-col-2, 
         .table thead th.sticky-col-3,
         .table thead th.sticky-col-4 {
-            background-color: #5e6b77 !important; color: #ffffff !important; z-index: 12;
+            position: sticky !important;
+            top: 0 !important;
+            background-color: #5e6b77 !important;
+            color: #ffffff !important;
+            z-index: 120 !important;
+        }
+
+        /* Fixed background for sticky columns to avoid see-through */
+        .table tbody tr:nth-child(even) td.sticky-col-1,
+        .table tbody tr:nth-child(even) td.sticky-col-2,
+        .table tbody tr:nth-child(even) td.sticky-col-3,
+        .table tbody tr:nth-child(even) td.sticky-col-4 {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td.sticky-col-1,
+        .table tbody tr:nth-child(odd) td.sticky-col-2,
+        .table tbody tr:nth-child(odd) td.sticky-col-3,
+        .table tbody tr:nth-child(odd) td.sticky-col-4 {
+            background-color: #ffffff !important;
         }
 
         /* 3. Zebra Striping Logic (Even Rows) */
@@ -592,6 +625,32 @@ if ($results && $results->num_rows > 0) {
         .table tbody tr:hover td.sticky-col-4 {
             background-color: #e9ecef !important;
         }
+
+        /* 6. Sticky Right Column (Act.) */
+        .table thead th.sticky-act-col {
+            position: sticky !important;
+            top: 0 !important;
+            right: 0 !important;
+            z-index: 120 !important;
+            background-color: #5e6b77 !important;
+            color: #ffffff !important;
+            border-left: 2px solid #dee2e6 !important;
+            min-width: 85px !important;
+            width: 85px !important;
+            box-sizing: border-box !important;
+        }
+        .table tbody td.sticky-act-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 10 !important;
+            border-left: 2px solid #dee2e6 !important;
+            min-width: 85px !important;
+            width: 85px !important;
+            box-sizing: border-box !important;
+        }
+        .table tbody tr:nth-child(even) td.sticky-act-col { background-color: #f2f4f6 !important; }
+        .table tbody tr:nth-child(odd) td.sticky-act-col { background-color: #ffffff !important; }
+        .table tbody tr:hover td.sticky-act-col { background-color: #e9ecef !important; }
 
         body { background-color: #f5f7fa; font-size: 12.5px; }
         .card { border: none; border-radius: 8px; box-shadow: 0 1px 10px rgba(0,0,0,0.05); }
@@ -898,7 +957,7 @@ if ($results && $results->num_rows > 0) {
                                 
                                 <th>Despatched Date</th>
                                 <th>Remarks</th>
-                                <th style="position: sticky; right: 0; background: #f8f9fa; z-index: 11; min-width: 85px;">Act.</th>
+                                <th class="sticky-act-col">Act.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1210,7 +1269,7 @@ if ($results && $results->num_rows > 0) {
                                     <?php else: ?>-<?php endif; ?>
                                 </td>
                                 
-                                <td class="align-middle bg-light" style="position: sticky; right: 0; border-left: 2px solid #dee2e6;">
+                                <td class="align-middle sticky-act-col">
                                     <div class="d-flex justify-content-center gap-1">
                                         <!-- Edit Job Button -->
                                         <button class="btn btn-sm btn-primary py-0 px-2 shadow-sm" title="Edit Job"

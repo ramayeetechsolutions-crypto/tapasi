@@ -611,9 +611,13 @@ function fetchData() {
             width: 100% !important;
         }
 
+        table.dataTable thead {
+            position: static !important;
+        }
+
         table.dataTable thead th { 
             position: sticky !important;
-            top: 0;
+            top: 0 !important;
             z-index: 20 !important;
             background-color: var(--header-bg) !important; 
             color: #ffffff !important; 
@@ -661,22 +665,22 @@ function fetchData() {
 
         /* 5. Sticky Columns for Unassigned Jobs with Exact Widths (No Gaps, No Overlap) */
         table.dataTable thead th:nth-child(1), table.dataTable tbody td:nth-child(1) {
-            position: sticky !important; left: 0;
+            position: sticky !important; left: 0 !important;
             width: 45px !important; min-width: 45px !important; max-width: 45px !important;
             box-sizing: border-box !important;
         }
         table.dataTable thead th:nth-child(2), table.dataTable tbody td:nth-child(2) {
-            position: sticky !important; left: 45px;
+            position: sticky !important; left: 45px !important;
             width: 140px !important; min-width: 140px !important; max-width: 140px !important;
             box-sizing: border-box !important;
         }
         table.dataTable thead th:nth-child(3), table.dataTable tbody td:nth-child(3) {
-            position: sticky !important; left: 185px;
+            position: sticky !important; left: 185px !important;
             width: 135px !important; min-width: 135px !important; max-width: 135px !important;
             box-sizing: border-box !important;
         }
         table.dataTable thead th:nth-child(4), table.dataTable tbody td:nth-child(4) {
-            position: sticky !important; left: 320px;
+            position: sticky !important; left: 320px !important;
             width: 140px !important; min-width: 140px !important; max-width: 140px !important;
             border-right: 1px solid #dee2e6 !important;
             box-sizing: border-box !important;
@@ -685,7 +689,7 @@ function fetchData() {
         /* Fixed background for sticky columns to avoid see-through/overlap */
         table.dataTable tbody tr:nth-child(even) td:nth-child(-n+4) { background-color: #f2f4f6 !important; }
         table.dataTable tbody tr:nth-child(odd) td:nth-child(-n+4) { background-color: #ffffff !important; }
-        table.dataTable tbody tr:hover td:nth-child(-n+4) { background-color: #c4cbd3 !important; }
+        table.dataTable tbody tr:hover td:nth-child(-n+4) { background-color: #e9ecef !important; }
 
         table.dataTable tbody td:nth-child(-n+4) {
             z-index: 10 !important;
@@ -693,8 +697,11 @@ function fetchData() {
 
         /* Apply z-index only to the first 4 headers */
         table.dataTable thead th:nth-child(-n+4) {
-            z-index: 30 !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 120 !important;
             background-color: var(--header-bg) !important;
+            color: #ffffff !important;
         }
 
         /* 6. Process Raw Numbers and Badges */
@@ -714,7 +721,8 @@ function fetchData() {
 
         .table-scroll-container {
             max-height: calc(100vh - 380px);
-            overflow: auto;
+            overflow-x: auto !important;
+            overflow-y: auto !important;
             position: relative;
             border-top: 1px solid #dee2e6;
         }
