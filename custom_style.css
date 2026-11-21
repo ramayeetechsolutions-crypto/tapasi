@@ -424,14 +424,17 @@ table.dataTable thead th,
    Sticky left/right column headers stay pinned on top during horizontal scroll
    and are never overlapped by incoming scrolling headers (z-index: 120 > 100)
    ========================================================================= */
+table thead th.sticky-col,
 table thead th.sticky-col-1,
 table thead th.sticky-col-2,
 table thead th.sticky-col-3,
 table thead th.sticky-col-4,
+.table thead th.sticky-col,
 .table thead th.sticky-col-1,
 .table thead th.sticky-col-2,
 .table thead th.sticky-col-3,
 .table thead th.sticky-col-4,
+.table-responsive table thead th.sticky-col,
 .table-responsive table thead th.sticky-col-1,
 .table-responsive table thead th.sticky-col-2,
 .table-responsive table thead th.sticky-col-3,
@@ -448,7 +451,9 @@ table thead th.sticky-col-4,
 #xmlJobsTable thead th:nth-child(2),
 #xmlJobsTable thead th:nth-child(3),
 #xmlJobsTable thead th:nth-child(4),
-#xmlJobsTable thead th:nth-child(-n+4) {
+#xmlJobsTable thead th:nth-child(-n+4),
+#processReportTable thead th.sticky-col,
+#dailyReportTable thead th.sticky-col {
     position: sticky !important;
     top: 0 !important;
     z-index: 120 !important;
@@ -470,6 +475,9 @@ table thead th.sticky-col-4,
 }
 
 /* Sticky Column Body Cells (z-index: 10, above scrolling body cells) */
+table tbody td.sticky-col,
+.table tbody td.sticky-col,
+.table-responsive table tbody td.sticky-col,
 #trackingTable tbody td.sticky-col-1,
 #trackingTable tbody td.sticky-col-2,
 #trackingTable tbody td.sticky-col-3,
@@ -482,8 +490,12 @@ table thead th.sticky-col-4,
 #xmlJobsTable tbody td:nth-child(2),
 #xmlJobsTable tbody td:nth-child(3),
 #xmlJobsTable tbody td:nth-child(4),
-#xmlJobsTable tbody td:nth-child(-n+4) {
+#xmlJobsTable tbody td:nth-child(-n+4),
+#processReportTable tbody td.sticky-col,
+#dailyReportTable tbody td.sticky-col,
+#dailyReportTable tfoot td.sticky-col {
     position: sticky !important;
+    left: 0 !important;
     z-index: 10 !important;
     background-clip: padding-box !important;
 }
@@ -501,12 +513,16 @@ table thead th.sticky-col-4,
     background: #ffffff;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
-    overflow: hidden !important;
     position: relative !important;
-    max-height: none !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
+.table-container:has(.table-responsive) {
+    overflow: hidden !important;
+    max-height: none !important;
+}
+
+.table-container:not(:has(.table-responsive)),
 .table-responsive,
 .table-container > .table-responsive {
     max-height: 72vh !important;

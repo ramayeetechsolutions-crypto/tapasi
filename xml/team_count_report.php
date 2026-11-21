@@ -453,10 +453,21 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
         /* Table Grid & Column Border Fixes - Unified Single Table */
         .table-container { 
             width: 100%; 
-            max-height: 48vh; 
-            overflow: auto; 
             position: relative;
+            background: #ffffff;
+            border-radius: 12px;
             border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+
+        .table-responsive,
+        .table-container > .table-responsive { 
+            width: 100%; 
+            max-height: 70vh !important; 
+            overflow-y: auto !important; 
+            overflow-x: auto !important; 
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
         }
 
         #processReportTable,
@@ -467,28 +478,34 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
             margin-bottom: 0 !important;
         }
 
+        #processReportTable thead,
+        #dailyReportTable thead {
+            position: static !important;
+        }
+
         #processReportTable thead th,
         #dailyReportTable thead th { 
-            background-color: var(--ash, #6c757d) !important;  
+            background-color: #5e6b77 !important;  
             color: #ffffff !important; 
             position: sticky !important; 
             top: 0 !important; 
-            z-index: 10 !important;
-            border: 1px solid #5a6268 !important;
+            z-index: 100 !important;
+            border: 1px solid #4f5a64 !important;
             vertical-align: middle !important;
             text-align: center !important;
-            padding: 6px 3px !important;
+            padding: 8px 6px !important;
             font-size: 0.8rem;
             font-weight: 600;
-            line-height: 1.15;
+            line-height: 1.2;
             white-space: normal !important;
+            box-sizing: border-box !important;
         }
 
         #processReportTable td,
         #dailyReportTable td { 
             border: 1px solid #dee2e6 !important;
             vertical-align: middle !important;
-            padding: 4px 2px !important; 
+            padding: 6px 4px !important; 
             font-size: 0.78rem;
         }
 
@@ -509,27 +526,52 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
         .sticky-col { 
             position: sticky !important; 
             left: 0 !important; 
-            background-color: #ffffff !important; 
-            z-index: 5 !important; 
+            z-index: 10 !important; 
             box-shadow: 2px 0 5px rgba(0,0,0,0.12); 
-            width: 130px !important; 
-            min-width: 130px !important; 
-            max-width: 140px !important; 
+            width: 135px !important; 
+            min-width: 135px !important; 
+            max-width: 145px !important; 
             padding: 4px 6px !important; 
+            box-sizing: border-box !important;
+        }
+
+        #processReportTable tbody tr:nth-child(even) td.sticky-col,
+        #dailyReportTable tbody tr:nth-child(even) td.sticky-col {
+            background-color: #f2f4f6 !important;
+        }
+        #processReportTable tbody tr:nth-child(odd) td.sticky-col,
+        #dailyReportTable tbody tr:nth-child(odd) td.sticky-col {
+            background-color: #ffffff !important;
+        }
+        #processReportTable tbody tr:hover td.sticky-col,
+        #dailyReportTable tbody tr:hover td.sticky-col {
+            background-color: #e9ecef !important;
         }
 
         #processReportTable thead th.sticky-col,
         #dailyReportTable thead th.sticky-col {
-            z-index: 99 !important;
-            background-color: var(--ash, #6c757d) !important;
+            position: sticky !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 120 !important;
+            background-color: #5e6b77 !important;
             color: #ffffff !important;
-            border: 1px solid #5a6268 !important;
+            border: 1px solid #4f5a64 !important;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.12);
+            box-sizing: border-box !important;
+        }
+
+        #dailyReportTable tfoot td.sticky-col {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 10 !important;
+            background-color: #212529 !important;
+            color: #ffffff !important;
         }
         #processReportTable .fs-6 { font-size: 0.82rem !important; }
         .summary-card { color: white; border-radius: 10px; }
         .stat-number { font-size: 2rem; font-weight: bold; }
         .filter-box { background-color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
-        .table-container { width: 100%; } 
         .target-missed { color: #dc3545; }
         .target-met { color: #198754; }
     </style>
@@ -693,10 +735,11 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
             </div>
             <div class="card-body p-0">
                 <div class="table-container">
+                    <div class="table-responsive">
                     <table class="table table-bordered table-striped align-middle mb-0" id="processReportTable">
                         <thead>
                             <tr>
-                                <th class="sticky-col" style="z-index: 99 !important;">Employee Name</th>
+                                <th class="sticky-col">Employee Name</th>
                                 <?php foreach($processes_array as $proc): 
                                     $is_wide = ($proc['process_name'] === 'DOAJ /Biblat /PubMed' || $proc['process_name'] === 'PMC JATS QC');
                                     $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
@@ -727,7 +770,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                                 $emp_overall_target = 0;
                             ?>
                             <tr>
-                                <td class="sticky-col" style="background-color: white;">
+                                <td class="sticky-col">
                                     <div class="employee-name"><?= h($emp['employee_name']) ?></div>
                                     <div class="text-muted small">ID: <?= h($emp['employee_username']) ?></div>
                                     <?php 
@@ -806,6 +849,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                             <?php endif; ?>
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -823,10 +867,11 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                 </div>
                 <div class="card-body p-0">
                     <div class="table-container">
+                        <div class="table-responsive">
                         <table class="table table-bordered table-striped align-middle mb-0" id="dailyReportTable">
                             <thead>
                                 <tr>
-                                    <th class="sticky-col" style="z-index: 99 !important;">Employee Name</th>
+                                    <th class="sticky-col">Employee Name</th>
                                     <?php foreach($processes_array as $proc): 
                                         $is_wide = ($proc['process_name'] === 'DOAJ /Biblat /PubMed' || $proc['process_name'] === 'PMC JATS QC');
                                         $col_cls = $is_wide ? 'proc-col-wide' : 'proc-col';
@@ -856,7 +901,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                                     $rendered_daily_rows++;
                                 ?>
                                 <tr>
-                                    <td class="sticky-col" style="background-color: white;">
+                                    <td class="sticky-col">
                                         <div class="employee-name"><?= h($emp['employee_name']) ?></div>
                                         <div class="text-muted small">ID: <?= h($emp['employee_username']) ?></div>
                                         <div class="text-primary small fw-bold mt-1"><i class="fas fa-calendar-alt me-1"></i><?= formatDate($date) ?></div>
@@ -894,6 +939,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
                     </div>
                 </div>
             </div>
