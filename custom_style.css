@@ -723,10 +723,12 @@ body > .page-title-container > .container-fluid {
     opacity: 1 !important;
 }
 
-/* Add / Edit Form Card Headers & Gradient Headers */
+/* Add / Edit Form Card Headers & Gradient / Dark Card Headers */
 .card-header-gradient,
 .card-header.card-header-gradient,
-.card-header.bg-gradient-primary {
+.card-header.bg-gradient-primary,
+.card-header.bg-dark,
+div.card-header.bg-dark {
     background: #6c757d !important;
     background-color: #6c757d !important;
     color: #ffffff !important;

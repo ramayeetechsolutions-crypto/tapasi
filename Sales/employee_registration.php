@@ -207,7 +207,7 @@ require 'header.php';
     <!-- ========================================== -->
     <?php if (!$isAddMode): ?>
         <div class="card shadow border-0">
-            <div class="card-header bg-dark text-white py-3">
+            <div class="card-header text-white py-3" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>Employee List</h5>
             </div>
             <div class="card-body p-0">

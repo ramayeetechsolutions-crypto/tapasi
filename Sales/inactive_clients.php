@@ -475,7 +475,7 @@ require 'header.php';
     
     <!-- Add/Edit Form -->
     <div class="card shadow border-0 mb-4">
-        <div class="card-header bg-dark text-white py-3">
+        <div class="card-header text-white py-3" style="background-color: #6c757d !important; background: #6c757d !important;">
             <h5 class="mb-0"><i class="fas <?= $mode === 'edit' ? 'fa-edit' : 'fa-plus-circle' ?> me-2"></i>
                 <?= $mode === 'edit' ? 'Edit Inactive Client Record' : 'Mark Client as Inactive' ?>
             </h5>
@@ -600,7 +600,7 @@ require 'header.php';
 
     <!-- DATA TABLE -->
     <div class="card shadow border-0">
-        <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+        <div class="card-header text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important;">
             <h5 class="mb-0"><i class="fas fa-list me-2"></i>Inactive Clients List</h5>
             <span class="badge bg-light text-dark">Total: <?= $result->num_rows ?></span>
         </div>
