@@ -235,7 +235,12 @@ if ($statusFilter !== '') {
     $params[] = $statusFilter;
     $types .= 's';
 }
-$sql .= " ORDER BY c.$sortBy $sortOrder";
+
+if ($sortBy === 'complaint_date') {
+    $sql .= " ORDER BY c.complaint_date $sortOrder, c.id $sortOrder";
+} else {
+    $sql .= " ORDER BY c.$sortBy $sortOrder, c.complaint_date DESC, c.id DESC";
+}
 
 // Execute query with error checking
 $stmt = $mysqli->prepare($sql);

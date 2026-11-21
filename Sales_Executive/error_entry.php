@@ -358,7 +358,7 @@ if (!empty($cond)) {
     $sql .= " WHERE " . implode(" AND ", $cond);
 }
 
-$sql .= " ORDER BY id DESC";
+$sql .= " ORDER BY error_date DESC, id DESC";
 
 if (!empty($types)) {
     $stmt = $mysqli->prepare($sql);
