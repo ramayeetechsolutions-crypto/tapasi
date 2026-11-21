@@ -200,12 +200,12 @@ if ($sortOrder !== 'ASC' && $sortOrder !== 'DESC') {
 // 1. Tickets created by current user
 // 2. Tickets created by employees where current user is their reporting manager
 $sql = "SELECT c.* FROM tbl_complaints c 
-        WHERE c.created_by = ? 
+        WHERE (c.created_by = ? 
         OR c.created_by IN (
             SELECT employee_name 
             FROM employee_master 
             WHERE reporting_manager = ?
-        )";
+        ))";
 
 $params = [$current_user_name, $current_user_name];
 $types = 'ss';
@@ -225,7 +225,12 @@ if ($statusFilter !== '') {
     $params[] = $statusFilter;
     $types .= 's';
 }
-$sql .= " ORDER BY c.$sortBy $sortOrder";
+
+if ($sortBy === 'complaint_date') {
+    $sql .= " ORDER BY c.complaint_date $sortOrder, c.id $sortOrder";
+} else {
+    $sql .= " ORDER BY c.$sortBy $sortOrder, c.complaint_date DESC, c.id DESC";
+}
 
 // Execute query with error checking
 $stmt = $mysqli->prepare($sql);

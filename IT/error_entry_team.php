@@ -263,7 +263,7 @@ $filter_client      = trim($_GET['client'] ?? $_GET['client_name'] ?? '');
 $filter_article     = trim($_GET['article'] ?? '');
 $filter_employee    = trim($_GET['team'] ?? $_GET['employee'] ?? '');
 $filter_status      = trim($_GET['status'] ?? '');
-$filter_sort        = trim($_GET['sort'] ?? 'id');
+$filter_sort        = trim($_GET['sort'] ?? 'error_date');
 
 // Build SQL query on error_log table (DESCENDING order, all error logs including IT, Sales, and Production)
 $sql = "SELECT id, week, error_date, team, department, error_taken_by, internal_external, client_name, article, error_type, error_subtype, yn, error_made_by, reason, error_photo, status, created_date 
@@ -317,15 +317,17 @@ if (!empty($cond)) {
     $sql .= " WHERE " . implode(" AND ", $cond);
 }
 
-// Default sort is DESCENDING
+// Default sort is Date DESCENDING
 if ($filter_sort === 'week') {
-    $sql .= " ORDER BY week DESC";
+    $sql .= " ORDER BY week DESC, error_date DESC";
 } elseif ($filter_sort === 'client') {
-    $sql .= " ORDER BY client_name ASC";
-} elseif ($filter_sort === 'created_date') {
-    $sql .= " ORDER BY created_date DESC";
-} else {
+    $sql .= " ORDER BY client_name ASC, error_date DESC";
+} elseif ($filter_sort === 'id') {
     $sql .= " ORDER BY id DESC";
+} elseif ($filter_sort === 'created_date') {
+    $sql .= " ORDER BY created_date DESC, error_date DESC";
+} else {
+    $sql .= " ORDER BY error_date DESC, id DESC";
 }
 
 if (!empty($types)) {
@@ -713,8 +715,8 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                     </div>
                     <div class="col-md-1">
                         <select name="sort" class="form-select form-control-sm">
+                            <option value="error_date" <?= ($filter_sort === 'error_date' || $filter_sort === 'date') ? 'selected' : '' ?>>Date (DESC)</option>
                             <option value="id" <?= $filter_sort === 'id' ? 'selected' : '' ?>>ID (DESC)</option>
-                            <option value="created_date" <?= $filter_sort === 'created_date' ? 'selected' : '' ?>>Date</option>
                             <option value="week" <?= $filter_sort === 'week' ? 'selected' : '' ?>>Week</option>
                             <option value="client" <?= $filter_sort === 'client' ? 'selected' : '' ?>>Client</option>
                         </select>
@@ -792,9 +794,10 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                         </thead>
                         <tbody>
                             <?php if ($entries && $entries->num_rows > 0): ?>
+                                <?php $counter = 1; ?>
                                 <?php while ($row = $entries->fetch_assoc()): ?>
                                 <tr>
-                                    <td class="fw-bold"><?= (int)$row['id'] ?></td>
+                                    <td class="fw-bold"><?= $counter++ ?></td>
                                     <td><span class="badge bg-primary"><?= h($row['week']) ?></span></td>
                                     <td><small class="text-muted"><?= h(formatDate($row['error_date'])) ?></small></td>
                                     <td><?= !empty($row['team']) ? '<span class="badge bg-secondary">' . h($row['team']) . '</span>' : '—' ?></td>
