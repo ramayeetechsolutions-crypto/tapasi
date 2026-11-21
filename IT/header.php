@@ -394,7 +394,12 @@ $reportPages = ['error_entry_team.php', 'error_entry.php'];
                 <!-- User Profile Menu -->
                 <ul class="nav-menu">
                     <li>
-                        <a href="#" onclick="return false;"><i class="fas fa-user-circle"></i> IT - <?php echo $username; ?></a>
+                        <?php 
+                        $user_role = $_SESSION["role_name"] ?? '';
+                        $is_it_tl = ($user_role !== 'TM');
+                        $user_badge = $is_it_tl ? 'IT TL' : 'IT TM';
+                        ?>
+                        <a href="#" onclick="return false;"><i class="fas fa-user-circle"></i> <?= $user_badge ?> - <?php echo $username; ?></a>
                         <ul class="nav-dropdown" style="left: auto; right: 0; border-radius: 8px;">
                             <li><a href="change_password.php"><i class="fas fa-key"></i> Change Password</a></li>
                             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>

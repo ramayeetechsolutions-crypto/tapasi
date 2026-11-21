@@ -334,23 +334,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // 3. Insert into client_master (including required non-null fields: template, tds_percentage, igst)
                 $remarks_text = !empty($pub['designation']) ? "Designation: " . $pub['designation'] : '';
+                $country = trim($pub['country'] ?? '');
+                $currency = (strcasecmp($country, 'India') === 0 || strcasecmp($country, 'ind') === 0 || empty($country)) ? 'INR' : 'USD';
+
                 $insert = $mysqli->prepare("INSERT INTO client_master 
-                    (client_name, company_name, contact_person, email, phone, country, link, remarks, template, tds_percentage, igst, status, created_date) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0, 0, 'Active', NOW())");
+                    (client_name, company_name, contact_person, email, phone, country, currency, link, remarks, template, tds_percentage, igst, status, created_date) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', 0, 0, 'Active', NOW())");
                 
                 $contact_person = $pub['contact_person'] ?? '';
                 $email = $pub['email'] ?? '';
                 $phone = $pub['contact_no'] ?? '';
-                $country = $pub['country'] ?? '';
                 $link = $pub['link'] ?? '';
 
-                $insert->bind_param("ssssssss", 
+                $insert->bind_param("sssssssss", 
                     $client_name,
                     $company_name,
                     $contact_person,
                     $email,
                     $phone,
                     $country,
+                    $currency,
                     $link,
                     $remarks_text
                 );
