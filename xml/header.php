@@ -22,6 +22,9 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
 $employee_id = $_SESSION['uid']; // set at login
 
 // Step 1: Fetch employee process IDs
+if (!isset($mysqli)) {
+    require_once __DIR__ . '/db.php';
+}
 $sql = "SELECT * FROM employee_master WHERE employee_id = ?";
 $stmt = $mysqli->prepare($sql);
 $stmt->bind_param("i", $employee_id);
@@ -768,6 +771,7 @@ if ($row = $result->fetch_assoc()) {
                         <?php $user_badge = $is_tl ? 'XML TL' : 'XML TM'; ?>
                         <a href="#"><i class="fas fa-star"></i> <?= $user_badge ?> - <?php echo $_SESSION["username"]?></a>
                         <ul class="nav-dropdown">
+                            <li><a href="change_password.php"><i class="fas fa-key"></i> Change Password</a></li>
                             <?php if ($_SESSION["username"]=='TPS002') {?>
                             <li><a href="switch_tm.php"><i class="fas fa-list"></i> Switch to TL</a></li>
                             <?php }?>

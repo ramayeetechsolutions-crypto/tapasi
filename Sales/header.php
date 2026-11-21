@@ -575,6 +575,7 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                         <a href="#" onclick="return false;"><i class="fas fa-user-circle"></i> TL-
                             <?php echo $username; ?></a>
                         <ul class="nav-dropdown" style="left: auto; right: 0; border-radius: 8px;">
+                            <li><a href="change_password.php"><i class="fas fa-key"></i> Change Password</a></li>
                             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                         </ul>
                     </li>
