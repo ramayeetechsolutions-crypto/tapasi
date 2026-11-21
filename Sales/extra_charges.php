@@ -387,7 +387,10 @@ require 'header.php';
     .table { margin-bottom: 0; }
     .table thead th { background-color: #6c757d !important; color: white !important; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 1rem 0.75rem; border-bottom: none !important; white-space: nowrap; position: sticky; top: 0; z-index: 1; }
     .table tbody td { padding: 0.85rem 0.75rem; vertical-align: middle; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 0.85rem; }
-    .table tbody tr:hover { background-color: #f8fafc; }
+    .table tbody tr:hover,
+    .table tbody tr:hover td,
+    .table tbody tr:hover th,
+    .table.table-hover tbody tr:hover > * { background-color: #f1f5f9 !important; }
     .table tbody tr:last-child td { border-bottom: none; }
     
     /* Badges & Text */

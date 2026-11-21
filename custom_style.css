@@ -38,7 +38,12 @@ table,
 th,
 td,
 p,
-h1, h2, h3, h4, h5, h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
 span:not([class*="fa-"]):not([class*="bi-"]),
 a,
 label {
@@ -49,13 +54,33 @@ label {
    1. PAGE & SECTION HEADINGS (Page Titles, Card Headers, h1 - h6)
    Must be BOLD and BLACK (#000000)
    ========================================================================= */
-h1, h2, h3, h4, h5, h6,
-.h1, .h2, .h3, .h4, .h5, .h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6,
 .page-title,
 .card-title,
 .section-title,
-h1.text-secondary, h2.text-secondary, h3.text-secondary, h4.text-secondary, h5.text-secondary, h6.text-secondary,
-h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.text-muted {
+h1.text-secondary,
+h2.text-secondary,
+h3.text-secondary,
+h4.text-secondary,
+h5.text-secondary,
+h6.text-secondary,
+h1.text-muted,
+h2.text-muted,
+h3.text-muted,
+h4.text-muted,
+h5.text-muted,
+h6.text-muted {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-heading-font-size) !important;
     font-weight: 700 !important;
@@ -63,16 +88,55 @@ h1.text-muted, h2.text-muted, h3.text-muted, h4.text-muted, h5.text-muted, h6.te
 }
 
 /* Card banners, modal headers, and grey/dark layout cards retain white text for headers */
-h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.text-white,
-.card-title.text-white, .page-title.text-white, .section-title.text-white,
-.text-white h1, .text-white h2, .text-white h3, .text-white h4, .text-white h5, .text-white h6,
-.text-white .card-title, .text-white .page-title, .text-white .section-title,
+h1.text-white,
+h2.text-white,
+h3.text-white,
+h4.text-white,
+h5.text-white,
+h6.text-white,
+.card-title.text-white,
+.page-title.text-white,
+.section-title.text-white,
+.text-white h1,
+.text-white h2,
+.text-white h3,
+.text-white h4,
+.text-white h5,
+.text-white h6,
+.text-white .card-title,
+.text-white .page-title,
+.text-white .section-title,
 .card-header.text-white,
-.card-header.text-white h1, .card-header.text-white h2, .card-header.text-white h3, .card-header.text-white h4, .card-header.text-white h5, .card-header.text-white h6,
-.card-header[style*="background"] h1, .card-header[style*="background"] h2, .card-header[style*="background"] h3, .card-header[style*="background"] h4, .card-header[style*="background"] h5, .card-header[style*="background"] h6,
-.card-header.bg-dark h1, .card-header.bg-dark h2, .card-header.bg-dark h3, .card-header.bg-dark h4, .card-header.bg-dark h5, .card-header.bg-dark h6,
-.card-header.bg-secondary h1, .card-header.bg-secondary h2, .card-header.bg-secondary h3, .card-header.bg-secondary h4, .card-header.bg-secondary h5, .card-header.bg-secondary h6,
-.card-header.bg-primary h1, .card-header.bg-primary h2, .card-header.bg-primary h3, .card-header.bg-primary h4, .card-header.bg-primary h5, .card-header.bg-primary h6,
+.card-header.text-white h1,
+.card-header.text-white h2,
+.card-header.text-white h3,
+.card-header.text-white h4,
+.card-header.text-white h5,
+.card-header.text-white h6,
+.card-header[style*="background"] h1,
+.card-header[style*="background"] h2,
+.card-header[style*="background"] h3,
+.card-header[style*="background"] h4,
+.card-header[style*="background"] h5,
+.card-header[style*="background"] h6,
+.card-header.bg-dark h1,
+.card-header.bg-dark h2,
+.card-header.bg-dark h3,
+.card-header.bg-dark h4,
+.card-header.bg-dark h5,
+.card-header.bg-dark h6,
+.card-header.bg-secondary h1,
+.card-header.bg-secondary h2,
+.card-header.bg-secondary h3,
+.card-header.bg-secondary h4,
+.card-header.bg-secondary h5,
+.card-header.bg-secondary h6,
+.card-header.bg-primary h1,
+.card-header.bg-primary h2,
+.card-header.bg-primary h3,
+.card-header.bg-primary h4,
+.card-header.bg-primary h5,
+.card-header.bg-primary h6,
 /* All Card Headers with grey / dark layouts across all modules */
 .card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h1,
 .card-header:not(.bg-white):not(.bg-light):not(.bg-warning):not(.bg-transparent):not([style*="background: white"]):not([style*="background-color: white"]):not([style*="background:white"]):not([style*="background-color:white"]):not([style*="background: transparent"]):not([style*="background:transparent"]) h2,
@@ -90,30 +154,94 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
 .ap-header *,
 .form-card-header,
 .form-card-header *,
-.modal-header.text-white h1, .modal-header.text-white h2, .modal-header.text-white h3, .modal-header.text-white h4, .modal-header.text-white h5, .modal-header.text-white h6,
-.modal-header[style*="background"] h1, .modal-header[style*="background"] h2, .modal-header[style*="background"] h3, .modal-header[style*="background"] h4, .modal-header[style*="background"] h5, .modal-header[style*="background"] h6,
-.modal-header.bg-dark h1, .modal-header.bg-dark h2, .modal-header.bg-dark h3, .modal-header.bg-dark h4, .modal-header.bg-dark h5, .modal-header.bg-dark h6,
-.modal-header.bg-secondary h1, .modal-header.bg-secondary h2, .modal-header.bg-secondary h3, .modal-header.bg-secondary h4, .modal-header.bg-secondary h5, .modal-header.bg-secondary h6,
+.modal-header.text-white h1,
+.modal-header.text-white h2,
+.modal-header.text-white h3,
+.modal-header.text-white h4,
+.modal-header.text-white h5,
+.modal-header.text-white h6,
+.modal-header[style*="background"] h1,
+.modal-header[style*="background"] h2,
+.modal-header[style*="background"] h3,
+.modal-header[style*="background"] h4,
+.modal-header[style*="background"] h5,
+.modal-header[style*="background"] h6,
+.modal-header.bg-dark h1,
+.modal-header.bg-dark h2,
+.modal-header.bg-dark h3,
+.modal-header.bg-dark h4,
+.modal-header.bg-dark h5,
+.modal-header.bg-dark h6,
+.modal-header.bg-secondary h1,
+.modal-header.bg-secondary h2,
+.modal-header.bg-secondary h3,
+.modal-header.bg-secondary h4,
+.modal-header.bg-secondary h5,
+.modal-header.bg-secondary h6,
 /* Grey / Dark layout card headers & titles */
 .weekly-target-card .card-title,
-.weekly-target-card h1, .weekly-target-card h2, .weekly-target-card h3,
-.weekly-target-card h4, .weekly-target-card h5, .weekly-target-card h6,
+.weekly-target-card h1,
+.weekly-target-card h2,
+.weekly-target-card h3,
+.weekly-target-card h4,
+.weekly-target-card h5,
+.weekly-target-card h6,
 .filter-card .card-title,
-.filter-card h1, .filter-card h2, .filter-card h3,
-.filter-card h4, .filter-card h5, .filter-card h6,
-.card.bg-dark .card-title, .card.bg-secondary .card-title,
-.card.bg-dark h1, .card.bg-dark h2, .card.bg-dark h3, .card.bg-dark h4, .card.bg-dark h5, .card.bg-dark h6,
-.card.bg-secondary h1, .card.bg-secondary h2, .card.bg-secondary h3, .card.bg-secondary h4, .card.bg-secondary h5, .card.bg-secondary h6,
+.filter-card h1,
+.filter-card h2,
+.filter-card h3,
+.filter-card h4,
+.filter-card h5,
+.filter-card h6,
+.card.bg-dark .card-title,
+.card.bg-secondary .card-title,
+.card.bg-dark h1,
+.card.bg-dark h2,
+.card.bg-dark h3,
+.card.bg-dark h4,
+.card.bg-dark h5,
+.card.bg-dark h6,
+.card.bg-secondary h1,
+.card.bg-secondary h2,
+.card.bg-secondary h3,
+.card.bg-secondary h4,
+.card.bg-secondary h5,
+.card.bg-secondary h6,
 .card.text-white .card-title,
-.card.text-white h1, .card.text-white h2, .card.text-white h3, .card.text-white h4, .card.text-white h5, .card.text-white h6,
+.card.text-white h1,
+.card.text-white h2,
+.card.text-white h3,
+.card.text-white h4,
+.card.text-white h5,
+.card.text-white h6,
 .card[style*="#5e6b77"] .card-title,
-.card[style*="#5e6b77"] h1, .card[style*="#5e6b77"] h2, .card[style*="#5e6b77"] h3, .card[style*="#5e6b77"] h4, .card[style*="#5e6b77"] h5, .card[style*="#5e6b77"] h6,
+.card[style*="#5e6b77"] h1,
+.card[style*="#5e6b77"] h2,
+.card[style*="#5e6b77"] h3,
+.card[style*="#5e6b77"] h4,
+.card[style*="#5e6b77"] h5,
+.card[style*="#5e6b77"] h6,
 .card[style*="5e6b77"] .card-title,
-.card[style*="5e6b77"] h1, .card[style*="5e6b77"] h2, .card[style*="5e6b77"] h3, .card[style*="5e6b77"] h4, .card[style*="5e6b77"] h5, .card[style*="5e6b77"] h6,
+.card[style*="5e6b77"] h1,
+.card[style*="5e6b77"] h2,
+.card[style*="5e6b77"] h3,
+.card[style*="5e6b77"] h4,
+.card[style*="5e6b77"] h5,
+.card[style*="5e6b77"] h6,
 [style*="#5e6b77"] .card-title,
-[style*="#5e6b77"] h1, [style*="#5e6b77"] h2, [style*="#5e6b77"] h3, [style*="#5e6b77"] h4, [style*="#5e6b77"] h5, [style*="#5e6b77"] h6,
+[style*="#5e6b77"] h1,
+[style*="#5e6b77"] h2,
+[style*="#5e6b77"] h3,
+[style*="#5e6b77"] h4,
+[style*="#5e6b77"] h5,
+[style*="#5e6b77"] h6,
 [style*="#707981"] .card-title,
-[style*="#707981"] h1, [style*="#707981"] h2, [style*="#707981"] h3, [style*="#707981"] h4, [style*="#707981"] h5, [style*="#707981"] h6 {
+[style*="#707981"] h1,
+[style*="#707981"] h2,
+[style*="#707981"] h3,
+[style*="#707981"] h4,
+[style*="#707981"] h5,
+[style*="#707981"] h6 {
     color: #ffffff !important;
 }
 
@@ -159,8 +287,8 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
 .page-title-container h4 i,
 .page-title-container h5 i,
 .page-title-container h6 i,
-.page-title-container > i,
-.page-title-container > div > i {
+.page-title-container>i,
+.page-title-container>div>i {
     color: #ffffff !important;
 }
 
@@ -198,12 +326,14 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border-color: #198754 !important;
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-success *,
 .page-header .btn-outline-success *,
 .user-header .btn-outline-success *,
 .header-card .btn-outline-success * {
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-success:hover,
 .page-header .btn-outline-success:hover,
 .user-header .btn-outline-success:hover,
@@ -221,12 +351,14 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border-color: #0d6efd !important;
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-primary *,
 .page-header .btn-outline-primary *,
 .user-header .btn-outline-primary *,
 .header-card .btn-outline-primary * {
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-primary:hover,
 .page-header .btn-outline-primary:hover,
 .user-header .btn-outline-primary:hover,
@@ -244,12 +376,14 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border-color: rgba(255, 255, 255, 0.75) !important;
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-secondary *,
 .page-header .btn-outline-secondary *,
 .user-header .btn-outline-secondary *,
 .header-card .btn-outline-secondary * {
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-secondary:hover,
 .page-header .btn-outline-secondary:hover,
 .user-header .btn-outline-secondary:hover,
@@ -266,12 +400,14 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border: 1px solid rgba(255, 255, 255, 0.75) !important;
     color: #ffffff !important;
 }
+
 .page-title-container .btn-secondary *,
 .page-header .btn-secondary *,
 .user-header .btn-secondary *,
 .header-card .btn-secondary * {
     color: #ffffff !important;
 }
+
 .page-title-container .btn-secondary:hover,
 .page-header .btn-secondary:hover,
 .user-header .btn-secondary:hover,
@@ -287,6 +423,7 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border-color: rgba(255, 255, 255, 0.85) !important;
     color: #ffffff !important;
 }
+
 .page-title-container .btn-outline-light *,
 .page-header .btn-outline-light *,
 .user-header .btn-outline-light *,
@@ -302,7 +439,13 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border-radius: 12px !important;
 }
 
-.user-header h1, .user-header h2, .user-header h3, .user-header h4, .user-header h5, .user-header h6, .user-header i {
+.user-header h1,
+.user-header h2,
+.user-header h3,
+.user-header h4,
+.user-header h5,
+.user-header h6,
+.user-header i {
     color: #ffffff !important;
 }
 
@@ -318,7 +461,13 @@ h1.text-white, h2.text-white, h3.text-white, h4.text-white, h5.text-white, h6.te
     border-radius: 12px !important;
 }
 
-.header-card h1, .header-card h2, .header-card h3, .header-card h4, .header-card h5, .header-card h6, .header-card i {
+.header-card h1,
+.header-card h2,
+.header-card h3,
+.header-card h4,
+.header-card h5,
+.header-card h6,
+.header-card i {
     color: #ffffff !important;
 }
 
@@ -336,7 +485,13 @@ div.page-header {
     padding: 12px 20px !important;
 }
 
-div.page-header h1, div.page-header h2, div.page-header h3, div.page-header h4, div.page-header h5, div.page-header h6, div.page-header i {
+div.page-header h1,
+div.page-header h2,
+div.page-header h3,
+div.page-header h4,
+div.page-header h5,
+div.page-header h6,
+div.page-header i {
     color: #ffffff !important;
 }
 
@@ -524,7 +679,7 @@ table tbody td.sticky-col,
 
 .table-container:not(:has(.table-responsive)),
 .table-responsive,
-.table-container > .table-responsive {
+.table-container>.table-responsive {
     max-height: 72vh !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
@@ -656,6 +811,7 @@ table td select,
     color: #000000 !important;
     font-weight: 600 !important;
 }
+
 .status-filter .nav-link.active {
     color: #0d6efd !important;
     font-weight: 700 !important;
@@ -677,9 +833,18 @@ table td select,
 /* =========================================================================
    6. PROTECT ICON FONTS (FontAwesome & Bootstrap Icons)
    ========================================================================= */
-.fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands,
-[class^="fa-"], [class*=" fa-"],
-.bi, [class^="bi-"], [class*=" bi-"] {
+.fa,
+.fas,
+.far,
+.fab,
+.fa-solid,
+.fa-regular,
+.fa-brands,
+[class^="fa-"],
+[class*=" fa-"],
+.bi,
+[class^="bi-"],
+[class*=" bi-"] {
     font-family: "Font Awesome 6 Free", "FontAwesome", "bootstrap-icons" !important;
 }
 
@@ -709,11 +874,11 @@ div.main-content,
 .container.main-content,
 .dashboard-container,
 div.dashboard-container,
-body > .container,
-body > .container-fluid,
-body > .wrapper,
-body > .content-wrapper,
-body > main,
+body>.container,
+body>.container-fluid,
+body>.wrapper,
+body>.content-wrapper,
+body>main,
 .container.mt-3,
 .container-fluid.mt-3,
 .container.mt-4,
@@ -744,10 +909,10 @@ body > main,
    Ensure page header / title containers match the width of the layout below
    (preventing full-bleed 100vw edge-to-edge stretching across all logins)
    ========================================================================= */
-body > .page-header,
-body > .page-title-container,
-body > div.page-header,
-body > div.page-title-container {
+body>.page-header,
+body>.page-title-container,
+body>div.page-header,
+body>div.page-title-container {
     margin-left: 1.5rem !important;
     margin-right: 1.5rem !important;
     margin-top: 15px !important;
@@ -757,16 +922,16 @@ body > div.page-title-container {
     max-width: calc(100% - 3rem) !important;
 }
 
-body > .page-header > .container-fluid,
-body > .page-title-container > .container-fluid {
+body>.page-header>.container-fluid,
+body>.page-title-container>.container-fluid {
     padding-left: 0 !important;
     padding-right: 0 !important;
 }
 
-.container-fluid > .page-header,
-.container-fluid > .page-title-container,
-.main-content > .page-header,
-.main-content > .page-title-container {
+.container-fluid>.page-header,
+.container-fluid>.page-title-container,
+.main-content>.page-header,
+.main-content>.page-title-container {
     margin-left: 0 !important;
     margin-right: 0 !important;
     margin-top: 0 !important;
@@ -797,9 +962,14 @@ body > .page-title-container > .container-fluid {
 }
 
 .modal-header .modal-title,
-.modal-header h1, .modal-header h2, .modal-header h3,
-.modal-header h4, .modal-header h5, .modal-header h6,
-.modal-header .modal-title i, .modal-header i {
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6,
+.modal-header .modal-title i,
+.modal-header i {
     color: #ffffff !important;
 }
 
@@ -809,6 +979,7 @@ body > .page-title-container > .container-fluid {
     filter: invert(1) grayscale(100%) brightness(200%) !important;
     opacity: 0.85 !important;
 }
+
 .modal-header .btn-close:hover,
 .modal-header button.btn-close:hover {
     opacity: 1 !important;
@@ -826,25 +997,35 @@ div.card-header.bg-dark {
     border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
-.card-header-gradient h1, .card-header-gradient h2, .card-header-gradient h3,
-.card-header-gradient h4, .card-header-gradient h5, .card-header-gradient h6,
+.card-header-gradient h1,
+.card-header-gradient h2,
+.card-header-gradient h3,
+.card-header-gradient h4,
+.card-header-gradient h5,
+.card-header-gradient h6,
 .card-header-gradient i,
-.card-header.card-header-gradient h1, .card-header.card-header-gradient h2,
-.card-header.card-header-gradient h3, .card-header.card-header-gradient h4,
-.card-header.card-header-gradient h5, .card-header.card-header-gradient h6,
+.card-header.card-header-gradient h1,
+.card-header.card-header-gradient h2,
+.card-header.card-header-gradient h3,
+.card-header.card-header-gradient h4,
+.card-header.card-header-gradient h5,
+.card-header.card-header-gradient h6,
 .card-header.card-header-gradient i,
-.card-header.bg-gradient-primary h1, .card-header.bg-gradient-primary h2,
-.card-header.bg-gradient-primary h3, .card-header.bg-gradient-primary h4,
-.card-header.bg-gradient-primary h5, .card-header.bg-gradient-primary h6,
+.card-header.bg-gradient-primary h1,
+.card-header.bg-gradient-primary h2,
+.card-header.bg-gradient-primary h3,
+.card-header.bg-gradient-primary h4,
+.card-header.bg-gradient-primary h5,
+.card-header.bg-gradient-primary h6,
 .card-header.bg-gradient-primary i {
     color: #ffffff !important;
 }
 
 /* For cards at top of container */
-body > .container > .card:first-child,
-body > .container-fluid > .card:first-child,
-.main-content > .container > .card:first-child,
-.main-content > .container-fluid > .card:first-child {
+body>.container>.card:first-child,
+body>.container-fluid>.card:first-child,
+.main-content>.container>.card:first-child,
+.main-content>.container-fluid>.card:first-child {
     margin-top: 10px !important;
 }
 
@@ -1019,22 +1200,22 @@ select.form-select-sm {
 }
 
 /* Ensure first and last items conform cleanly to dropdown curved corners */
-.nav-dropdown li:first-child > a,
-.nav-dropdown > a:first-child,
-.dropdown-menu li:first-child > a,
-.dropdown-menu > a:first-child,
-.nav-sub-dropdown li:first-child > a,
-.nav-sub-dropdown > a:first-child {
+.nav-dropdown li:first-child>a,
+.nav-dropdown>a:first-child,
+.dropdown-menu li:first-child>a,
+.dropdown-menu>a:first-child,
+.nav-sub-dropdown li:first-child>a,
+.nav-sub-dropdown>a:first-child {
     border-top-left-radius: 8px !important;
     border-top-right-radius: 8px !important;
 }
 
-.nav-dropdown li:last-child > a,
-.nav-dropdown > a:last-child,
-.dropdown-menu li:last-child > a,
-.dropdown-menu > a:last-child,
-.nav-sub-dropdown li:last-child > a,
-.nav-sub-dropdown > a:last-child {
+.nav-dropdown li:last-child>a,
+.nav-dropdown>a:last-child,
+.dropdown-menu li:last-child>a,
+.dropdown-menu>a:last-child,
+.nav-sub-dropdown li:last-child>a,
+.nav-sub-dropdown>a:last-child {
     border-bottom-left-radius: 8px !important;
     border-bottom-right-radius: 8px !important;
     border-bottom: none !important;
@@ -1042,19 +1223,19 @@ select.form-select-sm {
 
 /* Active Dropdown Item: Crisp ash background with bright white text & icons */
 .nav-dropdown a.active,
-.nav-dropdown li.active > a,
+.nav-dropdown li.active>a,
 .nav-dropdown .dropdown-item.active,
 .nav-dropdown .nav-link.active,
 .nav-menu .nav-dropdown a.active,
-.nav-menu .nav-dropdown li.active > a,
+.nav-menu .nav-dropdown li.active>a,
 .nav-menu .nav-dropdown .dropdown-item.active,
 .nav-menu .nav-dropdown .nav-link.active,
 .dropdown-menu a.active,
 .dropdown-menu .dropdown-item.active,
 .dropdown-menu .nav-link.active,
-.dropdown-menu li.active > a,
+.dropdown-menu li.active>a,
 .nav-sub-dropdown a.active,
-.nav-sub-dropdown li.active > a {
+.nav-sub-dropdown li.active>a {
     background-color: #6c757d !important;
     background: #6c757d !important;
     color: #ffffff !important;
@@ -1064,19 +1245,19 @@ select.form-select-sm {
 
 /* Ensure text, icons, spans, and child elements inside active dropdown items are pure white */
 .nav-dropdown a.active *,
-.nav-dropdown li.active > a *,
+.nav-dropdown li.active>a *,
 .nav-dropdown .dropdown-item.active *,
 .nav-dropdown .nav-link.active *,
 .nav-menu .nav-dropdown a.active *,
-.nav-menu .nav-dropdown li.active > a *,
+.nav-menu .nav-dropdown li.active>a *,
 .nav-menu .nav-dropdown .dropdown-item.active *,
 .nav-menu .nav-dropdown .nav-link.active *,
 .dropdown-menu a.active *,
 .dropdown-menu .dropdown-item.active *,
 .dropdown-menu .nav-link.active *,
-.dropdown-menu li.active > a *,
+.dropdown-menu li.active>a *,
 .nav-sub-dropdown a.active *,
-.nav-sub-dropdown li.active > a *,
+.nav-sub-dropdown li.active>a *,
 .nav-dropdown a.active i,
 .nav-dropdown a.active span,
 .nav-menu .nav-dropdown a.active i,
@@ -1088,38 +1269,38 @@ select.form-select-sm {
 
 /* Hover state on active dropdown item */
 .nav-dropdown a.active:hover,
-.nav-dropdown li.active > a:hover,
+.nav-dropdown li.active>a:hover,
 .nav-dropdown .dropdown-item.active:hover,
 .nav-dropdown .nav-link.active:hover,
 .nav-menu .nav-dropdown a.active:hover,
-.nav-menu .nav-dropdown li.active > a:hover,
+.nav-menu .nav-dropdown li.active>a:hover,
 .nav-menu .nav-dropdown .dropdown-item.active:hover,
 .nav-menu .nav-dropdown .nav-link.active:hover,
 .dropdown-menu a.active:hover,
 .dropdown-menu .dropdown-item.active:hover,
 .dropdown-menu .nav-link.active:hover,
-.dropdown-menu li.active > a:hover,
+.dropdown-menu li.active>a:hover,
 .nav-sub-dropdown a.active:hover,
-.nav-sub-dropdown li.active > a:hover {
+.nav-sub-dropdown li.active>a:hover {
     background-color: #5a6268 !important;
     background: #5a6268 !important;
     color: #ffffff !important;
 }
 
 .nav-dropdown a.active:hover *,
-.nav-dropdown li.active > a:hover *,
+.nav-dropdown li.active>a:hover *,
 .nav-dropdown .dropdown-item.active:hover *,
 .nav-dropdown .nav-link.active:hover *,
 .nav-menu .nav-dropdown a.active:hover *,
-.nav-menu .nav-dropdown li.active > a:hover *,
+.nav-menu .nav-dropdown li.active>a:hover *,
 .nav-menu .nav-dropdown .dropdown-item.active:hover *,
 .nav-menu .nav-dropdown .nav-link.active:hover *,
 .dropdown-menu a.active:hover *,
 .dropdown-menu .dropdown-item.active:hover *,
 .dropdown-menu .nav-link.active:hover *,
-.dropdown-menu li.active > a:hover *,
+.dropdown-menu li.active>a:hover *,
 .nav-sub-dropdown a.active:hover *,
-.nav-sub-dropdown li.active > a:hover *,
+.nav-sub-dropdown li.active>a:hover *,
 .nav-dropdown a.active:hover i,
 .nav-dropdown a.active:hover span,
 .nav-menu .nav-dropdown a.active:hover i,
@@ -1129,9 +1310,9 @@ select.form-select-sm {
 
 /* Inactive dropdown item hover */
 .nav-dropdown a:not(.active):hover,
-.nav-dropdown li:not(.active) > a:hover,
+.nav-dropdown li:not(.active)>a:hover,
 .nav-menu .nav-dropdown a:not(.active):hover,
-.nav-menu .nav-dropdown li:not(.active) > a:hover,
+.nav-menu .nav-dropdown li:not(.active)>a:hover,
 .dropdown-menu a:not(.active):hover,
 .dropdown-menu .dropdown-item:not(.active):hover {
     background-color: #f1f3f5 !important;
@@ -1139,9 +1320,9 @@ select.form-select-sm {
 }
 
 .nav-dropdown a:not(.active):hover *,
-.nav-dropdown li:not(.active) > a:hover *,
+.nav-dropdown li:not(.active)>a:hover *,
 .nav-menu .nav-dropdown a:not(.active):hover *,
-.nav-menu .nav-dropdown li:not(.active) > a:hover *,
+.nav-menu .nav-dropdown li:not(.active)>a:hover *,
 .dropdown-menu a:not(.active):hover *,
 .dropdown-menu .dropdown-item:not(.active):hover * {
     color: #0d6efd !important;
@@ -1183,7 +1364,7 @@ select.form-select-sm {
 .table-sticky-assign tfoot td,
 .table-sticky-assign.table-bordered thead th,
 .table-sticky-assign.table-bordered tbody td,
-.table-sticky-assign > :not(caption) > * > * {
+.table-sticky-assign> :not(caption)>*>* {
     border: 1px solid #dee2e6 !important;
 }
 
@@ -1299,9 +1480,9 @@ select.form-select-sm {
 .table-sticky-assign tbody tr:nth-child(even) td.sticky-assign-cell,
 .table-sticky-assign tbody tr.assigned:nth-child(even) td,
 .table-sticky-assign tbody tr.row-purple:nth-child(even) td,
-.table-sticky-assign.table-striped tbody tr:nth-of-type(even) > *,
+.table-sticky-assign.table-striped tbody tr:nth-of-type(even)>*,
 .table-container .table tbody tr:nth-child(even) td,
-.table-container .table.table-striped tbody tr:nth-of-type(even) > * {
+.table-container .table.table-striped tbody tr:nth-of-type(even)>* {
     background-color: #f2f4f6 !important;
 }
 
@@ -1312,9 +1493,9 @@ select.form-select-sm {
 .table-sticky-assign tbody tr:nth-child(odd) td.sticky-assign-cell,
 .table-sticky-assign tbody tr.assigned:nth-child(odd) td,
 .table-sticky-assign tbody tr.row-purple:nth-child(odd) td,
-.table-sticky-assign.table-striped tbody tr:nth-of-type(odd) > *,
+.table-sticky-assign.table-striped tbody tr:nth-of-type(odd)>*,
 .table-container .table tbody tr:nth-child(odd) td,
-.table-container .table.table-striped tbody tr:nth-of-type(odd) > * {
+.table-container .table.table-striped tbody tr:nth-of-type(odd)>* {
     background-color: #ffffff !important;
 }
 
@@ -1323,12 +1504,16 @@ select.form-select-sm {
 .table-sticky-assign tbody tr:hover th,
 .table-sticky-assign tbody tr.assigned:hover td,
 .table-sticky-assign tbody tr.row-purple:hover td,
-.table-sticky-assign.table-hover tbody tr:hover > *,
-.table-container .table tbody tr:hover td,
-.table-container .table.table-hover tbody tr:hover > * {
+.table-sticky-assign.table-hover tbody tr:hover>* {
     background-color: #c4cbd3 !important;
     cursor: pointer;
     transition: background-color 0.1s ease;
+}
+
+/* Default soft hover for standard table-containers */
+.table-container .table tbody tr:hover td,
+.table-container .table.table-hover tbody tr:hover>* {
+    background-color: #f1f5f9;
 }
 
 .table-sticky-assign tbody tr:hover td.sticky-assign-col,
@@ -1403,6 +1588,7 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.table-warning td {
     background-color: #fefce8 !important;
 }
+
 .table-sticky-assign tbody tr.table-warning:hover td {
     background-color: #fef9c3 !important;
 }
@@ -1410,6 +1596,7 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.table-danger td {
     background-color: #fef2f2 !important;
 }
+
 .table-sticky-assign tbody tr.table-danger:hover td {
     background-color: #fee2e2 !important;
 }
@@ -1417,6 +1604,7 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.table-success td {
     background-color: #f0fdf4 !important;
 }
+
 .table-sticky-assign tbody tr.table-success:hover td {
     background-color: #dcfce7 !important;
 }
@@ -1424,6 +1612,7 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.table-info td {
     background-color: #f0f9ff !important;
 }
+
 .table-sticky-assign tbody tr.table-info:hover td {
     background-color: #e0f2fe !important;
 }
@@ -1431,6 +1620,7 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.table-secondary td {
     background-color: #f1f5f9 !important;
 }
+
 .table-sticky-assign tbody tr.table-secondary:hover td {
     background-color: #e2e8f0 !important;
 }
@@ -1758,7 +1948,3 @@ select.form-select-sm {
     border-color: #cbd5e1 !important;
     color: #0f172a !important;
 }
-
-
-
-

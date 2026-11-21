@@ -267,7 +267,7 @@ require 'header.php';
                         <tbody>
                             <?php if ($rates->num_rows > 0): ?>
                                 <?php while($r = $rates->fetch_assoc()): ?>
-                                <tr class="<?= ($editData && $editData['id'] == $r['id']) ? 'table-warning' : '' ?>">
+                                <tr>
                                     <td class="py-3">
                                         <div class="fw-bold text-dark"><?= htmlspecialchars($r['service_type']) ?></div>
                                         <small class="text-muted"><?= htmlspecialchars($r['currency']) ?></small>
