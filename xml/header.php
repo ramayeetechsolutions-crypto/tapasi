@@ -618,19 +618,13 @@ if ($row = $result->fetch_assoc()) {
                             <?php 
                             $user_role = $_SESSION["role_name"] ?? '';
                             $is_tl = in_array($user_role, ['TL', 'Sub TL']) || ($tl == '3' || $tl == 'TL' || $tl == 'Team Leader');
-
-                            // Dynamic profile URL based on role
-                            $profile_link = $is_tl ? 'employee_master.php' : 'employee.php';
-                            $target_link  = $is_tl ? 'target_assignment.php' : 'target_executive.php';
-                            $target_name  = $is_tl ? 'Target' : 'Production Entry';
                             ?>
-                            <li><a href="<?= $profile_link ?>" class="<?= $currentPage === $profile_link ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
-                            <li><a href="<?= $target_link ?>" class="<?= $currentPage === $target_link ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> <?= $target_name ?></a></li>
-                            
                             <?php if ($is_tl): ?>
+                                <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
+                                <li><a href="target_assignment.php" class="<?= $currentPage === 'target_assignment.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> Target</a></li>
                                 <li><a href="teamleader_ot_approval.php" class="<?= $currentPage === 'teamleader_ot_approval.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> OT Approvals</a></li>
                             <?php else: ?>
-                                <li><a href="employee_leave.php" class="<?= $currentPage === 'employee_leave.php' ? 'active' : '' ?>"><i class="fas fa-calendar-alt"></i> OT Claims</a></li>
+                                <li><a href="target_executive.php" class="<?= $currentPage === 'target_executive.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> Production Entry</a></li>
                             <?php endif; ?>
                         </ul>
                     </li>
@@ -649,7 +643,9 @@ if ($row = $result->fetch_assoc()) {
                         <a href="#" class="<?= in_array($currentPage, $reportPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Reports</a>
                         <ul class="nav-dropdown">
                             <li><a href="client_report.php"><i class="fas fa-chart-line"></i> Client Report</a></li>
+                            <?php if ($is_tl): ?>
                             <li><a href="team_count_report.php"><i class="fas fa-diagram-project"></i> Production Report</a></li>
+                            <?php endif; ?>
                             <li><a href="xml_weekly_report.php"><i class="fas fa-file-alt"></i> Meeting Report</a></li>
                             <!-- <li>
                                 <a class="nav-link" href="xml_report.php">
@@ -769,7 +765,8 @@ if ($row = $result->fetch_assoc()) {
             <div class="header-right">
                 <ul class="nav-menu">
                     <li>
-                        <a href="#"><i class="fas fa-star"></i> TL- <?php echo $_SESSION["username"]?></a>
+                        <?php $user_badge = $is_tl ? 'XML TL' : 'XML TM'; ?>
+                        <a href="#"><i class="fas fa-star"></i> <?= $user_badge ?> - <?php echo $_SESSION["username"]?></a>
                         <ul class="nav-dropdown">
                             <?php if ($_SESSION["username"]=='TPS002') {?>
                             <li><a href="switch_tm.php"><i class="fas fa-list"></i> Switch to TL</a></li>
