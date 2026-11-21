@@ -40,6 +40,13 @@ if ($check_i_col && $check_i_col->num_rows == 0) {
     $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
 }
 
+// Auto-add is_moved column to ce table & migrate old 'Moved' remarks safely
+$check_moved_col = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'is_moved'");
+if ($check_moved_col && $check_moved_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE ce ADD COLUMN is_moved TINYINT(1) DEFAULT 0");
+    $mysqli->query("UPDATE ce SET is_moved = 1, remarks = NULL WHERE TRIM(COALESCE(remarks, '')) = 'Moved'");
+}
+
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
 }
@@ -219,6 +226,64 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid field update']);
     }
+    exit;
+}
+
+// --- 2B. Move CE Job AJAX (Triggered by Move Button) ---
+if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_ce') {
+    header('Content-Type: application/json');
+    $ce_id = (int)$_POST['ce_id'];
+
+    // Validation: CE, REF, and FQA assignments must all be assigned and Completed before moving
+    $check_stmt = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+    $check_stmt->bind_param("i", $ce_id);
+    $check_stmt->execute();
+    $check_row = $check_stmt->get_result()->fetch_assoc();
+    $check_stmt->close();
+
+    if (!$check_row) {
+        echo json_encode(['success' => false, 'message' => 'CE record not found.']);
+        exit;
+    }
+
+    $fqa_user = trim($check_row['fqa_tm'] ?? '');
+    $fqa_assigned = false;
+    if (!empty($fqa_user) && !in_array($fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL'])) {
+        $emp_chk = $mysqli->prepare("SELECT 1 FROM employee_master WHERE employee_username = ? LIMIT 1");
+        if ($emp_chk) {
+            $emp_chk->bind_param("s", $fqa_user);
+            $emp_chk->execute();
+            $fqa_assigned = ($emp_chk->get_result()->num_rows > 0);
+            $emp_chk->close();
+        }
+    }
+
+    $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
+    $ref_assigned = !empty(trim($check_row['assigned_to_img'] ?? ''));
+    $is_completed = ($check_row['status'] === 'Completed');
+
+    if (!$ce_assigned || !$ref_assigned || !$fqa_assigned || !$is_completed) {
+        $missing = [];
+        if (!$ce_assigned) $missing[] = 'CE TM not assigned';
+        if (!$ref_assigned) $missing[] = 'REF TM not assigned';
+        if (!$fqa_assigned) $missing[] = 'FQA TM not assigned';
+        if (!$is_completed) $missing[] = 'CE / REF / FQA not Completed';
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Cannot move! ' . implode(', ', $missing) . '. CE, REF, and FQA must all be Completed before moving.'
+        ]);
+        exit;
+    }
+
+    $stmt = $mysqli->prepare("UPDATE ce SET is_moved = 1, last_updated = NOW() WHERE id = ?");
+    $stmt->bind_param("i", $ce_id);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $mysqli->error]);
+    }
+    $stmt->close();
     exit;
 }
 
@@ -484,6 +549,7 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 
 // Build the query: Show Pending jobs OR recent jobs that are not yet 'Moved'
 $where_conditions = [
+    "(ce.is_moved = 0 OR ce.is_moved IS NULL)",
     "TRIM(COALESCE(ce.remarks, '')) != 'Moved'",
     "(ce.status NOT IN ('Completed', 'Done') OR DATE(COALESCE(j.job_date, ce.created_at)) >= '2026-10-01')"
 ];
@@ -595,11 +661,11 @@ $ce_result = $stmt->get_result();
 $stmt->close();
 
 // Get unique statuses for filter dropdown
-$status_query = "SELECT DISTINCT status FROM ce WHERE TRIM(COALESCE(remarks, '')) != 'Moved' ORDER BY status";
+$status_query = "SELECT DISTINCT status FROM ce WHERE (is_moved = 0 OR is_moved IS NULL) AND TRIM(COALESCE(remarks, '')) != 'Moved' ORDER BY status";
 $status_result = $mysqli->query($status_query);
 
 // Get unique clients for search dropdown
-$clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
+$clients_query = "SELECT DISTINCT c.client_name, c.team_client_name FROM ce JOIN jobs j ON ce.job_id = j.job_id JOIN client_master c ON j.client_id = c.client_id WHERE (ce.is_moved = 0 OR ce.is_moved IS NULL) AND TRIM(COALESCE(ce.remarks, '')) != 'Moved' ORDER BY c.team_client_name ASC";
 $clients_result = $mysqli->query($clients_query);
 
 require 'header.php';
@@ -1285,13 +1351,14 @@ require 'header.php';
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
+                            <th>Remarks</th>
                             <th>CE Assignment</th>
                             <th>Word Count</th>
                             <th>REF Assignment</th>
                             <th>REF Count</th>
                             <th>FQA Assignment</th>
-                            <th>Status</th>
                             <th>Priority</th>
+                            <th style="min-width: 80px; text-align: center;">Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -1380,6 +1447,20 @@ require 'header.php';
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
+                                    </td>
+
+                                    <!-- Remarks Dropdown -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" data-prev="<?= h($row['remarks'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value, this)">
+                                            <option value="">Select</option>
+                                            <?php 
+                                            $remarks_options = ['Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
+                                            foreach($remarks_options as $opt) {
+                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
+                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
+                                            }
+                                            ?>
+                                        </select>
                                     </td>
 
                                     <!-- 9. CE Assignment (Content) -->
@@ -1576,20 +1657,6 @@ require 'header.php';
                                         </div>
                                         </td>
 
-                                    <!-- Status Dropdown (Formerly Remarks) -->
-                                    <td>
-                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" data-prev="<?= h($row['remarks'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value, this)">
-                                            <option value="">Select</option>
-                                            <?php 
-                                            $remarks_options = ['Moved', 'Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
-                                            foreach($remarks_options as $opt) {
-                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
-                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
-                                            }
-                                            ?>
-                                        </select>
-                                    </td>
-
                                     <!-- Priority -->
                                     <td>
                                         <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'priority', this.value)">
@@ -1597,6 +1664,16 @@ require 'header.php';
                                             <option value="Client Priority" <?= ($row['priority'] ?? '') == 'Client Priority' ? 'selected' : '' ?>>Client Priority</option>
                                             <option value="Urgent" <?= ($row['priority'] ?? '') == 'Urgent' ? 'selected' : '' ?>>Urgent</option>
                                         </select>
+                                    </td>
+
+                                    <!-- Status Column with Move Button -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <button type="button" class="btn btn-sm btn-success move-btn-<?= $row['id'] ?>"
+                                                style="font-size: 11px; padding: 3px 10px; font-weight: 600; border-radius: 4px;"
+                                                onclick="moveCeJob(<?= $row['id'] ?>)"
+                                                title="Move to LE Assign">
+                                            <i class="fas fa-paper-plane me-1"></i> Move
+                                        </button>
                                     </td>
 
                                     <!-- TAT -->
@@ -1909,6 +1986,65 @@ require 'header.php';
                 if (element) {
                     element.value = element.getAttribute('data-prev') || '';
                 }
+            });
+        }
+
+        // Move CE Job button handler (Preserves exact CE/REF/FQA Completed validation)
+        function moveCeJob(ceId) {
+            const rowEl = document.getElementById('row-' + ceId);
+            if (rowEl) {
+                const ceSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ce'"));
+                const refSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'ref'"));
+                const fqaSel = Array.from(rowEl.querySelectorAll('select')).find(s => (s.getAttribute('onchange') || '').includes("'fqa'"));
+
+                const ceTm = rowEl.querySelector('.content-select-' + ceId);
+                const refTm = rowEl.querySelector('.images-select-' + ceId);
+                const fqaTm = rowEl.querySelector('.fqa-select-' + ceId);
+
+                const ceHasBadge = ceSel && ceSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+                const refHasBadge = refSel && refSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+                const fqaHasBadge = fqaSel && fqaSel.closest('.assignment-cell')?.querySelector('.tm-badge');
+
+                const ceOk = ceSel && ceSel.value === 'Completed' && ((ceTm && ceTm.value !== '') || ceHasBadge);
+                const refOk = refSel && refSel.value === 'Completed' && ((refTm && refTm.value !== '') || refHasBadge);
+                const fqaOk = fqaSel && fqaSel.value === 'Completed' && ((fqaTm && fqaTm.value !== '') || fqaHasBadge);
+
+                if (!ceOk || !refOk || !fqaOk) {
+                    showNotification('danger', 'Cannot move! CE, REF, and FQA must all have a TM assigned and be marked Completed.');
+                    return;
+                }
+            }
+
+            if (!confirm('Are you sure you want to move this job?')) {
+                return;
+            }
+
+            showLoading();
+            fetch('ce_assign_tm.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'ajax=move_ce&ce_id=' + encodeURIComponent(ceId)
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    showNotification('success', 'Job moved to LE Assign successfully!');
+                    if (rowEl) {
+                        rowEl.style.transition = 'all 0.4s ease';
+                        rowEl.style.opacity = '0';
+                        setTimeout(() => {
+                            rowEl.remove();
+                        }, 400);
+                    }
+                } else {
+                    showNotification('danger', data.message || 'Failed to move job');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('danger', 'Network error. Please try again.');
             });
         }
         
