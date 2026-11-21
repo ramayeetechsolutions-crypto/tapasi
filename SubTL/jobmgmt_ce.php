@@ -47,10 +47,15 @@ if ($check_i_col && $check_i_col->num_rows == 0) {
     $mysqli->query("ALTER TABLE jobs ADD COLUMN issue VARCHAR(255) NULL DEFAULT NULL AFTER journal");
 }
 
-// Auto-add priority column if not exists to avoid Unknown column error
+// Auto-add priority & is_moved columns if not exists to avoid Unknown column error
 $check_priority = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'priority'");
 if ($check_priority && $check_priority->num_rows == 0) {
     $mysqli->query("ALTER TABLE ce ADD COLUMN priority VARCHAR(50) NULL DEFAULT NULL");
+}
+$check_moved_col = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'is_moved'");
+if ($check_moved_col && $check_moved_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE ce ADD COLUMN is_moved TINYINT(1) DEFAULT 0");
+    $mysqli->query("UPDATE ce SET is_moved = 1, remarks = NULL WHERE TRIM(COALESCE(remarks, '')) = 'Moved'");
 }
 
 function h($s) { return htmlspecialchars((string)$s, ENT_QUOTES); }
@@ -239,7 +244,7 @@ $sql = "SELECT
     -- CE table fields
    ce.eq as ce_eq, ce.ref as ce_ref, ce.images as ce_images, ce.tables_count as ce_tables,
     ce.ce_date, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time, ce.done_by AS ce_done_by, ce.status AS ce_status,
-    ce.assigned_to_content, ce.assigned_to_img, ce.priority, ce.remarks as ce_remarks, 
+    ce.assigned_to_content, ce.assigned_to_img, ce.priority, ce.remarks as ce_remarks, ce.is_moved, 
     
     -- From job_uploads table
     ju.upload_date, ju.upload_by, ju.file_path 
@@ -741,6 +746,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Tables</th>
                             <th>Process</th>
                             <th>Due Date</th>
+                            <th>Remarks</th>
                             <th>CE Status</th>
                             <th>Word Count</th>
                             <th>REF Status</th>
@@ -752,8 +758,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>REF End</th>
                             <th>FQA Start</th>
                             <th>FQA End</th>
-                            <th>Status</th>
                             <th>Priority</th>
+                            <th>Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -845,6 +851,15 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- 8. Due Date -->
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
 
+                            <!-- Remarks -->
+                            <td>
+                                <?php if (!empty($row['ce_remarks']) && trim((string)$row['ce_remarks']) !== 'Moved'): ?>
+                                    <span class="badge bg-light text-dark border"><?= h($row['ce_remarks']) ?></span>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+
                             <!-- 9. CE Status -->
                             <td><?= getStatusBadge($ce_stat, $row['assigned_to_content'] ?? '', $emp_map) ?></td>
 
@@ -872,19 +887,19 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= !empty($row['fqa_start_time']) ? date('H:i', strtotime($row['fqa_start_time'])) : '—' ?></td>
                             <td><?= !empty($row['fqa_end_time']) ? date('H:i', strtotime($row['fqa_end_time'])) : '—' ?></td>
 
-                            <!-- Status (Formerly Remarks) -->
+                            <!-- Priority -->
                             <td>
-                                <?php if (!empty($row['ce_remarks'])): ?>
-                                    <span class="badge bg-light text-dark border"><?= h($row['ce_remarks']) ?></span>
+                                <?php if (!empty($row['priority'])): ?>
+                                    <span class="badge <?= $row['priority'] === 'Urgent' ? 'bg-danger' : 'bg-warning text-dark' ?>"><?= h($row['priority']) ?></span>
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
                             </td>
 
-                            <!-- Priority -->
+                            <!-- Status (Moved) -->
                             <td>
-                                <?php if (!empty($row['priority'])): ?>
-                                    <span class="badge <?= $row['priority'] === 'Urgent' ? 'bg-danger' : 'bg-warning text-dark' ?>"><?= h($row['priority']) ?></span>
+                                <?php if (!empty($row['is_moved']) && (int)$row['is_moved'] === 1 || trim((string)($row['ce_remarks'] ?? '')) === 'Moved'): ?>
+                                    <span class="badge bg-light text-dark border">Moved</span>
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
