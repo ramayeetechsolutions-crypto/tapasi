@@ -264,11 +264,42 @@ if ($teams_filter_res) {
     while ($t = $teams_filter_res->fetch_assoc()) { $teams_filter_list[] = $t; }
 }
 
-$all_emp_filter_res = $mysqli->query("SELECT employee_id, employee_name, employee_username FROM employee_master WHERE status = 'Active' AND employee_name NOT LIKE '%Selvarani%' ORDER BY employee_username ASC, employee_name ASC");
+// --- NEW LOGIC START: TL Name-a kandupudikkom (TL & TM rendu perukkum orey team data show aaga) ---
+$safe_name = $mysqli->real_escape_string($team_leader_name); // Logged in person's name
+$actual_tl_name = ''; // Default 
+
+$is_tl = false;
+if (!empty($safe_name)) {
+    // 1. Logged in person TL ah nu check panrom
+    $tl_check = $mysqli->query("SELECT 1 FROM employee_master WHERE reporting_manager='$safe_name' AND status='Active' LIMIT 1");
+    if ($tl_check && $tl_check->num_rows > 0) {
+        $is_tl = true;
+        $actual_tl_name = $safe_name; // Avaru TL na, avaru name thaan actual TL name
+    } else {
+        // 2. Logged in person TM ah irundha, avangoda TL (reporting_manager) yaru nu database-la irundhu edukkurom
+        $rm_check = $mysqli->query("SELECT reporting_manager FROM employee_master WHERE employee_name='$safe_name' AND status='Active' LIMIT 1");
+        if ($rm_check && $rm_check->num_rows > 0) {
+            $rm_row = $rm_check->fetch_assoc();
+            if (!empty($rm_row['reporting_manager'])) {
+                $actual_tl_name = $mysqli->real_escape_string($rm_row['reporting_manager']);
+            }
+        }
+    }
+}
+
+// Dropdown-la avanga Team Members Name mattum vara madhiri restrict panrom
+$emp_filter_sql = "SELECT employee_id, employee_name, employee_username FROM employee_master WHERE status = 'Active' AND employee_name NOT LIKE '%Selvarani%'";
+if (!empty($actual_tl_name)) {
+    $emp_filter_sql .= " AND reporting_manager = '$actual_tl_name'";
+}
+$emp_filter_sql .= " ORDER BY employee_username ASC, employee_name ASC";
+
+$all_emp_filter_res = $mysqli->query($emp_filter_sql);
 $all_emp_filter_list = [];
 if ($all_emp_filter_res) {
     while ($e = $all_emp_filter_res->fetch_assoc()) { $all_emp_filter_list[] = $e; }
 }
+// --- NEW LOGIC END ---
 
 $all_proc_filter_res = $mysqli->query("SELECT process_id, process_name FROM process_master WHERE status = 'Active' ORDER BY process_name");
 $all_proc_filter_list = [];
@@ -288,24 +319,16 @@ if ($pm_result) {
     }
 }
 
-// Fetch Employees (Filtered by reporting_manager to match Assignment Page, or filtered by selection)
+// Fetch Employees for Table & Chart (Avanga team data mattum varum)
 $emp_conds = ["em.status = 'Active'"];
-
-$safe_name = $mysqli->real_escape_string($team_leader_name);
-$is_tl = false;
-if (!empty($safe_name)) {
-    $tl_check = $mysqli->query("SELECT 1 FROM employee_master WHERE reporting_manager='$safe_name' AND status='Active' LIMIT 1");
-    if ($tl_check && $tl_check->num_rows > 0) {
-        $is_tl = true;
-    }
-}
 
 if (!empty($employee_id)) {
     $emp_conds[] = "em.employee_id = " . (int)$employee_id;
 } elseif (!empty($team_id)) {
     $emp_conds[] = "em.team_id = " . (int)$team_id;
-} elseif ($is_tl) {
-    $emp_conds[] = "em.reporting_manager = '$safe_name'";
+} elseif (!empty($actual_tl_name)) {
+    // 3. Table & Chart-ku actual TL name vechu filter panrom (Idhu TL & TM rendu perukkume work aagum)
+    $emp_conds[] = "em.reporting_manager = '$actual_tl_name'";
 }
 
 if (!empty($process)) {
