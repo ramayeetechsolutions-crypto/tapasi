@@ -39,6 +39,28 @@ if (!function_exists('redirect_with')) {
     }
 }
 
+if (!function_exists('calculateFiscalWeek')) {
+    function calculateFiscalWeek($dateStr) {
+        if (!$dateStr) return '';
+        try {
+            $d = new DateTime($dateStr);
+            $year = (int)$d->format('Y');
+            $month = (int)$d->format('m');
+            $fiscalStart = ($month < 4) ? new DateTime(($year - 1) . '-04-01') : new DateTime($year . '-04-01');
+            if ($d < $fiscalStart) return 'Week 1';
+            $cur = clone $fiscalStart;
+            $sundays = 0;
+            while ($cur <= $d) {
+                if ($cur->format('w') == 0) $sundays++;
+                $cur->modify('+1 day');
+            }
+            return 'Week ' . max(1, $sundays);
+        } catch (Exception $e) {
+            return 'Week 1';
+        }
+    }
+}
+
 // Dropdown data
 $employees = $mysqli->query("SELECT employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
 $clients = $mysqli->query("SELECT DISTINCT client_name FROM client_master WHERE status = 'Active' AND client_name IS NOT NULL AND client_name != '' ORDER BY client_name");
@@ -468,7 +490,7 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                             <div class="mb-3">
                                 <label for="week" class="form-label">Week <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="week" name="week" 
-                                       value="<?= h($editEntry['week'] ?? ($mode === 'add' ? 'Week ' . (int)date('W') : '')) ?>" 
+                                       value="<?= h($editEntry['week'] ?? ($mode === 'add' ? calculateFiscalWeek(date('Y-m-d')) : '')) ?>" 
                                        placeholder="e.g., Week 1, Jan-2024" required>
                             </div>
                         </div>
@@ -863,12 +885,29 @@ if (!$all_employees || $all_employees->num_rows === 0) {
             if (dateVal) {
                 const parts = dateVal.split('-');
                 if (parts.length === 3) {
-                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-                    // ISO 8601 week calculation
-                    const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                    target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
-                    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-                    const weekNo = Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+                    const y = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10);
+                    const d = parseInt(parts[2], 10);
+                    
+                    let fiscalStartYear = (m < 4) ? y - 1 : y;
+                    const fiscalStart = new Date(fiscalStartYear, 3, 1);
+                    const targetDate = new Date(y, m - 1, d);
+                    
+                    if (targetDate < fiscalStart) {
+                        weekInput.value = 'Week 1';
+                        return;
+                    }
+                    
+                    let sundays = 0;
+                    let cur = new Date(fiscalStart);
+                    while (cur <= targetDate) {
+                        if (cur.getDay() === 0) {
+                            sundays++;
+                        }
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                    
+                    const weekNo = Math.max(1, sundays);
                     weekInput.value = 'Week ' + weekNo;
                 }
             }
