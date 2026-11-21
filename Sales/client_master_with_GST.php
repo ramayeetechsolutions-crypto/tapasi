@@ -626,7 +626,8 @@ require 'header.php';
             border-radius: 0.75rem;
         }
         .card-header-gradient {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: #6c757d !important;
+            background-color: #6c757d !important;
             color: white;
             border-top-left-radius: 0.75rem !important;
             border-top-right-radius: 0.75rem !important;
@@ -1133,11 +1134,11 @@ require 'header.php';
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-warning text-dark border-0">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-file-excel me-2"></i>Import Clients from Excel
+                <div class="modal-header text-white border-0" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-excel me-2 text-white"></i>Import Clients from Excel
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 
                 <form action="" method="post" enctype="multipart/form-data">

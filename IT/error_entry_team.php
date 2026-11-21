@@ -722,9 +722,9 @@ if (!$all_employees || $all_employees->num_rows === 0) {
             <div class="modal-dialog">
                 <div class="modal-content">
                     <form action="error_entry_team.php" method="post" enctype="multipart/form-data">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="importExcelModalLabel"><i class="fas fa-file-import me-2"></i>Import Excel File</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                            <h5 class="modal-title text-white" id="importExcelModalLabel"><i class="fas fa-file-import me-2"></i>Import Excel File</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <input type="hidden" name="action" value="import">

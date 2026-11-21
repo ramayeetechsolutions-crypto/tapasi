@@ -342,7 +342,7 @@ require 'header.php';
     <?php if($edit_mode || $add_mode): ?>
     <!-- ADD/EDIT FORM (Hidden unless Add/Edit is clicked) -->
     <div class="card shadow-sm border-0 mb-4 animate__animated animate__fadeIn">
-        <div class="card-header bg-primary text-white py-3">
+        <div class="card-header text-white py-3" style="background-color: #6c757d !important; background: #6c757d !important;">
             <h6 class="mb-0 fw-bold">
                 <i class="fas <?= $edit_mode ? 'fa-edit' : 'fa-plus-circle' ?> me-2"></i>
                 <?= $edit_mode ? 'Edit Publisher Payment' : 'Record New Publisher Payment' ?>
@@ -657,9 +657,9 @@ require 'header.php';
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title fw-bold"><i class="fas fa-file-excel me-2"></i>Import Publisher Payments</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                <h5 class="modal-title fw-bold text-white"><i class="fas fa-file-excel me-2"></i>Import Publisher Payments</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             
             <form action="" method="post" enctype="multipart/form-data">

@@ -422,9 +422,9 @@ include 'header.php';
 <div class="modal fade" id="applyOTModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold text-primary">Submit OT / Permission Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                <h5 class="modal-title fw-bold text-white">Submit OT / Permission Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="">
                 <div class="modal-body">
@@ -482,9 +482,9 @@ include 'header.php';
 <div class="modal fade" id="editOTModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold text-primary">Edit Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                <h5 class="modal-title fw-bold text-white">Edit Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="">
                 <input type="hidden" name="request_id" id="edit_request_id">

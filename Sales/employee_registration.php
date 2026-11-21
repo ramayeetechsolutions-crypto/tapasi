@@ -272,7 +272,7 @@ require 'header.php';
     <!-- ========================================== -->
     <?php else: ?>
         <div class="card shadow border-0">
-            <div class="card-header bg-primary text-white py-3">
+            <div class="card-header text-white py-3" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="mb-0 fw-bold"><i class="fas fa-edit me-2"></i>New Employee Details</h5>
             </div>
             <div class="card-body p-4">
@@ -396,7 +396,7 @@ require 'header.php';
 <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="modal-title fw-bold"><i class="fas fa-file-import me-2"></i>Import Employees</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

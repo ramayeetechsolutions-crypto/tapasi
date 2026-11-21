@@ -126,7 +126,7 @@ require 'header.php';
     <?php endif; ?>
 
     <div class="card shadow border-0">
-        <div class="card-header bg-primary text-white py-3">
+        <div class="card-header text-white py-3" style="background-color: #6c757d !important; background: #6c757d !important;">
             <h5 class="mb-0 fw-bold"><i class="fas fa-lock me-2"></i>Admin Control Panel</h5>
         </div>
         <div class="card-body p-0">
@@ -214,7 +214,7 @@ require 'header.php';
 <div class="modal fade" id="saEditModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Update Admin Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

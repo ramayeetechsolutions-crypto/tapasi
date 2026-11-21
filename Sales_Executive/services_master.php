@@ -299,7 +299,7 @@ while($r = $res->fetch_assoc()) $categories[] = $r['category'];
     <div class="modal fade" id="serviceModal" tabindex="-1">
         <div class="modal-dialog">
             <form method="post" class="modal-content">
-                <div class="modal-header py-2 bg-dark text-white">
+                <div class="modal-header py-2 text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
                     <h6 class="modal-title" id="mTitle">Add Service</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -334,9 +334,9 @@ while($r = $res->fetch_assoc()) $categories[] = $r['category'];
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title">Import Services from Excel</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title text-white">Import Services from Excel</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="import_excel">

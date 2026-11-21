@@ -127,7 +127,7 @@ require 'header.php';
         <!-- ================= LEFT: FORM (ADD / EDIT) ================= -->
         <div class="col-md-3">
             <div class="card shadow-sm h-100">
-                <div class="card-header <?= $editData ? 'bg-warning text-dark' : 'bg-secondary text-white' ?> py-3">
+                <div class="card-header text-white py-3" style="background-color: #6c757d !important; background: #6c757d !important;">
                     <h6 class="mb-0">
                         <i class="fas <?= $editData ? 'fa-edit' : 'fa-plus-circle' ?> me-2"></i>
                         <?= $editData ? 'Update Math Charge' : 'Add Math Charge' ?>

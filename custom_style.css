@@ -684,6 +684,69 @@ body > .page-title-container > .container-fluid {
     border-radius: 12px !important;
 }
 
+/* =========================================================================
+   11. ASH COLOR HEADER THEME (MODALS, IMPORT, ADD & EDIT FORMS)
+   Changes background color to Ash (#6c757d) matching the navbar across
+   all Sales, Sales_Executive, IT, and ERP logins.
+   ========================================================================= */
+.modal-header,
+.modal-header.bg-warning,
+.modal-header.bg-primary,
+.modal-header.bg-info,
+.modal-header.bg-success,
+.modal-header.bg-danger,
+.modal-header.bg-dark,
+.modal-header.bg-gradient-dark,
+.modal-header.bg-light,
+.modal-header[class*="bg-"] {
+    background: #6c757d !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.modal-header .modal-title,
+.modal-header h1, .modal-header h2, .modal-header h3,
+.modal-header h4, .modal-header h5, .modal-header h6,
+.modal-header .modal-title i, .modal-header i {
+    color: #ffffff !important;
+}
+
+.modal-header .btn-close,
+.modal-header button.btn-close,
+.modal-header .btn-close:not(.btn-close-white) {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+    opacity: 0.85 !important;
+}
+.modal-header .btn-close:hover,
+.modal-header button.btn-close:hover {
+    opacity: 1 !important;
+}
+
+/* Add / Edit Form Card Headers & Gradient Headers */
+.card-header-gradient,
+.card-header.card-header-gradient,
+.card-header.bg-gradient-primary {
+    background: #6c757d !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.card-header-gradient h1, .card-header-gradient h2, .card-header-gradient h3,
+.card-header-gradient h4, .card-header-gradient h5, .card-header-gradient h6,
+.card-header-gradient i,
+.card-header.card-header-gradient h1, .card-header.card-header-gradient h2,
+.card-header.card-header-gradient h3, .card-header.card-header-gradient h4,
+.card-header.card-header-gradient h5, .card-header.card-header-gradient h6,
+.card-header.card-header-gradient i,
+.card-header.bg-gradient-primary h1, .card-header.bg-gradient-primary h2,
+.card-header.bg-gradient-primary h3, .card-header.bg-gradient-primary h4,
+.card-header.bg-gradient-primary h5, .card-header.bg-gradient-primary h6,
+.card-header.bg-gradient-primary i {
+    color: #ffffff !important;
+}
+
 /* For cards at top of container */
 body > .container > .card:first-child,
 body > .container-fluid > .card:first-child,

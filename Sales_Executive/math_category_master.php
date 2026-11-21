@@ -163,7 +163,7 @@ require 'header.php';
 <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2"></i>Add New Category</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -189,7 +189,7 @@ require 'header.php';
 <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Edit Category</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

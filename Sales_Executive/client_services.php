@@ -202,7 +202,7 @@ require 'header.php';
     <!-- 2. STEP: MANAGE SERVICES (Visible when client selected) -->
     <?php if($selected_client_id > 0): ?>
     <div class="card mb-5 border-start border-success border-4 shadow">
-      <div class="card-header bg-success text-white fw-bold">
+      <div class="card-header text-white fw-bold" style="background-color: #6c757d !important; background: #6c757d !important;">
         <i class="fas fa-check-double me-2"></i> Assign Services to <?= h($client_name) ?>
       </div>
       <div class="card-body">
@@ -346,7 +346,7 @@ require 'header.php';
   <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog">
       <form method="post" class="modal-content border-0 shadow-lg">
-        <div class="modal-header bg-primary text-white">
+        <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
           <h5 class="modal-title fw-bold"><i class="fas fa-info-circle me-2"></i>Update Service Details</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>

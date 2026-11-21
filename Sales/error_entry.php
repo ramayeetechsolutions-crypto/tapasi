@@ -866,7 +866,7 @@ if (!$entries) $entries = false;
     <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-info text-white">
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
                     <h5 class="modal-title" id="importModalLabel">
                         <i class="fas fa-file-import me-2"></i>Import Error Log Data
                     </h5>

@@ -441,7 +441,7 @@ require 'header.php';
     
     <!-- ADD / EDIT FORM -->
     <div class="card shadow-sm border-0 mb-4 animate__animated animate__fadeIn">
-        <div class="card-header bg-gradient-primary">
+        <div class="card-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
             <h5 class="mb-0 fw-bold">
                 <i class="fas <?= $mode === 'edit' ? 'fa-edit' : 'fa-plus-circle' ?> me-2"></i>
                 <?= $mode === 'edit' ? 'Edit Charge Record' : 'Create New Extra Charge' ?>
@@ -748,7 +748,7 @@ require 'header.php';
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
             
-            <div class="modal-header bg-gradient-dark text-white p-4 border-0">
+            <div class="modal-header text-white p-4 border-0" style="background-color: #6c757d !important; background: #6c757d !important;">
                 <h5 class="modal-title fw-bold"><i class="fas fa-file-excel text-success me-2 fs-4"></i> Batch Import Extra Charges</h5>
                 <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
