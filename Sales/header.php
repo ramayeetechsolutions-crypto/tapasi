@@ -572,8 +572,12 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                 <!-- User Profile Menu -->
                 <ul class="nav-menu">
                     <li>
-                        <a href="#" onclick="return false;"><i class="fas fa-user-circle"></i> TL-
-                            <?php echo $username; ?></a>
+                        <?php 
+                        $user_role = $_SESSION["role_name"] ?? '';
+                        $is_tl = in_array($user_role, ['SM', 'TL', 'Sub TL', 'Super Admin']) || (!in_array($user_role, ['sales', 'TM']) && !isset($_SESSION['sales_exec']));
+                        $user_badge = $is_tl ? 'SALES TL' : 'SALES TM';
+                        ?>
+                        <a href="#" onclick="return false;"><i class="fas fa-user-circle"></i> <?= $user_badge ?> - <?php echo $username; ?></a>
                         <ul class="nav-dropdown" style="left: auto; right: 0; border-radius: 8px;">
                             <li><a href="change_password.php"><i class="fas fa-key"></i> Change Password</a></li>
                             <li><a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
