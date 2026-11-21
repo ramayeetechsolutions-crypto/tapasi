@@ -118,13 +118,13 @@ $filter_tm = $_GET['filter_tm'] ?? '';
 $filter_process = $_GET['filter_process'] ?? [];
 $filter_week = $_GET['filter_week'] ?? getCurrentOpWeek();
 $filter_month = (int)($_GET['filter_month'] ?? date('n'));
-$filter_year = date('Y');
+$filter_year = isset($_GET['filter_year']) ? (int)$_GET['filter_year'] : date('Y');
 
-// Calculate 4 Dynamic Weeks for Columns
+// Calculate 4 Dynamic Weeks for Columns (Forward Order)
 $w1 = (int)$filter_week;
-$w2 = $w1 - 1 > 0 ? $w1 - 1 : 52 + ($w1 - 1);
-$w3 = $w2 - 1 > 0 ? $w2 - 1 : 52 + ($w2 - 1);
-$w4 = $w3 - 1 > 0 ? $w3 - 1 : 52 + ($w3 - 1);
+$w2 = $w1 + 1 <= 53 ? $w1 + 1 : ($w1 + 1) - 53;
+$w3 = $w2 + 1 <= 53 ? $w2 + 1 : ($w2 + 1) - 53;
+$w4 = $w3 + 1 <= 53 ? $w3 + 1 : ($w3 + 1) - 53;
 
 // Dates for Week 1 (Selected Week)
 $w1_dates = getOpWeekDates($w1, $filter_year);
@@ -230,7 +230,11 @@ $team_data = [];
 if (!empty($user_employee_name)) {
     $tm_sql = "SELECT employee_id, employee_username, employee_name, process, joining_date 
                FROM employee_master 
-               WHERE reporting_manager = ? AND status = 'Active'";
+               WHERE (? != '' OR 1=1) 
+               AND (
+                   employee_username IN ('TPS004','TPS051','TPS053','TPS064','TPS078','TPSC03','TPS038','TPS076','TPSC51','TPS079','TPS093','TPSN07','TPSC33','TPSF03','TPSF02')
+                   OR REPLACE(employee_name, ' ', '') IN ('K.Rajaramya','G.Saranya','E.Nandhini','T.Suvitha','D.Rohini','V.Indira','T.Lalitha','V.Malavika','G.Praveena','B.Shalini','S.Chandraleka','P.Rekha','S.Madhumitha','A.Ragul')
+               )";
     
     // Apply TM Filter
     if (!empty($filter_tm)) {
@@ -559,7 +563,7 @@ if($stmt_error) $stmt_error->close();
 
 <?php
         // Fetch values for Dropdowns
-        $tm_filter_qry = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = '$user_employee_name' AND status = 'Active' ORDER BY employee_name ASC");
+        $tm_filter_qry = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE (employee_username IN ('TPS004','TPS051','TPS053','TPS064','TPS078','TPSC03','TPS038','TPS076','TPSC51','TPS079','TPS093','TPSN07','TPSC33','TPSF03','TPSF02') OR REPLACE(employee_name, ' ', '') IN ('K.Rajaramya','G.Saranya','E.Nandhini','T.Suvitha','D.Rohini','V.Indira','T.Lalitha','V.Malavika','G.Praveena','B.Shalini','S.Chandraleka','P.Rekha','S.Madhumitha','A.Ragul')) ORDER BY employee_name ASC");
         
         // Exact 17 processes from screenshot (CE & PAG Processes)
         $required_processes = [
