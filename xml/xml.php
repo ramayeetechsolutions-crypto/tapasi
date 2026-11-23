@@ -26,12 +26,31 @@ $show_completed = isset($_GET['show_completed']) && $_GET['show_completed'] == '
 
 // Handle filter parameters
 $search = trim($_GET['search'] ?? '');
-$overall = trim($_GET['overall'] ?? '');
-$billed = trim($_GET['billed'] ?? '');
-$xml = trim($_GET['xml'] ?? '');
-$html = trim($_GET['html'] ?? '');
-$scielo = trim($_GET['scielo'] ?? '');
-$pubmed = trim($_GET['pubmed'] ?? '');
+$filter_client = trim($_GET['client'] ?? '');
+$filter_process = trim($_GET['process'] ?? '');
+$filter_job_status = trim($_GET['job_status'] ?? '');
+$filter_date_from = trim($_GET['date_from'] ?? '');
+$filter_date_to = trim($_GET['date_to'] ?? '');
+$filter_tat = strtolower(trim($_GET['tat'] ?? ''));
+$filter_missed_tat = strtolower(trim($_GET['missed_tat'] ?? ''));
+$sort = trim($_GET['sort'] ?? 'job_date');
+
+// Fetch clients specifically for this page (XML jobs) - dynamic dropdown
+$page_clients = [];
+$cl_q = "SELECT DISTINCT COALESCE(NULLIF(c.team_client_name, ''), c.client_name) AS display_client, c.client_name, c.team_client_name 
+         FROM jobs j 
+         JOIN client_master c ON j.client_id = c.client_id 
+         JOIN job_master jm ON j.process_id = jm.job_id 
+         WHERE jm.job_name LIKE '%XML%' 
+         ORDER BY display_client ASC";
+$cl_res = $mysqli->query($cl_q);
+if ($cl_res) {
+    while ($cl_row = $cl_res->fetch_assoc()) {
+        if (!empty($cl_row['display_client'])) {
+            $page_clients[] = $cl_row;
+        }
+    }
+}
 
 // ==========================================
 // AJAX HANDLERS
@@ -307,12 +326,14 @@ function fetchData() {
 
     $show_completed = isset($_GET['show_completed']) && $_GET['show_completed'] == '1';
     $search = trim($_GET['search'] ?? '');
-    $overall = trim($_GET['overall'] ?? '');
-    $billed = trim($_GET['billed'] ?? '');
-    $xml = trim($_GET['xml'] ?? '');
-    $html = trim($_GET['html'] ?? '');
-    $scielo = trim($_GET['scielo'] ?? '');
-    $pubmed = trim($_GET['pubmed'] ?? '');
+    $filter_client = trim($_GET['client'] ?? '');
+    $filter_process = trim($_GET['process'] ?? '');
+    $filter_job_status = trim($_GET['job_status'] ?? '');
+    $filter_date_from = trim($_GET['date_from'] ?? '');
+    $filter_date_to = trim($_GET['date_to'] ?? '');
+    $filter_tat = strtolower(trim($_GET['tat'] ?? ''));
+    $filter_missed_tat = strtolower(trim($_GET['missed_tat'] ?? ''));
+    $sort = trim($_GET['sort'] ?? 'job_date');
 
     $base_query = "SELECT u.*, j.assigned_xml as jobs_assigned_xml, j.process_id, j.job_date, j.mail_subject, j.word_count as jobs_word_count, 
                    COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(u.journal_name_client, ''), '-') as client_name, 
@@ -322,148 +343,95 @@ function fetchData() {
                    LEFT JOIN client_master c ON j.client_id = c.client_id 
                    WHERE 1=1";
 
-    $params =[];
+    $params = [];
     $types = '';
     
-    // Completely remove 'Despatched' jobs from this page so they move to the Upload Page unless Completed is filtered
-    if ($overall !== 'Completed') {
+    // Completely remove 'Despatched' jobs from this page so they move to the Upload Page unless Completed / Despatched is explicitly filtered or toggle is ON
+    if (!$show_completed && $filter_job_status !== 'Despatched' && $filter_job_status !== 'Completed') {
         $base_query .= " AND (u.job_status IS NULL OR u.job_status != 'Despatched')";
-    }
-    
-    if (!$show_completed && $overall !== 'Completed') { 
-        $base_query .= " AND (u.status IS NULL OR u.status != 'Completed')"; 
+        $base_query .= " AND (u.status IS NULL OR u.status != 'Completed')";
     }
 
     if (!empty($search)) {
         $base_query .= " AND (c.client_name LIKE ? OR c.team_client_name LIKE ? OR u.journal_name_client LIKE ? OR j.journal_issue LIKE ? OR u.issue LIKE ? OR u.job_id LIKE ? OR u.id LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
+        $params = array_merge($params, ["%$search%", "%$search%", "%$search%", "%$search%", "%$search%", "%$search%", "%$search%"]);
         $types .= 'sssssss';
     }
-    if (!empty($overall)) {
-        if ($overall === 'Need to Assign') {
-            $base_query .= " AND (u.job_status IS NULL OR (u.job_status != 'Inprocess' AND u.job_status != 'Despatched'))";
-            $base_query .= " AND (u.status IS NULL OR (u.status != 'Inprocess' AND u.status != 'Completed'))";
-            $base_query .= " AND (
-                (u.Image_user IS NULL OR u.Image_user = '' OR u.Image_user = '-' OR u.Image_user = 'N/A' OR u.Image_user = 'NA')
-                AND (u.Table_user IS NULL OR u.Table_user = '' OR u.Table_user = '-' OR u.Table_user = 'N/A' OR u.Table_user = 'NA')
-                AND (u.WPContent_user IS NULL OR u.WPContent_user = '' OR u.WPContent_user = '-' OR u.WPContent_user = 'N/A' OR u.WPContent_user = 'NA')
-                AND (u.nlm_user IS NULL OR u.nlm_user = '' OR u.nlm_user = '-' OR u.nlm_user = 'N/A' OR u.nlm_user = 'NA')
-                AND (u.jats_user IS NULL OR u.jats_user = '' OR u.jats_user = '-' OR u.jats_user = 'N/A' OR u.jats_user = 'NA')
-                AND (u.clockss_user IS NULL OR u.clockss_user = '' OR u.clockss_user = '-' OR u.clockss_user = 'N/A' OR u.clockss_user = 'NA')
-                AND (u.HTML_user IS NULL OR u.HTML_user = '' OR u.HTML_user = '-' OR u.HTML_user = 'N/A' OR u.HTML_user = 'NA')
-                AND (u.new_html_user IS NULL OR u.new_html_user = '' OR u.new_html_user = '-' OR u.new_html_user = 'N/A' OR u.new_html_user = 'NA')
-                AND (u.Scielo_user IS NULL OR u.Scielo_user = '' OR u.Scielo_user = '-' OR u.Scielo_user = 'N/A' OR u.Scielo_user = 'NA')
-                AND (u.ebsco_user IS NULL OR u.ebsco_user = '' OR u.ebsco_user = '-' OR u.ebsco_user = 'N/A' OR u.ebsco_user = 'NA')
-                AND (u.pubmed_user IS NULL OR u.pubmed_user = '' OR u.pubmed_user = '-' OR u.pubmed_user = 'N/A' OR u.pubmed_user = 'NA')
-                AND (u.biblat_user IS NULL OR u.biblat_user = '' OR u.biblat_user = '-' OR u.biblat_user = 'N/A' OR u.biblat_user = 'NA')
-                AND (u.doaj_user IS NULL OR u.doaj_user = '' OR u.doaj_user = '-' OR u.doaj_user = 'N/A' OR u.doaj_user = 'NA')
-                AND (u.QC_user IS NULL OR u.QC_user = '' OR u.QC_user = '-' OR u.QC_user = 'N/A' OR u.QC_user = 'NA')
-            )";
-        } elseif ($overall === 'In Progress') {
-            $base_query .= " AND (
-                u.status = 'Inprocess' 
-                OR u.job_status = 'Inprocess' 
-                OR u.status = 'In Progress' 
-                OR u.job_status = 'In Progress'
-                OR (u.Table_user IS NOT NULL AND u.Table_user != '' AND u.Table_user != '-' AND u.Table_user != 'N/A' AND u.Table_user != 'NA')
-                OR (u.WPContent_user IS NOT NULL AND u.WPContent_user != '' AND u.WPContent_user != '-' AND u.WPContent_user != 'N/A' AND u.WPContent_user != 'NA')
-                OR (u.Image_user IS NOT NULL AND u.Image_user != '' AND u.Image_user != '-' AND u.Image_user != 'N/A' AND u.Image_user != 'NA')
-                OR (u.nlm_user IS NOT NULL AND u.nlm_user != '' AND u.nlm_user != '-' AND u.nlm_user != 'N/A' AND u.nlm_user != 'NA')
-                OR (u.jats_user IS NOT NULL AND u.jats_user != '' AND u.jats_user != '-' AND u.jats_user != 'N/A' AND u.jats_user != 'NA')
-                OR (u.clockss_user IS NOT NULL AND u.clockss_user != '' AND u.clockss_user != '-' AND u.clockss_user != 'N/A' AND u.clockss_user != 'NA')
-                OR (u.HTML_user IS NOT NULL AND u.HTML_user != '' AND u.HTML_user != '-' AND u.HTML_user != 'N/A' AND u.HTML_user != 'NA')
-                OR (u.new_html_user IS NOT NULL AND u.new_html_user != '' AND u.new_html_user != '-' AND u.new_html_user != 'N/A' AND u.new_html_user != 'NA')
-                OR (u.Scielo_user IS NOT NULL AND u.Scielo_user != '' AND u.Scielo_user != '-' AND u.Scielo_user != 'N/A' AND u.Scielo_user != 'NA')
-                OR (u.ebsco_user IS NOT NULL AND u.ebsco_user != '' AND u.ebsco_user != '-' AND u.ebsco_user != 'N/A' AND u.ebsco_user != 'NA')
-                OR (u.pubmed_user IS NOT NULL AND u.pubmed_user != '' AND u.pubmed_user != '-' AND u.pubmed_user != 'N/A' AND u.pubmed_user != 'NA')
-                OR (u.biblat_user IS NOT NULL AND u.biblat_user != '' AND u.biblat_user != '-' AND u.biblat_user != 'N/A' AND u.biblat_user != 'NA')
-                OR (u.doaj_user IS NOT NULL AND u.doaj_user != '' AND u.doaj_user != '-' AND u.doaj_user != 'N/A' AND u.doaj_user != 'NA')
-                OR (u.QC_user IS NOT NULL AND u.QC_user != '' AND u.QC_user != '-' AND u.QC_user != 'N/A' AND u.QC_user != 'NA')
-            ) AND (u.job_status IS NULL OR u.job_status != 'Despatched') AND (u.status IS NULL OR u.status != 'Completed')";
-        } elseif ($overall === 'Completed') {
-            $base_query .= " AND (u.status = 'Completed' OR u.job_status = 'Despatched')";
+
+    if (!empty($filter_client)) {
+        $base_query .= " AND (c.client_name = ? OR c.team_client_name = ?)";
+        $params[] = $filter_client;
+        $params[] = $filter_client;
+        $types .= 'ss';
+    }
+
+    $process_col_map = [
+        'nlm' => 'u.nlm',
+        'jats' => 'u.jats',
+        'clockss' => 'u.clockss',
+        'scielo' => 'u.scielo',
+        'ebsco' => 'u.ebsco',
+        'pubmed' => 'u.pubmed',
+        'biblat' => 'u.biblat',
+        'doaj' => 'u.doaj',
+        'html' => 'u.html',
+        'new_html' => 'u.new_html',
+        'direct_html' => 'u.direct_html',
+        'new html' => 'u.new_html',
+        'direct html' => 'u.direct_html'
+    ];
+    if (!empty($filter_process)) {
+        $clean_proc = strtolower(trim($filter_process));
+        if (isset($process_col_map[$clean_proc])) {
+            $pcol = $process_col_map[$clean_proc];
+            $base_query .= " AND ($pcol IS NOT NULL AND $pcol != '' AND $pcol != '-' AND $pcol != '0')";
         }
     }
-    if (!empty($billed)) {
-        if ($billed === 'Yes') {
-            $base_query .= " AND u.Billed = 'Yes'";
-        } elseif ($billed === 'No') {
-            $base_query .= " AND (u.Billed = 'No' OR u.Billed IS NULL OR u.Billed = '' OR u.Billed != 'Yes')";
+
+    if (!empty($filter_job_status)) {
+        if (strcasecmp($filter_job_status, 'Inprocess') === 0) {
+            $base_query .= " AND (u.job_status = 'Inprocess' OR u.job_status = 'In Progress' OR u.status = 'Inprocess' OR u.status = 'In Progress')";
+        } else {
+            $base_query .= " AND (u.job_status = ? OR u.status = ?)";
+            $params[] = $filter_job_status;
+            $params[] = $filter_job_status;
+            $types .= "ss";
         }
     }
-    if (!empty($xml)) {
-        if ($xml === 'Done') {
-            $base_query .= " AND (u.nlm_user LIKE '%✓%' OR u.jats_user LIKE '%✓%')";
-        } elseif ($xml === 'In Progress') {
-            $base_query .= " AND (
-                (u.nlm_user IS NOT NULL AND u.nlm_user != '' AND u.nlm_user != '-' AND u.nlm_user != 'N/A' AND u.nlm_user != 'NA' AND u.nlm_user NOT LIKE '%✓%')
-                OR (u.jats_user IS NOT NULL AND u.jats_user != '' AND u.jats_user != '-' AND u.jats_user != 'N/A' AND u.jats_user != 'NA' AND u.jats_user NOT LIKE '%✓%')
-            )";
-        } elseif ($xml === 'Pending') {
-            $base_query .= " AND (
-                ( (u.nlm IS NOT NULL AND u.nlm != '' AND u.nlm != '-' AND u.nlm != '0') AND (u.nlm_user IS NULL OR u.nlm_user = '' OR u.nlm_user = '-' OR u.nlm_user NOT LIKE '%✓%') )
-                OR ( (u.jats IS NOT NULL AND u.jats != '' AND u.jats != '-' AND u.jats != '0') AND (u.jats_user IS NULL OR u.jats_user = '' OR u.jats_user = '-' OR u.jats_user NOT LIKE '%✓%') )
-            )";
-        }
+
+    if (!empty($filter_date_from)) {
+        $base_query .= " AND j.job_date >= ?";
+        $params[] = $filter_date_from;
+        $types .= "s";
     }
-    if (!empty($html)) {
-        if ($html === 'Done') {
-            $base_query .= " AND (u.HTML_user LIKE '%✓%' OR u.new_html_user LIKE '%✓%' OR u.direct_html_user LIKE '%✓%')";
-        } elseif ($html === 'In Progress') {
-            $base_query .= " AND (
-                (u.HTML_user IS NOT NULL AND u.HTML_user != '' AND u.HTML_user != '-' AND u.HTML_user != 'N/A' AND u.HTML_user != 'NA' AND u.HTML_user NOT LIKE '%✓%')
-                OR (u.new_html_user IS NOT NULL AND u.new_html_user != '' AND u.new_html_user != '-' AND u.new_html_user != 'N/A' AND u.new_html_user != 'NA' AND u.new_html_user NOT LIKE '%✓%')
-                OR (u.direct_html_user IS NOT NULL AND u.direct_html_user != '' AND u.direct_html_user != '-' AND u.direct_html_user != 'N/A' AND u.direct_html_user != 'NA' AND u.direct_html_user NOT LIKE '%✓%')
-            )";
-        } elseif ($html === 'Pending') {
-            $base_query .= " AND (
-                ( (u.html IS NOT NULL AND u.html != '' AND u.html != '-' AND u.html != '0') AND (u.HTML_user IS NULL OR u.HTML_user = '' OR u.HTML_user = '-' OR u.HTML_user NOT LIKE '%✓%') )
-                OR ( (u.new_html IS NOT NULL AND u.new_html != '' AND u.new_html != '-' AND u.new_html != '0') AND (u.new_html_user IS NULL OR u.new_html_user = '' OR u.new_html_user = '-' OR u.new_html_user NOT LIKE '%✓%') )
-                OR ( (u.direct_html IS NOT NULL AND u.direct_html != '' AND u.direct_html != '-' AND u.direct_html != '0') AND (u.direct_html_user IS NULL OR u.direct_html_user = '' OR u.direct_html_user = '-' OR u.direct_html_user NOT LIKE '%✓%') )
-            )";
-        }
+    if (!empty($filter_date_to)) {
+        $base_query .= " AND j.job_date <= ?";
+        $params[] = $filter_date_to . ' 23:59:59';
+        $types .= "s";
     }
-    if (!empty($scielo)) {
-        if ($scielo === 'Done') {
-            $base_query .= " AND (u.Scielo_user LIKE '%✓%' OR u.ebsco_user LIKE '%✓%')";
-        } elseif ($scielo === 'In Progress') {
-            $base_query .= " AND (
-                (u.Scielo_user IS NOT NULL AND u.Scielo_user != '' AND u.Scielo_user != '-' AND u.Scielo_user != 'N/A' AND u.Scielo_user != 'NA' AND u.Scielo_user NOT LIKE '%✓%')
-                OR (u.ebsco_user IS NOT NULL AND u.ebsco_user != '' AND u.ebsco_user != '-' AND u.ebsco_user != 'N/A' AND u.ebsco_user != 'NA' AND u.ebsco_user NOT LIKE '%✓%')
-            )";
-        } elseif ($scielo === 'Pending') {
-            $base_query .= " AND (
-                ( (u.scielo IS NOT NULL AND u.scielo != '' AND u.scielo != '-' AND u.scielo != '0') AND (u.Scielo_user IS NULL OR u.Scielo_user = '' OR u.Scielo_user = '-' OR u.Scielo_user NOT LIKE '%✓%') )
-                OR ( (u.ebsco IS NOT NULL AND u.ebsco != '' AND u.ebsco != '-' AND u.ebsco != '0') AND (u.ebsco_user IS NULL OR u.ebsco_user = '' OR u.ebsco_user = '-' OR u.ebsco_user NOT LIKE '%✓%') )
-            )";
-        }
+
+    // Missed TAT Sort & Filter (Ascending / Descending directly by missed days count)
+    if ($filter_missed_tat === 'asc' || $filter_missed_tat === 'desc') {
+        $base_query .= " AND ((u.tat_to_client IS NOT NULL AND u.tat_to_client < CURDATE() AND (u.job_status != 'Despatched' OR u.job_status IS NULL)) OR LOWER(TRIM(u.missed_tat)) = 'yes')";
+        $order_query = " ORDER BY DATEDIFF(CURDATE(), u.tat_to_client) " . strtoupper($filter_missed_tat);
     }
-    if (!empty($pubmed)) {
-        if ($pubmed === 'Done') {
-            $base_query .= " AND (u.pubmed_user LIKE '%✓%' OR u.biblat_user LIKE '%✓%' OR u.doaj_user LIKE '%✓%')";
-        } elseif ($pubmed === 'In Progress') {
-            $base_query .= " AND (
-                (u.pubmed_user IS NOT NULL AND u.pubmed_user != '' AND u.pubmed_user != '-' AND u.pubmed_user != 'N/A' AND u.pubmed_user != 'NA' AND u.pubmed_user NOT LIKE '%✓%')
-                OR (u.biblat_user IS NOT NULL AND u.biblat_user != '' AND u.biblat_user != '-' AND u.biblat_user != 'N/A' AND u.biblat_user != 'NA' AND u.biblat_user NOT LIKE '%✓%')
-                OR (u.doaj_user IS NOT NULL AND u.doaj_user != '' AND u.doaj_user != '-' AND u.doaj_user != 'N/A' AND u.doaj_user != 'NA' AND u.doaj_user NOT LIKE '%✓%')
-            )";
-        } elseif ($pubmed === 'Pending') {
-            $base_query .= " AND (
-                ( (u.pubmed IS NOT NULL AND u.pubmed != '' AND u.pubmed != '-' AND u.pubmed != '0') AND (u.pubmed_user IS NULL OR u.pubmed_user = '' OR u.pubmed_user = '-' OR u.pubmed_user NOT LIKE '%✓%') )
-                OR ( (u.biblat IS NOT NULL AND u.biblat != '' AND u.biblat != '-' AND u.biblat != '0') AND (u.biblat_user IS NULL OR u.biblat_user = '' OR u.biblat_user = '-' OR u.biblat_user NOT LIKE '%✓%') )
-                OR ( (u.doaj IS NOT NULL AND u.doaj != '' AND u.doaj != '-' AND u.doaj != '0') AND (u.doaj_user IS NULL OR u.doaj_user = '' OR u.doaj_user = '-' OR u.doaj_user NOT LIKE '%✓%') )
-            )";
-        }
+    // TAT Sort (Ascending / Descending by date)
+    elseif ($filter_tat === 'asc' || $filter_tat === 'desc') {
+        $order_query = " ORDER BY (CASE WHEN u.tat_to_client IS NULL THEN 1 ELSE 0 END) ASC, u.tat_to_client " . strtoupper($filter_tat);
     }
-    
-    // --- CHANGED CODE: Matching the sorting order exactly with UQ Process ---
-    $order_query = " ORDER BY j.job_date DESC, u.job_id DESC";
+    elseif (!empty($sort)) {
+        $sort_map = [
+            'job_id' => 'u.job_id',
+            'job_date' => 'j.job_date',
+            'client_name' => 'COALESCE(NULLIF(c.team_client_name, ""), c.client_name)',
+            'tat_to_client' => 'u.tat_to_client',
+            'rec_date' => 'u.rec_date'
+        ];
+        $col = $sort_map[$sort] ?? 'j.job_date';
+        $order_query = " ORDER BY $col DESC, u.job_id DESC";
+    } else {
+        $order_query = " ORDER BY j.job_date DESC, u.job_id DESC";
+    }
     $full_query = $base_query . $order_query;
     
     if (!empty($params)) {
@@ -753,26 +721,82 @@ function fetchData() {
             
             <!-- Filter Bar -->
             <div class="card-body bg-white border-bottom p-3">
-                <form method="get" class="row g-2 align-items-center">
+                <form method="get" class="row g-2 align-items-end">
                     <?php if($show_completed): ?> <input type="hidden" name="show_completed" value="1"> <?php endif; ?>
                     
-                    <div class="col-md-2">
+                    <div class="col-md-3">
+                        <input type="text" name="search" placeholder="Sort by ID/Client/Article" value="<?= h($search) ?>" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="client" class="form-select">
+                            <option value="">Sort by Client</option>
+                            <?php foreach ($page_clients as $pc): 
+                                $c_name = $pc['display_client'];
+                            ?>
+                                <option value="<?= h($c_name) ?>" <?= ($filter_client === $c_name) ? 'selected' : '' ?>><?= h($c_name) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="process" class="form-select">
+                            <option value="">Sort by Process</option>
+                            <option value="NLM" <?= strcasecmp($filter_process, 'NLM') === 0 ? 'selected' : '' ?>>NLM</option>
+                            <option value="JATS" <?= strcasecmp($filter_process, 'JATS') === 0 ? 'selected' : '' ?>>JATS</option>
+                            <option value="Clockss" <?= strcasecmp($filter_process, 'Clockss') === 0 ? 'selected' : '' ?>>Clockss</option>
+                            <option value="Scielo" <?= strcasecmp($filter_process, 'Scielo') === 0 ? 'selected' : '' ?>>Scielo</option>
+                            <option value="EBSCO" <?= strcasecmp($filter_process, 'EBSCO') === 0 ? 'selected' : '' ?>>EBSCO</option>
+                            <option value="PubMed" <?= strcasecmp($filter_process, 'PubMed') === 0 ? 'selected' : '' ?>>PubMed</option>
+                            <option value="Biblat" <?= strcasecmp($filter_process, 'Biblat') === 0 ? 'selected' : '' ?>>Biblat</option>
+                            <option value="DOAJ" <?= strcasecmp($filter_process, 'DOAJ') === 0 ? 'selected' : '' ?>>DOAJ</option>
+                            <option value="HTML" <?= strcasecmp($filter_process, 'HTML') === 0 ? 'selected' : '' ?>>HTML</option>
+                            <option value="New HTML" <?= strcasecmp($filter_process, 'New HTML') === 0 ? 'selected' : '' ?>>New HTML</option>
+                            <option value="Direct HTML" <?= strcasecmp($filter_process, 'Direct HTML') === 0 ? 'selected' : '' ?>>Direct HTML</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="job_status" class="form-select">
+                            <option value="">Filter by Job Status</option>
+                            <option value="Query" <?= strcasecmp($filter_job_status, 'Query') === 0 ? 'selected' : '' ?>>Query</option>
+                            <option value="Rework/Correction" <?= strcasecmp($filter_job_status, 'Rework/Correction') === 0 ? 'selected' : '' ?>>Rework/Correction</option>
+                            <option value="Hold" <?= strcasecmp($filter_job_status, 'Hold') === 0 ? 'selected' : '' ?>>Hold</option>
+                            <option value="Inprocess" <?= strcasecmp($filter_job_status, 'Inprocess') === 0 ? 'selected' : '' ?>>Inprocess</option>
+                            <option value="Despatched" <?= strcasecmp($filter_job_status, 'Despatched') === 0 ? 'selected' : '' ?>>Despatched</option>
+                            <option value="PNR" <?= strcasecmp($filter_job_status, 'PNR') === 0 ? 'selected' : '' ?>>PNR</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
-                            <input type="text" name="search" value="<?= h($search) ?>" placeholder="Search ID / Journal..." class="form-control border-start-0 ps-0">
+                            <input type="date" name="date_from" value="<?= h($filter_date_from) ?>" class="form-control" title="Date From">
+                            <input type="date" name="date_to" value="<?= h($filter_date_to) ?>" class="form-control" title="Date To">
                         </div>
                     </div>
-                    
-                    <div class="col"><select name="overall" class="form-select form-select-sm"><option value="">Overall Status</option><option value="Need to Assign" <?= $overall === 'Need to Assign' ? 'selected' : '' ?>>Need to Assign</option><option value="In Progress" <?= $overall === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Completed" <?= $overall === 'Completed' ? 'selected' : '' ?>>Completed</option></select></div>
-                    <div class="col"><select name="billed" class="form-select form-select-sm"><option value="">Billing</option><option value="Yes" <?= $billed === 'Yes' ? 'selected' : '' ?>>Billed</option><option value="No" <?= $billed === 'No' ? 'selected' : '' ?>>Unbilled</option></select></div>
-                    <div class="col"><select name="xml" class="form-select form-select-sm"><option value="">NLM/JATS</option><option value="Pending" <?= $xml === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $xml === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $xml === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
-                    <div class="col"><select name="html" class="form-select form-select-sm"><option value="">HTML</option><option value="Pending" <?= $html === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $html === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $html === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
-                    <div class="col"><select name="scielo" class="form-select form-select-sm"><option value="">SciELO</option><option value="Pending" <?= $scielo === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $scielo === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $scielo === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
-                    <div class="col"><select name="pubmed" class="form-select form-select-sm"><option value="">PubMed</option><option value="Pending" <?= $pubmed === 'Pending' ? 'selected' : '' ?>>Pending</option><option value="In Progress" <?= $pubmed === 'In Progress' ? 'selected' : '' ?>>In Progress</option><option value="Done" <?= $pubmed === 'Done' ? 'selected' : '' ?>>Done</option></select></div>
-
-                    <div class="col-auto d-flex gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm px-3 shadow-sm">Filter</button>
-                        <a href="?" class="btn btn-light btn-sm border px-2 text-muted" title="Clear Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    <div class="col-md-2">
+                        <select name="tat" class="form-select">
+                            <option value="">Sort by TAT</option>
+                            <option value="asc" <?= $filter_tat === 'asc' ? 'selected' : '' ?>>Ascending</option>
+                            <option value="desc" <?= $filter_tat === 'desc' ? 'selected' : '' ?>>Descending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="missed_tat" class="form-select">
+                            <option value="">Missed TAT</option>
+                            <option value="asc" <?= $filter_missed_tat === 'asc' ? 'selected' : '' ?>>Ascending</option>
+                            <option value="desc" <?= $filter_missed_tat === 'desc' ? 'selected' : '' ?>>Descending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="sort" class="form-select"> 
+                            <option value="job_date" <?= $sort === 'job_date' ? 'selected' : '' ?>>Sort by Job Date</option>
+                            <option value="job_id" <?= $sort === 'job_id' ? 'selected' : '' ?>>Sort by Job ID</option>
+                            <option value="client_name" <?= $sort === 'client_name' ? 'selected' : '' ?>>Sort by Client</option>
+                            <option value="tat_to_client" <?= $sort === 'tat_to_client' ? 'selected' : '' ?>>Sort by TAT Date</option>
+                            <option value="rec_date" <?= $sort === 'rec_date' ? 'selected' : '' ?>>Sort by Rec Date</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel me-1"></i> Apply Filters</button>
+                        <a href="xml.php<?= $show_completed ? '?show_completed=1' : '' ?>" class="btn btn-outline-secondary btn-sm" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
                     </div>
                 </form>
             </div>
