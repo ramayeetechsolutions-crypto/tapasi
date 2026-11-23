@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -452,11 +452,9 @@ $todayTotal = $startCount + $inprogressCount + $endCount;
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-database me-2"></i><?= $mode === 'edit' ? 'Edit Backup Record' : 'Add New Backup' ?></h4>
-            <a href="backup.php" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
-            </a>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-database me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit Backup Record' : 'Add New Backup' ?></h4>
+            <a href="backup.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
         </div>
 
         <div class="card">
@@ -570,10 +568,10 @@ $todayTotal = $startCount + $inprogressCount + $endCount;
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h4><i class="fas fa-database me-2"></i>Backup Management </h4>
-                <p class="text-muted"><?= $totalBackups ?> Backups | Import Excel to add/update backup records</p>
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-database me-2" style="color: #ffffff !important;"></i>Backup Management</h4>
+                <p class="mb-0 text-white opacity-75 small" style="color: rgba(255, 255, 255, 0.85) !important;"><?= $totalBackups ?> Backups | Import Excel to add/update backup records</p>
             </div>
             <div>
                 <button type="button" class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
@@ -781,9 +779,9 @@ $todayTotal = $startCount + $inprogressCount + $endCount;
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-file-excel me-2"></i>Import Backups from Excel
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-excel me-2 text-white"></i>Import Backups from Excel
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>

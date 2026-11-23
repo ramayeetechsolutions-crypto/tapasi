@@ -155,8 +155,12 @@ $data = $mysqli->query($sql . " ORDER BY id DESC");
         <?php endif; ?>
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-desktop me-2" style="color: #ffffff !important;"></i><?= $mode==='edit'?'Edit System':'Add New System' ?></h4>
+                <a href="systems.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
+            </div>
             <div class="card shadow-sm">
-                <div class="card-header"><?= $mode==='edit'?'Edit System':'Add New System' ?></div>
+                <div class="card-header text-white fw-bold" style="background-color: #6c757d !important; background: #6c757d !important;"><?= $mode==='edit'?'Edit System':'Add New System' ?></div>
                 <div class="card-body">
                     <form method="post" class="row g-3">
                         <input type="hidden" name="action" value="<?= $mode ?>">
@@ -183,10 +187,12 @@ $data = $mysqli->query($sql . " ORDER BY id DESC");
             </div>
         <?php else: ?>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4><i class="fas fa-desktop me-2"></i>System Inventory</h4>
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <div>
-                    <button type="button" class="btn btn-warning btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-desktop me-2" style="color: #ffffff !important;"></i>System Inventory</h4>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="fas fa-file-excel me-1"></i> Import Excel
                     </button>
                     <a href="systems.php?mode=add" class="btn btn-success btn-sm">
@@ -260,8 +266,8 @@ $data = $mysqli->query($sql . " ORDER BY id DESC");
             <div class="modal-content">
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="import_excel">
-                    <div class="modal-header bg-warning">
-                        <h5 class="modal-title fw-bold">Import Systems from Excel</h5>
+                    <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                        <h5 class="modal-title fw-bold text-white">Import Systems from Excel</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">

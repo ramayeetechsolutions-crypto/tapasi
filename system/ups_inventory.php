@@ -230,6 +230,26 @@ $manufacturers = $mysqli->query("SELECT DISTINCT manufacturer FROM tbl_ups WHERE
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        .page-title-container {
+            background: var(--ash, #6c757d) !important;
+            color: #ffffff !important;
+            padding: 16px 24px !important;
+            border-radius: 12px !important;
+            margin-bottom: 24px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+        .page-title-container h4 {
+            margin: 0 !important;
+            font-size: 1.25rem !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+        }
+        .page-title-container i {
+            color: #ffffff !important;
+        }
         .main-content {
             padding: 20px;
             max-width: 1800px;
@@ -324,8 +344,8 @@ $manufacturers = $mysqli->query("SELECT DISTINCT manufacturer FROM tbl_ups WHERE
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-plug me-2"></i><?= $mode === 'edit' ? 'Edit UPS Details' : 'Add New UPS to Inventory' ?></h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-plug me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit UPS Details' : 'Add New UPS to Inventory' ?></h4>
             <a href="ups.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to Inventory
             </a>
@@ -445,8 +465,8 @@ $manufacturers = $mysqli->query("SELECT DISTINCT manufacturer FROM tbl_ups WHERE
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-warehouse me-2"></i>UPS Inventory</h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-warehouse me-2" style="color: #ffffff !important;"></i>UPS Inventory</h4>
             <a href="ups.php?mode=add" class="btn btn-success btn-sm">
                 <i class="fas fa-plus me-1"></i> Add UPS to Inventory
             </a>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -420,8 +420,8 @@ $soldPersons = $mysqli->query("SELECT DISTINCT sold_person FROM tbl_scrap WHERE 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-recycle me-2"></i><?= $mode === 'edit' ? 'Edit Scrap Record' : 'Add New Scrap Sale' ?></h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-recycle me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit Scrap Record' : 'Add New Scrap Sale' ?></h4>
             <a href="scrap.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -508,10 +508,10 @@ $soldPersons = $mysqli->query("SELECT DISTINCT sold_person FROM tbl_scrap WHERE 
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h4><i class="fas fa-recycle me-2"></i>Scrap Sales</h4>
-                <p class="text-muted mb-0">Manage scrap records | Import Excel to bulk add</p>
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-recycle me-2" style="color: #ffffff !important;"></i>Scrap Sales</h4>
+                <p class="mb-0 text-white opacity-75 small" style="color: rgba(255, 255, 255, 0.85) !important;">Manage scrap records | Import Excel to bulk add</p>
             </div>
             <div>
                 <button type="button" class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
@@ -670,9 +670,9 @@ $soldPersons = $mysqli->query("SELECT DISTINCT sold_person FROM tbl_scrap WHERE 
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-file-excel me-2"></i>Import Scrap Records from Excel
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-excel me-2 text-white"></i>Import Scrap Records from Excel
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>

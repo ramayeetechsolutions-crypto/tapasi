@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -257,9 +257,9 @@ $totalContacts = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_contacts")->fet
         <?php endif; ?>
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4><?= $mode === 'edit' ? 'Edit Contact' : 'Add New Contact' ?></h4>
-                <a href="contacts.php" class="btn btn-secondary btn-sm">Back to List</a>
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-address-book me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit Contact' : 'Add New Contact' ?></h4>
+                <a href="contacts.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
             </div>
             <div class="card"><div class="card-body">
                 <form method="post">
@@ -286,10 +286,10 @@ $totalContacts = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_contacts")->fet
             </div></div>
 
         <?php else: ?>
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div><h4>Contact Management</h4><p class="text-muted"><?= $totalContacts ?> Total Contacts</p></div>
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <div><h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-address-book me-2" style="color: #ffffff !important;"></i>Contact Management</h4><p class="mb-0 text-white opacity-75 small" style="color: rgba(255, 255, 255, 0.85) !important;"><?= $totalContacts ?> Total Contacts</p></div>
                 <div>
-                    <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#importModal"><i class="fas fa-file-excel me-2"></i> Import Excel</button>
+                    <button class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal"><i class="fas fa-file-excel me-1"></i> Import Excel</button>
                     <a href="contacts.php?mode=add" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i> Add Contact</a>
                 </div>
             </div>
@@ -350,8 +350,8 @@ $totalContacts = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_contacts")->fet
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title">Import Contacts from Excel</h5>
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white"><i class="fas fa-file-excel me-2 text-white"></i>Import Contacts from Excel</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="post" enctype="multipart/form-data">

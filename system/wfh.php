@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 if (
     isset($_GET['ajax']) &&
     $_GET['ajax'] === 'get_employee_details' &&
@@ -493,8 +493,8 @@ if (!empty($typesTemporary)) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-home me-2"></i><?= $mode === 'edit' ? 'Edit WFH Record' : 'Add New WFH Record' ?></h4>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-home me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit WFH Record' : 'Add New WFH Record' ?></h4>
             <a href="wfh.php?tab=<?= h($activeTab) ?>" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
@@ -616,9 +616,9 @@ if (!empty($typesTemporary)) {
         <?php else: ?>
 
         <!-- View Mode with Tabs -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h4><i class="fas fa-home me-2"></i>WFH Management</h4>
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-home me-2" style="color: #ffffff !important;"></i>WFH Management</h4>
             </div>
             <div>
                 <!-- Import Excel Button added here -->
@@ -854,9 +854,9 @@ if (!empty($typesTemporary)) {
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-file-excel me-2"></i>Import WFH Records from Excel
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-excel me-2 text-white"></i>Import WFH Records from Excel
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>

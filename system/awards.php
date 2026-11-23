@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -506,8 +506,8 @@ function getAwardColor($award_name) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
         <!-- Add/Edit Form -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5><i class="fas fa-trophy me-2"></i><?= $mode === 'edit' ? 'Edit Award Record' : 'Add New Award' ?></h5>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-trophy me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit Award Record' : 'Add New Award' ?></h5>
             <a href="awards.php" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left me-1"></i> Back
             </a>
@@ -634,9 +634,9 @@ function getAwardColor($award_name) {
         <?php else: ?>
 
         <!-- View Mode -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h5><i class="fas fa-trophy me-2"></i>Employee Awards & Recognition</h5>
+                <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-trophy me-2" style="color: #ffffff !important;"></i>Employee Awards & Recognition</h5>
             </div>
             <div>
                 <button type="button" class="btn btn-warning text-dark fw-bold btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
@@ -892,9 +892,9 @@ function getAwardColor($award_name) {
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-file-excel me-2"></i>Import Awards from Excel
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-excel me-2 text-white"></i>Import Awards from Excel
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>

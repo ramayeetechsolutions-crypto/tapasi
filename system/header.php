@@ -46,7 +46,7 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
             --primary: #3498db;
             --primary-dark: #2980b9;
             --secondary: #2c3e50;
-            --light: #f5f7fa;
+            --light: #ffffff;
             --dark: #34495e;
             --success: #2ecc71;
             --warning: #f39c12;
@@ -59,7 +59,7 @@ $username    = htmlspecialchars($_SESSION['username'] ?? 'User');
         }
 
         body {
-            background-color: var(--light);
+            background-color: #ffffff !important;
             color: var(--secondary);
             line-height: 1.6;
         }

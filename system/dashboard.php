@@ -76,9 +76,8 @@ $backup_stats_data = $backup_stats->fetch_assoc();
 }
 
 body {
-    /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh; */
-    background-color: #707981; 
+    background-color: #ffffff !important;
+    background: #ffffff !important;
     min-height: 100vh;
 }
 
@@ -89,28 +88,31 @@ body {
     padding: 24px;
 }
 
-/* Header Styles */
+/* Header Styles - Navbar Ash Color Matching System Theme */
 .dashboard-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: #6c757d !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
     border-radius: var(--border-radius);
-    padding: 24px 32px;
+    padding: 20px 28px;
     margin-bottom: 24px;
-    box-shadow: var(--box-shadow);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: none;
 }
 
+.dashboard-header .header-title h1,
 .header-title h1 {
-    color: var(--dark);
-    font-size: 2rem;
+    color: #ffffff !important;
+    font-size: 1.75rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
+.dashboard-header .header-title p,
 .header-title p {
-    color: var(--gray);
-    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 0.95rem;
     font-weight: 400;
 }
 
@@ -123,15 +125,14 @@ body {
 }
 
 .stat-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: #ffffff;
     border-radius: var(--border-radius);
     padding: 24px;
-    box-shadow: var(--box-shadow);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     display: flex;
     align-items: center;
     transition: var(--transition);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #e2e8f0;
     position: relative;
     overflow: hidden;
 }
@@ -278,35 +279,48 @@ body {
 }
 
 .content-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: #ffffff !important;
     border-radius: var(--border-radius);
     padding: 24px;
-    box-shadow: var(--box-shadow);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
 }
 
-.card-header {
+.card-header,
+.content-card .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 2px solid var(--light);
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
 }
 
-.card-header h2 {
-    color: var(--dark);
+.card-header h2,
+.content-card .card-header h2,
+.content-card .card-header h2 span,
+.content-card .card-header h4,
+.content-card .card-header h4 span {
+    color: #0f172a !important;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700 !important;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
-.card-header h2 i {
-    color: var(--primary);
-    font-size: 1.5rem;
+.card-header h2 i,
+.content-card .card-header h2 i {
+    color: #ef4444 !important;
+    font-size: 1.35rem;
+}
+
+.content-card .card-header h4 i,
+.content-card .card-header h4 i.fa-database {
+    color: #2563eb !important;
+    font-size: 1.2rem;
 }
 
 .view-link {
@@ -606,11 +620,11 @@ a.stat-card:hover {
     <div class="content-grid">
         <!-- Left Column - Recent Backups with Mini Stats -->
         <div class="content-card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="card-header bg-white" style="background: #ffffff !important; background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0 !important; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
     <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-        <h4 style="display: flex; align-items: center; gap: 4px; margin: 0; font-size: 1.2rem;">
-            <i class="fas fa-database" style="color: #2563eb;"></i>
-        Recent Backups
+        <h4 style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 1.2rem; color: #0f172a !important; font-weight: 700;">
+            <i class="fas fa-database" style="color: #2563eb !important;"></i>
+            <span style="color: #0f172a !important;">Recent Backups</span>
         </h4>
         
         <!-- Mini Backup Statistics - Inline with Header -->
@@ -700,10 +714,10 @@ a.stat-card:hover {
 
         <!-- Right Column - Recent Complaints -->
         <div class="content-card">
-            <div class="card-header">
-                <h2>
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Recent Complaints
+            <div class="card-header bg-white" style="background: #ffffff !important; background-color: #ffffff !important; border-bottom: 1px solid #e2e8f0 !important;">
+                <h2 style="display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.25rem; color: #0f172a !important; font-weight: 700;">
+                    <i class="fas fa-exclamation-triangle" style="color: #ef4444 !important;"></i>
+                    <span style="color: #0f172a !important;">Recent Complaints</span>
                 </h2>
                 <a href="ticketmanagementsystem.php" class="view-link">View All</a>
             </div>

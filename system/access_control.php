@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require 'db.php';
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -501,23 +501,6 @@ $totalCards = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_access_cards")->fe
     <?php require 'header.php'; ?>
     
     <div class="main-content">
-        <!-- PAGE HEADER -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold text-dark mb-0"><i class="fas fa-id-card me-2"></i>Access Card</h4>
-                <p class="text-muted"><?= $totalCards ?> Cards | Import Excel to add/update cards</p>
-            </div>
-            
-            <div>
-                <button type="button" class="btn btn-warning text-dark fw-bold me-2" data-bs-toggle="modal" data-bs-target="#importModal">
-                    <i class="fas fa-file-excel me-2"></i> Import from Excel
-                </button>
-                <a href="access_control.php?mode=add" class="btn btn-success fw-bold">
-                    <i class="fas fa-plus me-2"></i> Add New Card
-                </a>
-            </div>
-        </div>
-
         <!-- ALERTS -->
         <?php if (!empty($_GET['msg'])): ?>
         <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show" role="alert">
@@ -528,10 +511,16 @@ $totalCards = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_access_cards")->fe
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
         
+        <!-- Add/Edit Form Header -->
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-<?= $mode === 'add' ? 'plus' : 'edit' ?> me-2" style="color: #ffffff !important;"></i><?= $mode === 'add' ? 'Add New Access Card' : 'Edit Access Card' ?></h4>
+            <a href="access_control.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
+        </div>
+
         <!-- Add/Edit Form Section -->
         <div class="card">
-            <div class="card-header bg-<?= $mode === 'add' ? 'success' : 'warning' ?> text-white">
-                <h5 class="mb-0">
+            <div class="card-header text-white fw-bold" style="background-color: #6c757d !important; background: #6c757d !important;">
+                <h5 class="mb-0 text-white">
                     <i class="fas fa-<?= $mode === 'add' ? 'plus' : 'edit' ?> me-2"></i>
                     <?= $mode === 'add' ? 'Add New Access Card' : 'Edit Access Card' ?>
                 </h5>
@@ -664,6 +653,23 @@ $totalCards = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_access_cards")->fe
         </div>
 
         <?php else: ?>
+
+        <!-- PAGE HEADER (View Mode) -->
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <div>
+                <h4 class="fw-bold text-white mb-0" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-id-card me-2" style="color: #ffffff !important;"></i>Access Card</h4>
+                <p class="mb-0 text-white opacity-75 small" style="color: rgba(255, 255, 255, 0.85) !important;"><?= $totalCards ?> Cards | Import Excel to add/update cards</p>
+            </div>
+            
+            <div>
+                <button type="button" class="btn btn-warning text-dark fw-bold me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-file-excel me-2"></i> Import from Excel
+                </button>
+                <a href="access_control.php?mode=add" class="btn btn-success fw-bold">
+                    <i class="fas fa-plus me-2"></i> Add New Card
+                </a>
+            </div>
+        </div>
 
         <!-- View Mode - Search and Filter Section -->
         <div class="card mb-3">
@@ -804,9 +810,9 @@ $totalCards = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_access_cards")->fe
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title fw-bold">
-                        <i class="fas fa-file-excel me-2"></i>Import Access Cards from Excel
+                <div class="modal-header text-white" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="fas fa-file-excel me-2 text-white"></i>Import Access Cards from Excel
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
