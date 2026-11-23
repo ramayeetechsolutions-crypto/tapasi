@@ -365,7 +365,8 @@ LEFT JOIN
 LEFT JOIN 
     designation_master d ON e.designation_id = d.designation_id 
 WHERE 
-    (e.reporting_manager = '$emp_username_esc' OR e.reporting_manager = '$display_name_esc')";
+    (e.reporting_manager = '$emp_username_esc' OR e.reporting_manager = '$display_name_esc')
+    AND e.employee_username NOT IN ('TPS019', 'TPS024')"; // Hides K.Sivapriya and S. Devibala
         
 $cond=[];$params=[];$types='';
 
