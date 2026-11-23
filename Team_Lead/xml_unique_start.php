@@ -696,19 +696,21 @@ if ($results && $results->num_rows > 0) {
             background-color: #ffffff !important;
         }
 
-        /* 5. Zebra Striping Logic (matching xml/xml.php) */
-        #trackingTable tbody tr:nth-child(even) td {
+        /* 5. Zebra Striping Logic (matching xml/xml.php) - Exclude status colored cells */
+        #trackingTable tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
             background-color: #f2f4f6 !important;
         }
-        #trackingTable tbody tr:nth-child(odd) td {
+        #trackingTable tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
             background-color: #ffffff !important;
         }
 
-        /* 6. FULL ROW HOVER EFFECT & SLIGHT ZOOM ANIMATION */
-        #trackingTable tbody tr:hover td {
+        /* 6. FULL ROW HOVER EFFECT & SLIGHT ZOOM ANIMATION (Keep status cell colors vibrant) */
+        #trackingTable tbody tr:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
             background-color: #c4cbd3 !important;
+        }
+        #trackingTable tbody tr:hover td {
             cursor: pointer;
-            transform: scale(1.03);
+            transform: scale(1.025);
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
             z-index: 15 !important;
             position: relative;
@@ -762,10 +764,28 @@ if ($results && $results->num_rows > 0) {
         .table th { background-color: #5e6b77 !important; color:  #ffffff !important; font-weight: 600; font-size: 12.5px; padding: 8px 10px; white-space: nowrap; position: sticky; top: 0; z-index: 10; text-align: center; }
         .table td { vertical-align: middle; padding: 6px 10px; font-size: 12.5px; text-align: center; white-space: nowrap; }
         
-        /* Custom Colors for Assigned User Columns */
-        .bg-cell-unassigned { background-color: #ffc107 !important; color: #000 !important; font-weight: bold; }
-        .bg-cell-assigned { background-color: #fd7e14 !important; color: #fff !important; font-weight: bold; }
-        .bg-cell-completed { background-color: #198754 !important; color: #fff !important; font-weight: bold; }
+        /* Custom Colors for Assigned User Columns (High Specificity to preserve exact colors) */
+        #trackingTable tbody td.bg-primary,
+        #trackingTable tbody tr td.bg-primary,
+        .bg-primary { background-color: #0d6efd !important; color: #ffffff !important; font-weight: bold !important; }
+        
+        #trackingTable tbody td.bg-cell-completed,
+        #trackingTable tbody tr td.bg-cell-completed,
+        .bg-cell-completed { background-color: #198754 !important; color: #ffffff !important; font-weight: bold !important; }
+        
+        #trackingTable tbody td.bg-cell-assigned,
+        #trackingTable tbody tr td.bg-cell-assigned,
+        .bg-cell-assigned { background-color: #fd7e14 !important; color: #ffffff !important; font-weight: bold !important; }
+        
+        #trackingTable tbody td.bg-cell-unassigned,
+        #trackingTable tbody tr td.bg-cell-unassigned,
+        .bg-cell-unassigned { background-color: #ffc107 !important; color: #000000 !important; font-weight: bold !important; }
+
+        /* Row hover state preserves task status cell colors */
+        #trackingTable tbody tr:hover td.bg-primary { background-color: #0d6efd !important; color: #ffffff !important; filter: brightness(1.08); }
+        #trackingTable tbody tr:hover td.bg-cell-completed { background-color: #198754 !important; color: #ffffff !important; filter: brightness(1.08); }
+        #trackingTable tbody tr:hover td.bg-cell-assigned { background-color: #fd7e14 !important; color: #ffffff !important; filter: brightness(1.08); }
+        #trackingTable tbody tr:hover td.bg-cell-unassigned { background-color: #ffc107 !important; color: #000000 !important; filter: brightness(1.08); }
         
         /* Status Badges */
         .badge-cyan { color: #000; font-weight: 700; font-size: 12px; }
