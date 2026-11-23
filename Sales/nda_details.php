@@ -5,6 +5,18 @@ error_reporting(E_ALL);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ---------- Auto-migration for Database Columns ----------
+// Ensure client_master columns that must be nullable are nullable (prevents "doesn't have a default value" on import)
+$cm_fix_cols = ['template' => 'text', 'tds_percentage' => 'double(10,2)', 'igst' => 'double(10,2)'];
+foreach ($cm_fix_cols as $col => $type) {
+    $chk = $mysqli->query("SHOW COLUMNS FROM client_master LIKE '$col'");
+    if ($chk && $chk->num_rows > 0) {
+        $col_info = $chk->fetch_assoc();
+        if ($col_info['Null'] === 'NO') {
+            $mysqli->query("ALTER TABLE client_master MODIFY COLUMN `$col` $type NULL");
+        }
+    }
+}
+
 $check_prev_col = $mysqli->query("SHOW COLUMNS FROM nda_details LIKE 'previous_status'");
 if ($check_prev_col && $check_prev_col->num_rows == 0) {
     $mysqli->query("ALTER TABLE nda_details ADD COLUMN previous_status VARCHAR(255) NULL AFTER revision_amount_status");
@@ -106,15 +118,33 @@ function encode_split_rate($with, $without) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_excel') {
     
     if (isset($_FILES['excel_file']) && $_FILES['excel_file']['error'] === 0) {
-        if (!file_exists($libPath)) {
-            redirect_with(['msg' => 'SimpleXLSX library not found. Please install it.', 'type' => 'danger']);
-        }
-        
-        require_once $libPath;
-        $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+        $uploaded_name = strtolower($_FILES['excel_file']['name']);
+        $is_csv = (pathinfo($uploaded_name, PATHINFO_EXTENSION) === 'csv');
 
-        if ($xlsx) {
-            $rows = $xlsx->rows();
+        // ---- Parse CSV ----
+        if ($is_csv) {
+            $tmp = $_FILES['excel_file']['tmp_name'];
+            $handle = fopen($tmp, 'r');
+            $rows = [];
+            if ($handle) {
+                while (($line = fgetcsv($handle, 0, ',')) !== false) {
+                    $rows[] = $line;
+                }
+                fclose($handle);
+            }
+            $parse_ok = !empty($rows);
+        } else {
+            // ---- Parse XLSX / XLS ----
+            if (!file_exists($libPath)) {
+                redirect_with(['msg' => 'SimpleXLSX library not found. Please install it.', 'type' => 'danger']);
+            }
+            require_once $libPath;
+            $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+            $rows = $xlsx ? $xlsx->rows() : [];
+            $parse_ok = ($xlsx !== false);
+        }
+
+        if ($parse_ok) {
             $count_added = 0;
             $count_skipped = 0;
             $errors =[];
@@ -171,6 +201,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $image           = $mysqli->real_escape_string(trim($r[27] ?? ''));
                         $math            = $mysqli->real_escape_string(trim($r[28] ?? ''));
                         $remarks         = $mysqli->real_escape_string(trim($r[29] ?? ''));
+                        // Client billing columns (optional — blank = NULL)
+                        $cm_template     = trim($r[30] ?? '');
+                        $cm_tds          = trim($r[31] ?? '');
+                        $cm_igst         = trim($r[32] ?? '');
                     } else {
                         $previous_status = '';
                         $client_status   = $mysqli->real_escape_string(trim($r[3] ?? 'Active'));
@@ -199,8 +233,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $image           = $mysqli->real_escape_string(trim($r[26] ?? ''));
                         $math            = $mysqli->real_escape_string(trim($r[27] ?? ''));
                         $remarks         = $mysqli->real_escape_string(trim($r[28] ?? ''));
+                        // Client billing columns (optional — blank = NULL)
+                        $cm_template     = trim($r[29] ?? '');
+                        $cm_tds          = trim($r[30] ?? '');
+                        $cm_igst         = trim($r[31] ?? '');
                     }
                     if (empty($client_status)) { $client_status = 'Active'; }
+
+                    // Convert blank billing values to NULL for client_master
+                    $sql_template = ($cm_template !== '') ? "'" . $mysqli->real_escape_string($cm_template) . "'" : "NULL";
+                    $sql_tds      = ($cm_tds !== '' && is_numeric($cm_tds))  ? (float)$cm_tds  : "NULL";
+                    $sql_igst     = ($cm_igst !== '' && is_numeric($cm_igst)) ? (float)$cm_igst : "NULL";
 
                     // Check if client exists in client_master (unique constraint)
                     $check_client = $mysqli->query("SELECT client_id FROM client_master WHERE client_name = '" . $mysqli->real_escape_string($client_name) . "'");
@@ -209,11 +252,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         // Client exists - use existing client_id
                         $client_id = $check_client->fetch_assoc()['client_id'];
                         
-                        // Optionally update country/status if needed
-                        $mysqli->query("UPDATE client_master SET country='$country', status='$client_status', previous_status='$previous_status' WHERE client_id=$client_id");
+                        // Update country/status and billing fields if provided
+                        $update_parts = "country='$country', status='$client_status', previous_status='$previous_status'";
+                        if ($sql_template !== "NULL") $update_parts .= ", template=$sql_template";
+                        if ($sql_tds      !== "NULL") $update_parts .= ", tds_percentage=$sql_tds";
+                        if ($sql_igst     !== "NULL") $update_parts .= ", igst=$sql_igst";
+                        $mysqli->query("UPDATE client_master SET $update_parts WHERE client_id=$client_id");
                     } else {
                         // Create new client (unique entry)
-                        $sql_client = "INSERT INTO client_master (client_name, country, status, previous_status) VALUES ('" . $mysqli->real_escape_string($client_name) . "', '$country', '$client_status', '$previous_status')";
+                        $sql_client = "INSERT INTO client_master (client_name, country, status, previous_status, template, tds_percentage, igst) VALUES ('" . $mysqli->real_escape_string($client_name) . "', '$country', '$client_status', '$previous_status', $sql_template, $sql_tds, $sql_igst)";
                         if ($mysqli->query($sql_client)) {
                             $client_id = $mysqli->insert_id;
                         } else {
@@ -267,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             redirect_with(['msg' => $msg, 'type' => ($count_added > 0) ? 'success' : 'warning']);
             
         } else {
-            redirect_with(['msg' => 'Failed to parse Excel file.', 'type' => 'danger']);
+            redirect_with(['msg' => 'Failed to parse file. Please upload a valid .xlsx, .xls, or .csv file.', 'type' => 'danger']);
         }
     }
 }
@@ -1264,8 +1311,8 @@ require 'header.php';
                     <div class="modal-body p-4">
                         <div class="row bg-light rounded p-3 mb-4 shadow-sm border">
                             <div class="col-md-8">
-                                <label class="form-label fw-bold text-dark">Select Excel File (.xlsx, .xls)</label>
-                                <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls" required>
+                                <label class="form-label fw-bold text-dark">Select File (.xlsx, .xls, .csv)</label>
+                                <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
                             </div>
                             <div class="col-md-4 d-flex align-items-end">
                                 <button type="button" class="btn btn-success w-100 shadow-sm" onclick="downloadSample()">
@@ -1275,18 +1322,18 @@ require 'header.php';
                         </div>
                         
                         <div class="alert alert-secondary border-0 shadow-sm">
-                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-list-ol me-2 text-primary"></i>Excel Format (30 Columns Required):</h6>
-                            <p class="mb-2 text-muted small">Columns 1(S.No) and 9(Signed Year) are ignored during import. Client names are unique in client_master, but multiple NDA records per client are allowed.</p>
+                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-list-ol me-2 text-primary"></i>File Format (33 Columns — last 3 optional):</h6>
+                            <p class="mb-2 text-muted small">Columns 1(S.No) and 9(Signed Year) are ignored during import. Columns AE–AG (Template, TDS %, IGST %) are <strong>optional</strong> — leave them blank and they will be stored as NULL.</p>
                             <div class="table-responsive bg-white rounded border">
                                 <table class="table table-sm table-bordered mb-0 align-middle text-center small" style="font-size: 0.70rem;">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th><th>M</th><th>N</th><th>O</th><th>P</th><th>Q</th><th>R</th><th>S</th><th>T</th><th>U</th><th>V</th><th>W</th><th>X</th><th>Y</th><th>Z</th><th>AA</th><th>AB</th><th>AC</th><th>AD</th>
+                                            <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th><th>M</th><th>N</th><th>O</th><th>P</th><th>Q</th><th>R</th><th>S</th><th>T</th><th>U</th><th>V</th><th>W</th><th>X</th><th>Y</th><th>Z</th><th>AA</th><th>AB</th><th>AC</th><th>AD</th><th>AE</th><th>AF</th><th>AG</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-muted">
                                         <tr>
-                                            <td>S.No</td><td class="text-primary fw-bold">Client Name*</td><td>Country</td><td>Previous Status</td><td>Current Status</td><td>NDA Status</td><td>Rev amt</td><td>Signed Date</td><td>Signed Year</td><td>All</td><td>CE+TS</td><td>CE+TS+XML</td><td>CE</td><td>TS</td><td>PMC</td><td>PUBMED</td><td>CLOCKSS</td><td>SCIELO</td><td>Crossref</td><td>DOAJ</td><td>BIBILAT</td><td>MEDES</td><td>PDF to XML</td><td>HTML</td><td>New HTML</td><td>Direct HTML</td><td>XML+HTML</td><td>Image</td><td>Math</td><td>Remarks</td>
+                                            <td>S.No</td><td class="text-primary fw-bold">Client Name*</td><td>Country</td><td>Previous Status</td><td>Current Status</td><td>NDA Status</td><td>Rev amt</td><td>Signed Date</td><td>Signed Year</td><td>All</td><td>CE+TS</td><td>CE+TS+XML</td><td>CE</td><td>TS</td><td>PMC</td><td>PUBMED</td><td>CLOCKSS</td><td>SCIELO</td><td>Crossref</td><td>DOAJ</td><td>BIBILAT</td><td>MEDES</td><td>PDF to XML</td><td>HTML</td><td>New HTML</td><td>Direct HTML</td><td>XML+HTML</td><td>Image</td><td>Math</td><td>Remarks</td><td class="text-success fw-bold">Template</td><td class="text-success fw-bold">TDS %</td><td class="text-success fw-bold">IGST %</td>
                                         </tr>
                                     </tbody>
                                 </table>
