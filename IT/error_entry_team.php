@@ -50,11 +50,11 @@ if (!function_exists('calculateFiscalWeek')) {
             if ($d < $fiscalStart) return 'Week 1';
             $cur = clone $fiscalStart;
             $sundays = 0;
-            while ($cur <= $d) {
+            while ($cur < $d) {
                 if ($cur->format('w') == 0) $sundays++;
                 $cur->modify('+1 day');
             }
-            return 'Week ' . max(1, $sundays);
+            return 'Week ' . (1 + $sundays);
         } catch (Exception $e) {
             return 'Week 1';
         }
@@ -903,14 +903,14 @@ if (!$all_employees || $all_employees->num_rows === 0) {
                     
                     let sundays = 0;
                     let cur = new Date(fiscalStart);
-                    while (cur <= targetDate) {
+                    while (cur < targetDate) {
                         if (cur.getDay() === 0) {
                             sundays++;
                         }
                         cur.setDate(cur.getDate() + 1);
                     }
                     
-                    const weekNo = Math.max(1, sundays);
+                    const weekNo = 1 + sundays;
                     weekInput.value = 'Week ' + weekNo;
                 }
             }
