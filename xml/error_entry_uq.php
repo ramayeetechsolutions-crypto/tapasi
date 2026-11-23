@@ -55,6 +55,12 @@ function redirect_with($params =[]) {
 // FORCE DEPARTMENTS TO 'XML' ONLY
 $departments_from_master = $mysqli->query("SELECT team_name AS department_name FROM team_master WHERE status = 'Active' AND team_name = 'XML' ORDER BY team_name");
 $employees = $mysqli->query("SELECT employee_name, employee_username FROM employee_master WHERE status = 'Active' ORDER BY employee_name");
+$emp_names = [];
+if ($employees && $employees->num_rows > 0) {
+    while($emp_row = $employees->fetch_assoc()) {
+        $emp_names[] = $emp_row['employee_name'];
+    }
+}
 $clients = $mysqli->query("SELECT DISTINCT team_client_name FROM client_master WHERE status = 'Active' AND team_client_name IS NOT NULL AND team_client_name != '' ORDER BY team_client_name");
 
 // Handle Excel/CSV Import
@@ -192,11 +198,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $team = 'UQ';
         $department         = trim($_POST['department'] ?? 'XML'); // Fallback to XML
         $error_taken_by     = trim($_POST['error_taken_by'] ?? '');
+        if ($error_taken_by === 'Others' && !empty(trim($_POST['error_taken_by_other'] ?? ''))) {
+            $error_taken_by = trim($_POST['error_taken_by_other']);
+        }
         $internal_external  = trim($_POST['internal_external'] ?? '');
         $client_name        = trim($_POST['client_name'] ?? '');
         $article            = trim($_POST['article'] ?? '');
         $error_type         = trim($_POST['error_type'] ?? '');
         $error_subtype      = trim($_POST['error_subtype'] ?? '');
+        if ($error_subtype === 'Others' && !empty(trim($_POST['error_subtype_other'] ?? ''))) {
+            $error_subtype = trim($_POST['error_subtype_other']);
+        }
         $yn                 = trim($_POST['yn'] ?? '');
         $error_made_by      = trim($_POST['error_made_by'] ?? '');
         $reason             = trim($_POST['reason'] ?? '');
@@ -525,8 +537,7 @@ if (!$entries) $entries = false;
                                 <select class="form-control select2" id="team" name="team" data-placeholder="Select team">
                                     <option value=""></option>
                                     <option value="WK" <?= ($editEntry['team'] ?? '') === 'WK' ? 'selected' : '' ?>>WK</option>
-                                    <option value="UQ" <?= ($editEntry['team'] ?? '') === 'UQ' ? 'selected' : '' ?>>UQ</option>
-                                    
+                                    <option value="UQ" <?= ($editEntry['team'] ?? ($mode === 'add' ? 'UQ' : '')) === 'UQ' ? 'selected' : '' ?>>UQ</option>
                                 </select>
                             </div>
                         </div>
@@ -544,6 +555,17 @@ if (!$entries) $entries = false;
                         </div>
                     </div>
 
+                    <?php
+                        $edit_taken_by = $editEntry['error_taken_by'] ?? '';
+                        $is_taken_by_other = ($edit_taken_by === 'Others' || (!empty($edit_taken_by) && !in_array($edit_taken_by, $emp_names)));
+                        $taken_by_other_val = $is_taken_by_other ? ($edit_taken_by === 'Others' ? '' : $edit_taken_by) : '';
+
+                        $subtypes_standard = ['Ack_Client', 'Ack_Sales', 'Communication Issue', 'Wrong Upload', 'Commitment not met', 'Feedback not send', 'Improper response', 'Reply late', 'Priority to same client', 'Priority to other client', 'Missed out Crx', 'Misunderstand Crx'];
+                        $edit_subtype = $editEntry['error_subtype'] ?? '';
+                        $is_subtype_other = ($edit_subtype === 'Others' || (!empty($edit_subtype) && !in_array($edit_subtype, $subtypes_standard)));
+                        $subtype_other_val = $is_subtype_other ? ($edit_subtype === 'Others' ? '' : $edit_subtype) : '';
+                    ?>
+
                     <!-- Row 2 -->
                     <div class="row">
                         <div class="col-md-3">
@@ -551,11 +573,15 @@ if (!$entries) $entries = false;
                                 <label for="error_taken_by" class="form-label">Error Taken By</label>
                                 <select class="form-control select2" id="error_taken_by" name="error_taken_by" data-placeholder="Select employee">
                                     <option value=""></option>
-                                    <option value="Others" <?= ($editEntry['error_taken_by'] ?? '') === 'Others' ? 'selected' : '' ?>>Others</option>
-                                    <?php if($employees && $employees->num_rows > 0): $employees->data_seek(0); while($emp_row = $employees->fetch_assoc()): ?>
-                                        <option value="<?= h($emp_row['employee_name']) ?>" <?= ($editEntry['error_taken_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '' ?>><?= h($emp_row['employee_name']) ?></option>
-                                    <?php endwhile; endif; ?>
+                                    <option value="Others" <?= $is_taken_by_other ? 'selected' : '' ?>>Others</option>
+                                    <?php foreach($emp_names as $emp_name): ?>
+                                        <option value="<?= h($emp_name) ?>" <?= (!$is_taken_by_other && $edit_taken_by === $emp_name) ? 'selected' : '' ?>><?= h($emp_name) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
+                                <div id="error_taken_by_other_div" class="mt-2" style="<?= $is_taken_by_other ? '' : 'display: none;' ?>">
+                                    <input type="text" class="form-control form-control-sm border-warning" id="error_taken_by_other" name="error_taken_by_other" 
+                                           placeholder="Specify Error Taken By" value="<?= h($taken_by_other_val) ?>">
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -612,11 +638,19 @@ if (!$entries) $entries = false;
                                     <?php 
                                         $subtypes_list =['Ack_Client', 'Ack_Sales', 'Communication Issue', 'Wrong Upload', 'Commitment not met', 'Feedback not send', 'Improper response', 'Reply late', 'Priority to same client', 'Priority to other client', 'Missed out Crx', 'Misunderstand Crx', 'Others'];
                                         foreach($subtypes_list as $subtype): 
-                                            $selected = (($editEntry['error_subtype'] ?? '') === $subtype) ? 'selected' : '';
+                                            if ($subtype === 'Others') {
+                                                $selected = $is_subtype_other ? 'selected' : '';
+                                            } else {
+                                                $selected = (!$is_subtype_other && $edit_subtype === $subtype) ? 'selected' : '';
+                                            }
                                     ?>
                                         <option value="<?= h($subtype) ?>" <?= $selected ?>><?= h($subtype) ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <div id="error_subtype_other_div" class="mt-2" style="<?= $is_subtype_other ? '' : 'display: none;' ?>">
+                                    <input type="text" class="form-control form-control-sm border-warning" id="error_subtype_other" name="error_subtype_other" 
+                                           placeholder="Specify Error Subtype" value="<?= h($subtype_other_val) ?>">
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -634,9 +668,9 @@ if (!$entries) $entries = false;
                                 <label for="error_made_by" class="form-label">Error Made by</label>
                                 <select class="form-control select2" id="error_made_by" name="error_made_by" data-placeholder="Select employee">
                                     <option value=""></option>
-                                    <?php if($employees && $employees->num_rows > 0): $employees->data_seek(0); while($emp_row = $employees->fetch_assoc()): ?>
-                                        <option value="<?= h($emp_row['employee_name']) ?>" <?= ($editEntry['error_made_by'] ?? '') === $emp_row['employee_name'] ? 'selected' : '' ?>><?= h($emp_row['employee_name']) ?></option>
-                                    <?php endwhile; endif; ?>
+                                    <?php foreach($emp_names as $emp_name): ?>
+                                        <option value="<?= h($emp_name) ?>" <?= ($editEntry['error_made_by'] ?? '') === $emp_name ? 'selected' : '' ?>><?= h($emp_name) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
@@ -940,6 +974,26 @@ if (!$entries) $entries = false;
                     updateWeekFromDate();
                 }
             }
+
+            // Toggle custom text box for Error Taken By ("Others")
+            $('#error_taken_by').on('change', function() {
+                if ($(this).val() === 'Others') {
+                    $('#error_taken_by_other_div').slideDown(150);
+                    $('#error_taken_by_other').focus();
+                } else {
+                    $('#error_taken_by_other_div').slideUp(150);
+                }
+            });
+
+            // Toggle custom text box for Error Subtype ("Others")
+            $('#error_subtype').on('change', function() {
+                if ($(this).val() === 'Others') {
+                    $('#error_subtype_other_div').slideDown(150);
+                    $('#error_subtype_other').focus();
+                } else {
+                    $('#error_subtype_other_div').slideUp(150);
+                }
+            });
         });
 
         // Generate Sample CSV Template for Download

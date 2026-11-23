@@ -142,13 +142,17 @@ $employees_sql = "SELECT em.employee_id, em.employee_name, em.employee_username,
                   LEFT JOIN team_master t ON em.team_id = t.team_id
                   LEFT JOIN designation_master d ON em.designation_id = d.designation_id
                   WHERE $manager_cond AND $employee_cond
-                  ORDER BY em.process, em.employee_name";
+                  ORDER BY em.employee_username ASC, em.employee_name ASC";
 $employees_result = $mysqli->query($employees_sql);
 
 if ($employees_result && $employees_result->num_rows > 0) {
     while ($emp = $employees_result->fetch_assoc()) {
         $employee_details[$emp['employee_id']] = $emp;
     }
+    // Sort employee details by employee ID (username) in ascending order
+    uasort($employee_details, function($a, $b) {
+        return strnatcasecmp($a['employee_username'] ?? '', $b['employee_username'] ?? '');
+    });
 }
 
 // Fetch all employees for dropdown (respects manager & team filter, unaffected by single employee filter)
@@ -973,9 +977,9 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
 
             <!-- Chart 2: Line Chart -->
             <div class="col-12 mb-4">
-                <div class="card border-success">
-                    <div class="card-header bg-white border-success">
-                        <h5 class="mb-0 text-success"><i class="fas fa-chart-line me-2"></i>Overall Employee Performance (Line Chart)</h5>
+                <div class="card border-primary">
+                    <div class="card-header bg-white border-primary">
+                        <h5 class="mb-0 text-primary"><i class="fas fa-chart-line me-2"></i>Overall Employee Performance (Line Chart)</h5>
                         <small class="text-muted">Summing the percentages: SUM(ARRAYFORMULA(Achieved / Target * 100))</small>
                     </div>
                     <div class="card-body chart-container" style="position: relative; height: 330px; width: 100%; padding: 15px;">
@@ -1142,7 +1146,7 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                             if (val !== undefined) {
                                 ctx.save();
                                 ctx.font = 'bold 11px sans-serif';
-                                ctx.fillStyle = 'rgb(25, 135, 84)';
+                                ctx.fillStyle = 'rgb(13, 110, 253)';
                                 ctx.textAlign = 'center';
                                 ctx.fillText(val + '%', point.x, point.y - 8);
                                 ctx.restore();
@@ -1152,23 +1156,56 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                 }
             };
 
+            // Plugin to draw Dark Green horizontal line at 100%
+            const targetLine100Plugin = {
+                id: 'targetLine100Plugin',
+                afterDraw(chart) {
+                    const yScale = chart.scales.y;
+                    if (!yScale) return;
+                    const y100 = yScale.getPixelForValue(100);
+                    const left = chart.chartArea.left;
+                    const right = chart.chartArea.right;
+                    
+                    if (y100 !== undefined && y100 >= chart.chartArea.top && y100 <= chart.chartArea.bottom) {
+                        const ctx = chart.ctx;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(left, y100);
+                        ctx.lineTo(right, y100);
+                        ctx.strokeStyle = '#0f5132'; // Dark Green
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                        
+                        // Badge label
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.fillStyle = '#0f5132';
+                        ctx.textAlign = 'right';
+                        ctx.fillText('100% Target', right - 6, y100 - 6);
+                        ctx.restore();
+                    }
+                }
+            };
+
             // ----------------------------------------------------
             // 2. LINE CHART: Employee Overall Sum
             // ----------------------------------------------------
             new Chart(document.getElementById('employeeLineChart').getContext('2d'), {
                 type: 'line',
-                plugins: [lineDataLabelPlugin],
+                plugins: [lineDataLabelPlugin, targetLine100Plugin],
                 data: {
                     labels: <?= json_encode($emp_chart_labels) ?>,
                     datasets: [
                         {
                             label: 'Sum of Process Percentages (%)',
                             data: <?= json_encode($emp_chart_percentages) ?>,
-                            backgroundColor: 'rgba(25, 135, 84, 0.2)', 
-                            borderColor: 'rgb(25, 135, 84)',           
+                            backgroundColor: 'rgba(13, 110, 253, 0.18)', 
+                            borderColor: 'rgb(13, 110, 253)',           
                             borderWidth: 3,
-                            pointBackgroundColor: 'rgb(25, 135, 84)',
-                            pointRadius: 5,
+                            pointBackgroundColor: 'rgb(13, 110, 253)',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 5.5,
+                            pointHoverRadius: 7.5,
                             fill: true, 
                             tension: 0.3
                         }

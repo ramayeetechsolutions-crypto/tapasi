@@ -379,19 +379,38 @@ $error_sql = "SELECT error_made_by,
 $error_res = $mysqli->query($error_sql);
 $employee_errors = [];
 while ($row = $error_res->fetch_assoc()) {
-    $employee_errors[$row['error_made_by']] = $row;
+    $err_emp = (string)($row['error_made_by'] ?? '');
+    if ($err_emp !== '') {
+        $employee_errors[$err_emp] = $row;
+    }
 }
 
 // ADDED: Fetch process-wise targets & achieved for accurate "Sum of Process %" calculation
 $pw_targets_sql = "SELECT t1.tm_id, t1.process_id, t1.target_limit FROM daily_targets_xml t1 INNER JOIN (SELECT tm_id, process_id, MAX(id) as latest_id FROM daily_targets_xml GROUP BY tm_id, process_id) t2 ON t1.id = t2.latest_id";
 $pw_targets_res = $mysqli->query($pw_targets_sql);
 $pw_targets = [];
-while($r = $pw_targets_res->fetch_assoc()) { $pw_targets[$r['tm_id']][$r['process_id']] = $r['target_limit']; }
+if ($pw_targets_res) {
+    while($r = $pw_targets_res->fetch_assoc()) { 
+        $t_mid = (string)($r['tm_id'] ?? '');
+        $p_id = (string)($r['process_id'] ?? '');
+        if ($t_mid !== '' && $p_id !== '') {
+            $pw_targets[$t_mid][$p_id] = $r['target_limit']; 
+        }
+    }
+}
 
 $pw_achieved_sql = "SELECT tm_id, process_id, SUM(achieved_target) as proc_achieved FROM daily_achieved_xml WHERE target_date BETWEEN '$start_date' AND '$end_date' GROUP BY tm_id, process_id";
 $pw_achieved_res = $mysqli->query($pw_achieved_sql);
 $pw_achieved = [];
-while($r = $pw_achieved_res->fetch_assoc()) { $pw_achieved[$r['tm_id']][$r['process_id']] = $r['proc_achieved']; }
+if ($pw_achieved_res) {
+    while($r = $pw_achieved_res->fetch_assoc()) { 
+        $t_mid = (string)($r['tm_id'] ?? '');
+        $p_id = (string)($r['process_id'] ?? '');
+        if ($t_mid !== '' && $p_id !== '') {
+            $pw_achieved[$t_mid][$p_id] = $r['proc_achieved']; 
+        }
+    }
+}
 
 $sts = strtotime($start_date);
 $ets = strtotime($end_date);
@@ -508,6 +527,47 @@ if ($team_stats['avg_production'] > 0) {
 } else {
     $team_stats['avg_accuracy'] = 0;
 }
+
+// Compute Dynamic Header & Chart Period Label
+$start_m_d = date('m-d', strtotime($start_date));
+$end_m_d   = date('m-d', strtotime($end_date));
+$start_y   = (int)date('Y', strtotime($start_date));
+$end_y     = (int)date('Y', strtotime($end_date));
+
+$period_label = '';
+if ($start_m_d === '04-01' && $end_m_d === '03-31' && $end_y === ($start_y + 1)) {
+    // 1. Financial Year (e.g., 2026 - 2027 (April - March))
+    $period_label = "{$start_y} - {$end_y} (April - March)";
+} else {
+    $first_day = date('Y-m-01', strtotime($start_date));
+    $last_day  = date('Y-m-t', strtotime($start_date));
+    if ($start_date === $first_day && $end_date === $last_day) {
+        // 2. Exact Month (e.g., October 2026)
+        $period_label = date('F Y', strtotime($start_date));
+    } elseif (date('Y-m', strtotime($start_date)) === date('Y-m', strtotime($end_date)) && (strtotime($end_date) - strtotime($start_date)) > 7 * 86400) {
+        // 3. Date range inside same month
+        $period_label = date('F Y', strtotime($start_date));
+    } else {
+        // 4. Week
+        if (!empty($week)) {
+            $period_label = "Week {$week}, {$year}";
+        } else {
+            $period_label = date('d-M-Y', strtotime($start_date)) . ' to ' . date('d-M-Y', strtotime($end_date));
+        }
+    }
+}
+
+// Find Selected Employee Name if filtered
+$selected_employee_label = '';
+if (!empty($employee_id)) {
+    foreach ($all_emp_filter_list as $emp_item) {
+        if ((string)$emp_item['employee_id'] === (string)$employee_id) {
+            $e_code = !empty($emp_item['employee_username']) ? " (" . $emp_item['employee_username'] . ")" : "";
+            $selected_employee_label = " - " . $emp_item['employee_name'] . $e_code;
+            break;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -592,7 +652,7 @@ if ($team_stats['avg_production'] > 0) {
         <div class="page-title-container">
             <div>
                 <h4 class="mb-1 text-white"><i class="fas fa-file-alt me-2"></i>MEETING REPORT</h4>
-                <p class="text-white-50 mb-0 small">Team: <?= h($team_leader_team_name) ?> | Week <?= $week ?>, <?= $year ?> (<?= date('d-m-Y', strtotime($start_date)) ?> to <?= date('d-m-Y', strtotime($end_date)) ?>)</p>
+                <p class="text-white-50 mb-0 small">Team: <?= h($team_leader_team_name) ?> | <?= h($period_label) ?> (<?= date('d-m-Y', strtotime($start_date)) ?> to <?= date('d-m-Y', strtotime($end_date)) ?>)<?= !empty($selected_employee_label) ? ' | ' . h(ltrim($selected_employee_label, ' - ')) : '' ?></p>
             </div>
         </div>
 
@@ -851,7 +911,7 @@ if ($team_stats['avg_production'] > 0) {
         <!-- Performance Chart (CHART NEXT) -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Chart - Week <?= $week ?>, <?= $year ?></h5>
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Chart - <?= h($period_label . $selected_employee_label) ?></h5>
             </div>
             <div class="card-body">
                 <div class="chart-container">
@@ -893,6 +953,7 @@ if ($team_stats['avg_production'] > 0) {
                 $('input[name="end_date"]').val(dates[1]);
                 $('#week_selector').val('');
                 $('#year_selector').val('');
+                $('#hidden_week').val('');
             }
         });
 
@@ -905,6 +966,7 @@ if ($team_stats['avg_production'] > 0) {
                 $('input[name="end_date"]').val(dates[1]);
                 $('#week_selector').val('');
                 $('#month_selector').val('');
+                $('#hidden_week').val('');
             }
         });
 
@@ -992,7 +1054,7 @@ if ($team_stats['avg_production'] > 0) {
                     },
                     title: {
                         display: true,
-                        text: 'Performance Comparison - Week <?= $week ?>, <?= $year ?>'
+                        text: <?= json_encode('Performance Comparison - ' . $period_label . $selected_employee_label) ?>
                     }
                 }
             }

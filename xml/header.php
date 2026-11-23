@@ -646,10 +646,10 @@ if ($row = $result->fetch_assoc()) {
                         <a href="#" class="<?= in_array($currentPage, $reportPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Reports</a>
                         <ul class="nav-dropdown">
                             <li><a href="client_report.php"><i class="fas fa-chart-line"></i> Client Report</a></li>
-                            <?php if ($is_tl): ?>
                             <li><a href="team_count_report.php"><i class="fas fa-diagram-project"></i> Production Report</a></li>
-                            <?php endif; ?>
+                            <?php if ($is_tl): ?>
                             <li><a href="xml_weekly_report.php"><i class="fas fa-file-alt"></i> Meeting Report</a></li>
+                            <?php endif; ?>
                             <!-- <li>
                                 <a class="nav-link" href="xml_report.php">
                                     <i class="fa fa-line-chart"></i> Graphical Reports
