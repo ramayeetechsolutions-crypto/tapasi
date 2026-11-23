@@ -262,17 +262,13 @@ require 'header.php';
 
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
         <!-- Add/Edit Form -->
-        <div class="page-title-container">
-            <h1>
-                <i class="fas fa-briefcase"></i> <?= $mode==='edit' ? 'Edit Job' : 'Add Job' ?>
-            </h1>
-            <a href="job_master.php" class="btn-header-action">
-                <i class="fas fa-arrow-left"></i>
-                <span>Back</span>
-            </a>
-        </div>
+        <div class="mx-auto" style="max-width: 550px;">
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <h5 class="mb-0 text-white" style="color: #ffffff !important;"><i class="fas fa-briefcase me-2"></i><?= $mode==='edit' ? 'Edit Job' : 'Add Job' ?></h5>
+                <a href="job_master.php" class="btn btn-secondary btn-sm" style="margin-left: auto !important;"><i class="fas fa-arrow-left me-1"></i> Back</a>
+            </div>
 
-        <div class="card mb-4 mx-auto shadow-sm border-0" style="max-width: 550px;">
+            <div class="card mb-4 shadow-sm border-0">
             <div class="card-body p-4">
                 <form method="post" autocomplete="off">
                     <input type="hidden" name="action" value="<?= $mode==='edit' ? 'edit' : 'add' ?>">
@@ -300,6 +296,7 @@ require 'header.php';
                     </div>
                 </form>
             </div>
+        </div>
         </div>
 
         <?php else: ?>

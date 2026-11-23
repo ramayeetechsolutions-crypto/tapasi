@@ -412,16 +412,27 @@
 
         /* Table Styles */
         .table-responsive {
-            overflow-x: auto;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
         }
 
-        table {
+        table,
+        .table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
 
-        thead {
-            background-color: #f8f9fa;
+        thead,
+        .table thead,
+        table thead {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-color: #6c757d;
         }
 
         th {
@@ -702,7 +713,7 @@
             }
         }
 
-        /* Table header matching Dashboard/Master navbar grey */
+        /* Table header matching Dashboard/Master navbar grey & Sticky */
         .table thead th,
         .table th,
         table thead th,
@@ -718,6 +729,10 @@
             border-color: #5a6268 !important;
             font-weight: 600 !important;
             vertical-align: middle !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-clip: padding-box !important;
         }
     </style>
     <!-- Tapasi Global Typography & Font Stylesheet -->
@@ -735,10 +750,10 @@
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
                 <?php
-                $masterPages = ['company_master.php', 'user_role_master.php', 'user_role_master', 'client_master.php', 'job_master.php', 'employee_master.php'];
+                $masterPages = ['company_master.php', 'company_details.php', 'user_role_master.php', 'user_role_master', 'client_master.php', 'job_master.php', 'employee_master.php'];
                 $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
                 $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
-                $jobsPages = ['manage_jobs.php', 'job_management.php'];
+                $jobsPages = ['manage_jobs.php', 'job_management.php', 'jobs.php'];
                 $invoicePages = ['list_invoice.php'];
                 ?>
                 <ul class="nav-menu">
@@ -757,7 +772,7 @@
                     <li>
                         <a href="#" class="<?= in_array($currentPage, $masterPages) ? 'active' : '' ?>"><i class="fas fa-cogs"></i> Master</a>
                         <ul class="nav-dropdown">
-                            <li><a href="company_master.php" class="<?= $currentPage === 'company_master.php' ? 'active' : '' ?>"><i class="fas fa-building"></i> Company</a></li>
+                            <li><a href="company_details.php" class="<?= in_array($currentPage, ['company_master.php', 'company_details.php']) ? 'active' : '' ?>"><i class="fas fa-building"></i> Company</a></li>
                             <li><a href="user_role_master.php" class="<?= in_array($currentPage, ['user_role_master.php', 'user_role_master']) ? 'active' : '' ?>"><i class="fas fa-user-tag"></i> User Role</a></li>
                             <li><a href="client_master.php" class="<?= $currentPage === 'client_master.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Client</a></li>
                             <li><a href="job_master.php" class="<?= $currentPage === 'job_master.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job</a></li>
@@ -792,7 +807,7 @@
                     <li>
                         <a href="#" class="<?= in_array($currentPage, $jobsPages) ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Jobs</a>
                         <ul class="nav-dropdown">
-                            <li><a href="manage_jobs.php" class="<?= $currentPage === 'manage_jobs.php' ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
+                            <li><a href="jobs.php" class="<?= in_array($currentPage, ['jobs.php', 'manage_jobs.php']) ? 'active' : '' ?>"><i class="fas fa-tasks"></i> Manage Jobs</a></li>
                             <li><a href="job_management.php" class="<?= $currentPage === 'job_management.php' ? 'active' : '' ?>"><i class="fas fa-list"></i> Job Categories</a></li>
                         </ul>
                     </li>

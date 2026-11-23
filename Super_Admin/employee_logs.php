@@ -154,8 +154,8 @@ $total_hours = round($total_hours / 3600, 2); // Convert seconds to hours
         }
         
         .card-header {
-            /* background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%); */
-            background-color: #707981 !important;
+            background-color: #6c757d !important;
+            background: #6c757d !important;
             color: white;
             border-radius: 10px 10px 0 0 !important;
             padding: 15px 20px;
@@ -211,9 +211,25 @@ $total_hours = round($total_hours / 3600, 2); // Convert seconds to hours
         .status-logout { background: #e2e3e5; color: #383d41; }
         .status-timeout { background: #fff3cd; color: #856404; }
         
-        .table th {
-            background: var(--light);
-            border-bottom: 2px solid #dee2e6;
+        .table-responsive {
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th, .table thead th {
+            background-color: #6c757d !important;
+            color: #ffffff !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-clip: padding-box !important;
+            border-bottom: 2px solid #5a6268;
         }
         
         .duration-cell {
@@ -228,27 +244,25 @@ $total_hours = round($total_hours / 3600, 2); // Convert seconds to hours
 </head>
 <body>
     <?php require 'header.php'; ?>
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%);">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-line"></i> Employee Login Logs
-            </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3">
-                    <i class="fas fa-user"></i> <?php echo htmlspecialchars($_SESSION['ename'] ?? $_SESSION['username']); ?>
+    <div class="container-fluid mt-3">
+        <!-- Header -->
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 14px 24px !important; border-radius: 12px !important; margin-top: 4px !important; margin-bottom: 24px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <div class="d-flex align-items-center">
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-chart-line me-2"></i> Employee Login Logs</h4>
+            </div>
+            <div class="d-flex align-items-center ms-auto" style="margin-left: auto !important;">
+                <span class="text-white me-3" style="color: #ffffff !important;">
+                    <i class="fas fa-user me-1"></i> <?php echo htmlspecialchars($_SESSION['ename'] ?? $_SESSION['username']); ?>
                 </span>
-                <a class="btn btn-outline-light btn-sm" href="dashboard.php">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                <a class="btn btn-outline-light btn-sm" href="dashboard_md.php">
+                    <i class="fas fa-tachometer-alt me-1"></i> Dashboard
                 </a>
-                <a class="btn btn-light btn-sm ms-2" href="logout.php">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                <a class="btn btn-danger btn-sm ms-2" href="../logout.php">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
                 </a>
             </div>
         </div>
-    </nav>
 
-    <div class="container-fluid mt-4">
         <!-- Summary Cards -->
         <div class="row">
             <div class="col-md-4">

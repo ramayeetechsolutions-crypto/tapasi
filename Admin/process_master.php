@@ -147,9 +147,12 @@ require 'header.php';
 <?php endif; ?>
 
 <?php if($mode==='add'||$mode==='edit'): ?>
-<!--h5><?=$mode==='edit'?'Edit Process':'Add Process'?></h5-->
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center mt-3">
     <div class="col-lg-6 col-md-8">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+          <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Process':'Add Process' ?></h5>
+          <a href="process_master.php" class="btn btn-sm btn-secondary" style="margin-left: auto !important;">Back</a>
+        </div>
         <div class="card shadow-lg p-4">
             <h4 class="card-title text-center mb-4">
                 <?= $mode === 'edit' ? 'Edit Process' : 'Add New Process' ?>
@@ -182,11 +185,14 @@ require 'header.php';
         </div>
 </div>
 <?php else: ?>
-<div class="page-title-container">
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
   <h5 class="mb-0 text-white">Process Master</h5>
-  <a href="process_master.php?mode=add" class="btn btn-success btn-sm">Add</a>
+  <a href="process_master.php?mode=add" class="btn btn-success btn-sm" style="margin-left: auto !important;"><i class="fa fa-plus me-1"></i> Add</a>
 </div>
-<table class="table table-bordered">
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0">
 <thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Status</th><th>Created By</th><th>Created</th><th>Actions</th></tr></thead>
 <tbody>
 <?php if($processes && $processes->num_rows): while($row=$processes->fetch_assoc()): ?>
@@ -216,7 +222,10 @@ require 'header.php';
 <tr><td colspan="7" class="text-center">No processes found.</td></tr>
 <?php endif; ?>
 </tbody>
-</table>
+      </table>
+    </div>
+  </div>
+</div>
 <?php endif; ?>
 
 </div>

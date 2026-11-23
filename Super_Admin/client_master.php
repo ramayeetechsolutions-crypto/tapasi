@@ -631,22 +631,33 @@ require 'header.php';
         }
         /* Table Styling */
         .table-responsive {
-            overflow-x: auto;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
             border-radius: 0.5rem;
+            -webkit-overflow-scrolling: touch;
         }
         .table {
             margin-bottom: 0;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
-        .table th {
+        .table th, .table thead th {
             /* background-color: #2c3e50; */
-            background-color: var(--ash, #6c757d) !important !important; color: #212529 !important;
-            color: white;
+            background-color: var(--ash, #6c757d) !important;
+            color: #ffffff !important;
             border: none;
             font-size: 0.80rem;
             white-space: nowrap;
             padding: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-clip: padding-box !important;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
         }
         .table td {
             vertical-align: middle;
@@ -698,7 +709,7 @@ require 'header.php';
     <!-- ADD/EDIT FORM -->
     <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-edit me-2" style="color: #ffffff !important;"></i><?= $mode==='edit'?'Edit Client':'Add New Client' ?></h4>
-        <a href="client_master.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
+        <a href="client_master.php" class="btn btn-outline-light text-white btn-sm shadow-sm" style="margin-left: auto !important;">
             <i class="fas fa-arrow-left me-1"></i> Back to List
         </a>
     </div>
@@ -942,7 +953,7 @@ require 'header.php';
             <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Client Master <?= $isPassive ? '<span class="badge bg-warning text-dark shadow-sm ms-2">Passive Clients</span>' : '' ?></h4>
             <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage client directory and billing configurations</p>
         </div>
-        <div>
+        <div style="margin-left: auto !important;">
             <button type="button" class="btn btn-warning text-dark fw-bold btn-sm shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
                 <i class="fas fa-file-excel me-2"></i> Import Excel
             </button>
@@ -1137,11 +1148,11 @@ require 'header.php';
     <div class="modal fade" id="importModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-warning text-dark border-0">
-                    <h5 class="modal-title fw-bold">
+                <div class="modal-header text-white border-0" style="background-color: #6c757d !important; background: #6c757d !important;">
+                    <h5 class="modal-title fw-bold text-white">
                         <i class="fas fa-file-excel me-2"></i>Import Clients from Excel
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 
                 <form action="" method="post" enctype="multipart/form-data">

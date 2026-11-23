@@ -362,15 +362,45 @@ $years = range($current_year - 2, $current_year + 1);
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content { margin-top: 70px;
-            padding: 20px;
+        .page-title-container {
+            background: var(--ash, #6c757d) !important;
+            color: white !important;
+            padding: 12px 20px !important;
+            border-radius: 12px !important;
+            margin-bottom: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+            flex-wrap: wrap !important;
+            gap: 15px !important;
+        }
+        .main-content {
+            margin-top: 0;
+            padding: 4px 20px 20px 20px;
             max-width: 1800px;
             margin: 0 auto;
         }
-        .table th {
+        .table-responsive {
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th, .table thead th {
             background-color: var(--ash, #6c757d) !important;
-            color: white;
+            color: white !important;
             border: none;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-clip: padding-box !important;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
         }
         .table td {
             vertical-align: middle;
@@ -405,9 +435,9 @@ $years = range($current_year - 2, $current_year + 1);
     <?php if (file_exists('header.php')) require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-file-invoice-dollar me-2"></i>TDS Monthly Deduction Report</h4>
-            <div>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-file-invoice-dollar me-2" style="color: #ffffff !important;"></i>TDS Monthly Deduction Report</h4>
+            <div style="margin-left: auto !important;">
                 <a href="tds.php?export=excel&month=<?= h($month) ?>&year=<?= h($year) ?>" 
                    class="btn btn-success">
                     <i class="fas fa-file-excel me-1"></i> Export to Excel

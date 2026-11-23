@@ -251,10 +251,201 @@ h6.text-white,
     background: #6c757d !important;
     background-color: #6c757d !important;
     color: #ffffff !important;
-    padding: 16px 24px !important;
+    padding: 14px 22px !important;
     border-radius: 12px !important;
-    margin-bottom: 24px !important;
+    margin-top: 4px !important;
+    margin-bottom: 20px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+}
+
+.page-title-container > h1,
+.page-title-container > h2,
+.page-title-container > h3,
+.page-title-container > h4,
+.page-title-container > h5,
+.page-title-container > h6,
+.page-title-container > div:first-child:not(:last-child) {
+    margin-bottom: 0 !important;
+    flex-shrink: 1 !important;
+}
+
+.page-title-container > a.btn,
+.page-title-container > button.btn,
+.page-title-container > a[class*="btn"],
+.page-title-container > button[class*="btn"],
+.page-title-container > .btn-group,
+.page-title-container > div:has(.btn),
+.page-title-container > div:last-child:not(:first-child),
+.dashboard-header > div:first-child > div:last-child,
+.dashboard-header .d-flex.align-items-center.gap-2,
+.dashboard-header .date-badge,
+.dashboard-header .dashboard-date {
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.dashboard-header {
+    width: 100% !important;
+}
+
+.dashboard-header > div:first-child {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+/* =========================================================================
+   Adaptive Header Widths matching Centered Form Cards & Layouts across All Logins
+   ========================================================================= */
+
+/* 500px - 550px cards (e.g. job_master, etc.) */
+.container:has(> .card[style*="max-width:500px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 500px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:550px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 550px"]) > .page-title-container,
+.page-title-container:has(+ .card[style*="max-width:500px"]),
+.page-title-container:has(+ .card[style*="max-width: 500px"]),
+.page-title-container:has(+ .card[style*="max-width:550px"]),
+.page-title-container:has(+ .card[style*="max-width: 550px"]),
+.page-title-container:has(+ * > .card[style*="max-width:500px"]),
+.page-title-container:has(+ * > .card[style*="max-width: 500px"]),
+.page-title-container:has(+ * > .card[style*="max-width:550px"]),
+.page-title-container:has(+ * > .card[style*="max-width: 550px"]),
+.page-title-container:has(+ form > .card[style*="max-width:500px"]),
+.page-title-container:has(+ form > .card[style*="max-width: 500px"]),
+.page-title-container:has(+ form > .card[style*="max-width:550px"]),
+.page-title-container:has(+ form > .card[style*="max-width: 550px"]) {
+    max-width: 550px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* 600px - 650px cards (e.g. user_role_master, client_master small, etc.) */
+.container:has(> .card[style*="max-width:600px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 600px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:650px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 650px"]) > .page-title-container,
+.page-title-container:has(+ .card[style*="max-width:600px"]),
+.page-title-container:has(+ .card[style*="max-width: 600px"]),
+.page-title-container:has(+ .card[style*="max-width:650px"]),
+.page-title-container:has(+ .card[style*="max-width: 650px"]),
+.page-title-container:has(+ * > .card[style*="max-width:600px"]),
+.page-title-container:has(+ * > .card[style*="max-width: 600px"]),
+.page-title-container:has(+ * > .card[style*="max-width:650px"]),
+.page-title-container:has(+ * > .card[style*="max-width: 650px"]),
+.page-title-container:has(+ form > .card[style*="max-width:600px"]),
+.page-title-container:has(+ form > .card[style*="max-width: 600px"]),
+.page-title-container:has(+ form > .card[style*="max-width:650px"]),
+.page-title-container:has(+ form > .card[style*="max-width: 650px"]) {
+    max-width: 600px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* 800px - 900px cards (e.g. company_master, client_master, employee_master, etc.) */
+.container:has(> .card[style*="max-width:800px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 800px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:900px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 900px"]) > .page-title-container,
+.page-title-container:has(+ .card[style*="max-width:800px"]),
+.page-title-container:has(+ .card[style*="max-width: 800px"]),
+.page-title-container:has(+ .card[style*="max-width:900px"]),
+.page-title-container:has(+ .card[style*="max-width: 900px"]),
+.page-title-container:has(+ * > .card[style*="max-width:900px"]),
+.page-title-container:has(+ * > .card[style*="max-width: 900px"]),
+.page-title-container:has(+ form > .card[style*="max-width:900px"]),
+.page-title-container:has(+ form > .card[style*="max-width: 900px"]) {
+    max-width: 900px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* 980px cards (e.g. job_management) */
+.container:has(> .card[style*="max-width:980px"]) > .page-title-container,
+.container:has(> .card[style*="max-width: 980px"]) > .page-title-container,
+.page-title-container:has(+ .card[style*="max-width:980px"]),
+.page-title-container:has(+ .card[style*="max-width: 980px"]) {
+    max-width: 980px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Centered row columns (col-md-6 / col-lg-6) */
+.container:has(> .row.justify-content-center > .col-md-6) > .page-title-container,
+.container:has(> .row.justify-content-center > .col-lg-6) > .page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-md-6) > .page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-lg-6) > .page-title-container,
+.container:has(> * > .row.justify-content-center > .col-md-6) > .page-title-container,
+.container:has(> * > .row.justify-content-center > .col-lg-6) > .page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-md-6) > .page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-lg-6) > .page-title-container,
+.page-title-container:has(+ .row.justify-content-center > .col-md-6),
+.page-title-container:has(+ .row.justify-content-center > .col-lg-6),
+.page-title-container:has(~ .row.justify-content-center > .col-md-6),
+.page-title-container:has(~ .row.justify-content-center > .col-lg-6),
+.page-title-container:has(+ * + .row.justify-content-center > .col-md-6),
+.page-title-container:has(+ * + .row.justify-content-center > .col-lg-6),
+.page-title-container:has(+ .fade-in.row.justify-content-center > .col-md-6),
+.page-title-container:has(+ .fade-in.row.justify-content-center > .col-lg-6) {
+    max-width: min(100%, 650px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Centered row columns (col-md-8 / col-lg-8) */
+.container:has(> .row.justify-content-center > .col-md-8) > .page-title-container,
+.container:has(> .row.justify-content-center > .col-lg-8) > .page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-md-8) > .page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-lg-8) > .page-title-container,
+.container:has(> * > .row.justify-content-center > .col-md-8) > .page-title-container,
+.container:has(> * > .row.justify-content-center > .col-lg-8) > .page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-md-8) > .page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-lg-8) > .page-title-container,
+.page-title-container:has(+ .row.justify-content-center > .col-md-8),
+.page-title-container:has(+ .row.justify-content-center > .col-lg-8),
+.page-title-container:has(~ .row.justify-content-center > .col-md-8),
+.page-title-container:has(~ .row.justify-content-center > .col-lg-8),
+.page-title-container:has(+ * + .row.justify-content-center > .col-md-8),
+.page-title-container:has(+ * + .row.justify-content-center > .col-lg-8),
+.page-title-container:has(+ .fade-in.row.justify-content-center > .col-md-8),
+.page-title-container:has(+ .fade-in.row.justify-content-center > .col-lg-8) {
+    max-width: min(100%, 900px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* When page-title-container is placed directly inside centered columns */
+.row.justify-content-center > .col-md-6 > .page-title-container,
+.row.justify-content-center > .col-lg-6 > .page-title-container,
+.row.justify-content-center > .col-md-8 > .page-title-container,
+.row.justify-content-center > .col-lg-8 > .page-title-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Inside Modals: ensure headers adapt seamlessly to modal body width */
+.modal-dialog .page-title-container,
+.modal-content .page-title-container,
+.modal-body .page-title-container,
+.modal-dialog .page-header,
+.modal-content .page-header,
+.modal-body .page-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 8px !important;
 }
 
 .page-title-container h1,
@@ -533,7 +724,16 @@ thead.bg-light th,
    ========================================================================= */
 table thead,
 .table thead {
-    position: static !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background-color: #6c757d !important;
+}
+
+table,
+.table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
 }
 
 table thead th,
@@ -552,19 +752,23 @@ table.table-grey th,
 #jobsTable thead.table-grey th,
 table.dataTable thead th,
 .table-container table thead th,
-.table-responsive table thead th {
+.table-responsive table thead th,
+.table > :not(caption) > thead > * > *,
+.table > thead > tr > th {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-table-header-font-size) !important;
     font-weight: 700 !important;
     color: #ffffff !important;
-    background-color: #5e6b77 !important;
-    border-color: #4f5a64 !important;
+    background-color: #6c757d !important;
+    border-color: #5a6268 !important;
     text-transform: uppercase;
     letter-spacing: 0.025em;
     vertical-align: middle;
     position: sticky !important;
     top: 0 !important;
     z-index: 100 !important;
+    background-clip: padding-box !important;
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
 }
 
 /* Multi-row thead support: ensure 2nd header row sticks below 1st header row instead of overlapping at top: 0 */
@@ -594,6 +798,8 @@ table.dataTable thead th,
    Sticky left/right column headers stay pinned on top during horizontal scroll
    and are never overlapped by incoming scrolling headers (z-index: 120 > 100)
    ========================================================================= */
+
+/* Top header z-index for all sticky columns (Header stays on top during vertical and horizontal scroll) */
 table thead th.sticky-col,
 table thead th.sticky-col-1,
 table thead th.sticky-col-2,
@@ -613,15 +819,15 @@ table thead th.sticky-col-4,
 #trackingTable thead th.sticky-col-2,
 #trackingTable thead th.sticky-col-3,
 #trackingTable thead th.sticky-col-4,
-#completedJobsTable thead th:nth-child(1),
-#completedJobsTable thead th:nth-child(2),
-#completedJobsTable thead th:nth-child(3),
-#completedJobsTable thead th:nth-child(-n+3),
 #xmlJobsTable thead th:nth-child(1),
 #xmlJobsTable thead th:nth-child(2),
 #xmlJobsTable thead th:nth-child(3),
 #xmlJobsTable thead th:nth-child(4),
 #xmlJobsTable thead th:nth-child(-n+4),
+#completedJobsTable thead th:nth-child(1),
+#completedJobsTable thead th:nth-child(2),
+#completedJobsTable thead th:nth-child(3),
+#completedJobsTable thead th:nth-child(-n+3),
 #processReportTable thead th.sticky-col,
 #dailyReportTable thead th.sticky-col {
     position: sticky !important;
@@ -630,6 +836,148 @@ table thead th.sticky-col-4,
     background-color: #5e6b77 !important;
     color: #ffffff !important;
     background-clip: padding-box !important;
+}
+
+/* Individual Column Widths and Left Coordinates (S.No to Journal/Issue) */
+/* Column 1: S.No / # / #ID (width: 45px, left: 0) */
+table thead th.sticky-col-1,
+table tbody td.sticky-col-1,
+.table thead th.sticky-col-1,
+.table tbody td.sticky-col-1,
+.table-responsive table thead th.sticky-col-1,
+.table-responsive table tbody td.sticky-col-1,
+#trackingTable thead th.sticky-col-1,
+#trackingTable tbody td.sticky-col-1,
+#xmlJobsTable thead th:nth-child(1),
+#xmlJobsTable tbody td:nth-child(1) {
+    position: sticky !important;
+    left: 0 !important;
+    width: 45px !important;
+    min-width: 45px !important;
+    max-width: 45px !important;
+    box-sizing: border-box !important;
+}
+
+/* Single sticky column (e.g., reports with only S.No) */
+table thead th.sticky-col,
+table tbody td.sticky-col,
+.table thead th.sticky-col,
+.table tbody td.sticky-col,
+.table-responsive table thead th.sticky-col,
+.table-responsive table tbody td.sticky-col,
+#processReportTable thead th.sticky-col,
+#processReportTable tbody td.sticky-col,
+#dailyReportTable thead th.sticky-col,
+#dailyReportTable tbody td.sticky-col,
+#dailyReportTable tfoot td.sticky-col {
+    position: sticky !important;
+    left: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Column 2: Rec Date (Time) / Date / Job ID (width: 140px, left: 45px) */
+table thead th.sticky-col-2,
+table tbody td.sticky-col-2,
+.table thead th.sticky-col-2,
+.table tbody td.sticky-col-2,
+.table-responsive table thead th.sticky-col-2,
+.table-responsive table tbody td.sticky-col-2,
+#trackingTable thead th.sticky-col-2,
+#trackingTable tbody td.sticky-col-2,
+#xmlJobsTable thead th:nth-child(2),
+#xmlJobsTable tbody td:nth-child(2) {
+    position: sticky !important;
+    left: 45px !important;
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    box-sizing: border-box !important;
+}
+
+/* Column 3: Client Name / Client (width: 140px, left: 185px) */
+table thead th.sticky-col-3,
+table tbody td.sticky-col-3,
+.table thead th.sticky-col-3,
+.table tbody td.sticky-col-3,
+.table-responsive table thead th.sticky-col-3,
+.table-responsive table tbody td.sticky-col-3,
+#trackingTable thead th.sticky-col-3,
+#trackingTable tbody td.sticky-col-3 {
+    position: sticky !important;
+    left: 185px !important;
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    box-sizing: border-box !important;
+}
+
+#xmlJobsTable thead th:nth-child(3),
+#xmlJobsTable tbody td:nth-child(3) {
+    position: sticky !important;
+    left: 185px !important;
+    width: 135px !important;
+    min-width: 135px !important;
+    max-width: 135px !important;
+    box-sizing: border-box !important;
+}
+
+/* Column 4: Journal / Issue (width: 145px, left: 325px; in xmlJobsTable left: 320px, width: 140px) */
+table thead th.sticky-col-4,
+table tbody td.sticky-col-4,
+.table thead th.sticky-col-4,
+.table tbody td.sticky-col-4,
+.table-responsive table thead th.sticky-col-4,
+.table-responsive table tbody td.sticky-col-4,
+#trackingTable thead th.sticky-col-4,
+#trackingTable tbody td.sticky-col-4 {
+    position: sticky !important;
+    left: 325px !important;
+    width: 145px !important;
+    min-width: 145px !important;
+    max-width: 145px !important;
+    border-right: 1px solid #dee2e6 !important;
+    box-sizing: border-box !important;
+}
+
+#xmlJobsTable thead th:nth-child(4),
+#xmlJobsTable tbody td:nth-child(4) {
+    position: sticky !important;
+    left: 320px !important;
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    border-right: 1px solid #dee2e6 !important;
+    box-sizing: border-box !important;
+}
+
+/* completedJobsTable in upload_xml.php */
+#completedJobsTable thead th:nth-child(1),
+#completedJobsTable tbody td:nth-child(1) {
+    position: sticky !important;
+    left: 0 !important;
+    width: 110px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    box-sizing: border-box !important;
+}
+#completedJobsTable thead th:nth-child(2),
+#completedJobsTable tbody td:nth-child(2) {
+    position: sticky !important;
+    left: 110px !important;
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+    box-sizing: border-box !important;
+}
+#completedJobsTable thead th:nth-child(3),
+#completedJobsTable tbody td:nth-child(3) {
+    position: sticky !important;
+    left: 310px !important;
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+    border-right: 1px solid #dee2e6 !important;
+    box-sizing: border-box !important;
 }
 
 /* Sticky Right Column Header (Action Header in Tracking Table) */
@@ -642,30 +990,38 @@ table thead th.sticky-col-4,
     background-color: #5e6b77 !important;
     color: #ffffff !important;
     background-clip: padding-box !important;
+    border-left: 2px solid #dee2e6 !important;
+    min-width: 85px !important;
+    width: 85px !important;
+    box-sizing: border-box !important;
 }
 
-/* Sticky Column Body Cells (z-index: 10, above scrolling body cells) */
+/* Sticky Column Body Cells (z-index: 10, stays above scrolling body cells) */
 table tbody td.sticky-col,
+table tbody td.sticky-col-1,
+table tbody td.sticky-col-2,
+table tbody td.sticky-col-3,
+table tbody td.sticky-col-4,
 .table tbody td.sticky-col,
+.table tbody td.sticky-col-1,
+.table tbody td.sticky-col-2,
+.table tbody td.sticky-col-3,
+.table tbody td.sticky-col-4,
 .table-responsive table tbody td.sticky-col,
+.table-responsive table tbody td.sticky-col-1,
+.table-responsive table tbody td.sticky-col-2,
+.table-responsive table tbody td.sticky-col-3,
+.table-responsive table tbody td.sticky-col-4,
 #trackingTable tbody td.sticky-col-1,
 #trackingTable tbody td.sticky-col-2,
 #trackingTable tbody td.sticky-col-3,
 #trackingTable tbody td.sticky-col-4,
-#completedJobsTable tbody td:nth-child(1),
-#completedJobsTable tbody td:nth-child(2),
-#completedJobsTable tbody td:nth-child(3),
 #completedJobsTable tbody td:nth-child(-n+3),
-#xmlJobsTable tbody td:nth-child(1),
-#xmlJobsTable tbody td:nth-child(2),
-#xmlJobsTable tbody td:nth-child(3),
-#xmlJobsTable tbody td:nth-child(4),
 #xmlJobsTable tbody td:nth-child(-n+4),
 #processReportTable tbody td.sticky-col,
 #dailyReportTable tbody td.sticky-col,
 #dailyReportTable tfoot td.sticky-col {
     position: sticky !important;
-    left: 0 !important;
     z-index: 10 !important;
     background-clip: padding-box !important;
 }
@@ -676,6 +1032,93 @@ table tbody td.sticky-col,
     right: 0 !important;
     z-index: 10 !important;
     background-clip: padding-box !important;
+    border-left: 2px solid #dee2e6 !important;
+    min-width: 85px !important;
+    width: 85px !important;
+    box-sizing: border-box !important;
+}
+
+/* Opaque backgrounds for sticky cells during horizontal scroll (No see-through data) */
+table tbody tr:nth-child(odd) td.sticky-col,
+table tbody tr:nth-child(odd) td.sticky-col-1,
+table tbody tr:nth-child(odd) td.sticky-col-2,
+table tbody tr:nth-child(odd) td.sticky-col-3,
+table tbody tr:nth-child(odd) td.sticky-col-4,
+.table tbody tr:nth-child(odd) td.sticky-col-1,
+.table tbody tr:nth-child(odd) td.sticky-col-2,
+.table tbody tr:nth-child(odd) td.sticky-col-3,
+.table tbody tr:nth-child(odd) td.sticky-col-4,
+#trackingTable tbody tr:nth-child(odd) td.sticky-col-1,
+#trackingTable tbody tr:nth-child(odd) td.sticky-col-2,
+#trackingTable tbody tr:nth-child(odd) td.sticky-col-3,
+#trackingTable tbody tr:nth-child(odd) td.sticky-col-4,
+#trackingTable tbody tr:nth-child(odd) td.sticky-act-col,
+#xmlJobsTable tbody tr:nth-child(odd) td:nth-child(-n+4) {
+    background-color: #ffffff !important;
+}
+
+table tbody tr:nth-child(even) td.sticky-col,
+table tbody tr:nth-child(even) td.sticky-col-1,
+table tbody tr:nth-child(even) td.sticky-col-2,
+table tbody tr:nth-child(even) td.sticky-col-3,
+table tbody tr:nth-child(even) td.sticky-col-4,
+.table tbody tr:nth-child(even) td.sticky-col-1,
+.table tbody tr:nth-child(even) td.sticky-col-2,
+.table tbody tr:nth-child(even) td.sticky-col-3,
+.table tbody tr:nth-child(even) td.sticky-col-4,
+#trackingTable tbody tr:nth-child(even) td.sticky-col-1,
+#trackingTable tbody tr:nth-child(even) td.sticky-col-2,
+#trackingTable tbody tr:nth-child(even) td.sticky-col-3,
+#trackingTable tbody tr:nth-child(even) td.sticky-col-4,
+#trackingTable tbody tr:nth-child(even) td.sticky-act-col,
+#xmlJobsTable tbody tr:nth-child(even) td:nth-child(-n+4) {
+    background-color: #f2f4f6 !important;
+}
+
+table tbody tr:hover td.sticky-col,
+table tbody tr:hover td.sticky-col-1,
+table tbody tr:hover td.sticky-col-2,
+table tbody tr:hover td.sticky-col-3,
+table tbody tr:hover td.sticky-col-4,
+.table tbody tr:hover td.sticky-col-1,
+.table tbody tr:hover td.sticky-col-2,
+.table tbody tr:hover td.sticky-col-3,
+.table tbody tr:hover td.sticky-col-4,
+#trackingTable tbody tr:hover td.sticky-col-1,
+#trackingTable tbody tr:hover td.sticky-col-2,
+#trackingTable tbody tr:hover td.sticky-col-3,
+#trackingTable tbody tr:hover td.sticky-col-4,
+#trackingTable tbody tr:hover td.sticky-act-col,
+#xmlJobsTable tbody tr:hover td:nth-child(-n+4) {
+    background-color: #c4cbd3 !important;
+}
+
+/* Tracking Table / UQ Process Row Hover Zoom Animation */
+#trackingTable tbody tr {
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+#trackingTable tbody td {
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, box-shadow 0.2s ease;
+    will-change: transform;
+}
+#trackingTable tbody tr:hover td {
+    transform: scale(1.03);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+    z-index: 15 !important;
+    position: relative;
+}
+#trackingTable tbody tr:hover td.sticky-col-1 {
+    transform-origin: left center;
+    z-index: 25 !important;
+}
+#trackingTable tbody tr:hover td.sticky-col-2,
+#trackingTable tbody tr:hover td.sticky-col-3,
+#trackingTable tbody tr:hover td.sticky-col-4 {
+    z-index: 25 !important;
+}
+#trackingTable tbody tr:hover td.sticky-act-col {
+    transform-origin: right center;
+    z-index: 25 !important;
 }
 
 /* Ensure table containers allow vertical & horizontal scroll with sticky headers */
@@ -688,38 +1131,60 @@ table tbody td.sticky-col,
 }
 
 .table-container:has(.table-responsive) {
-    overflow: hidden !important;
+    overflow: visible !important;
     max-height: none !important;
 }
 
 .table-container:not(:has(.table-responsive)),
 .table-responsive,
-.table-container>.table-responsive {
-    max-height: 72vh !important;
+.table-container>.table-responsive,
+.card-body:has(> .table),
+.card:has(> .table),
+.dataTables_scrollBody {
+    max-height: 70vh !important;
     overflow-y: auto !important;
     overflow-x: auto !important;
     position: relative !important;
     -webkit-overflow-scrolling: touch;
 }
 
-/* Polished clean scrollbars for tables */
-.table-responsive::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* Polished clean scrollbars for tables (Matching XML Unassigned Jobs: #f1f1f1 track, #6c757d thumb, 10px height) */
+.table-responsive::-webkit-scrollbar,
+.table-scroll-container::-webkit-scrollbar,
+.dataTables_scrollBody::-webkit-scrollbar,
+div:has(> table)::-webkit-scrollbar {
+    width: 10px !important;
+    height: 10px !important;
 }
 
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f5f9;
+.table-responsive::-webkit-scrollbar-track,
+.table-scroll-container::-webkit-scrollbar-track,
+.dataTables_scrollBody::-webkit-scrollbar-track,
+div:has(> table)::-webkit-scrollbar-track {
+    background: #f1f1f1 !important;
     border-radius: 4px;
 }
 
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+.table-responsive::-webkit-scrollbar-thumb,
+.table-scroll-container::-webkit-scrollbar-thumb,
+.dataTables_scrollBody::-webkit-scrollbar-thumb,
+div:has(> table)::-webkit-scrollbar-thumb {
+    background: #6c757d !important;
     border-radius: 4px;
 }
 
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+.table-responsive::-webkit-scrollbar-thumb:hover,
+.table-scroll-container::-webkit-scrollbar-thumb:hover,
+.dataTables_scrollBody::-webkit-scrollbar-thumb:hover,
+div:has(> table)::-webkit-scrollbar-thumb:hover {
+    background: #5a6268 !important;
+}
+
+.table-responsive,
+.table-scroll-container,
+.dataTables_scrollBody {
+    scrollbar-color: #6c757d #f1f1f1 !important;
+    scrollbar-width: thin !important;
 }
 
 /* Table-dark headers keep their darker background but match size and font */
@@ -870,18 +1335,19 @@ table td select,
 }
 
 /* =========================================================================
-   7. NAVBAR CLEARANCE & SPACE BETWEEN NAVBAR AND HEADER
-   The fixed top navbar is 70px tall. We ensure a consistent 20px-25px
-   breathing space below the navbar across all logins and pages so headers
-   never touch the navbar.
+   7. NAVBAR CLEARANCE & SPACE ABOVE / BELOW HEADER (ALL LOGINS)
+   The fixed top navbar is 70px tall. We maintain a minimal, clean top space
+   (approx 6px - 10px) above the page header across all logins and modules.
    ========================================================================= */
 
-/* Ensure body content starts below the fixed top navbar (70px) with comfortable breathing room */
+/* Ensure body content starts closely below the fixed top navbar (70px) */
 body {
-    padding-top: 92px !important;
+    padding-top: 76px !important;
 }
 
-/* For pages using .main-content wrapper or containers, normalize margin-top and padding-top */
+/* Eliminate large double-offsets from main containers and wrappers */
+.main-container,
+div.main-container,
 .main-content,
 main.main-content,
 div.main-content,
@@ -894,29 +1360,64 @@ body>.container-fluid,
 body>.wrapper,
 body>.content-wrapper,
 body>main,
-.container.mt-3,
-.container-fluid.mt-3,
-.container.mt-4,
-.container-fluid.mt-4,
-.container.mt-5,
-.container-fluid.mt-5,
-.container.py-3,
-.container-fluid.py-3,
-.container.py-4,
-.container-fluid.py-4,
-.container.py-5,
-.container-fluid.py-5 {
+.container,
+.container-fluid,
+.container.mt-1, .container-fluid.mt-1,
+.container.mt-2, .container-fluid.mt-2,
+.container.mt-3, .container-fluid.mt-3,
+.container.mt-4, .container-fluid.mt-4,
+.container.mt-5, .container-fluid.mt-5,
+.container.py-1, .container-fluid.py-1,
+.container.py-2, .container-fluid.py-2,
+.container.py-3, .container-fluid.py-3,
+.container.py-4, .container-fluid.py-4,
+.container.py-5, .container-fluid.py-5,
+.container.pt-1, .container-fluid.pt-1,
+.container.pt-2, .container-fluid.pt-2,
+.container.pt-3, .container-fluid.pt-3,
+.container.pt-4, .container-fluid.pt-4,
+.container.pt-5, .container-fluid.pt-5 {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
 
-/* Ensure page header banners, cards and title containers have clean top margins */
+/* Neutralize legacy 50px-100px top margins or paddings on wrappers */
+[style*="margin-top: 50px"], [style*="margin-top:50px"],
+[style*="margin-top: 60px"], [style*="margin-top:60px"],
+[style*="margin-top: 70px"], [style*="margin-top:70px"],
+[style*="margin-top: 80px"], [style*="margin-top:80px"],
+[style*="margin-top: 90px"], [style*="margin-top:90px"],
+[style*="margin-top: 100px"], [style*="margin-top:100px"],
+[style*="padding-top: 50px"], [style*="padding-top:50px"],
+[style*="padding-top: 60px"], [style*="padding-top:60px"],
+[style*="padding-top: 70px"], [style*="padding-top:70px"],
+[style*="padding-top: 80px"], [style*="padding-top:80px"] {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Ensure page header banners, cards and title containers have tight top spacing and clean bottom spacing */
 .user-header,
 .header-card,
 .user-info,
 .content-header,
-.dashboard-header {
-    margin-top: 0 !important;
+.dashboard-header,
+.page-title-container,
+.page-header {
+    margin-top: 4px !important;
+    margin-bottom: 20px !important;
+}
+
+/* Ensure first header in any container sits closely under the navbar */
+.main-container > .page-title-container:first-child,
+.main-container > .page-header:first-child,
+.main-content > .page-title-container:first-child,
+.main-content > .page-header:first-child,
+.container > .page-title-container:first-child,
+.container > .page-header:first-child,
+.container-fluid > .page-title-container:first-child,
+.container-fluid > .page-header:first-child {
+    margin-top: 4px !important;
 }
 
 /* =========================================================================
@@ -953,6 +1454,62 @@ body>.page-title-container>.container-fluid {
     margin-bottom: 20px !important;
     width: 100% !important;
     border-radius: 12px !important;
+}
+
+.page-header {
+    background: #6c757d !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    padding: 16px 24px !important;
+    border-radius: 12px !important;
+    margin-bottom: 24px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+}
+
+.page-header h1,
+.page-header h2,
+.page-header h3,
+.page-header h4,
+.page-header h5,
+.page-header h6 {
+    margin: 0 !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.page-header p {
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin: 0 !important;
+}
+
+.page-header h1 i,
+.page-header h2 i,
+.page-header h3 i,
+.page-header h4 i,
+.page-header h5 i,
+.page-header h6 i,
+.page-header>i,
+.page-header>div>i {
+    color: #ffffff !important;
+}
+
+.page-header > a.btn,
+.page-header > button.btn,
+.page-header > a[class*="btn"],
+.page-header > button[class*="btn"],
+.page-header > .btn-group,
+.page-header > div:has(.btn),
+.page-header > div:last-child:not(:first-child) {
+    margin-left: auto !important;
 }
 
 /* =========================================================================

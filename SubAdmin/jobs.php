@@ -441,12 +441,13 @@ require 'header.php';
         <!-- Form for adding/editing jobs -->
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
 
+            <div class="mx-auto compact-form" style="max-width:700px;">
             <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <h5 class="mb-0 text-white"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
                 <a href="jobs.php" class="btn btn-sm btn-secondary">Back</a>
             </div>
 
-            <div class="card mx-auto compact-form" style="max-width:700px;">
+            <div class="card">
                 <div class="card-body">
                     <form method="post" autocomplete="off">
                         <input type="hidden" name="action" value="<?= $mode ?>" />
@@ -498,6 +499,7 @@ require 'header.php';
                         </div>
                     </form>
                 </div>
+            </div>
             </div>
 
         <!-- Main job list display -->

@@ -142,13 +142,13 @@ $total_jobs_count = $need_to_assign_count + $in_progress_count + $completed_coun
 
 <main class="main-content">
     <!-- Dashboard Header -->
-    <div class="dashboard-header">
-        <div class="d-flex justify-content-between align-items-center py-3">
+    <div class="dashboard-header" style="background: #6c757d !important; background-color: #6c757d !important; color: #ffffff !important; padding: 16px 24px !important; border-radius: 12px !important; margin-bottom: 24px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important; width: 100% !important;">
+        <div class="d-flex justify-content-between align-items-center w-100" style="width: 100% !important;">
             <div>
-                <h1 class="dashboard-title mb-1"><font color="white"><i class="fas fa-chart-line me-2"></i>Dashboard</font></h1>
-                <p class="dashboard-subtitle mb-0 text-muted"><font color="white">Welcome back, <strong><?php echo htmlspecialchars($current_user); ?></strong></font></p>
+                <h1 class="dashboard-title mb-1 text-white" style="color: #ffffff !important; font-size: 1.5rem !important;"><i class="fas fa-chart-line me-2"></i>Dashboard</h1>
+                <p class="dashboard-subtitle mb-0 text-white-50" style="color: rgba(255,255,255,0.85) !important;">Welcome back, <strong><?php echo htmlspecialchars($current_user); ?></strong></p>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 ms-auto" style="margin-left: auto !important;">
                 <button class="btn btn-sm btn-outline-light" onclick="resetAllTerms()">
                     <i class="fas fa-redo me-1"></i>Reset Terms
                 </button>

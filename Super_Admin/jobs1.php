@@ -609,12 +609,13 @@ require 'header.php';
         <?php endif; ?>
 
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
+            <div class="mx-auto" style="max-width:800px;">
             <div class="page-title-container">
                 <h5 class="mb-0 text-white"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
                 <a href="jobs.php" class="btn btn-sm btn-secondary">Back</a>
             </div>
 
-            <div class="card mx-auto" style="max-width:800px;">
+            <div class="card">
                 <div class="card-body">
                     <form method="post" autocomplete="off" id="jobForm">
                         <input type="hidden" name="action" value="<?= $mode ?>" />
@@ -756,6 +757,7 @@ Article 3
                         </div>
                     </form>
                 </div>
+            </div>
             </div>
 
             <!-- JavaScript for dynamic form behavior -->

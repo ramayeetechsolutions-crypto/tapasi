@@ -172,36 +172,38 @@ require 'header.php';
 
 <?php if($mode==='add'||$mode==='edit'): ?>
 <!-- Add/Edit Form -->
-<div class="page-title-container">
-  <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Role':'Add Role' ?></h5>
-  <a href="user_role_master.php" class="btn btn-sm btn-secondary">Back</a>
-</div>
-<div class="card mb-3 mx-auto" style="max-width:600px;">
-  <div class="card-body">
-    <form method="post" autocomplete="off">
-      <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
-      <?php if($mode==='edit'): ?>
-        <input type="hidden" name="role_id" value="<?= (int)$editRole['role_id'] ?>">
-      <?php endif; ?>
+<div class="mx-auto" style="max-width:600px;">
+  <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Role':'Add Role' ?></h5>
+    <a href="user_role_master.php" class="btn btn-sm btn-secondary" style="margin-left: auto !important;">Back</a>
+  </div>
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="post" autocomplete="off">
+        <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
+        <?php if($mode==='edit'): ?>
+          <input type="hidden" name="role_id" value="<?= (int)$editRole['role_id'] ?>">
+        <?php endif; ?>
 
-      <div class="mb-2">
-        <label class="form-label small">Role Name *</label>
-        <input type="text" name="role_name" class="form-control form-control-sm" required value="<?= h($editRole['role_name'] ?? '') ?>">
-      </div>
-      <div class="mb-2">
-        <label class="form-label small">Role Description</label>
-        <textarea name="role_description" class="form-control form-control-sm" rows="2"><?= h($editRole['role_description'] ?? '') ?></textarea>
-      </div>
-      <div class="mb-2">
-        <label class="form-label small">Permissions *</label>
-        <textarea name="permissions" class="form-control form-control-sm" rows="2" required><?= h($editRole['permissions'] ?? '') ?></textarea>
-      </div>
-      
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-sm" style="background-color:brown;color:white;"><?= $mode==='edit'?'Update':'Save' ?></button>
-        <a href="user_role_master.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
+        <div class="mb-2">
+          <label class="form-label small">Role Name *</label>
+          <input type="text" name="role_name" class="form-control form-control-sm" required value="<?= h($editRole['role_name'] ?? '') ?>">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Role Description</label>
+          <textarea name="role_description" class="form-control form-control-sm" rows="2"><?= h($editRole['role_description'] ?? '') ?></textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Permissions *</label>
+          <textarea name="permissions" class="form-control form-control-sm" rows="2" required><?= h($editRole['permissions'] ?? '') ?></textarea>
+        </div>
+        
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-sm" style="background-color:brown;color:white;"><?= $mode==='edit'?'Update':'Save' ?></button>
+          <a href="user_role_master.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 

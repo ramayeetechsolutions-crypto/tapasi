@@ -759,12 +759,13 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
         <!-- Form for adding/editing jobs -->
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
 
+            <div class="mx-auto <?= $role_name === 'Executive' ? 'executive-compact' : 'compact-form' ?>" style="max-width:<?= $role_name === 'Executive' ? '500px' : '700px' ?>;">
             <div class="page-title-container">
                 <h5 class="mb-0 text-white"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
                 <a href="jobs.php" class="btn btn-sm btn-secondary">Back</a>
             </div>
 
-            <div class="card mx-auto <?= $role_name === 'Executive' ? 'executive-compact' : 'compact-form' ?>" style="max-width:<?= $role_name === 'Executive' ? '500px' : '700px' ?>;">
+            <div class="card">
                 <div class="card-body">
                     <form method="post" autocomplete="off">
                         <input type="hidden" name="action" value="<?= $mode ?>" />
@@ -907,6 +908,7 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
                         </div>
                     </form>
                 </div>
+            </div>
             </div>
 
             <!-- JavaScript for dynamic form behavior -->

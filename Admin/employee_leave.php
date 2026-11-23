@@ -182,7 +182,7 @@ include 'header.php';
             <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fa fa-clock-o me-2" style="color: #ffffff !important;"></i>My OT & Permissions</h4>
             <p class="small mb-0 text-white-50" style="color: rgba(255, 255, 255, 0.85) !important;">Submit and track your requests. Manage your OT credits.</p>
         </div>
-        <div class="d-flex gap-2 align-items-center">
+        <div class="d-flex gap-2 align-items-center" style="margin-left: auto !important;">
             
             <!-- OT Credits Summary -->
             <div class="card border-0 shadow-sm bg-gradient-primary text-white" style="background: linear-gradient(45deg, #2196F3, #21CBF3);">
@@ -304,8 +304,8 @@ include 'header.php';
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold text-primary">Submit OT / Permission Request</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold text-white">Submit OT / Permission Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="">
                 <div class="modal-body">

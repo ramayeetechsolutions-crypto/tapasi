@@ -473,9 +473,9 @@ require 'header.php';
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .main-content {
-        padding: 20px 3%;
+        padding: 4px 3% 20px 3%;
         margin: 0 auto;
-        margin-top: 70px;
+        margin-top: 0;
     }
 
     /* Ash Page Header Banner (Matching Navbar Color) */

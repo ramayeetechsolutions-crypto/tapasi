@@ -548,12 +548,13 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
 
         <?php if ($mode === 'add' || $mode === 'edit'): ?>
 
+            <div class="mx-auto <?= $role_name === 'Executive' ? 'executive-compact' : 'compact-form' ?>" style="max-width:<?= $role_name === 'Executive' ? '500px' : '700px' ?>;">
             <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <h5 class="mb-0 text-white"><?= $mode === 'edit' ? 'Edit' : 'Add' ?> Job</h5>
-                <a href="jobs.php" class="btn btn-sm btn-secondary">Back</a>
+                <a href="jobs.php" class="btn btn-sm btn-secondary" style="margin-left: auto !important;">Back</a>
             </div>
 
-            <div class="card mx-auto <?= $role_name === 'Executive' ? 'executive-compact' : 'compact-form' ?>" style="max-width:<?= $role_name === 'Executive' ? '500px' : '700px' ?>;">
+            <div class="card">
                 <div class="card-body">
                     <form method="post" autocomplete="off">
                         <input type="hidden" name="action" value="<?= $mode ?>" />
@@ -694,6 +695,7 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
                         </div>
                     </form>
                 </div>
+            </div>
             </div>
 
             <script>
@@ -840,7 +842,7 @@ if ($mode === 'edit' && in_array($role_name, ['Team Lead', 'Admin'], true) && $e
             <!-- LIST VIEW -->
             <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
                 <h5 class="mb-0 text-white">Jobs</h5>
-                <a href="jobs.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add </a>
+                <a href="jobs.php?mode=add" class="btn btn-sm btn-success" style="margin-left: auto !important;"><i class="fa fa-plus"></i> Add </a>
             </div>
 
             <form method="get" class="row gy-2 gx-2 mb-3 align-items-end">

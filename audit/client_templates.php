@@ -119,11 +119,11 @@ require 'header.php';
     </style>
 </head>
 <body>
-    <div class="container-fluid mt-4">
+    <div class="container-fluid mt-2">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h3 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="bi bi-people-fill me-2"></i> Client Management</h3>
+        </div>
         <div class="card">
-            <div class="card-header">
-                <h3 class="mb-0"><i class="bi bi-people-fill"></i> Client Management</h3>
-            </div>
             <div class="card-body">
                 <?php if (isset($_SESSION['message'])): ?>
                     <div class="alert alert-info alert-dismissible fade show" role="alert">

@@ -191,11 +191,12 @@ require 'header.php';
 <?php endif; ?>
 
 <?php if($mode==='add'||$mode==='edit'): ?>
-<div class="page-title-container">
+<div class="mx-auto" style="max-width:980px;">
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
     <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Job':'Add Job' ?></h5>
-    <a href="job_management.php" class="btn btn-secondary">Back</a>
+    <a href="job_management.php" class="btn btn-secondary" style="margin-left: auto !important;">Back</a>
 </div>
-<div class="card mb-3 mx-auto" style="max-width:980px;">
+<div class="card mb-3">
     <div class="card-body">
         <form method="post" enctype="multipart/form-data" autocomplete="off">
             <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
@@ -262,12 +263,13 @@ require 'header.php';
         </form>
     </div>
 </div>
+</div>
 
 <?php else: ?>
 <!-- Toolbar like client_master -->
-<div class="page-title-container">
-    <h5 class="mb-0 text-white">Job Master</h5>
-    <a href="job_management.php?mode=add" class="btn btn-success"><i class="fa fa-plus"></i> Add Job</a>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h5 class="mb-0 text-white">Job Categories</h5>
+    <a href="job_management.php?mode=add" class="btn btn-success" style="margin-left: auto !important;"><i class="fa fa-plus"></i> Add Job</a>
 </div>
 
 <div class="d-flex flex-wrap gap-2 mb-3">

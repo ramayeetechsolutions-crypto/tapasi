@@ -202,6 +202,10 @@ require 'header.php';
         <!-- FORM VIEW -->
         <div class="row justify-content-center">
             <div class="col-lg-6">
+                <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                    <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-folder-plus' ?> me-2"></i><?= $mode === 'edit' ? 'Update Process' : 'New Process Definition' ?></h4>
+                    <a href="process_master.php" class="btn btn-secondary btn-sm" style="margin-left: auto !important;"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
+                </div>
                 <div class="card p-4 p-md-5">
                     <div class="text-center mb-4">
                         <div class="bg-light d-inline-block p-3 rounded-circle mb-3">
@@ -240,12 +244,12 @@ require 'header.php';
 
     <?php else: ?>
         <!-- TABLE VIEW -->
-        <div class="page-header">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
-                <h3 class="fw-bold mb-1">Process Master</h3>
-                <p class="text-muted small mb-0">Total Processes: <?= $processes->num_rows ?></p>
+                <h3 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-cogs me-2"></i>Process Master</h3>
+                <p class="small mb-0 text-white-50" style="color: rgba(255, 255, 255, 0.85) !important;">Total Processes: <?= $processes->num_rows ?></p>
             </div>
-            <a href="process_master.php?mode=add" class="btn btn-primary px-4 shadow-sm">
+            <a href="process_master.php?mode=add" class="btn btn-success px-4 shadow-sm" style="margin-left: auto !important;">
                 <i class="fa fa-plus me-2"></i>Add Process
             </a>
         </div>

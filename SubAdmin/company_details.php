@@ -63,6 +63,7 @@ $stmt->bind_param("ssssssssssi", $name, $pan, $bank_name, $bank_ac_name, $bank_a
     </div>
 <?php endif; ?>
 
+<?php if ($mode === 'edit'): ?><div class="mx-auto" style="max-width:900px;"><?php endif; ?>
 <div class="page-title-container">
     <h5 class="mb-0 text-white">Company Master</h5>
     <?php if ($mode === 'view'): ?>
@@ -126,7 +127,7 @@ $stmt->bind_param("ssssssssssi", $name, $pan, $bank_name, $bank_ac_name, $bank_a
 
 <?php else: // edit ?>
 
-    <div class="card mx-auto" style="max-width:900px;">
+    <div class="card">
         <div class="card-body">
             <form method="post" autocomplete="off">
                 <div class="row">
@@ -185,6 +186,7 @@ $stmt->bind_param("ssssssssssi", $name, $pan, $bank_name, $bank_ac_name, $bank_a
             </form>
         </div>
     </div>
+</div>
 
 <?php endif; ?>
 

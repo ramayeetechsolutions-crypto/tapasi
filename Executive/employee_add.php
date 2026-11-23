@@ -197,14 +197,15 @@ require 'header.php';
     <div class="container-fluid mt-3" style="margin-top: 80px;">
         
         <!-- Header -->
-        <div class="page-title-container">
+        <div class="mx-auto" style="max-width:1200px;">
+    <div class="page-title-container">
             <h5 class="mb-0 text-white"><i class="fas fa-user-plus me-2"></i>Add New Employee</h5>
             <a href="employee_master.php" class="btn btn-sm btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
         </div>
 
-        <div class="card p-4 mx-auto" style="max-width:1200px;">
+        <div class="card p-4">
             <form method="post" class="row g-3" onsubmit="return checkPasswordMatch()">
                 <input type="hidden" name="action" value="add">
 
@@ -364,6 +365,7 @@ require 'header.php';
                 </div>
             </form>
         </div>
+    </div>
     </div>
 
     <script>

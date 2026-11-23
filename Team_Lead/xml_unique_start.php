@@ -552,61 +552,215 @@ if ($results && $results->num_rows > 0) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
     <style>
-              /* 1. Sticky Columns Setup (Locked Widths to prevent overlap) */
-        .table th.sticky-col-1, .table td.sticky-col-1 { position: sticky; left: 0; z-index: 10; min-width: 45px; max-width: 45px; }
-        .table th.sticky-col-2, .table td.sticky-col-2 { position: sticky; left: 45px; z-index: 10; min-width: 130px; max-width: 130px; }
-        .table th.sticky-col-3, .table td.sticky-col-3 { position: sticky; left: 175px; z-index: 10; min-width: 200px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
-        .table th.sticky-col-4, .table td.sticky-col-4 { position: sticky; left: 375px; z-index: 10; border-right: 1px solid #dee2e6; min-width: 180px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+                      #trackingTable {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
+            margin-top: 0 !important;
+            font-size: 12.5px;
+        }
+        #trackingTable thead {
+            position: static !important;
+        }
 
-        /* 2. Header Colors (Dark Grey) */
+        /* 1. Header Styling matching xml/xml.php */
+        #trackingTable thead th { 
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 20 !important;
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important; 
+            font-size: 12.5px;
+            font-weight: 600;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            padding: 8px 10px !important;
+            white-space: nowrap;
+        }
+        #trackingTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        /* 2. Cell Padding & Text Alignments matching xml/xml.php */
+        #trackingTable tbody tr {
+            transition: transform 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        #trackingTable tbody td { 
+            vertical-align: middle !important; 
+            text-align: center;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            padding: 6px 10px !important;
+            white-space: nowrap;
+            font-size: 12.5px;
+            transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, box-shadow 0.2s ease;
+            will-change: transform;
+        }
+        #trackingTable tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        /* 3. Sticky Columns Setup (Exact Widths matching xml/xml.php) */
+        .table th.sticky-col-1, .table td.sticky-col-1,
+        #trackingTable thead th.sticky-col-1, #trackingTable tbody td.sticky-col-1 { 
+            position: sticky !important; 
+            left: 0 !important; 
+            min-width: 45px !important; 
+            max-width: 45px !important; 
+            width: 45px !important; 
+            box-sizing: border-box !important; 
+        }
+        .table th.sticky-col-2, .table td.sticky-col-2,
+        #trackingTable thead th.sticky-col-2, #trackingTable tbody td.sticky-col-2 { 
+            position: sticky !important; 
+            left: 45px !important; 
+            min-width: 140px !important; 
+            max-width: 140px !important; 
+            width: 140px !important; 
+            box-sizing: border-box !important; 
+        }
+        .table th.sticky-col-3, .table td.sticky-col-3,
+        #trackingTable thead th.sticky-col-3, #trackingTable tbody td.sticky-col-3 { 
+            position: sticky !important; 
+            left: 185px !important; 
+            min-width: 140px !important; 
+            max-width: 140px !important; 
+            width: 140px !important; 
+            box-sizing: border-box !important; 
+            overflow: hidden !important; 
+            text-overflow: ellipsis !important; 
+            white-space: nowrap !important; 
+        }
+        .table th.sticky-col-4, .table td.sticky-col-4,
+        #trackingTable thead th.sticky-col-4, #trackingTable tbody td.sticky-col-4 { 
+            position: sticky !important; 
+            left: 325px !important; 
+            border-right: 1px solid #dee2e6 !important; 
+            min-width: 145px !important; 
+            max-width: 145px !important; 
+            width: 145px !important; 
+            box-sizing: border-box !important; 
+            overflow: hidden !important; 
+            text-overflow: ellipsis !important; 
+            white-space: nowrap !important; 
+        }
+
+        .table td.sticky-col-1,
+        .table td.sticky-col-2,
+        .table td.sticky-col-3,
+        .table td.sticky-col-4,
+        #trackingTable tbody td.sticky-col-1,
+        #trackingTable tbody td.sticky-col-2,
+        #trackingTable tbody td.sticky-col-3,
+        #trackingTable tbody td.sticky-col-4 {
+            z-index: 10 !important;
+        }
+
+        /* 4. Header Colors & Z-Index (Above scrolling headers during horizontal scroll) */
         .table thead th.sticky-col-1, 
         .table thead th.sticky-col-2, 
         .table thead th.sticky-col-3,
-        .table thead th.sticky-col-4 {
-            background-color: #5e6b77 !important; color: #ffffff !important; z-index: 12;
+        .table thead th.sticky-col-4,
+        #trackingTable thead th.sticky-col-1,
+        #trackingTable thead th.sticky-col-2,
+        #trackingTable thead th.sticky-col-3,
+        #trackingTable thead th.sticky-col-4 {
+            position: sticky !important;
+            top: 0 !important;
+            background-color: #5e6b77 !important;
+            color: #ffffff !important;
+            z-index: 120 !important;
         }
 
-        /* 3. Zebra Striping Logic (Even Rows) */
-        .table tbody tr:nth-child(even) td {
-            background-color: #f2f4f6; /* Visible Grey */
+        /* Fixed background for sticky columns to avoid see-through */
+        .table tbody tr:nth-child(even) td.sticky-col-1,
+        .table tbody tr:nth-child(even) td.sticky-col-2,
+        .table tbody tr:nth-child(even) td.sticky-col-3,
+        .table tbody tr:nth-child(even) td.sticky-col-4,
+        #trackingTable tbody tr:nth-child(even) td.sticky-col-1,
+        #trackingTable tbody tr:nth-child(even) td.sticky-col-2,
+        #trackingTable tbody tr:nth-child(even) td.sticky-col-3,
+        #trackingTable tbody tr:nth-child(even) td.sticky-col-4 {
+            background-color: #f2f4f6 !important;
         }
-        /* Zebra Striping Logic (Odd Rows) */
-        .table tbody tr:nth-child(odd) td {
-            background-color: #ffffff; /* White */
+        .table tbody tr:nth-child(odd) td.sticky-col-1,
+        .table tbody tr:nth-child(odd) td.sticky-col-2,
+        .table tbody tr:nth-child(odd) td.sticky-col-3,
+        .table tbody tr:nth-child(odd) td.sticky-col-4,
+        #trackingTable tbody tr:nth-child(odd) td.sticky-col-1,
+        #trackingTable tbody tr:nth-child(odd) td.sticky-col-2,
+        #trackingTable tbody tr:nth-child(odd) td.sticky-col-3,
+        #trackingTable tbody tr:nth-child(odd) td.sticky-col-4 {
+            background-color: #ffffff !important;
         }
 
-        /* 4. FULL ROW HOVER EFFECT (Consistent with Upload Sheet) */
-        .table tbody tr:hover td {
-            background-color: #c4cbd3 !important; /* Row full-ah highlight aagum */
+        /* 5. Zebra Striping Logic (matching xml/xml.php) */
+        #trackingTable tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        #trackingTable tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+
+        /* 6. FULL ROW HOVER EFFECT & SLIGHT ZOOM ANIMATION */
+        #trackingTable tbody tr:hover td {
+            background-color: #c4cbd3 !important;
             cursor: pointer;
-            transition: background-color 0.1s ease;
+            transform: scale(1.03);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+            z-index: 15 !important;
+            position: relative;
         }
 
-        /* 5. Base Table Cell Padding & Alignment */
-        .table td { vertical-align: middle; padding: 6px 10px; font-size: 12.5px; border: 1px solid #dee2e6; text-align: center; }
-
-        /* Highlight the sticky columns too when hovering */
-        .table tbody tr:hover td.sticky-col-1,
-        .table tbody tr:hover td.sticky-col-2,
-        .table tbody tr:hover td.sticky-col-3,
-        .table tbody tr:hover td.sticky-col-4 {
-            background-color: #e9ecef !important;
+        /* Highlight the sticky columns too when hovering & maintain sticky alignment */
+        #trackingTable tbody tr:hover td.sticky-col-1 {
+            background-color: #c4cbd3 !important;
+            transform-origin: left center;
+            z-index: 25 !important;
+        }
+        #trackingTable tbody tr:hover td.sticky-col-2,
+        #trackingTable tbody tr:hover td.sticky-col-3,
+        #trackingTable tbody tr:hover td.sticky-col-4 {
+            background-color: #c4cbd3 !important;
+            z-index: 25 !important;
         }
 
         body { background-color: #f5f7fa; font-size: 12.5px; }
         .card { border: none; border-radius: 8px; box-shadow: 0 1px 10px rgba(0,0,0,0.05); }
         
         /* Dashboard Card Styles */
-        /* .filter-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; } */
         .filter-card { background: #5e6b77 !important; color: white; }
         .stat-card { transition: transform 0.3s; padding: 10px; border-radius: 8px; min-width: 140px;}
         .stat-card:hover { transform: translateY(-3px); }
         .report-icon { font-size: 2rem; opacity: 0.3; }
         
         /* Grid Table Styles - Full Width Wide Table */
-        .table-responsive { max-height: 65vh; overflow-y: auto; overflow-x: auto; }
-        .table th { background-color: #5e6b77 !important; color:  #ffffff !important; border: 1px solid #dee2e6; font-weight: 600; font-size: 12.5px; padding: 8px 10px; white-space: nowrap; position: sticky; top: 0; z-index: 10; text-align: center; }
-        .table td { vertical-align: middle; padding: 6px 10px; font-size: 12.5px; border: 1px solid #dee2e6; text-align: center; white-space: nowrap; }
+        .table-responsive { 
+            max-height: 65vh; 
+            overflow-y: auto !important; 
+            overflow-x: auto !important; 
+            scrollbar-color: #6c757d #f1f1f1 !important;
+            scrollbar-width: thin !important;
+        }
+        .table-responsive::-webkit-scrollbar {
+            width: 10px !important;
+            height: 10px !important;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1 !important;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #6c757d !important;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #5a6268 !important;
+        }
+        .table th { background-color: #5e6b77 !important; color:  #ffffff !important; font-weight: 600; font-size: 12.5px; padding: 8px 10px; white-space: nowrap; position: sticky; top: 0; z-index: 10; text-align: center; }
+        .table td { vertical-align: middle; padding: 6px 10px; font-size: 12.5px; text-align: center; white-space: nowrap; }
         
         /* Custom Colors for Assigned User Columns */
         .bg-cell-unassigned { background-color: #ffc107 !important; color: #000 !important; font-weight: bold; }

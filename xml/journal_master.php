@@ -770,7 +770,7 @@ $months = getMonths();
                         <!-- Table headings matched exactly to required order -->
                         <thead class="table-light">
                             <tr>
-                                <th>S.No</th>
+                                <th class="fw-bold">S.No</th>
                                 <th>Team</th>
                                 <th>Client ID</th>
                                 <!-- <th>WK_NEW Journals</th> -->
@@ -787,7 +787,7 @@ $months = getMonths();
     <?php if($entries && $entries->num_rows > 0): $i=0;?>
         <?php while($row = $entries->fetch_assoc()): $i=$i+1;?>
         <tr>
-            <td><?= $i ?></td>
+            <td class="fw-bold"><?= $i ?></td>
             <!-- Team Column -->
             <td>
                 <?php if(!empty($row['team_name'])): ?>

@@ -123,13 +123,13 @@ body{
 
 <div class="container-fluid">
 
+<?php if($system){ ?>
+
 <div class="page-title-container">
     <h1 class="mb-0">
         <i class="fas fa-desktop"></i> System Details
     </h1>
 </div>
-
-<?php if($system){ ?>
 
 <div class="row">
 
@@ -300,6 +300,12 @@ else
 <div class="row justify-content-center">
 
 <div class="col-lg-8">
+
+<div class="page-title-container">
+    <h1 class="mb-0">
+        <i class="fas fa-desktop"></i> System Details
+    </h1>
+</div>
 
 <div class="card">
 

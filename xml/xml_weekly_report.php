@@ -766,7 +766,7 @@ if ($team_stats['avg_production'] > 0) {
                     <table class="table table-bordered table-hover">
                         <thead>
                             <tr>
-                                <th>S.No</th>
+                                <th class="sticky-col-1">S.No</th>
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Exp</th>
@@ -789,7 +789,7 @@ if ($team_stats['avg_production'] > 0) {
                                 <?php $counter = 1; ?>
                                 <?php foreach($performance_data as $emp): ?>
                                 <tr class="text-center align-middle">
-                                    <td class="fw-bold"><?= $counter++ ?></td>
+                                    <td class="fw-bold sticky-col-1"><?= $counter++ ?></td>
                                     <td><?= h($emp['employee_username']) ?></td>
                                     <td class="text-start text-nowrap"><?= h($emp['employee_name']) ?></td>
                                     <td><?= h($emp['experience']) ?></td>

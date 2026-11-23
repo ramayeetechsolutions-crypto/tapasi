@@ -72,12 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'edit') {
     </div>
 <?php endif; ?>
 
-<div class="page-title-container">
-    <h5 class="mb-0 text-white">Company Master</h5>
+<?php if ($mode === 'edit'): ?><div class="mx-auto" style="max-width:900px;"><?php endif; ?>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2"></i>Company Master</h5>
     <?php if ($mode === 'view'): ?>
-        <a href="company_master.php?mode=edit" class="btn btn-sm btn-primary">Edit</a>
+        <a href="company_master.php?mode=edit" class="btn btn-sm btn-primary" style="margin-left: auto !important;"><i class="fas fa-edit me-1"></i> Edit</a>
     <?php else: ?>
-        <a href="company_master.php" class="btn btn-sm btn-secondary">Back</a>
+        <a href="company_master.php" class="btn btn-sm btn-secondary text-white" style="margin-left: auto !important;"><i class="fas fa-arrow-left me-1"></i> Back</a>
     <?php endif; ?>
 </div>
 
@@ -154,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'edit') {
 
 <?php else: // edit ?>
 
-    <div class="card mx-auto" style="max-width:900px;">
+    <div class="card">
         <div class="card-body">
             <form method="post" autocomplete="off">
                 <div class="row">
@@ -246,6 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'edit') {
             </form>
         </div>
     </div>
+</div>
 
 <?php endif; ?>
 

@@ -181,7 +181,7 @@ exit;
                     <h2 class="fw-bold mb-0 text-white"><i class="fas fa-user-edit me-2"></i>Employee Self-Registration</h2>
                     <p class=" mb-0 text-white-50 small">Complete your profile details for verification.</p>
                 </div>
-                <div>
+                <div style="margin-left: auto !important;">
                     <?php if(isset($emprow['emp_confirm']) && $emprow['emp_confirm'] == 1): ?>
                         <span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-2"></i> Submitted by You</span>
                     <?php else: ?>

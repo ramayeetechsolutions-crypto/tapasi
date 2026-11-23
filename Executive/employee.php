@@ -409,6 +409,7 @@ require 'header.php';
         <?php if ($mode==='edit'): ?>
         
         <!-- Edit Form -->
+        <div class="mx-auto" style="max-width:1200px;">
         <div class="page-title-container">
             <h1>
                 <i class="fas fa-user-edit"></i> Edit My Details
@@ -419,7 +420,7 @@ require 'header.php';
             </a>
         </div>
 
-        <div class="card p-4 mx-auto" style="max-width:1200px;">
+        <div class="card p-4">
             <form method="post" class="row g-3" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="employee_id" value="<?= $editRow['employee_id'] ?>">
@@ -604,6 +605,8 @@ require 'header.php';
                     <a href="employee.php" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
+        </div>
+
         </div>
 
         <!-- Image Modal -->

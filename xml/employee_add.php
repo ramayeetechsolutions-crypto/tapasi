@@ -171,12 +171,13 @@ require 'header.php';
         </div>
     <?php endif; ?>
 
+    <div class="mx-auto" style="max-width:900px;">
     <div class="page-title-container">
         <h5 class="mb-0 text-white">Add New Employee</h5>
         <a href="employee_master.php" class="btn btn-sm btn-secondary">Back to List</a>
     </div>
     
-    <div class="card p-4 mx-auto" style="max-width:900px;">
+    <div class="card p-4">
         <form method="post" class="row g-3" onsubmit="return checkPasswordMatch()">
             <input type="hidden" name="action" value="add">
 
@@ -273,6 +274,7 @@ require 'header.php';
                 <button type="reset" class="btn btn-secondary">Reset</button>
             </div>
         </form>
+    </div>
     </div>
 </div>
 

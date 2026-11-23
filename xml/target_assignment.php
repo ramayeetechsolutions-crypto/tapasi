@@ -218,10 +218,10 @@ require 'header.php';
         }
 
         .main-container {
-            padding: 24px;
+            padding: 4px 24px 24px 24px;
             max-width: 100%;
             margin: 0 auto;
-            margin-top: 70px;
+            margin-top: 0;
         }
 
         /* Ash Page Header Banner (Matching Navbar Color) */

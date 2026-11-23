@@ -284,12 +284,12 @@ require 'header.php';
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered mb-0">
-                        <thead class="table-light">
+                        <thead>
                             <tr>
-                                <th>#ID</th>
-                                <th>Job ID</th>
-                                <th>Rec Date</th>
-                                <th>Journal / Client</th>
+                                <th class="sticky-col-1">#ID</th>
+                                <th class="sticky-col-2">Job ID</th>
+                                <th class="sticky-col-3">Rec Date</th>
+                                <th class="sticky-col-4">Journal / Client</th>
                                 <th>Issue / Articles</th>
                                 <th>Statuses</th>
                                 <th>Assigned Users</th>
@@ -302,10 +302,10 @@ require 'header.php';
                                 while ($job = $jobs_res->fetch_assoc()): 
                             ?>
                                 <tr>
-                                    <td><?= (int)$job['id'] ?></td>
-                                    <td><strong><?= h($job['job_id']) ?></strong></td>
-                                    <td><?= formatDate($job['rec_date']) ?></td>
-                                    <td>
+                                    <td class="sticky-col-1"><?= (int)$job['id'] ?></td>
+                                    <td class="sticky-col-2"><strong><?= h($job['job_id']) ?></strong></td>
+                                    <td class="sticky-col-3"><?= formatDate($job['rec_date']) ?></td>
+                                    <td class="sticky-col-4">
                                         <span class="text-primary fw-bold"><?= h($job['journal_name_client']) ?></span>
                                     </td>
                                     <td>

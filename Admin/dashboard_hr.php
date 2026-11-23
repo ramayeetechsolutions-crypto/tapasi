@@ -65,8 +65,8 @@ body { background:#f4f6f9; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans
 <body>
 
 <div class="container mt-4">
-  <div class="page-title-container">
-    <h4 class="mb-0 text-white"><i class="fas fa-tachometer-alt me-2"></i>Dashboard Overview</h4>
+  <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h4 class="mb-0 text-white" style="font-size: 1.25rem !important; color: #ffffff !important;"><i class="fas fa-tachometer-alt me-2" style="color: #ffffff !important;"></i>Dashboard Overview</h4>
   </div>
   <!-- Filter Bar -->
   <div class="filter-bar">

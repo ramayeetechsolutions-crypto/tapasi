@@ -152,11 +152,12 @@ require 'header.php';
 <?php endif; ?>
 
 <?php if($mode==='add'||$mode==='edit'): ?>
-<div class="page-title-container">
+<div class="mx-auto" style="max-width:650px;">
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
   <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
-  <a href="client_master.php" class="btn btn-sm btn-secondary">Back</a>
+  <a href="client_master.php" class="btn btn-sm btn-secondary" style="margin-left: auto !important;">Back</a>
 </div>
-<div class="card mb-3 mx-auto" style="max-width:650px;">
+<div class="card mb-3">
   <div class="card-body">
     <form method="post" autocomplete="off">
       <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
@@ -198,6 +199,7 @@ require 'header.php';
       </div>
     </form>
   </div>
+</div>
 </div>
 
 <?php else: ?>

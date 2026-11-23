@@ -881,30 +881,53 @@ require 'header.php';
         
         .table {
             margin-bottom: 0;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
         }
         
         .table thead th {
-            background: #f8fafc;
-            color: #ffffff !important; font-size: 1.25rem !important;
+            background-color: #5e6b77 !important;
+            color: #ffffff !important;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 12.5px;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 0.75rem 0.5rem;
-            border-bottom: 2px solid #e2e8f0;
+            padding: 8px 10px;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
             white-space: nowrap;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 20 !important;
+        }
+        .table thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
         .table tbody td {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.8rem;
+            padding: 6px 10px;
+            font-size: 12.5px;
             color: #334155;
             vertical-align: middle;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            white-space: nowrap;
+        }
+        .table tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
         }
         
-        .table tbody tr:hover {
-            background-color: #f8fafc;
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
         }
         
         .badge {
@@ -1372,13 +1395,13 @@ require 'header.php';
             <!-- Jobs Table -->
             <div class="table-container">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover table-bordered mb-0" id="jobsTable">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Date</th>
-                                <th>Client</th>
-                                <th>Journal/Issue</th>
+                                <th class="sticky-col-1">#</th>
+                                <th class="sticky-col-2">Date</th>
+                                <th class="sticky-col-3">Client</th>
+                                <th class="sticky-col-4">Journal/Issue</th>
                                 <th>Article</th>
                                 <th>Mail Subject</th>
                                 <th>Process</th>
@@ -1398,10 +1421,10 @@ require 'header.php';
                                 $i=$i+1;
                             ?>
                                 <tr>
-                                    <td><?= $i; ?></td>
-                                    <td><?= formatDate($job['job_date']) ?></td>
-                                    <td><?= h($job['client_name']) ?></td>
-                                    <td><?= h($job['journal_issue']) ?></td>
+                                    <td class="sticky-col-1"><?= $i; ?></td>
+                                    <td class="sticky-col-2"><?= formatDate($job['job_date']) ?></td>
+                                    <td class="sticky-col-3"><?= h($job['client_name']) ?></td>
+                                    <td class="sticky-col-4"><?= h($job['journal_issue']) ?></td>
                                     <td><?= h($job['article']) ?></td>
                                     <td><?= h($job['mail_subject']) ?></td>
                                     <td><?= h($job['job_name']) ?></td>

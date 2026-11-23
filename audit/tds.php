@@ -362,8 +362,9 @@ $years = range($current_year - 2, $current_year + 1);
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .main-content { margin-top: 70px;
-            padding: 20px;
+        .main-content {
+            margin-top: 0;
+            padding: 4px 20px 20px 20px;
             max-width: 1800px;
             margin: 0 auto;
         }
@@ -405,9 +406,9 @@ $years = range($current_year - 2, $current_year + 1);
     <?php if (file_exists('header.php')) require 'header.php'; ?>
     
     <div class="main-content">
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-file-invoice-dollar me-2"></i>TDS Monthly Deduction Report</h4>
-            <div>
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-file-invoice-dollar me-2" style="color: #ffffff !important;"></i>TDS Monthly Deduction Report</h4>
+            <div style="margin-left: auto !important;">
                 <a href="tds.php?export=excel&month=<?= h($month) ?>&year=<?= h($year) ?>" 
                    class="btn btn-success">
                     <i class="fas fa-file-excel me-1"></i> Export to Excel

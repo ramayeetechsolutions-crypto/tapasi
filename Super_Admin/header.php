@@ -432,16 +432,27 @@ $currentPage = basename($_SERVER['PHP_SELF']); // e.g., job_master.php
 
         /* Table Styles */
         .table-responsive {
-            overflow-x: auto;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
         }
 
-        table {
+        table,
+        .table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
 
-        thead {
-            background-color: #f8f9fa;
+        thead,
+        .table thead,
+        table thead {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-color: #6c757d;
         }
 
         th {
@@ -722,7 +733,7 @@ $currentPage = basename($_SERVER['PHP_SELF']); // e.g., job_master.php
             }
         }
 
-        /* Table header matching Dashboard/Master navbar grey */
+        /* Table header matching Dashboard/Master navbar grey & Sticky */
         .table thead th,
         .table th,
         table thead th,
@@ -738,6 +749,10 @@ $currentPage = basename($_SERVER['PHP_SELF']); // e.g., job_master.php
             border-color: #5a6268 !important;
             font-weight: 600 !important;
             vertical-align: middle !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-clip: padding-box !important;
         }
     </style>
     <!-- Tapasi Global Typography & Font Stylesheet -->

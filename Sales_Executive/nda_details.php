@@ -832,13 +832,14 @@ require 'header.php';
         $title = $isAdd ? '<i class="fas fa-plus-circle me-2"></i>Create New NDA Record' : '<i class="fas fa-edit me-2"></i>Update NDA Record for: ' . h($editClient['client_name'] ?? '');
         $btnText = $isAdd ? 'Save New NDA Record' : 'Update NDA Details';
     ?>
+    <div class="mx-auto" style="max-width: 950px;">
     <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><?= $title ?></h4>
         <a href="nda_details.php" class="btn btn-outline-light text-white btn-sm shadow-sm">
             <i class="fas fa-arrow-left me-1"></i> Back to List
         </a>
     </div>
-    <div class="card mb-4 mx-auto shadow-sm" style="max-width: 950px;">
+    <div class="card mb-4 shadow-sm">
         <div class="card-body p-4">
             <form method="post">
                 <input type="hidden" name="action" value="<?= $formAction ?>">
@@ -964,6 +965,7 @@ require 'header.php';
                 </div>
             </form>
         </div>
+    </div>
     </div>
     <?php endif; ?>
 

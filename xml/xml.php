@@ -689,7 +689,7 @@ function fetchData() {
         /* Fixed background for sticky columns to avoid see-through/overlap */
         table.dataTable tbody tr:nth-child(even) td:nth-child(-n+4) { background-color: #f2f4f6 !important; }
         table.dataTable tbody tr:nth-child(odd) td:nth-child(-n+4) { background-color: #ffffff !important; }
-        table.dataTable tbody tr:hover td:nth-child(-n+4) { background-color: #e9ecef !important; }
+        table.dataTable tbody tr:hover td:nth-child(-n+4) { background-color: #c4cbd3 !important; }
 
         table.dataTable tbody td:nth-child(-n+4) {
             z-index: 10 !important;
@@ -725,6 +725,23 @@ function fetchData() {
             overflow-y: auto !important;
             position: relative;
             border-top: 1px solid #dee2e6;
+            scrollbar-color: #6c757d #f1f1f1 !important;
+            scrollbar-width: thin !important;
+        }
+        .table-scroll-container::-webkit-scrollbar {
+            width: 10px !important;
+            height: 10px !important;
+        }
+        .table-scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1 !important;
+            border-radius: 4px;
+        }
+        .table-scroll-container::-webkit-scrollbar-thumb {
+            background: #6c757d !important;
+            border-radius: 4px;
+        }
+        .table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #5a6268 !important;
         }
     </style>
 

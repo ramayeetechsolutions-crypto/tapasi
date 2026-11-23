@@ -549,10 +549,26 @@ $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'Augu
             border: 1px solid rgba(0, 0, 0, 0.125);
             margin-bottom: 20px;
         }
-        .table th {
-            background-color: #2c3e50;
-            color: white;
+        .table-responsive {
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th, .table thead th {
+            background-color: var(--ash, #6c757d) !important;
+            color: white !important;
             border: none;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            background-clip: padding-box !important;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
         }
         .table td {
             vertical-align: middle;
@@ -603,11 +619,11 @@ $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'Augu
         </div>
         <?php endif; ?>
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4><i class="fas fa-money-check me-2"></i>Payment Reconciliation</h4>
-            <form method="post" class="d-inline">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-money-check me-2" style="color: #ffffff !important;"></i>Payment Reconciliation</h4>
+            <form method="post" class="d-inline" style="margin-left: auto !important;">
                 <input type="hidden" name="action" value="reconcile">
-                <button type="submit" class="btn auto-match-btn" onclick="return confirm('Run auto-reconciliation? This will match payments based on client templates.')">
+                <button type="submit" class="btn auto-match-btn text-white" style="margin-left: auto !important;" onclick="return confirm('Run auto-reconciliation? This will match payments based on client templates.')">
                     <i class="fas fa-robot me-1"></i> Auto Reconcile Payments
                 </button>
             </form>

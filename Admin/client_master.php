@@ -222,77 +222,79 @@ require 'header.php';
 
 <?php if($mode==='add'||$mode==='edit'): ?>
 <!-- Add/Edit Form -->
-<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
-  <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
-  <a href="client_master.php" class="btn btn-sm btn-outline-light text-white">Back</a>
-</div>
-<div class="card mb-3 mx-auto" style="max-width:900px;">
-  <div class="card-body">
-    <form method="post" autocomplete="off">
-      <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
-      <?php if($mode==='edit'): ?><input type="hidden" name="client_id" value="<?= (int)$editClient['client_id'] ?>"><?php endif; ?>
+<div class="mx-auto" style="max-width:900px;">
+  <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Client':'Add Client' ?></h5>
+    <a href="client_master.php" class="btn btn-sm btn-outline-light text-white" style="margin-left: auto !important;">Back</a>
+  </div>
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="post" autocomplete="off">
+        <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
+        <?php if($mode==='edit'): ?><input type="hidden" name="client_id" value="<?= (int)$editClient['client_id'] ?>"><?php endif; ?>
 
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label small">Client Name <span class="text-danger">*</span></label>
-          <input type="text" name="client_name" class="form-control form-control-sm" required value="<?= h($editClient['client_name'] ?? '') ?>">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label small">Company Name</label>
-          <input type="text" name="company_name" class="form-control form-control-sm" value="<?= h($editClient['company_name'] ?? '') ?>">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label small">Client Name <span class="text-danger">*</span></label>
+            <input type="text" name="client_name" class="form-control form-control-sm" required value="<?= h($editClient['client_name'] ?? '') ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Company Name</label>
+            <input type="text" name="company_name" class="form-control form-control-sm" value="<?= h($editClient['company_name'] ?? '') ?>">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small">Contact Person <span class="text-danger">*</span></label>
+            <input type="text" name="contact_person" class="form-control form-control-sm" required value="<?= h($editClient['contact_person'] ?? '') ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Email <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control form-control-sm" required value="<?= h($editClient['email'] ?? '') ?>">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small">Phone <span class="text-danger">*</span></label>
+            <input type="text" name="phone" class="form-control form-control-sm" required value="<?= h($editClient['phone'] ?? '') ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Country <span class="text-danger">*</span></label>
+            <input type="text" name="country" class="form-control form-control-sm" required value="<?= h($editClient['country'] ?? 'India') ?>">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small">GST / Tax No</label>
+            <input type="text" name="gst_no" class="form-control form-control-sm" value="<?= h($editClient['gst_no'] ?? '') ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Preferred Communication <span class="text-danger">*</span></label>
+            <select name="preferred_communication" class="form-select form-select-sm" required>
+              <option value="">Select</option>
+              <option value="Email" <?= ($editClient['preferred_communication'] ?? '')==='Email'?'selected':'' ?>>Email</option>
+              <option value="Phone" <?= ($editClient['preferred_communication'] ?? '')==='Phone'?'selected':'' ?>>Phone</option>
+              <option value="Portal" <?= ($editClient['preferred_communication'] ?? '')==='Portal'?'selected':'' ?>>Portal</option>
+            </select>
+          </div>
+
+          <div class="col-md-12">
+            <label class="form-label small">Address <span class="text-danger">*</span></label>
+            <textarea name="address" class="form-control form-control-sm" rows="2" required><?= h($editClient['address'] ?? '') ?></textarea>
+          </div>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label small">Contact Person <span class="text-danger">*</span></label>
-          <input type="text" name="contact_person" class="form-control form-control-sm" required value="<?= h($editClient['contact_person'] ?? '') ?>">
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <button type="submit" class="btn btn-sm" style="background-color:brown; color:white;"><?= $mode==='edit'?'Update':'Save' ?></button>
+          <a href="client_master.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
         </div>
-        <div class="col-md-6">
-          <label class="form-label small">Email <span class="text-danger">*</span></label>
-          <input type="email" name="email" class="form-control form-control-sm" required value="<?= h($editClient['email'] ?? '') ?>">
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label small">Phone <span class="text-danger">*</span></label>
-          <input type="text" name="phone" class="form-control form-control-sm" required value="<?= h($editClient['phone'] ?? '') ?>">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label small">Country <span class="text-danger">*</span></label>
-          <input type="text" name="country" class="form-control form-control-sm" required value="<?= h($editClient['country'] ?? 'India') ?>">
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label small">GST / Tax No</label>
-          <input type="text" name="gst_no" class="form-control form-control-sm" value="<?= h($editClient['gst_no'] ?? '') ?>">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label small">Preferred Communication <span class="text-danger">*</span></label>
-          <select name="preferred_communication" class="form-select form-select-sm" required>
-            <option value="">Select</option>
-            <option value="Email" <?= ($editClient['preferred_communication'] ?? '')==='Email'?'selected':'' ?>>Email</option>
-            <option value="Phone" <?= ($editClient['preferred_communication'] ?? '')==='Phone'?'selected':'' ?>>Phone</option>
-            <option value="Portal" <?= ($editClient['preferred_communication'] ?? '')==='Portal'?'selected':'' ?>>Portal</option>
-          </select>
-        </div>
-
-        <div class="col-md-12">
-          <label class="form-label small">Address <span class="text-danger">*</span></label>
-          <textarea name="address" class="form-control form-control-sm" rows="2" required><?= h($editClient['address'] ?? '') ?></textarea>
-        </div>
-      </div>
-
-      <div class="d-flex justify-content-end gap-2 mt-4">
-        <button type="submit" class="btn btn-sm" style="background-color:brown; color:white;"><?= $mode==='edit'?'Update':'Save' ?></button>
-        <a href="client_master.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </div>
 
 <?php else: ?>
 
-<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
   <h5 class="mb-0 text-white"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Client Master</h5>
-  <a href="client_master.php?mode=add" class="btn btn-sm btn-primary"><i class="fa fa-plus me-1"></i> Add Client</a>
+  <a href="client_master.php?mode=add" class="btn btn-sm btn-primary" style="margin-left: auto !important;"><i class="fa fa-plus me-1"></i> Add Client</a>
 </div>
 
 <!-- Filter Form -->

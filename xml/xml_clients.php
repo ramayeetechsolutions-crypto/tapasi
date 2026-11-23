@@ -603,9 +603,9 @@ $clients = getClients($mysqli);
                     <table class="table table-hover table-bordered mb-0">
                         <thead>
                             <tr>
-                                <th>S.No</th>
-                                <th>Client Name</th>
-                                <th>Journal Name</th>
+                                <th class="sticky-col-1">S.No</th>
+                                <th class="sticky-col-2">Client Name</th>
+                                <th class="sticky-col-3">Journal Name</th>
                                 <th>Status</th>
                                 <th>Company Name</th>
                                 <th>Season</th>
@@ -619,9 +619,9 @@ $clients = getClients($mysqli);
                             <?php if($entries && $entries->num_rows > 0): $i = 1;?>
                                 <?php while($row = $entries->fetch_assoc()): ?>
                                 <tr>
-                                    <td class="text-center fw-bold"><?= $i++ ?></td>
-                                    <td class="fw-bold text-primary"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
-                                    <td><?= h($row['journal_name']) ?: '-' ?></td>
+                                    <td class="text-center fw-bold sticky-col-1"><?= $i++ ?></td>
+                                    <td class="fw-bold text-primary sticky-col-2"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
+                                    <td class="sticky-col-3"><?= h($row['journal_name']) ?: '-' ?></td>
                                     <td class="text-center">
                                         <form method="post" style="display:inline;">
                                             <input type="hidden" name="action" value="toggle">

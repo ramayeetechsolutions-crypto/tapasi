@@ -61,12 +61,13 @@ require 'header.php';
     </div>
 <?php endif; ?>
 
-<div class="page-title-container">
+<?php if ($mode === 'edit'): ?><div class="mx-auto" style="max-width:900px;"><?php endif; ?>
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
     <h5 class="mb-0 text-white">Company Master</h5>
     <?php if ($mode === 'view'): ?>
-        <a href="company_details.php?mode=edit" class="btn btn-sm btn-primary">Edit</a>
+        <a href="company_details.php?mode=edit" class="btn btn-sm btn-primary" style="margin-left: auto !important;">Edit</a>
     <?php else: ?>
-        <a href="company_details.php" class="btn btn-sm btn-secondary">Back</a>
+        <a href="company_details.php" class="btn btn-sm btn-secondary" style="margin-left: auto !important;">Back</a>
     <?php endif; ?>
 </div>
 
@@ -110,7 +111,7 @@ require 'header.php';
 
 <?php else: // edit ?>
 
-    <div class="card mx-auto" style="max-width:900px;">
+    <div class="card">
         <div class="card-body">
             <form method="post" autocomplete="off">
                 <div class="row">
@@ -169,6 +170,7 @@ require 'header.php';
             </form>
         </div>
     </div>
+</div>
 
 <?php endif; ?>
 

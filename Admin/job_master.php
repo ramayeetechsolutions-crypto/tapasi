@@ -190,40 +190,42 @@ require 'header.php';
 
 <?php if($mode==='add'||$mode==='edit'): ?>
 <!-- Add/Edit Form -->
-<div class="page-title-container">
-  <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Job':'Add Job' ?></h5>
-  <a href="job_master.php" class="btn btn-sm btn-secondary">Back</a>
-</div>
-<div class="card mb-3 mx-auto" style="max-width:500px;">
-  <div class="card-body">
-    <form method="post" autocomplete="off">
-      <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
-      <?php if($mode==='edit'): ?><input type="hidden" name="job_id" value="<?= (int)$editJob['job_id'] ?>"><?php endif; ?>
-      <div class="mb-2">
-        <label class="form-label small">Job Name *</label>
-        <input type="text" name="job_name" class="form-control form-control-sm" required value="<?= h($editJob['job_name'] ?? '') ?>">
-      </div>
-      <div class="mb-2">
-        <label class="form-label small">Rate</label>
-        <input type="number" step="0.01" name="rate" class="form-control form-control-sm" value="<?= h($editJob['rate'] ?? '') ?>">
-      </div>
-      <div class="mb-2">
-        <label class="form-label small">Description</label>
-        <textarea name="job_description" class="form-control form-control-sm" rows="2"><?= h($editJob['job_description'] ?? '') ?></textarea>
-      </div>
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-sm" style="background-color:brown;color:white;"><?= $mode==='edit'?'Update':'Save' ?></button>
-        <a href="job_master.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
-      </div>
-    </form>
+<div class="mx-auto" style="max-width:500px;">
+  <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit Job':'Add Job' ?></h5>
+    <a href="job_master.php" class="btn btn-sm btn-secondary" style="margin-left: auto !important;">Back</a>
+  </div>
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="post" autocomplete="off">
+        <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
+        <?php if($mode==='edit'): ?><input type="hidden" name="job_id" value="<?= (int)$editJob['job_id'] ?>"><?php endif; ?>
+        <div class="mb-2">
+          <label class="form-label small">Job Name *</label>
+          <input type="text" name="job_name" class="form-control form-control-sm" required value="<?= h($editJob['job_name'] ?? '') ?>">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Rate</label>
+          <input type="number" step="0.01" name="rate" class="form-control form-control-sm" value="<?= h($editJob['rate'] ?? '') ?>">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Description</label>
+          <textarea name="job_description" class="form-control form-control-sm" rows="2"><?= h($editJob['job_description'] ?? '') ?></textarea>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-sm" style="background-color:brown;color:white;"><?= $mode==='edit'?'Update':'Save' ?></button>
+          <a href="job_master.php" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
 <?php else: ?>
 
-<div class="page-title-container">
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
   <h5 class="mb-0 text-white">Job Master</h5>
-  <a href="job_master.php?mode=add" class="btn btn-sm btn-success"><i class="fa fa-plus"></i> Add</a>
+  <a href="job_master.php?mode=add" class="btn btn-sm btn-success" style="margin-left: auto !important;"><i class="fa fa-plus"></i> Add</a>
 </div>
 
 <!-- Filter Form -->

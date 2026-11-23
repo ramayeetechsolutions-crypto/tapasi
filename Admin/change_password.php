@@ -94,7 +94,7 @@ body { background:#f4f6f9; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans
 
 <div class="container">
   <div class="card">
-    <div class="page-title-container"><h4 class="mb-0 text-white">Change Password</h4></div>
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h4 class="mb-0 text-white" style="font-size: 1.25rem !important; color: #ffffff !important;">Change Password</h4></div>
     <?= $msg ?>
     <form method="post">
       <!-- Old Password -->

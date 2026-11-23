@@ -509,6 +509,7 @@ require 'header.php';
         <?php if ($mode === 'edit'): ?>
         
         <!-- Edit Form Header Banner -->
+        <div class="mx-auto" style="max-width:1200px;">
         <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <div>
                 <h1 class="mb-0" style="color: #ffffff !important; font-size: 1.25rem !important; margin: 0 !important;">
@@ -523,7 +524,7 @@ require 'header.php';
             </div>
         </div>
 
-        <div class="card p-4 mx-auto" style="max-width:1200px;">
+        <div class="card p-4">
             <form method="post" class="row g-3" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="employee_id" value="<?= $editRow['employee_id'] ?>">
@@ -663,6 +664,8 @@ require 'header.php';
             </form>
         </div>
 
+        </div>
+
         <?php else: ?>
 
         <!-- View Mode Header Banner (Ash matching Navbar) -->
@@ -729,7 +732,7 @@ require 'header.php';
                     <table class="table table-hover align-middle mb-0">
                         <thead>
                             <tr>
-                                <th width="50">S. No.
+                                <th width="50" class="fw-bold">S. No.
                                     <a href="?<?= http_build_query(array_merge($_GET, ['sort' => 'employee_id', 'dir' => $sort == 'employee_id' && $dir == 'asc' ? 'desc' : 'asc'])) ?>" class="text-white">
                                         <i class="fas fa-sort<?= $sort == 'employee_id' ? ($dir == 'asc' ? '-up' : '-down') : '' ?>"></i>
                                     </a>

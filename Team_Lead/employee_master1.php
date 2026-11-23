@@ -217,8 +217,9 @@ require 'header.php';
 <?php endif; ?>
 
 <?php if ($mode==='add'||$mode==='edit'): ?>
+<div class="mx-auto" style="max-width:900px;">
 <div class="page-title-container"><h5 class="mb-0 text-white"><?= $mode==='edit'?'Edit':'Add' ?> Employee</h5><a href="employee_master.php" class="btn btn-sm btn-secondary">Back</a></div>
-<div class="card p-4 mx-auto" style="max-width:900px;">
+<div class="card p-4">
 <form method="post" class="row g-3" onsubmit="return checkPasswordMatch()">
     <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
     <?php if ($mode==='edit'): ?><input type="hidden" name="employee_id" value="<?= $editRow['employee_id'] ?>"><?php endif; ?>
@@ -278,6 +279,8 @@ function togglePassword(id){const input=document.getElementById(id);input.type=i
 function checkPasswordMatch(){const pass=document.getElementById('password').value;const conf=document.getElementById('confirm_password').value;if(pass!==conf){alert("Passwords do not match!");return false;}return true;}
 document.addEventListener('DOMContentLoaded',()=>{const roleSelect=document.getElementById('user_role_id');const rmContainer=document.getElementById('rmContainer');async function updateReportingManager(){const roleId=parseInt(roleSelect.value);let html='';if(roleId===5){html=`<label class="form-label">Reporting Manager *</label><input type="text" class="form-control" value="Super Admin" disabled><input type="hidden" name="reporting_manager" value="Super Admin">`;}else if(roleId===4){const response=await fetch('employee_master.php?ajax=team_leads');const data=await response.json();html=`<label class="form-label">Reporting Manager *</label><select name="reporting_manager" class="form-select" required><option value="">Select Team Lead</option>${data.map(name=>`<option value="${name}">${name}</option>`).join('')}</select>`;}else if(roleId===3){const response=await fetch('employee_master.php?ajax=admins');const data=await response.json();html=`<label class="form-label">Reporting Manager *</label><select name="reporting_manager" class="form-select" required><option value="">Select Admin</option>${data.map(name=>`<option value="${name}">${name}</option>`).join('')}</select>`;}else{let rmVal="<?= h($editRow['reporting_manager'] ?? $_POST['reporting_manager'] ?? '') ?>";html=`<label class="form-label">Reporting Manager *</label><input type="text" name="reporting_manager" class="form-control" value="${rmVal}" required />`;}rmContainer.innerHTML=html;const select=rmContainer.querySelector('select[name="reporting_manager"]');if(select){let selectedVal="<?= h($editRow['reporting_manager'] ?? $_POST['reporting_manager'] ?? '') ?>";if(selectedVal) select.value=selectedVal;}}roleSelect.addEventListener('change',updateReportingManager);updateReportingManager();});
 </script>
+
+</div>
 
 <?php else: ?>
 <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;">Employee Master</h5><a href="employee_master.php?mode=add" class="btn btn-success btn-sm">+ Add </a></div>

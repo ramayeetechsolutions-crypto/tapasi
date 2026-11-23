@@ -129,8 +129,9 @@ if (isset($mysqli) && $mysqli) {
     <meta charset="UTF-8">
     <title>Super Admin: Available Invoice Files</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; background: transparent; padding: 0; box-shadow: none; border: none; }
+        .invoices-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e9ecef; }
         .search-section { background: #e7f3ff; padding: 20px; border-radius: 8px; margin-bottom: 25px; }
         .search-form { display: flex; gap: 10px; align-items: center; }
         .search-input { flex: 1; padding: 10px 15px; border: 2px solid #007bff; border-radius: 25px; font-size: 16px; outline: none; }
@@ -202,11 +203,13 @@ if (isset($mysqli) && $mysqli) {
     </script>
 </head>
 <body>
-    <div class="container">
-        <br><br><br>
-        <h1>📁 Client Completed Journals & Invoice</h1>
+    <div class="container main-content" style="max-width: 1200px; margin: 0 auto; padding: 0;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-folder me-2"></i>Client Completed Journals & Invoice</h4>
+        </div>
 
-        <div class="search-section">
+        <div class="invoices-card">
+            <div class="search-section">
             <form method="GET" class="search-form">
                 <input
                     type="text"
@@ -294,6 +297,7 @@ if (isset($mysqli) && $mysqli) {
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
+        </div>
     </div>
 </body>
 </html>

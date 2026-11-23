@@ -125,13 +125,13 @@ body{
 
 <div class="container-fluid">
 
-<div class="page-title-container">
-    <h1 class="mb-0">
-        <i class="fas fa-desktop"></i> System Details
+<?php if($system){ ?>
+
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h1 class="mb-0 text-white" style="font-size: 1.25rem !important; color: #ffffff !important;">
+        <i class="fas fa-desktop me-2" style="color: #ffffff !important;"></i> System Details
     </h1>
 </div>
-
-<?php if($system){ ?>
 
 <div class="row">
 
@@ -302,6 +302,12 @@ else
 <div class="row justify-content-center">
 
 <div class="col-lg-8">
+
+<div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+    <h1 class="mb-0 text-white" style="font-size: 1.25rem !important; color: #ffffff !important;">
+        <i class="fas fa-desktop me-2" style="color: #ffffff !important;"></i> System Details
+    </h1>
+</div>
 
 <div class="card">
 

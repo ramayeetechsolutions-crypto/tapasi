@@ -402,14 +402,15 @@ $stmt->close();
         <?php if ($mode==='edit'): ?>
         
         <!-- Edit Form -->
+        <div class="mx-auto" style="max-width:1200px;">
         <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-edit me-2" style="color: #ffffff !important;"></i>Edit My Details</h5>
-            <a href="employee.php" class="btn btn-sm btn-secondary text-white">
+            <a href="employee.php" class="btn btn-sm btn-secondary text-white" style="margin-left: auto !important;">
                 <i class="fas fa-arrow-left me-1"></i> Back to View
             </a>
         </div>
 
-        <div class="card p-4 mx-auto" style="max-width:1200px;">
+        <div class="card p-4">
             <form method="post" class="row g-3" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="employee_id" value="<?= $editRow['employee_id'] ?>">
@@ -596,6 +597,8 @@ $stmt->close();
             </form>
         </div>
 
+        </div>
+
         <!-- Image Modal -->
         <div id="imageModal" class="image-modal">
             <span class="close-modal" onclick="closeModal()">&times;</span>
@@ -637,7 +640,7 @@ $stmt->close();
         
         <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
             <h5 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-user-check me-2" style="color: #ffffff !important;"></i>My Employee Details</h5>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2" style="margin-left: auto !important;">
                 <?php if ($employee_data && $employee_data['emp_confirm'] == 0): ?>
                     <form method="post" style="display:inline" onsubmit="return confirm('Are you sure you want to verify your details? Once verified, you cannot edit them again.')">
                         <input type="hidden" name="action" value="verify">

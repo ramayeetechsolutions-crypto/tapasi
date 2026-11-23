@@ -366,26 +366,31 @@ if ($current_user_name) {
         }
 
         /* Sticky Table Header */
+        .table-responsive {
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
+        }
         .table thead th, .table th { 
-            position: sticky;
-            top: 70px;
-            z-index: 900;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
             background-color: var(--ash, #6c757d) !important; 
             color: white !important; 
-            border: 1px solid #6c757d !important; 
+            border: 1px solid #5a6268 !important; 
             font-size: 11px; 
             font-weight: bold;
             text-transform: uppercase;
             white-space: nowrap; 
             padding: 8px 5px; 
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
+            background-clip: padding-box !important;
         }
         .table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .card, .card-body, .table-responsive, .table-container {
-            overflow: visible !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
         .card-header {
             background-color: var(--ash, #6c757d) !important;
@@ -470,9 +475,9 @@ if ($current_user_name) {
         <?php if($mode === 'add' || $mode === 'edit'): ?>
 
         <!-- Add/Edit Form -->
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i><?= $mode === 'edit' ? 'Edit Ticket' : 'Create New Ticket' ?></h4>
-            <a href="ticketmanagementexecutive.php" class="btn btn-light btn-sm fw-semibold">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2" style="color: #ffffff !important;"></i><?= $mode === 'edit' ? 'Edit Ticket' : 'Create New Ticket' ?></h4>
+            <a href="ticketmanagementexecutive.php" class="btn btn-light btn-sm fw-semibold" style="margin-left: auto !important;">
                 <i class="fas fa-arrow-left me-1"></i> Back to List
             </a>
         </div>
@@ -644,9 +649,9 @@ if ($current_user_name) {
         <?php else: ?>
 
         <!-- View Mode - IT Ticket Management -->
-        <div class="page-title-container">
-            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2"></i>System Complaints</h4>
-            <div class="d-flex align-items-center gap-2">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+            <h4 class="mb-0 text-white"><i class="fas fa-ticket-alt me-2" style="color: #ffffff !important;"></i>System Complaints</h4>
+            <div class="d-flex align-items-center gap-2" style="margin-left: auto !important;">
                 <?php if($current_user_name): ?>
                 <span class="badge bg-light text-dark">Viewing: <?= h($current_user_name) ?>'s Team</span>
                 <?php endif; ?>

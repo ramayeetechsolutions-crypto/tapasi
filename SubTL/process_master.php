@@ -199,18 +199,12 @@ require 'header.php';
 
         <?php if($mode === 'add' || $mode === 'edit'): ?>
             <!-- FORM VIEW -->
-            <div class="page-title-container">
-                <h1>
-                    <i class="fa-solid fa-gears"></i> <?= $mode === 'edit' ? 'Update Process' : 'New Process Definition' ?>
-                </h1>
-                <a href="process_master.php" class="btn-header-action">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back</span>
-                </a>
-            </div>
-
             <div class="row justify-content-center">
                 <div class="col-lg-6">
+                    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                        <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fa-solid fa-gears me-2"></i><?= $mode === 'edit' ? 'Update Process' : 'New Process Definition' ?></h4>
+                        <a href="process_master.php" class="btn btn-secondary btn-sm" style="margin-left: auto !important;"><i class="fas fa-arrow-left me-1"></i> Back</a>
+                    </div>
                     <div class="card p-4 p-md-5 shadow-sm border-0" style="border-radius: 12px;">
                         <div class="text-center mb-4">
                             <div class="bg-light d-inline-block p-3 rounded-circle mb-3">

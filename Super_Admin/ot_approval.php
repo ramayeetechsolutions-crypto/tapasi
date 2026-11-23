@@ -301,10 +301,17 @@ include 'header.php';
     }
 
     /* Sticky Table Header */
-    .table thead th {
-        position: sticky;
-        top: 70px;
-        z-index: 900;
+    .table-responsive {
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        position: relative !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .table thead th, .table th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 100 !important;
         background-color: var(--ash, #6c757d) !important;
         font-weight: 600;
         font-size: 0.82rem;
@@ -312,15 +319,13 @@ include 'header.php';
         letter-spacing: 0.03em;
         color: white !important;
         padding: 0.75rem 0.5rem;
-        border: 1px solid #6c757d !important;
-        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+        border: 1px solid #5a6268 !important;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
+        background-clip: padding-box !important;
     }
     .table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    .card, .card-body, .table-responsive, .table-container {
-        overflow: visible !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
     }
     .card-header {
         background-color: var(--ash, #6c757d) !important;

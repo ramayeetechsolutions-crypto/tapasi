@@ -366,26 +366,31 @@ if ($current_user_name) {
         }
 
         /* Sticky Table Header */
+        .table-responsive {
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+            overflow-x: auto !important;
+            position: relative !important;
+            -webkit-overflow-scrolling: touch;
+        }
         .table thead th, .table th { 
-            position: sticky;
-            top: 70px;
-            z-index: 900;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
             background-color: var(--ash, #6c757d) !important; 
             color: white !important; 
-            border: 1px solid #6c757d !important; 
+            border: 1px solid #5a6268 !important; 
             font-size: 11px; 
             font-weight: bold;
             text-transform: uppercase;
             white-space: nowrap; 
             padding: 8px 5px; 
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
+            background-clip: padding-box !important;
         }
         .table {
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-        .card, .card-body, .table-responsive, .table-container {
-            overflow: visible !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
         .card-header {
             background-color: var(--ash, #6c757d) !important;

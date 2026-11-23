@@ -229,6 +229,10 @@ $jobs = $mysqli->query($sql);
     <!-- Add/Edit Form Section -->
     <div class="row justify-content-center fade-in">
         <div class="col-md-6">
+            <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
+                <h4 class="mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-plus-circle' ?> me-2"></i><?= $mode==='edit'?'Modify Job Detail':'Register New Job' ?></h4>
+                <a href="job_master.php" class="btn btn-secondary btn-sm" style="margin-left: auto !important;"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
+            </div>
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="fa-solid <?= $mode==='edit'?'fa-pen-to-square':'fa-plus-circle' ?> me-2"></i><?= $mode==='edit'?'Modify Job Detail':'Register New Job' ?></span>
@@ -262,12 +266,12 @@ $jobs = $mysqli->query($sql);
     <?php else: ?>
 
     <!-- Header Actions -->
-    <div class="page-title-container">
+    <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h3 class="fw-bold mb-0 mb-0 text-white">Job Master</h3>
-            <p class="small mb-0 mb-0 text-white-50 small">Manage your company's service catalog and roles.</p>
+            <h3 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-briefcase me-2"></i>Job Master</h3>
+            <p class="small mb-0 text-white-50" style="color: rgba(255, 255, 255, 0.85) !important;">Manage your company's service catalog and roles.</p>
         </div>
-        <a href="job_master.php?mode=add" class="btn btn-primary shadow-sm">
+        <a href="job_master.php?mode=add" class="btn btn-success shadow-sm" style="margin-left: auto !important;">
             <i class="fa fa-plus me-2"></i>Add New Job
         </a>
     </div>

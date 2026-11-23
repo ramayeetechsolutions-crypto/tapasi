@@ -374,7 +374,7 @@ $mysqli->close();
                                 // '</thead>' +
                                 '<thead class="table-light">' +
                                     '<tr>' +
-                                        '<th class="text-center" style="width: 60px;">S.No</th>' +
+                                        '<th class="text-center fw-bold" style="width: 60px;">S.No</th>' +
                                         '<th style="width: 130px;">Employee ID</th>' +
                                         '<th style="white-space: nowrap; min-width: 180px;">Name</th>' +
                                         '<th>Process Details</th>' +
@@ -405,7 +405,7 @@ $mysqli->close();
                         //     '<td>' + processBadges + '</td>' +
                         // '</tr>';
                         listHtml += '<tr>' +
-                            '<td class="text-center fw-bold text-muted">' + (index + 1) + '</td>' +
+                            '<td class="text-center fw-bold">' + (index + 1) + '</td>' +
                             '<td><span class="team-badge">' + execUsername + '</span></td>' +
                             '<td style="white-space: nowrap;"><div class="d-flex align-items-center"><i class="fas fa-user text-success me-2"></i> <strong>' + execName + '</strong></div></td>' +
                             '<td>' + processBadges + '</td>' +

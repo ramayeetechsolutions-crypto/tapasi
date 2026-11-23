@@ -329,8 +329,9 @@ hr.my-1 {
 <?php endif; ?>
 
 <?php if ($mode==='add'||$mode==='edit'): ?>
+<div class="mx-auto" style="max-width:900px;">
 <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;"><h5 class="mb-0 text-white" style="color: #ffffff !important;"><?= $mode==='edit'?'Edit':'Add' ?> Employee</h5><a href="employee_master.php" class="btn btn-sm btn-secondary text-white">Back</a></div>
-<div class="card p-4 mx-auto" style="max-width:900px;">
+<div class="card p-4">
 <form method="post" class="row g-3" onsubmit="return checkPasswordMatch()">
     <input type="hidden" name="action" value="<?= $mode==='edit'?'edit':'add' ?>">
     <?php if ($mode==='edit'): ?><input type="hidden" name="employee_id" value="<?= $editRow['employee_id'] ?>"><?php endif; ?>
@@ -450,6 +451,7 @@ renderGroup("XML Processes", $others, $saved);
 
     <div class="col-12 mt-3 d-flex justify-content-end gap-2"><button type="submit" class="btn btn-brown"><?= $mode==='edit'?'Update':'Save' ?></button><a href="employee_master.php" class="btn btn-secondary">Cancel</a></div>
 </form>
+</div>
 </div>
 
 <script>
