@@ -584,9 +584,6 @@ if ($results && $results->num_rows > 0) {
         }
 
         /* 2. Cell Padding & Text Alignments matching xml/xml.php */
-        #trackingTable tbody tr {
-            transition: transform 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
         #trackingTable tbody td { 
             vertical-align: middle !important; 
             text-align: center;
@@ -595,8 +592,7 @@ if ($results && $results->num_rows > 0) {
             padding: 6px 10px !important;
             white-space: nowrap;
             font-size: 12.5px;
-            transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease, box-shadow 0.2s ease;
-            will-change: transform;
+            transition: transform 0.15s ease, background-color 0.15s ease;
         }
         #trackingTable tbody td:first-child {
             border-left: 1px solid #dee2e6 !important;
@@ -704,29 +700,32 @@ if ($results && $results->num_rows > 0) {
             background-color: #ffffff !important;
         }
 
-        /* 6. FULL ROW HOVER EFFECT & SLIGHT ZOOM ANIMATION (Keep status cell colors vibrant) */
+        /* 6. FULL ROW HOVER EFFECT - Zoom text only on hover, brighten, no shadow */
         #trackingTable tbody tr:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
-            background-color: #c4cbd3 !important;
+            background-color: #e9ecef !important;
         }
         #trackingTable tbody tr:hover td {
             cursor: pointer;
             transform: scale(1.025);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.16);
+            box-shadow: none !important;
+            text-shadow: none !important;
             z-index: 15 !important;
             position: relative;
         }
 
         /* Highlight the sticky columns too when hovering & maintain sticky alignment */
         #trackingTable tbody tr:hover td.sticky-col-1 {
-            background-color: #c4cbd3 !important;
+            background-color: #e9ecef !important;
             transform-origin: left center;
             z-index: 25 !important;
+            box-shadow: none !important;
         }
         #trackingTable tbody tr:hover td.sticky-col-2,
         #trackingTable tbody tr:hover td.sticky-col-3,
         #trackingTable tbody tr:hover td.sticky-col-4 {
-            background-color: #c4cbd3 !important;
+            background-color: #e9ecef !important;
             z-index: 25 !important;
+            box-shadow: none !important;
         }
 
         body { background-color: #f5f7fa; font-size: 12.5px; }
@@ -781,11 +780,11 @@ if ($results && $results->num_rows > 0) {
         #trackingTable tbody tr td.bg-cell-unassigned,
         .bg-cell-unassigned { background-color: #ffc107 !important; color: #000000 !important; font-weight: bold !important; }
 
-        /* Row hover state preserves task status cell colors */
-        #trackingTable tbody tr:hover td.bg-primary { background-color: #0d6efd !important; color: #ffffff !important; filter: brightness(1.08); }
-        #trackingTable tbody tr:hover td.bg-cell-completed { background-color: #198754 !important; color: #ffffff !important; filter: brightness(1.08); }
-        #trackingTable tbody tr:hover td.bg-cell-assigned { background-color: #fd7e14 !important; color: #ffffff !important; filter: brightness(1.08); }
-        #trackingTable tbody tr:hover td.bg-cell-unassigned { background-color: #ffc107 !important; color: #000000 !important; filter: brightness(1.08); }
+        /* Row hover state brightens task status cell colors with zero shadow */
+        #trackingTable tbody tr:hover td.bg-primary { background-color: #267dff !important; color: #ffffff !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-cell-completed { background-color: #20a768 !important; color: #ffffff !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-cell-assigned { background-color: #ff8f33 !important; color: #ffffff !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-cell-unassigned { background-color: #ffd233 !important; color: #000000 !important; box-shadow: none !important; }
         
         /* Status Badges */
         .badge-cyan { color: #000; font-weight: 700; font-size: 12px; }
