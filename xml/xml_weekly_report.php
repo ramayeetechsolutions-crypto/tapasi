@@ -153,7 +153,7 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     
     // Title
     echo '<table>';
-    echo '<tr><td colspan="14" class="title">MEETING REPORT</td></tr>';
+    echo '<tr><td colspan="14" class="title">Meeting Report</td></tr>';
     echo '<tr><td colspan="14" class="subtitle">Week: ' . $week . ', Year: ' . $year . '</td></tr>';
     echo '<tr><td colspan="14" class="subtitle">Team: ' . $team_leader_team_name . '</td></tr>';
     echo '<tr><td colspan="14">&nbsp;</td></tr>';
@@ -623,20 +623,71 @@ if (!empty($employee_id)) {
             overflow-y: auto;
         }
 
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+
+        .table th,
         .table thead th {
-            background-color: var(--ash, #6c757d) !important;
+            background-color: var(--ash, #5e6b77) !important;
             font-weight: bold;
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 0.025em;
             color: white !important;
             padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
             white-space: nowrap;
             /* ADDED: Sticky properties to freeze the header */
             position: sticky;
             top: 0;
             z-index: 10;
+        }
+
+        .table td,
+        .table tbody td {
+            vertical-align: middle !important;
+            border-bottom: 1px solid #dee2e6 !important;
+        }
+
+        /* Alternating mild ash and white rows matching UQ Process */
+        .table tbody tr:nth-child(even) td:not(.bg-warning):not(.bg-danger) {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td:not(.bg-warning):not(.bg-danger) {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td:not(.bg-warning):not(.bg-danger) {
+            background-color: #e9ecef !important;
+        }
+
+        /* Sticky S.No column row background sync */
+        .table tbody tr:nth-child(even) td.sticky-col-1 {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td.sticky-col-1 {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td.sticky-col-1 {
+            background-color: #e9ecef !important;
+        }
+
+        /* Preserve summary row and error highlight styling */
+        .table tbody tr.table-secondary td {
+            background-color: #e2e3e5 !important;
+            font-weight: bold;
+        }
+        .table tbody tr td.bg-warning {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+        }
+        .table tbody tr td.bg-danger {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
         }
         .team-badge { font-size: 1.2em; padding: 10px 20px; }
         .chart-container { height: 400px; }
@@ -651,7 +702,7 @@ if (!empty($employee_id)) {
         <!-- Header with Title -->
         <div class="page-title-container">
             <div>
-                <h4 class="mb-1 text-white"><i class="fas fa-file-alt me-2"></i>MEETING REPORT</h4>
+                <h4 class="mb-1 text-white"><i class="fas fa-file-alt me-2"></i>Meeting Report</h4>
                 <p class="text-white-50 mb-0 small">Team: <?= h($team_leader_team_name) ?> | <?= h($period_label) ?> (<?= date('d-m-Y', strtotime($start_date)) ?> to <?= date('d-m-Y', strtotime($end_date)) ?>)<?= !empty($selected_employee_label) ? ' | ' . h(ltrim($selected_employee_label, ' - ')) : '' ?></p>
             </div>
         </div>
