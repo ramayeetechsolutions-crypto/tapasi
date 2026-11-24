@@ -685,7 +685,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                 <div class="col-md-2">
                     <label class="form-label small mb-1 d-block">&nbsp;</label>
                     <button class="btn btn-primary btn-sm" type="submit">
-                        <i class="fas fa-search"></i> Filter
+                        <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
                     <a href="jobmgmt_le.php" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-times"></i> Clear
@@ -707,7 +707,6 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <th>Received Date</th>
                             <th>Client</th>
                             <th>Journal</th>
-                            <th>Issue</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>EQ</th>
                             <th>Images</th>
@@ -792,8 +791,22 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= formatDateOnly($row['ce_date'], 'd-m-Y') ?></td>
                             <td><?= formatDateOnly($row['job_date'], 'd-m-Y') ?></td>
                             <td><?= h(!empty($row['team_client_name']) ? $row['team_client_name'] : $row['client_name']) ?></td>
-                            <td><?= h(!empty($row['journal']) ? $row['journal'] : $row['journal_issue']) ?></td>
-                            <td><?= !empty($row['issue']) ? h($row['issue']) : '—' ?></td>
+                            <td><?php
+                                $j_val = trim($row['journal'] ?? '');
+                                $i_val = trim($row['issue'] ?? '');
+                                if ($j_val !== '' && $i_val !== '') {
+                                    $display_journal = (stripos($j_val, $i_val) !== false) ? $j_val : ($j_val . ' ' . $i_val);
+                                } elseif ($j_val !== '') {
+                                    $display_journal = $j_val;
+                                } elseif ($i_val !== '') {
+                                    $display_journal = $i_val;
+                                } elseif (!empty($row['journal_issue'])) {
+                                    $display_journal = $row['journal_issue'];
+                                } else {
+                                    $display_journal = '—';
+                                }
+                                echo h($display_journal);
+                            ?></td>
                             <td class="col-article" style="width: 135px; min-width: 135px; max-width: 135px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= h($row['article'] ?? '') ?>"><?= h($row['article']) ?></td>
                             <td><?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?></td>
                              <td><?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?></td>
@@ -838,7 +851,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 </td>
                         </tr>
                         <?php endforeach; else: ?>
-                        <tr><td colspan="20" class="text-center">No jobs found assigned to you.</td></tr>
+                        <tr><td colspan="19" class="text-center">No jobs found assigned to you.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>

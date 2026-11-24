@@ -1459,7 +1459,6 @@ require 'header.php';
                             <th>Received Date</th>
                             <th>Client</th>
                             <th>Journal</th>
-                            <th>Issue</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>EQ</th>
                             <th>Images</th>
@@ -1512,17 +1511,23 @@ require 'header.php';
 
                                     <!-- Journal -->
                                     <td>
-                                        <?php $display_journal = !empty($row['job_journal']) ? $row['job_journal'] : (!empty($row['journal_issue']) ? $row['journal_issue'] : ($row['issue'] ?? 'N/A')); ?>
+                                        <?php 
+                                        $j_val = trim($row['job_journal'] ?? '');
+                                        $i_val = trim(!empty($row['job_issue']) ? $row['job_issue'] : ($row['issue'] ?? ''));
+                                        if ($j_val !== '' && $i_val !== '') {
+                                            $display_journal = (stripos($j_val, $i_val) !== false) ? $j_val : ($j_val . ' ' . $i_val);
+                                        } elseif ($j_val !== '') {
+                                            $display_journal = $j_val;
+                                        } elseif ($i_val !== '') {
+                                            $display_journal = $i_val;
+                                        } elseif (!empty($row['journal_issue'])) {
+                                            $display_journal = $row['journal_issue'];
+                                        } else {
+                                            $display_journal = 'N/A';
+                                        }
+                                        ?>
                                         <span class="text-truncate d-block" title="<?= h($display_journal) ?>">
                                             <?= h($display_journal) ?>
-                                        </span>
-                                    </td>
-
-                                    <!-- 2. Issue -->
-                                    <td>
-                                        <?php $display_issue = !empty($row['job_issue']) ? $row['job_issue'] : '—'; ?>
-                                        <span class="text-truncate d-block" title="<?= h($display_issue) ?>">
-                                            <?= h($display_issue) ?>
                                         </span>
                                     </td>
 
@@ -1810,7 +1815,7 @@ require 'header.php';
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="16" class="empty-state">
+                                <td colspan="15" class="empty-state">
                                     <i class="fas fa-check-circle"></i>
                                     <h6>No Pending Assignments</h6>
                                     <p class="text-muted small">All CE jobs have been assigned or completed.</p>
