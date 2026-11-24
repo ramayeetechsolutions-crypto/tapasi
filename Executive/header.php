@@ -436,7 +436,7 @@ if ($result && $row = $result->fetch_assoc()) {
                 <?php
                 $masterPages = ['job_master.php', 'process_master.php', 'team_view.php'];
                 $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
-                $employeePages = ['employee_master.php', 'target_assignment.php'];
+                $employeePages = ['employee_master.php', 'target_assignment.php', 'teamleader_ot_approval.php'];
                 $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                 $reportPages = ['error_entry_team.php'];
                 $jobsPages = ['job_management.php', 'tm_queries.php'];
@@ -484,7 +484,7 @@ if ($result && $row = $result->fetch_assoc()) {
                         <ul class="nav-dropdown">
                             <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
                             <li><a href="target_assignment.php" class="<?= $currentPage === 'target_assignment.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> Target</a></li>
-                            <!-- <li><a href="teamleader_ot_approval.php"><i class="fas fa-bullseye"></i> OT Approvals</a></li> -->
+                            <li><a href="teamleader_ot_approval.php" class="<?= $currentPage === 'teamleader_ot_approval.php' ? 'active' : '' ?>"><i class="fas fa-bullseye"></i> OT Approvals</a></li>
                         </ul>
                     </li>
                     <!-- System Dropdown -->

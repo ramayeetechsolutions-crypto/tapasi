@@ -156,12 +156,22 @@ if (!$entries) {
             max-width: 1600px;
             margin: 0 auto;
         }
-                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        /* Grid Table Styles - Matching xml/xml_unique_start.php (Horizontal lines only, no vertical lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+        
         .table th,
         .table thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-left: none !important;
+            border-right: none !important;
             font-weight: 600;
             font-size: 12.5px;
             text-transform: uppercase;
@@ -178,7 +188,10 @@ if (!$entries) {
             padding: 6px 10px;
             font-size: 12.5px;
             color: #334155;
-            border: 1px solid #dee2e6 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-left: none !important;
+            border-right: none !important;
             text-align: center;
             white-space: nowrap;
         }
@@ -238,12 +251,22 @@ if (!$entries) {
             border: 1px solid #dee2e6;
             padding: 8px;
         }
-                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        /* Grid Table Styles - Matching xml/xml_unique_start.php (Horizontal lines only, no vertical lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100% !important;
+            margin-bottom: 0 !important;
+        }
+        
         .table th,
         .table thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-left: none !important;
+            border-right: none !important;
             font-weight: 600;
             font-size: 12.5px;
             text-transform: uppercase;
@@ -260,7 +283,10 @@ if (!$entries) {
             padding: 6px 10px;
             font-size: 12.5px;
             color: #334155;
-            border: 1px solid #dee2e6 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-left: none !important;
+            border-right: none !important;
             text-align: center;
             white-space: nowrap;
         }

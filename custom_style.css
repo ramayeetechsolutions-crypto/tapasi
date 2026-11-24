@@ -626,6 +626,7 @@ h6.text-white,
 .page-header .btn-outline-light,
 .user-header .btn-outline-light,
 .header-card .btn-outline-light {
+    background-color: transparent !important;
     border-color: rgba(255, 255, 255, 0.85) !important;
     color: #ffffff !important;
 }
@@ -634,6 +635,38 @@ h6.text-white,
 .page-header .btn-outline-light *,
 .user-header .btn-outline-light *,
 .header-card .btn-outline-light * {
+    color: #ffffff !important;
+}
+
+.page-title-container .btn-outline-light:hover,
+.page-title-container .btn-outline-light:focus,
+.page-title-container .btn-outline-light:active,
+.page-header .btn-outline-light:hover,
+.page-header .btn-outline-light:focus,
+.page-header .btn-outline-light:active,
+.user-header .btn-outline-light:hover,
+.user-header .btn-outline-light:focus,
+.user-header .btn-outline-light:active,
+.header-card .btn-outline-light:hover,
+.header-card .btn-outline-light:focus,
+.header-card .btn-outline-light:active {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+}
+
+.page-title-container .btn-outline-light:hover *,
+.page-title-container .btn-outline-light:focus *,
+.page-title-container .btn-outline-light:active *,
+.page-header .btn-outline-light:hover *,
+.page-header .btn-outline-light:focus *,
+.page-header .btn-outline-light:active *,
+.user-header .btn-outline-light:hover *,
+.user-header .btn-outline-light:focus *,
+.user-header .btn-outline-light:active *,
+.header-card .btn-outline-light:hover *,
+.header-card .btn-outline-light:focus *,
+.header-card .btn-outline-light:active * {
     color: #ffffff !important;
 }
 
@@ -2721,28 +2754,28 @@ td.sticky-assign-col-last {
 }
 
 .table-sticky-assign .badge.bg-secondary {
-    background-color: #f1f5f9 !important;
-    color: #475569 !important;
+    background-color: #6c757d !important;
+    color: #ffffff !important;
 }
 
 .table-sticky-assign .badge.bg-success {
-    background-color: #dcfce7 !important;
-    color: #15803d !important;
+    background-color: #28a745 !important;
+    color: #ffffff !important;
 }
 
 .table-sticky-assign .badge.bg-primary {
-    background-color: #eff6ff !important;
-    color: #1d4ed8 !important;
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
 }
 
 .table-sticky-assign .badge.bg-danger {
-    background-color: #fee2e2 !important;
-    color: #dc2626 !important;
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
 }
 
 .table-sticky-assign .badge.bg-warning {
-    background-color: #fef3c7 !important;
-    color: #b45309 !important;
+    background-color: #ffc107 !important;
+    color: #212529 !important;
 }
 
 .table-sticky-assign .due-date.urgent {

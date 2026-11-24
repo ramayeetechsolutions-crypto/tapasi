@@ -1555,7 +1555,7 @@ require 'header.php';
 
                                     <!-- 7. Process -->
                                     <td>
-                                        <span class="badge bg-secondary"><?= h($row['process'] ?? 'N/A') ?></span>
+                                        <span class="badge bg-secondary" style="background-color: #6c757d !important; color: #ffffff !important; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;"><?= h($row['process'] ?? 'N/A') ?></span>
                                     </td>
 
                                     <!-- 8. Due Date -->
