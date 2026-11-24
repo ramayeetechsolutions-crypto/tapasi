@@ -83,16 +83,13 @@ require 'header.php';
                     <form method="get" class="d-flex gap-2">
                         <input type="text" name="search" class="form-control" placeholder="Search..." value="<?= htmlspecialchars($search) ?>">
                         
-                        <!-- Removed px-4 to reduce button size -->
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i> Search
+                        <button type="submit" class="btn btn-primary text-nowrap">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         
-                        <?php if(!empty($search)): ?>
-                            <a href="math_category_master.php" class="btn btn-secondary">
-                                <i class="fas fa-times"></i>
-                            </a>
-                        <?php endif; ?>
+                        <a href="math_category_master.php" class="btn btn-outline-secondary text-nowrap">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </a>
                     </form>
                 </div>
             </div>

@@ -685,7 +685,7 @@ require 'header.php';
                     </div> -->
                     <div class="col-md-auto d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm text-nowrap">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         <a href="employee_master.php" class="btn btn-secondary btn-sm text-nowrap">
                             <i class="fas fa-times me-1"></i> Clear
