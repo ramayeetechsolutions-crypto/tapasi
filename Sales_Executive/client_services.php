@@ -271,8 +271,8 @@ require 'header.php';
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end gap-1">
-                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold"><i class="fas fa-filter me-1"></i> Filter</button>
-                <a href="client_services.php" class="btn btn-light btn-sm w-100 fw-bold">Reset</a>
+                <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                <a href="client_services.php" class="btn btn-light btn-sm w-100 fw-bold border text-nowrap"><i class="fas fa-times me-1"></i> Clear</a>
             </div>
         </form>
       </div>

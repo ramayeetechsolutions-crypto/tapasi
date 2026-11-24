@@ -605,8 +605,8 @@ require 'header.php';
                         <input type="text" name="q" class="form-control" placeholder="Sort by Client, Sales Incharge, Particular, Process, Team, Article, Remarks..." value="<?= h($searchQuery) ?>">
                     </div>
                     <div class="col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm"><i class="fas fa-search me-1"></i> Filter</button>
-                        <a href="extra_charges.php" class="btn btn-light border flex-grow-1 shadow-sm"><i class="fas fa-times me-1"></i> Reset</a>
+                        <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="extra_charges.php" class="btn btn-light border flex-grow-1 shadow-sm"><i class="fas fa-times me-1"></i> Clear</a>
                     </div>
                 </form>
             </div>

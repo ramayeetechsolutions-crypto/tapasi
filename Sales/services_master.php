@@ -243,11 +243,12 @@ while($r = $res->fetch_assoc()) $categories[] = $r['category'];
                         </select>
                     </div>
                     
-                    <div class="col-md-1">
-                        <button class="btn btn-sm btn-primary w-100">Filter</button>
+                    <div class="col-md-2 d-flex gap-1">
+                        <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="services_master.php" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="fas fa-times me-1"></i> Clear</a>
                     </div>
                     
-                    <div class="col-md-4 text-end">
+                    <div class="col-md-3 text-end">
                         <button type="button" class="btn btn-warning btn-sm me-1 text-dark" data-bs-toggle="modal" data-bs-target="#importModal">
                             <i class="fas fa-file-excel"></i> Import Excel
                         </button>

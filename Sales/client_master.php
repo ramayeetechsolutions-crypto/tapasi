@@ -902,7 +902,7 @@ require 'header.php';
                     </select>
                 </div>
                    <div class="col-md-2 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm">Go</button>
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button>
                     <a href="client_master.php" class="btn btn-light border btn-sm flex-grow-1 shadow-sm">Clear</a>
                 </div>
             </form>
@@ -1170,14 +1170,6 @@ require 'header.php';
 
     document.addEventListener('DOMContentLoaded', function() {
         autoSelectCurrency();
-
-        // Auto-submit form on filter changes
-        const filterSelects = document.querySelectorAll('select[name="status"], select[name="sort"], select[name="dir"]');
-        filterSelects.forEach(select => {
-            select.addEventListener('change', function() {
-                this.form.submit();
-            });
-        });
 
         // Auto-dismiss alerts after 5 seconds
         const alerts = document.querySelectorAll('.alert');

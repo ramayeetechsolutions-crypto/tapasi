@@ -698,7 +698,7 @@ if (!$entries) $entries = false;
             <div class="card-body">
                 <form method="get" class="row g-3 align-items-center" id="searchForm">
                     <div class="col-md-2">
-                        <select name="client_name" class="form-select form-select-sm select2-sm">
+                        <select name="client_name" class="form-select form-select-sm">
                             <option value="">Sort by Client</option>
                             <?php if($unique_clients && $unique_clients->num_rows > 0): $unique_clients->data_seek(0); while($client = $unique_clients->fetch_assoc()): ?>
                                 <option value="<?= h($client['client_name']) ?>" <?= $filter_client === $client['client_name'] ? 'selected' : '' ?>><?= h($client['client_name']) ?></option>
@@ -708,7 +708,7 @@ if (!$entries) $entries = false;
                     
                     <!-- SORT BY TEAM -->
                     <div class="col-md-2">
-                        <select name="team" class="form-select form-control-sm">
+                        <select name="team" class="form-select form-select-sm">
                             <option value="">Sort by Team</option>
                             <option value="WK" <?= $filter_team === 'WK' ? 'selected' : '' ?>>WK</option>
                             <option value="UQ" <?= $filter_team === 'UQ' ? 'selected' : '' ?>>UQ</option>
@@ -717,7 +717,7 @@ if (!$entries) $entries = false;
 
                     <!-- SORT BY DEPT -->
                     <div class="col-md-2">
-                        <select name="department" class="form-select form-control-sm select2-sm">
+                        <select name="department" class="form-select form-select-sm">
                             <option value="">Sort by Dept</option>
                             <?php if($departments_from_master && $departments_from_master->num_rows > 0): $departments_from_master->data_seek(0); while($dept_row = $departments_from_master->fetch_assoc()): ?>
                                 <option value="<?= h($dept_row['department_name']) ?>" <?= $filter_department === $dept_row['department_name'] ? 'selected' : '' ?>><?= h($dept_row['department_name']) ?></option>
@@ -726,7 +726,7 @@ if (!$entries) $entries = false;
                     </div>
 
                     <div class="col-md-2">
-                        <select name="error_type" class="form-select form-control-sm">
+                        <select name="error_type" class="form-select form-select-sm">
                             <option value="">Sort by Error Types</option>
                             <?php 
                                 $types_list =['NA', 'Acknowledgement Issue', 'Technical Issue', 'Missed TAT'];
@@ -738,17 +738,20 @@ if (!$entries) $entries = false;
                     </div>
                     
                     <div class="col-md-2">
-                        <select name="yn" class="form-select form-control-sm">
+                        <select name="yn" class="form-select form-select-sm">
                             <option value="">Sort by Y/N</option>
                             <option value="Yes" <?= $filter_yn === 'Yes' ? 'selected' : '' ?>>Yes</option>
                             <option value="No" <?= $filter_yn === 'No' ? 'selected' : '' ?>>No</option>
                         </select>
                     </div>
                     
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
-                            <i class="fas fa-search me-1"></i> Filter
+                    <div class="col-md-2 d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1 text-nowrap">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
+                        <a href="error_entry.php" class="btn btn-outline-secondary btn-sm flex-grow-1 text-nowrap">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </a>
                     </div>
                 </form>
             </div>
