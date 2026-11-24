@@ -612,7 +612,7 @@ if ($result && $row = $result->fetch_assoc()) {
             });
         });
 
-        // Sticky Columns Support for TL/SubTL Assign & Report Pages (From S.No to Articles, except WK Report)
+        // Sticky Columns Support for TL/SubTL/Executive Assign & Report Pages (From S.No until Journal field, except WK Report)
         function applyStickyAssignColumns() {
             if (window.location.pathname.indexOf('wk_report') !== -1) return;
 
@@ -634,22 +634,33 @@ if ($result && $row = $result->fetch_assoc()) {
                 var ths = Array.from(headerTr.children);
                 if (ths.length === 0) return;
 
-                // 1. Locate the Articles column index
-                var articleIndex = -1;
+                // 1. Locate the Journal column index (Freeze until Journal field from S.No)
+                var journalIndex = -1;
                 for (var i = 0; i < ths.length; i++) {
                     var text = ths[i].textContent.trim().toUpperCase();
-                    if ((text === 'ARTICLES' || text === 'ARTICLE') || (text.indexOf('ARTICLE') !== -1 && text.indexOf('COUNT') === -1)) {
-                        articleIndex = i;
+                    if (text === 'JOURNAL' || text.indexOf('JOURNAL') !== -1) {
+                        journalIndex = i;
                         break;
                     }
                 }
-                if (articleIndex === -1 && !table.classList.contains('table-sticky-assign')) {
+                if (journalIndex === -1 && !table.classList.contains('table-sticky-assign')) {
                     return;
                 }
-                if (articleIndex === -1) {
-                    articleIndex = 5; // Default fallback: first 6 columns (S.No to Articles)
+                if (journalIndex === -1) {
+                    // Fallback: If no Journal column, try Client or default to 4 (S.No to Client/Journal)
+                    for (var i = 0; i < ths.length; i++) {
+                        var text = ths[i].textContent.trim().toUpperCase();
+                        if (text === 'CLIENT' || text.indexOf('CLIENT') !== -1) {
+                            journalIndex = i;
+                            break;
+                        }
+                    }
+                }
+                if (journalIndex === -1) {
+                    journalIndex = Math.min(4, ths.length - 1);
                 }
 
+                var freezeIndex = journalIndex;
                 table.classList.add('table-sticky-assign');
 
                 // Ensure thead and tbody have proper stacking contexts so headers stay on top when scrolling vertically
@@ -664,74 +675,105 @@ if ($result && $row = $result->fetch_assoc()) {
                     tbody.style.setProperty('z-index', '1', 'important');
                 }
 
-                // Enforce compact 135px width on Articles column before measuring layout offsets
-                if (articleIndex !== -1 && ths[articleIndex]) {
-                    ths[articleIndex].classList.add('sticky-assign-col-last', 'col-article');
-                    ths[articleIndex].style.setProperty('width', '135px', 'important');
-                    ths[articleIndex].style.setProperty('min-width', '135px', 'important');
-                    ths[articleIndex].style.setProperty('max-width', '135px', 'important');
-                }
-
-                var tbodyRows = table.querySelectorAll('tbody tr');
-                tbodyRows.forEach(function(row) {
-                    if (articleIndex !== -1 && row.children[articleIndex]) {
-                        var c = row.children[articleIndex];
-                        c.classList.add('sticky-assign-col-last', 'col-article');
-                        c.style.setProperty('width', '135px', 'important');
-                        c.style.setProperty('min-width', '135px', 'important');
-                        c.style.setProperty('max-width', '135px', 'important');
+                // If Articles column exists in the table, keep standard 135px width formatting
+                for (var i = 0; i < ths.length; i++) {
+                    var text = ths[i].textContent.trim().toUpperCase();
+                    if ((text === 'ARTICLES' || text === 'ARTICLE') || (text.indexOf('ARTICLE') !== -1 && text.indexOf('COUNT') === -1)) {
+                        ths[i].classList.add('col-article');
+                        ths[i].style.setProperty('width', '135px', 'important');
+                        ths[i].style.setProperty('min-width', '135px', 'important');
+                        ths[i].style.setProperty('max-width', '135px', 'important');
+                        
+                        var tbodyRows = table.querySelectorAll('tbody tr');
+                        tbodyRows.forEach(function(row) {
+                            if (row.children[i]) {
+                                var c = row.children[i];
+                                c.classList.add('col-article');
+                                c.style.setProperty('width', '135px', 'important');
+                                c.style.setProperty('min-width', '135px', 'important');
+                                c.style.setProperty('max-width', '135px', 'important');
+                            }
+                        });
+                        break;
                     }
-                });
+                }
 
                 // 2. Measure cumulative left offsets
                 var leftOffsets = [];
                 var acc = 0;
-                for (var i = 0; i <= articleIndex; i++) {
+                for (var i = 0; i <= freezeIndex; i++) {
                     leftOffsets[i] = acc;
                     acc += ths[i].offsetWidth;
                 }
 
-                // 3. Apply sticky left to header cells (0 to articleIndex)
+                // 3. Apply sticky left to header cells (0 to freezeIndex)
                 for (var i = 0; i < ths.length; i++) {
                     var th = ths[i];
-                    if (i <= articleIndex) {
+                    if (i <= freezeIndex) {
                         th.classList.add('sticky-assign-col');
                         th.style.setProperty('position', 'sticky', 'important');
                         th.style.setProperty('top', '0', 'important');
                         th.style.setProperty('left', leftOffsets[i] + 'px', 'important');
-                        th.style.setProperty('z-index', (i === articleIndex ? '165' : '160'), 'important');
+                        th.style.setProperty('z-index', (i === freezeIndex ? '165' : '160'), 'important');
                         th.style.setProperty('background-color', '#5e6b77', 'important');
                         th.style.setProperty('color', '#ffffff', 'important');
-                        if (i === articleIndex) {
+                        if (i === freezeIndex) {
                             th.classList.add('sticky-assign-col-last');
+                        } else {
+                            th.classList.remove('sticky-assign-col-last');
                         }
                     } else {
                         th.classList.remove('sticky-assign-col', 'sticky-assign-col-last');
                         th.style.setProperty('position', 'sticky', 'important');
                         th.style.setProperty('top', '0', 'important');
+                        th.style.removeProperty('left');
                         th.style.setProperty('z-index', '150', 'important');
                         th.style.setProperty('background-color', '#5e6b77', 'important');
                         th.style.setProperty('color', '#ffffff', 'important');
                     }
                 }
 
-                // 4. Apply sticky left to all tbody rows
+                // 4. Apply sticky left to all tbody rows (0 to freezeIndex) with White & Light Ash zebra striping
                 var rows = table.querySelectorAll('tbody tr');
-                rows.forEach(function(row) {
+                rows.forEach(function(row, rowIdx) {
+                    var isEven = (rowIdx % 2 === 1); // Row 1 (0) = White, Row 2 (1) = Light Ash
+                    var rowBg = isEven ? '#f2f4f6' : '#ffffff';
                     var cells = row.children;
                     for (var i = 0; i < cells.length; i++) {
                         var cell = cells[i];
-                        if (i <= articleIndex) {
+                        if (i <= freezeIndex) {
                             cell.classList.add('sticky-assign-col', 'sticky-assign-cell');
                             cell.style.setProperty('position', 'sticky', 'important');
                             cell.style.setProperty('left', leftOffsets[i] + 'px', 'important');
-                            cell.style.setProperty('z-index', (i === articleIndex ? '15' : '10'), 'important');
-                            if (i === articleIndex) {
+                            cell.style.setProperty('z-index', (i === freezeIndex ? '15' : '10'), 'important');
+                            cell.style.setProperty('background-color', rowBg, 'important');
+                            if (i === freezeIndex) {
                                 cell.classList.add('sticky-assign-col-last');
+                            } else {
+                                cell.classList.remove('sticky-assign-col-last');
                             }
                         } else {
                             cell.classList.remove('sticky-assign-col', 'sticky-assign-cell', 'sticky-assign-col-last');
+                            cell.style.removeProperty('position');
+                            cell.style.removeProperty('left');
+                            cell.style.removeProperty('z-index');
+                            cell.style.removeProperty('background-color');
                         }
+                    }
+
+                    // Hover interaction for sticky columns
+                    if (!row.dataset.stickyHoverBound) {
+                        row.dataset.stickyHoverBound = '1';
+                        row.addEventListener('mouseenter', function() {
+                            var sCells = this.querySelectorAll('.sticky-assign-col, .sticky-assign-cell');
+                            sCells.forEach(function(sc) { sc.style.setProperty('background-color', '#e9ecef', 'important'); });
+                        });
+                        row.addEventListener('mouseleave', function() {
+                            var curEven = (Array.from(this.parentNode.children).indexOf(this) % 2 === 1);
+                            var bg = curEven ? '#f2f4f6' : '#ffffff';
+                            var sCells = this.querySelectorAll('.sticky-assign-col, .sticky-assign-cell');
+                            sCells.forEach(function(sc) { sc.style.setProperty('background-color', bg, 'important'); });
+                        });
                     }
                 });
             });

@@ -1587,8 +1587,24 @@ body>.page-title-container>.container-fluid {
 .page-header h5 i,
 .page-header h6 i,
 .page-header>i,
-.page-header>div>i {
+.page-header>div:not(:has(.btn))>i {
     color: #ffffff !important;
+}
+
+/* Ensure button icons inside page-header retain their proper colors */
+.page-header .btn i,
+.page-header a.btn i,
+.page-header button.btn i {
+    color: inherit;
+}
+
+.page-header .btn-light i,
+.page-header a.btn-light i,
+.page-header .btn-light .fa-plus,
+.page-header a.btn-light .fa-plus,
+.page-header .btn-light .text-primary,
+.page-header a.btn-light .text-primary {
+    color: #0d6efd !important;
 }
 
 .page-header>a.btn,
@@ -2042,25 +2058,46 @@ select.form-select-sm {
     z-index: 1 !important;
 }
 
-/* Crisp Clean Table Grid Borders matching xml/xml_unique_start.php */
-.table-sticky-assign th,
-.table-sticky-assign td,
+/* Crisp Clean Table Grid Borders matching xml/xml_unique_start.php (Single 1px #dee2e6 lines) */
 .table-sticky-assign thead th,
+.table-sticky-assign thead.table-light th,
+.table-sticky-assign thead.bg-light th,
+.table-sticky-assign thead th.sticky-assign-col,
+.table-sticky-assign thead th.sticky-assign-cell {
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
+}
+
+.table-sticky-assign thead th:first-child,
+.table-sticky-assign thead.table-light th:first-child,
+.table-sticky-assign thead.bg-light th:first-child,
+.table-sticky-assign thead th.sticky-assign-col:first-child {
+    border-left: 1px solid #dee2e6 !important;
+}
+
 .table-sticky-assign tbody td,
-.table-sticky-assign tfoot td,
-.table-sticky-assign.table-bordered thead th,
-.table-sticky-assign.table-bordered tbody td,
+.table-sticky-assign tbody td.sticky-assign-col,
+.table-sticky-assign tbody td.sticky-assign-cell,
+.table-sticky-assign tfoot td {
+    border-top: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
+}
+
+.table-sticky-assign tbody td:first-child,
+.table-sticky-assign tbody td.sticky-assign-col:first-child,
+.table-sticky-assign tfoot td:first-child {
+    border-left: 1px solid #dee2e6 !important;
+}
+
 .table-sticky-assign> :not(caption)>*>* {
-    border: 1px solid #dee2e6 !important;
+    border-color: #dee2e6 !important;
 }
 
-/* Table Grid Styles - Clear Horizontal and Vertical Lines (Matching Screenshot 2) */
-.table-grid,
-.table-grid thead th,
-.table-grid tbody td {
-    border: 1px solid #dee2e6 !important;
-}
-
+/* Table Grid Styles - Clear Single 1px Horizontal and Vertical Lines matching xml/xml_unique_start.php */
 .table-grid {
     border-collapse: separate !important;
     border-spacing: 0 !important;
@@ -2076,14 +2113,28 @@ select.form-select-sm {
     text-align: center !important;
     vertical-align: middle !important;
     white-space: nowrap !important;
-    border: 1px solid #dee2e6 !important;
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
+}
+
+.table-grid thead th:first-child {
+    border-left: 1px solid #dee2e6 !important;
 }
 
 .table-grid tbody td {
     vertical-align: middle !important;
     padding: 6px 10px !important;
     font-size: 12.5px !important;
-    border: 1px solid #dee2e6 !important;
+    border-top: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
+}
+
+.table-grid tbody td:first-child {
+    border-left: 1px solid #dee2e6 !important;
 }
 
 .table-grid tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
@@ -2108,7 +2159,10 @@ select.form-select-sm {
     z-index: 100 !important;
     background-color: #5e6b77 !important;
     color: #ffffff !important;
-    border: 1px solid #4f5a64 !important;
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
     font-weight: 600 !important;
     font-size: 12.5px !important;
     padding: 8px 10px !important;
@@ -2118,6 +2172,13 @@ select.form-select-sm {
     letter-spacing: 0.025em !important;
     vertical-align: middle !important;
     box-sizing: border-box !important;
+    box-shadow: none !important;
+}
+
+.table-sticky-assign thead th:first-child,
+.table-sticky-assign thead.table-light th:first-child,
+.table-sticky-assign thead.bg-light th:first-child {
+    border-left: 1px solid #dee2e6 !important;
 }
 
 /* Sticky Header Cells: Vertically & Horizontally Sticky (S.No to Articles) */
@@ -2130,7 +2191,10 @@ select.form-select-sm {
     z-index: 120 !important;
     background-color: #5e6b77 !important;
     color: #ffffff !important;
-    border: 1px solid #4f5a64 !important;
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
     font-weight: 600 !important;
     font-size: 12.5px !important;
     padding: 8px 10px !important;
@@ -2141,6 +2205,12 @@ select.form-select-sm {
     vertical-align: middle !important;
     background-clip: padding-box !important;
     box-sizing: border-box !important;
+    box-shadow: none !important;
+}
+
+.table-sticky-assign thead th.sticky-assign-col:first-child,
+.table-sticky-assign thead th.sticky-assign-cell:first-child {
+    border-left: 1px solid #dee2e6 !important;
 }
 
 /* Sticky Body Cells: Horizontally Sticky (S.No to Articles) */
@@ -2150,32 +2220,44 @@ select.form-select-sm {
     z-index: 10 !important;
     background-clip: padding-box !important;
     box-sizing: border-box !important;
-    border: 1px solid #dee2e6 !important;
+    border-top: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
 }
 
-/* Freeze column boundary line (Articles Column) */
+.table-sticky-assign tbody td.sticky-assign-col:first-child,
+.table-sticky-assign tbody td.sticky-assign-cell:first-child {
+    border-left: 1px solid #dee2e6 !important;
+}
+
+/* Freeze column boundary line matching xml/xml_unique_start.php (Clean Light 1px #dee2e6 Line) */
 .table-sticky-assign thead th.sticky-assign-col-last,
-.table-sticky-assign thead th.col-article {
+.table-responsive table thead th.sticky-assign-col-last,
+.table thead th.sticky-assign-col-last,
+th.sticky-assign-col-last {
     position: sticky !important;
     top: 0 !important;
     z-index: 125 !important;
     background-color: #5e6b77 !important;
     color: #ffffff !important;
-    width: 135px !important;
-    min-width: 135px !important;
-    max-width: 135px !important;
     box-sizing: border-box !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    border-right: 2px solid #3d4750 !important;
+    border-right: 1px solid #dee2e6 !important;
 }
 
 .table-sticky-assign tbody td.sticky-assign-col-last,
 .table-sticky-assign tbody td.sticky-assign-cell.sticky-assign-col-last,
-.table-sticky-assign tbody td.col-article {
+.table-responsive table tbody td.sticky-assign-col-last,
+.table tbody td.sticky-assign-col-last,
+td.sticky-assign-col-last {
     position: sticky !important;
     z-index: 15 !important;
+    box-sizing: border-box !important;
+    border-right: 1px solid #dee2e6 !important;
+}
+
+/* Articles Column Compact Width */
+.table-sticky-assign thead th.col-article {
     width: 135px !important;
     min-width: 135px !important;
     max-width: 135px !important;
@@ -2183,7 +2265,16 @@ select.form-select-sm {
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    border-right: 2px solid #b0b8c1 !important;
+}
+
+.table-sticky-assign tbody td.col-article {
+    width: 135px !important;
+    min-width: 135px !important;
+    max-width: 135px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 /* Base Body Cells Styling */
@@ -2191,20 +2282,34 @@ select.form-select-sm {
     vertical-align: middle !important;
     padding: 6px 10px !important;
     font-size: 12.5px !important;
-    border: 1px solid #dee2e6 !important;
+    border-top: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
     text-align: center !important;
     white-space: nowrap !important;
     color: #334155 !important;
 }
 
+/* Reset Bootstrap 5 inset box-shadow so pure white and light ash zebra striping displays clearly */
+.table> :not(caption)>*>*,
+.table-sticky-assign> :not(caption)>*>*,
+.table-striped>tbody>tr:nth-of-type(odd)>*,
+.table-striped>tbody>tr:nth-of-type(even)>*,
+.table-container .table> :not(caption)>*>* {
+    --bs-table-accent-bg: transparent !important;
+    box-shadow: none !important;
+}
+
 /* S.No Center & Semi-bold */
 .table-sticky-assign tbody td:first-child {
+    border-left: 1px solid #dee2e6 !important;
     text-align: center !important;
     font-weight: 600 !important;
     color: #64748b !important;
 }
 
-/* Zebra Striping Logic (Even Rows - Visible Grey #f2f4f6 matching xml_unique_start.php) */
+/* Zebra Striping: Even Rows - Light Ash #f2f4f6 matching xml_unique_start.php */
 .table-sticky-assign tbody tr:nth-child(even) td,
 .table-sticky-assign tbody tr:nth-child(even) th,
 .table-sticky-assign tbody tr:nth-child(even) td.sticky-assign-col,
@@ -2213,11 +2318,12 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.row-purple:nth-child(even) td,
 .table-sticky-assign.table-striped tbody tr:nth-of-type(even)>*,
 .table-container .table tbody tr:nth-child(even) td,
-.table-container .table.table-striped tbody tr:nth-of-type(even)>* {
+.table-container .table.table-striped tbody tr:nth-of-type(even)>*,
+.table tbody tr:nth-child(even) td {
     background-color: #f2f4f6 !important;
 }
 
-/* Zebra Striping Logic (Odd Rows - White #ffffff matching xml_unique_start.php) */
+/* Zebra Striping: Odd Rows - Pure White #ffffff matching xml_unique_start.php */
 .table-sticky-assign tbody tr:nth-child(odd) td,
 .table-sticky-assign tbody tr:nth-child(odd) th,
 .table-sticky-assign tbody tr:nth-child(odd) td.sticky-assign-col,
@@ -2226,7 +2332,8 @@ select.form-select-sm {
 .table-sticky-assign tbody tr.row-purple:nth-child(odd) td,
 .table-sticky-assign.table-striped tbody tr:nth-of-type(odd)>*,
 .table-container .table tbody tr:nth-child(odd) td,
-.table-container .table.table-striped tbody tr:nth-of-type(odd)>* {
+.table-container .table.table-striped tbody tr:nth-of-type(odd)>*,
+.table tbody tr:nth-child(odd) td {
     background-color: #ffffff !important;
 }
 
@@ -2235,16 +2342,13 @@ select.form-select-sm {
 .table-sticky-assign tbody tr:hover th,
 .table-sticky-assign tbody tr.assigned:hover td,
 .table-sticky-assign tbody tr.row-purple:hover td,
-.table-sticky-assign.table-hover tbody tr:hover>* {
+.table-sticky-assign.table-hover tbody tr:hover>*,
+.table-container .table tbody tr:hover td,
+.table-container .table.table-hover tbody tr:hover>*,
+.table tbody tr:hover td {
     background-color: #c4cbd3 !important;
     cursor: pointer;
     transition: background-color 0.1s ease;
-}
-
-/* Default soft hover for standard table-containers */
-.table-container .table tbody tr:hover td,
-.table-container .table.table-hover tbody tr:hover>* {
-    background-color: #f1f5f9;
 }
 
 .table-sticky-assign tbody tr:hover td.sticky-assign-col,

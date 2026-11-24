@@ -136,6 +136,69 @@ if (!empty($types)) {
     .main-content { padding: 20px; max-width: 1400px; margin: 0 auto; }
     .mail-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; }
     .disabled-btn { cursor: not-allowed !important; opacity: 0.6; }
+    
+    .table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+    .table th,
+    .table thead th {
+        background-color: #5e6b77 !important;
+        color: #ffffff !important;
+        border-top: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        border-right: 1px solid #dee2e6 !important;
+        border-left: none !important;
+        font-weight: 600;
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        padding: 8px 10px;
+        white-space: nowrap;
+        text-align: center;
+        vertical-align: middle;
+        box-shadow: none !important;
+    }
+    .table th:first-child,
+    .table thead th:first-child {
+        border-left: 1px solid #dee2e6 !important;
+    }
+    .table td,
+    .table tbody td {
+        padding: 6px 10px;
+        font-size: 12.5px;
+        color: #334155;
+        vertical-align: middle;
+        border-top: none !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        border-right: 1px solid #dee2e6 !important;
+        border-left: none !important;
+        white-space: nowrap;
+    }
+    .table td:first-child,
+    .table tbody td:first-child {
+        border-left: 1px solid #dee2e6 !important;
+    }
+    .sticky-assign-col-last {
+        border-right: 1px solid #dee2e6 !important;
+    }
+    .table> :not(caption)>*>*,
+    .table-striped>tbody>tr:nth-of-type(odd)>*,
+    .table-striped>tbody>tr:nth-of-type(even)>* {
+        --bs-table-accent-bg: transparent !important;
+        box-shadow: none !important;
+    }
+    .table tbody tr:nth-child(even) td {
+        background-color: #f2f4f6 !important;
+    }
+    .table tbody tr:nth-child(odd) td {
+        background-color: #ffffff !important;
+    }
+    .table tbody tr:hover td {
+        background-color: #c4cbd3 !important;
+        cursor: pointer;
+        transition: background-color 0.1s ease;
+    }
 </style>
     
     <div class="main-content">
@@ -198,9 +261,8 @@ if (!empty($types)) {
 
             <div class="card shadow-sm border-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <!-- <thead class="table-dark"> -->
-                            <thead class="table-grey">
+                    <table class="table table-hover table-striped table-bordered align-middle mb-0">
+                        <thead>
                            <tr>
                                 <th>S.No</th>
                                 <th>Mail Subject</th>

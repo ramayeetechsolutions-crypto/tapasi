@@ -36,6 +36,68 @@ $showEditButtonJson = json_encode($showEditButton);
 $processIdsJson = json_encode($process_ids); 
 ?>
 
+<style>
+    #ceTable {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+    #ceTable th, #ceTable thead th {
+        background-color: #5e6b77 !important;
+        color: #ffffff !important;
+        border-top: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        border-right: 1px solid #dee2e6 !important;
+        border-left: none !important;
+        font-weight: 600;
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        padding: 8px 10px;
+        white-space: nowrap;
+        text-align: center;
+        vertical-align: middle;
+        box-shadow: none !important;
+    }
+    #ceTable th:first-child, #ceTable thead th:first-child {
+        border-left: 1px solid #dee2e6 !important;
+    }
+    #ceTable td, #ceTable tbody td {
+        padding: 6px 10px;
+        font-size: 12.5px;
+        color: #334155;
+        vertical-align: middle;
+        border-top: none !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        border-right: 1px solid #dee2e6 !important;
+        border-left: none !important;
+        text-align: center;
+        white-space: nowrap;
+    }
+    #ceTable td:first-child, #ceTable tbody td:first-child {
+        border-left: 1px solid #dee2e6 !important;
+    }
+    .sticky-assign-col-last {
+        border-right: 1px solid #dee2e6 !important;
+    }
+    #ceTable> :not(caption)>*>*,
+    #ceTable.table-striped>tbody>tr:nth-of-type(odd)>*,
+    #ceTable.table-striped>tbody>tr:nth-of-type(even)>* {
+        --bs-table-accent-bg: transparent !important;
+        box-shadow: none !important;
+    }
+    #ceTable tbody tr:nth-child(even) td {
+        background-color: #f2f4f6 !important;
+    }
+    #ceTable tbody tr:nth-child(odd) td {
+        background-color: #ffffff !important;
+    }
+    #ceTable tbody tr:hover td {
+        background-color: #c4cbd3 !important;
+        cursor: pointer;
+        transition: background-color 0.1s ease;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="page-title-container">
         <h3 class="mb-0 text-white"><i class="bi bi-table me-2"></i> CE Records</h3>
@@ -52,8 +114,8 @@ $processIdsJson = json_encode($process_ids);
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
-                <table id="ceTable" class="table table-bordered table-striped table-hover">
-                    <thead class="table-dark">
+                <table id="ceTable" class="table table-bordered table-striped table-hover align-middle">
+                    <thead>
                         <tr>
                             <th>ID</th>
                             <th>Job ID</th>

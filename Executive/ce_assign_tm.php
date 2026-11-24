@@ -9,9 +9,6 @@ $role_name = $_SESSION['role_name'] ?? '';
 if (isset($_SESSION['uid'])) $exeid = $_SESSION['uid'];
 
 // Role & permission configuration:
-// Executive page is strictly Executive mode (Team Member view).
-// Executive can only self-assign unassigned tasks, cannot assign to others, and cannot reassign already assigned tasks.
-// Team Lead & SubTL pages have full assignment/reassignment access.
 $current_folder = basename(__DIR__);
 $is_tl_or_subtl = false;
 if ($current_folder === 'Team_Lead' || $current_folder === 'SubTL') {
@@ -68,6 +65,32 @@ function formatDate($date, $format = 'd-m-Y') {
     if (!$date) return '';
     $dateObj = DateTime::createFromFormat('Y-m-d', $date);
     return $dateObj ? $dateObj->format($format) : $date;
+}
+
+function getCeStats($mysqli) {
+    $sql = "SELECT 
+                COUNT(*) as total,
+                SUM(CASE 
+                    WHEN (ce.status IS NULL OR ce.status NOT IN ('Completed', 'Done'))
+                     AND (
+                         ce.status IN ('Need to Assign', 'Pending', '') OR ce.status IS NULL
+                         OR ce.assigned_to_content IS NULL OR TRIM(ce.assigned_to_content) = ''
+                         OR ce.assigned_to_img IS NULL OR TRIM(ce.assigned_to_img) = ''
+                         OR j.assigned_to IS NULL OR TRIM(j.assigned_to) = ''
+                         OR NOT EXISTS (SELECT 1 FROM employee_master em WHERE em.employee_username = j.assigned_to)
+                     )
+                    THEN 1 ELSE 0 
+                END) as need_assign,
+                SUM(CASE WHEN ce.status IN ('In Progress', 'CE Done', 'REF Done', 'CE & REF Done') THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN ce.assigned_to_content IS NOT NULL AND TRIM(ce.assigned_to_content) != '' THEN 1 ELSE 0 END) as content_assigned,
+                SUM(CASE WHEN ce.assigned_to_img IS NOT NULL AND TRIM(ce.assigned_to_img) != '' THEN 1 ELSE 0 END) as images_assigned
+            FROM ce 
+            LEFT JOIN jobs j ON ce.job_id = j.job_id
+            WHERE (ce.is_moved = 0 OR ce.is_moved IS NULL)
+            AND TRIM(COALESCE(ce.remarks, '')) != 'Moved'
+            AND (ce.status IS NULL OR ce.status NOT IN ('Completed', 'Done') OR DATE(COALESCE(j.job_date, ce.created_at)) >= '2026-10-01')";
+    $res = $mysqli->query($sql);
+    return $res ? $res->fetch_assoc() : ['total' => 0, 'need_assign' => 0, 'in_progress' => 0, 'content_assigned' => 0, 'images_assigned' => 0];
 }
 
 // ==========================================
@@ -201,7 +224,8 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
             'ce_status' => $curr_ce_status,
             'ref_status' => $curr_ref_status,
             'fqa_status' => $curr_fqa_status,
-            'type' => $target_type
+            'type' => $target_type, 
+            'stats' => getCeStats($mysqli)
         ]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -240,10 +264,6 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
                 }
             }
 
-            $fqa_completed = (($check_row['fqa_status'] ?? '') === 'Completed' || $check_row['status'] === 'Completed');
-            $fqa_has_times = (!empty($check_row['fqa_start_time']) && !empty($check_row['fqa_end_time']));
-            $fqa_ok = ($fqa_assigned && $fqa_completed && $fqa_has_times);
-
             $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
             $ce_completed = (($check_row['ce_status'] ?? '') === 'Completed' || in_array($check_row['status'], ['CE Done', 'CE & REF Done', 'Completed']));
             $ce_has_times = (!empty($check_row['ce_start_time']) && !empty($check_row['ce_end_time']));
@@ -271,10 +291,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             $stmt->bind_param("si", $val, $ce_id);
         }
         if ($stmt->execute()) {
-            if ($field === 'remarks' && $val === 'Moved') {
-                $mysqli->query("UPDATE ce SET is_moved = 1 WHERE id = $ce_id");
-            }
-            echo json_encode(['success' => true]);
+            echo json_encode(['success' => true, 'stats' => getCeStats($mysqli)]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
         }
@@ -330,7 +347,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_ce') {
 
     if (!$fqa_ok || (!$ce_ok && !$ref_ok)) {
         echo json_encode([
-            'success' => false,
+            'success' => false, 
             'message' => 'Cannot move! FQA must be Completed, and either CE Assignment or REF Assignment must be Completed before moving.'
         ]);
         exit;
@@ -339,7 +356,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_ce') {
     $stmt = $mysqli->prepare("UPDATE ce SET is_moved = 1, remarks = 'Moved', last_updated = NOW() WHERE id = ?");
     $stmt->bind_param("i", $ce_id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true, 'stats' => getCeStats($mysqli)]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
     }
@@ -388,12 +405,10 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 
         // Permission check for Executive
         if (!$is_tl_or_subtl) {
-            // Once assigned, Executive cannot change/reassign
             if (!empty($already_assigned)) {
                 echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to reassign members.']);
                 exit;
             }
-            // Unassigned task: Executive can ONLY assign themself
             if ($assigned_to !== $current_username) {
                 echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to assign to other members.']);
                 exit;
@@ -440,6 +455,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         
         $mysqli->commit();
         $response['success'] = true;
+        $response['stats'] = getCeStats($mysqli);
         
         $stmt_name = $mysqli->prepare("SELECT employee_name FROM employee_master WHERE employee_username = ? LIMIT 1");
         if ($stmt_name) {
@@ -680,8 +696,6 @@ $total_rows = (int)($stats['total'] ?? 0);
 $total_pages = ceil($total_rows / $limit);
 // --- END STATS & PAGINATION ---
 
-
-
 // Main query
 $ce_query = "SELECT ce.*, 
                     j.journal AS job_journal,
@@ -706,11 +720,11 @@ $ce_query = "SELECT ce.*,
              WHERE $where_sql
              ORDER BY $sort $dir";
 
-// Apply LIMIT and OFFSET to query
+// Apply LIMIT and OFFSET
 $ce_query .= " LIMIT ? OFFSET ?";
 $params[] = $limit;
 $params[] = $offset;
-$types .= 'ii'; // Append integer types for bind_param
+$types .= 'ii';
 
 $stmt = $mysqli->prepare($ce_query);
 if (!empty($params)) {
@@ -950,12 +964,20 @@ require 'header.php';
             margin-bottom: 0;
         }
         
-        /* Grid Table Styles - Matching xml/xml_unique_start.php */
+                /* Grid Table Styles - Matching xml/xml_unique_start.php (Single 1px #dee2e6 lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
         .table th,
-        .table thead th {
+        .table thead th,
+        .table-sticky-assign thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             font-weight: 600;
             font-size: 12.5px;
             text-transform: uppercase;
@@ -964,25 +986,58 @@ require 'header.php';
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
+        }
+        .table th:first-child,
+        .table thead th:first-child,
+        .table-sticky-assign thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
         .table td,
-        .table tbody td {
+        .table tbody td,
+        .table-sticky-assign tbody td {
             vertical-align: middle;
             padding: 6px 10px;
             font-size: 12.5px;
             color: #334155;
-            border: 1px solid #dee2e6 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
             white-space: nowrap;
         }
+        .table td:first-child,
+        .table tbody td:first-child,
+        .table-sticky-assign tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table th.sticky-assign-col-last,
+        .table thead th.sticky-assign-col-last,
+        .table td.sticky-assign-col-last,
+        .table tbody td.sticky-assign-col-last,
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
+        }
         
-        /* Visible Zebra Striping matching xml/xml_unique_start.php */
-        .table tbody tr:nth-child(even) td {
+        .table> :not(caption)>*>*,
+        .table-sticky-assign> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td,
+        .table-sticky-assign tbody tr:nth-child(even) td {
             background-color: #f2f4f6 !important;
         }
         
-        .table tbody tr:nth-child(odd) td {
+        .table tbody tr:nth-child(odd) td,
+        .table-sticky-assign tbody tr:nth-child(odd) td {
             background-color: #ffffff !important;
         }
         
@@ -1260,7 +1315,7 @@ require 'header.php';
                         <i class="fas fa-hourglass-start"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['need_assign'] ?? 0 ?></h3>
+                        <h3 id="stat-need"><?= $stats['need_assign'] ?? 0 ?></h3>
                         <p>Need to Assign</p>
                     </div>
                 </div>
@@ -1271,7 +1326,7 @@ require 'header.php';
                         <i class="fas fa-spinner"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['in_progress'] ?? 0 ?></h3>
+                        <h3 id="stat-progress"><?= $stats['in_progress'] ?? 0 ?></h3>
                         <p>In Progress</p>
                     </div>
                 </div>
@@ -1282,7 +1337,7 @@ require 'header.php';
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['completed'] ?? 0 ?></h3>
+                        <h3 id="stat-completed"><?= $stats['completed'] ?? 0 ?></h3>
                         <p>Completed</p>
                     </div>
                 </div>
@@ -1293,7 +1348,7 @@ require 'header.php';
                         <i class="fas fa-file-alt"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['content_assigned'] ?? 0 ?></h3>
+                        <h3 id="stat-content"><?= $stats['content_assigned'] ?? 0 ?></h3>
                         <p>Content Assigned</p>
                     </div>
                 </div>
@@ -1304,7 +1359,7 @@ require 'header.php';
                         <i class="fas fa-image"></i>
                     </div>
                     <div class="stats-info">
-                        <h3><?= $stats['images_assigned'] ?? 0 ?></h3>
+                        <h3 id="stat-images"><?= $stats['images_assigned'] ?? 0 ?></h3>
                         <p>Images Assigned</p>
                     </div>
                 </div>
@@ -1397,7 +1452,7 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover table-bordered table-sticky-assign" style="min-width: 1900px; border-collapse: separate; border-spacing: 0;">
+                <table class="table table-hover table-striped table-bordered align-middle table-sticky-assign" style="min-width: 1900px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>S.No</th>
@@ -1597,7 +1652,6 @@ require 'header.php';
                                     <!-- 11. REF Assignment (Reference/Images) -->
                                     <td class="assignment-cell">
                                         <?php 
-                                            // REF is completed ONLY if ref_status is explicitly Completed, or legacy 'REF Done' / 'CE & REF Done'
                                             $ref_done = (($row['ref_status'] ?? '') === 'Completed') || (empty($row['ref_status']) && in_array($row['status'], ['REF Done', 'CE & REF Done']) && !empty($row['assigned_to_img']));
                                             $ref_inprogress = (!$ref_done && (!empty($row['assigned_to_img']) || ($row['ref_status'] ?? '') === 'In Progress'));
 
@@ -1770,7 +1824,7 @@ require 'header.php';
 
         <!-- Pagination Info -->
         <?php if ($ce_result && $ce_result->num_rows > 0): ?>
-            <div class="row mt-3 mb-5">
+            <div class="row mt-3">
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">
@@ -1781,11 +1835,8 @@ require 'header.php';
                         <nav aria-label="Page navigation">
                             <ul class="pagination pagination-sm mb-0">
                                 <?php 
-                                    // Keep existing search/filter parameters in URL when changing pages
-                                    $query_string = $_GET;
-                                    unset($query_string['page']);
-                                    $qs = http_build_query($query_string);
-                                    $qs = $qs ? '&' . $qs : '';
+                                    $query_string = $_GET; unset($query_string['page']);
+                                    $qs = http_build_query($query_string); $qs = $qs ? '&' . $qs : '';
                                 ?>
                                 <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
                                     <a class="page-link" href="?page=<?= $page - 1 ?><?= $qs ?>">Previous</a>
@@ -1798,9 +1849,6 @@ require 'header.php';
                                 </li>
                             </ul>
                         </nav>
-                        <!-- <small class="text-muted">
-                            Reporting Manager: <strong><?= h($reporting_manager) ?></strong>
-                        </small> -->
                     </div>
                 </div>
             </div>
@@ -1835,23 +1883,20 @@ require 'header.php';
         function showNotification(type, message) {
             const container = document.getElementById('notificationContainer');
             const notification = document.createElement('div');
-            notification.className = `alert alert-${type} alert-dismissible fade show notification shadow`;
+            notification.className = `alert alert-${type} alert-dismissible fade show notification`;
             notification.setAttribute('role', 'alert');
-            notification.style.cssText = 'min-width: 320px; max-width: 500px; font-weight: 500; font-size: 14px;';
             notification.innerHTML = `
                 <div class="d-flex align-items-center">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle text-success' : (type === 'warning' ? 'fa-exclamation-triangle text-warning' : 'fa-exclamation-circle text-danger')} me-2 fs-5"></i>
-                    <div class="flex-grow-1">${message}</div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+                    <div>${message}</div>
+                    <button type="button" class="btn-close ms-3" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `;
             container.appendChild(notification);
             
             // Auto remove after 5 seconds
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
+                notification.remove();
             }, 5000);
         }
         
@@ -1863,6 +1908,17 @@ require 'header.php';
         // Hide loading overlay
         function hideLoading() {
             document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        // Update Summary Cards immediately after any AJAX update
+        function updateStatsCards(stats) {
+            if (!stats) return;
+            if (document.getElementById('stat-total')) document.getElementById('stat-total').textContent = stats.total ?? 0;
+            if (document.getElementById('stat-need')) document.getElementById('stat-need').textContent = stats.need_assign ?? 0;
+            if (document.getElementById('stat-progress')) document.getElementById('stat-progress').textContent = stats.in_progress ?? 0;
+            if (document.getElementById('stat-completed')) document.getElementById('stat-completed').textContent = stats.completed ?? 0;
+            if (document.getElementById('stat-content')) document.getElementById('stat-content').textContent = stats.content_assigned ?? 0;
+            if (document.getElementById('stat-images')) document.getElementById('stat-images').textContent = stats.images_assigned ?? 0;
         }
 
        // Status Update Function with instant DOM badge update
@@ -1927,6 +1983,7 @@ require 'header.php';
             .then(data => {
                 if (select) { select.disabled = false; }
                 if (data.success) {
+                    updateStatsCards(data.stats);
                     showNotification('success', 'Status updated successfully!');
                     if (select) { 
                         select.setAttribute('data-prev', newStatus);
@@ -2018,6 +2075,7 @@ require 'header.php';
             .then(response => response.json())
             .then(data => {
                 if (data.success) { 
+                    updateStatsCards(data.stats);
                     if (element) {
                         element.setAttribute('data-prev', value);
                     }
@@ -2089,6 +2147,7 @@ require 'header.php';
             .then(data => {
                 hideLoading();
                 if (data.success) {
+                    updateStatsCards(data.stats);
                     showNotification('success', 'Job moved to LE Assign successfully!');
                     if (rowEl) {
                         rowEl.style.transition = 'all 0.4s ease';
@@ -2161,6 +2220,9 @@ require 'header.php';
                 hideLoading();
                 selectElement.disabled = false;
                 if (data.success) {
+                    if (typeof updateStatsCards === 'function') {
+                        updateStatsCards(data.stats);
+                    }
                     showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
                     document.getElementById('row-' + ceId).classList.add('assigned');
                     selectElement.setAttribute('data-assigned', selectedValue);
@@ -2249,9 +2311,6 @@ require 'header.php';
             $('#clientSearchDropdown').select2({
                 width: '100%'
             });
-            if (typeof applyStickyAssignColumns === 'function') {
-                applyStickyAssignColumns();
-            }
         });
     </script>
 </body>

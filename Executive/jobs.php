@@ -964,28 +964,79 @@ require 'header.php';
             margin-bottom: 0;
         }
         
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th,
         .table thead th {
-            background-color: #707981 !important;
-            font-weight: bold;
-            font-size: 0.85rem;
+            background-color: #5e6b77 !important;
+            font-weight: 600;
+            font-size: 12.5px;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            color: white !important;
-            padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
+            color: #ffffff !important;
+            padding: 8px 10px;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             white-space: nowrap;
+            text-align: center;
+            vertical-align: middle;
+            box-shadow: none !important;
+        }
+        .table th:first-child,
+        .table thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
+        .table td,
         .table tbody td {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.8rem;
+            padding: 6px 10px;
+            font-size: 12.5px;
             color: #334155;
             vertical-align: middle;
-            border-bottom: 1px solid #e2e8f0;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .table td:first-child,
+        .table tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table th.sticky-assign-col-last,
+        .table thead th.sticky-assign-col-last,
+        .table td.sticky-assign-col-last,
+        .table tbody td.sticky-assign-col-last,
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
         }
         
-        .table tbody tr:hover {
-            background-color: #f8fafc;
+        .table> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
         }
         
         .badge {
@@ -1104,21 +1155,21 @@ require 'header.php';
 </head>
 <body>
     <div class="container-fluid px-3 pt-3">
-        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
-                        <i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>
-                        Manage Jobs
-                    </h5>
-                    <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage and track all jobs</small>
-                </div>
-                <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
-                    <a href="jobs.php?mode=add" class="btn btn-light btn-sm fw-semibold">
-                        <i class="fas fa-plus me-1 text-primary"></i> Add Job(s)
-                    </a>
-                <?php endif; ?>
+        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
+            <div style="text-align: left;">
+                <h5 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important; display: flex; align-items: center; justify-content: flex-start;">
+                    <i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>
+                    Manage Jobs
+                </h5>
+                <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage and track all jobs</small>
             </div>
+            <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
+                <div style="margin-left: auto;">
+                    <a href="jobs.php?mode=add" class="btn btn-light btn-sm fw-semibold shadow-sm" style="color: #212529 !important; background-color: #ffffff !important; border: 1px solid #dee2e6 !important;">
+                        <i class="fas fa-plus me-1" style="color: #0d6efd !important; font-weight: 900;"></i> Add Job(s)
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
         <?php if (!empty($_GET['msg'])): ?>
             <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show py-2">
@@ -1456,7 +1507,7 @@ require 'header.php';
             <!-- Jobs Table -->
             <div class="table-container">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover table-striped table-bordered align-middle">
                         <thead>
                             <tr>
                                 <th>S.No</th>

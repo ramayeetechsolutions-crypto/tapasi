@@ -473,29 +473,71 @@ if($stmt_error) $stmt_error->close();
             margin-bottom: 2rem;
         }
         
-        .table { margin-bottom: 0; }
+        .table { 
+            margin-bottom: 0; 
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th,
         .table thead th {
-            background-color: #707981 !important; 
-            color: white !important;
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 12.5px;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
+            padding: 8px 10px;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
         }
+        .table th:first-child,
+        .table thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        .table td,
         .table tbody td {
-            padding: 0.6rem 0.4rem;
-            font-size: 0.85rem;
+            padding: 6px 10px;
+            font-size: 12.5px;
             color: #334155;
             vertical-align: middle;
-            border: 1px solid #cbd5e1;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
         }
-        .table tbody tr:hover { background-color: #f8fafc; }
+        .table td:first-child,
+        .table tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
+        }
+        .table> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
         .text-start { text-align: left !important; }
         
         .text-danger-fw { color: #dc2626; font-weight: 600; }
@@ -699,7 +741,7 @@ if($stmt_error) $stmt_error->close();
     <h5 class="section-title"><i class="fas fa-table text-primary"></i> <?= ($filter_mode === 'month') ? date('F', mktime(0,0,0,$filter_month,1)) . ' Monthly Report Data' : 'Weekly Report Data' ?></h5>
     <div class="table-container">
         <div class="table-responsive">
-            <table class="table table-hover table-bordered">
+            <table class="table table-hover table-striped table-bordered align-middle">
                 <thead>
                     <tr>
                         <th colspan="17" style="background-color: #475569 !important; font-size:1rem;">
