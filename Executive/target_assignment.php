@@ -41,26 +41,87 @@ function formatDate($d) {
     return date('d-m-Y', strtotime($d));
 }
 
+function getCompanyWeekDefinitions() {
+    return [
+        1 => ['start_m' => 4, 'start_d' => 1, 'end_m' => 4, 'end_d' => 4, 'month' => 'Apr'],
+        2 => ['start_m' => 4, 'start_d' => 6, 'end_m' => 4, 'end_d' => 11, 'month' => 'Apr'],
+        3 => ['start_m' => 4, 'start_d' => 13, 'end_m' => 4, 'end_d' => 18, 'month' => 'Apr'],
+        4 => ['start_m' => 4, 'start_d' => 20, 'end_m' => 4, 'end_d' => 25, 'month' => 'Apr'],
+        5 => ['start_m' => 4, 'start_d' => 27, 'end_m' => 5, 'end_d' => 2, 'month' => 'Apr-May'],
+        6 => ['start_m' => 5, 'start_d' => 4, 'end_m' => 5, 'end_d' => 9, 'month' => 'May'],
+        7 => ['start_m' => 5, 'start_d' => 11, 'end_m' => 5, 'end_d' => 16, 'month' => 'May'],
+        8 => ['start_m' => 5, 'start_d' => 18, 'end_m' => 5, 'end_d' => 23, 'month' => 'May'],
+        9 => ['start_m' => 5, 'start_d' => 25, 'end_m' => 5, 'end_d' => 30, 'month' => 'May'],
+        10 => ['start_m' => 6, 'start_d' => 1, 'end_m' => 6, 'end_d' => 6, 'month' => 'Jun'],
+        11 => ['start_m' => 6, 'start_d' => 8, 'end_m' => 6, 'end_d' => 13, 'month' => 'Jun'],
+        12 => ['start_m' => 6, 'start_d' => 15, 'end_m' => 6, 'end_d' => 21, 'month' => 'Jun'],
+        13 => ['start_m' => 6, 'start_d' => 22, 'end_m' => 6, 'end_d' => 27, 'month' => 'Jun'],
+        14 => ['start_m' => 6, 'start_d' => 29, 'end_m' => 7, 'end_d' => 4, 'month' => 'Jun-Jul'],
+        15 => ['start_m' => 7, 'start_d' => 6, 'end_m' => 7, 'end_d' => 11, 'month' => 'Jul'],
+        16 => ['start_m' => 7, 'start_d' => 13, 'end_m' => 7, 'end_d' => 18, 'month' => 'Jul'],
+        17 => ['start_m' => 7, 'start_d' => 20, 'end_m' => 7, 'end_d' => 25, 'month' => 'Jul'],
+        18 => ['start_m' => 7, 'start_d' => 27, 'end_m' => 8, 'end_d' => 1, 'month' => 'Jul-Aug'],
+        19 => ['start_m' => 8, 'start_d' => 3, 'end_m' => 8, 'end_d' => 8, 'month' => 'Aug'],
+        20 => ['start_m' => 8, 'start_d' => 10, 'end_m' => 8, 'end_d' => 14, 'month' => 'Aug'],
+        21 => ['start_m' => 8, 'start_d' => 17, 'end_m' => 8, 'end_d' => 22, 'month' => 'Aug'],
+        22 => ['start_m' => 8, 'start_d' => 24, 'end_m' => 8, 'end_d' => 29, 'month' => 'Aug'],
+        23 => ['start_m' => 8, 'start_d' => 31, 'end_m' => 9, 'end_d' => 5, 'month' => 'Aug-Sep'],
+        24 => ['start_m' => 9, 'start_d' => 7, 'end_m' => 9, 'end_d' => 12, 'month' => 'Sep'],
+        25 => ['start_m' => 9, 'start_d' => 14, 'end_m' => 9, 'end_d' => 19, 'month' => 'Sep'],
+        26 => ['start_m' => 9, 'start_d' => 21, 'end_m' => 9, 'end_d' => 26, 'month' => 'Sep'],
+        27 => ['start_m' => 9, 'start_d' => 28, 'end_m' => 10, 'end_d' => 3, 'month' => 'Sep-Oct'],
+        28 => ['start_m' => 10, 'start_d' => 5, 'end_m' => 10, 'end_d' => 10, 'month' => 'Oct'],
+        29 => ['start_m' => 10, 'start_d' => 12, 'end_m' => 10, 'end_d' => 17, 'month' => 'Oct'],
+        30 => ['start_m' => 10, 'start_d' => 20, 'end_m' => 10, 'end_d' => 24, 'month' => 'Oct'],
+        31 => ['start_m' => 10, 'start_d' => 26, 'end_m' => 10, 'end_d' => 31, 'month' => 'Oct'],
+        32 => ['start_m' => 11, 'start_d' => 2, 'end_m' => 11, 'end_d' => 6, 'month' => 'Nov'],
+        33 => ['start_m' => 11, 'start_d' => 9, 'end_m' => 11, 'end_d' => 14, 'month' => 'Nov'],
+        34 => ['start_m' => 11, 'start_d' => 16, 'end_m' => 11, 'end_d' => 21, 'month' => 'Nov'],
+        35 => ['start_m' => 11, 'start_d' => 23, 'end_m' => 11, 'end_d' => 28, 'month' => 'Nov'],
+        36 => ['start_m' => 11, 'start_d' => 30, 'end_m' => 12, 'end_d' => 5, 'month' => 'Nov-Dec'],
+        37 => ['start_m' => 12, 'start_d' => 7, 'end_m' => 12, 'end_d' => 12, 'month' => 'Dec'],
+        38 => ['start_m' => 12, 'start_d' => 14, 'end_m' => 12, 'end_d' => 19, 'month' => 'Dec'],
+        39 => ['start_m' => 12, 'start_d' => 21, 'end_m' => 12, 'end_d' => 26, 'month' => 'Dec'],
+        40 => ['start_m' => 12, 'start_d' => 28, 'end_m' => 1, 'end_d' => 2, 'month' => 'Dec-Jan'],
+        41 => ['start_m' => 1, 'start_d' => 4, 'end_m' => 1, 'end_d' => 9, 'month' => 'Jan'],
+        42 => ['start_m' => 1, 'start_d' => 11, 'end_m' => 1, 'end_d' => 14, 'month' => 'Jan'],
+        43 => ['start_m' => 1, 'start_d' => 18, 'end_m' => 1, 'end_d' => 23, 'month' => 'Jan'],
+        44 => ['start_m' => 1, 'start_d' => 25, 'end_m' => 1, 'end_d' => 30, 'month' => 'Jan'],
+        45 => ['start_m' => 2, 'start_d' => 1, 'end_m' => 2, 'end_d' => 6, 'month' => 'Feb'],
+        46 => ['start_m' => 2, 'start_d' => 8, 'end_m' => 2, 'end_d' => 13, 'month' => 'Feb'],
+        47 => ['start_m' => 2, 'start_d' => 15, 'end_m' => 2, 'end_d' => 20, 'month' => 'Feb'],
+        48 => ['start_m' => 2, 'start_d' => 22, 'end_m' => 2, 'end_d' => 27, 'month' => 'Feb'],
+        49 => ['start_m' => 3, 'start_d' => 1, 'end_m' => 3, 'end_d' => 6, 'month' => 'Mar'],
+        50 => ['start_m' => 3, 'start_d' => 8, 'end_m' => 3, 'end_d' => 13, 'month' => 'Mar'],
+        51 => ['start_m' => 3, 'start_d' => 15, 'end_m' => 3, 'end_d' => 20, 'month' => 'Mar'],
+        52 => ['start_m' => 3, 'start_d' => 22, 'end_m' => 3, 'end_d' => 27, 'month' => 'Mar']
+    ];
+}
+
 function getWeekDates($week_number, $year = null) {
-    if ($year === null) $year = date('Y');
+    if ($year === null) $year = (int)date('Y');
+    else $year = (int)$year;
     
-    // Financial / Operational year starts from April 1
-    $april_first = strtotime($year . '-04-01');
-    $day_of_week = date('N', $april_first); // 1 (Mon) to 7 (Sun)
-    
-    // First Monday on or after April 1
-    if ($day_of_week == 1) {
-        $first_monday = $april_first;
-    } else {
-        $first_monday = strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+    $defs = getCompanyWeekDefinitions();
+    if (isset($defs[$week_number])) {
+        $w = $defs[$week_number];
+        $sy = ($w['start_m'] >= 4) ? $year : ($year + 1);
+        $ey = ($w['end_m'] >= 4 && $w['end_m'] >= $w['start_m']) ? $year : ($year + 1);
+        
+        $from_date = sprintf('%04d-%02d-%02d', $sy, $w['start_m'], $w['start_d']);
+        $to_date = sprintf('%04d-%02d-%02d', $ey, $w['end_m'], $w['end_d']);
+        
+        return [
+            'from_date' => $from_date,
+            'to_date' => $to_date,
+            'month' => $w['month']
+        ];
     }
     
-    $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
-    $week_end = strtotime('+5 days', $week_start); // Monday to Saturday (e.g. 26 Oct to 31 Oct)
-    
     return [
-        'from_date' => date('Y-m-d', $week_start),
-        'to_date' => date('Y-m-d', $week_end)
+        'from_date' => date('Y-m-d'),
+        'to_date' => date('Y-m-d'),
+        'month' => ''
     ];
 }
 
@@ -95,60 +156,114 @@ if ($current_user_role == 3) {
     $tl_lookup->close();
 }
 
-// Get TLs for dropdown
-$tls = [];
-if ($my_tl_id > 0) {
-    $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master 
-                             WHERE user_role_id = 3 AND status = 'Active' AND employee_id = ?
-                             ORDER BY employee_name");
-    $stmt->bind_param("i", $my_tl_id);
-} else {
-    $stmt = $mysqli->prepare("SELECT employee_id, employee_name, employee_username FROM employee_master 
-                             WHERE user_role_id = 3 AND status = 'Active' 
-                             ORDER BY employee_name");
-}
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $tls[] = $row;
-}
-$stmt->close();
+// Exact Database-Matched Team Member Lists (Verified from latest Weekly Report images):
+// 1. CE Team (Total 12 members: K. Rajaramya, G. Saranya, E. Nandhini, T. Suvitha, D. Rohini, V. Indira, T. Lalitha, V. Malavika, G. Praveena, B. Shalini, S. Chandraleka, P. Rekha)
+$ce_team_members = [
+    'TPS004', 'TPS051', 'TPS053', 'TPSC43', 'TPS064', 'TPS078', 'TPSC03', 
+    'TPS038', 'TPS076', 'TPSC51', 'TPS079', 'TPS093', 'TPSN07', 'TPSC33'
+];
 
-// Get selected TL for Filter & Assign (always lock to own Team Leader for TL, SubTL, TM)
-$selected_tl_id = isset($_GET['tl_id']) && $_GET['tl_id'] !== '' ? (int)$_GET['tl_id'] : 0;
-$filter_tl_id = ($my_tl_id > 0) ? $my_tl_id : $selected_tl_id;
-$assign_tl_id = ($my_tl_id > 0) ? $my_tl_id : $selected_tl_id;
+// 2. LE Team (Total 6 members: S. Dhanalakshmi, N. Ramya, S. Abinaya, B. Arulmozhi, S. Kiruthika Singaravel, T. Priyadharshini)
+$le_team_members = [
+    'TPS005', 'TPS011', 'TPS045', 'TPSC42', 'TPS101', 'TPS074', 'TPS095', 'TPSC47'
+];
 
-// Get TMs strictly under this Team Leader (reporting_manager)
+// 3. TS (PAG) & QC Team (Total 9 members: S. Manjuparkavi, V. Hariswetha, P. Kaviya, R. Anitha, V. Bharathi, P. Shanthi, Z. Shakina Banu, V. Jayachandran, S. Athithya)
+$ts_qc_team_members = [
+    'TPS032', 'TPS066', 'TPS070', 'TPS080', 'TPS033', 'TPS036', 'TPS072', 'TPSC41', 'TPSC21'
+];
+
+$all_uq_members = array_unique(array_merge($ce_team_members, $le_team_members, $ts_qc_team_members));
+
+// Check if logged-in user belongs to UQ team (TL T.G. Bragadeeshwaran TPS002 / employee_id = 2)
+$is_uq_team = ($my_tl_id == 2 || $current_user === 'TPS002' || stripos($current_user_name, 'Bragadeeshwaran') !== false || in_array($current_user, $all_uq_members));
+
+// Check if logged-in user is Team Leader (TL)
+$is_tl = ($current_user_role == 3 || $current_user === 'TPS002' || stripos($current_user_name, 'Bragadeeshwaran') !== false);
+$assign_tl_id = ($my_tl_id > 0) ? $my_tl_id : 0;
+
 $tms = [];
-if ($current_user_role > 0) {
-    if ($filter_tl_id > 0) {
-        $query = "SELECT DISTINCT em.employee_id, em.employee_name, em.employee_username 
-                  FROM employee_master em
-                  INNER JOIN employee_master tl ON tl.employee_id = ?
-                  WHERE (em.user_role_id = 4 OR em.user_role_id = 11)
-                    AND (em.status = 'Active' OR em.status IS NULL)
-                    AND (
-                        CAST(em.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_name AS CHAR) COLLATE utf8mb4_unicode_ci
-                        OR CAST(em.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = CAST(tl.employee_username AS CHAR) COLLATE utf8mb4_unicode_ci
-                    )
-                  ORDER BY em.employee_username ASC";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param("i", $filter_tl_id);
+$active_list = [];
+
+if ($is_uq_team) {
+    // Resolve Team Filter Selection (CE, LE, TS, QC)
+    $selected_team = $_GET['team_filter'] ?? '';
+
+    // If no team selected in filter, auto-detect logged-in user's team for SubTL/TM:
+    if (empty($selected_team) && !$is_tl) {
+        if (in_array($current_user, $ce_team_members)) {
+            $selected_team = 'CE';
+        } elseif (in_array($current_user, $le_team_members)) {
+            $selected_team = 'LE';
+        } elseif (in_array($current_user, $ts_qc_team_members)) {
+            $selected_team = 'TS';
+        } else {
+            $selected_team = 'CE';
+        }
+    }
+
+    // Select active member list according to Team Filter:
+    if ($selected_team === 'CE') {
+        $active_list = $ce_team_members;
+    } elseif ($selected_team === 'LE') {
+        $active_list = $le_team_members;
+    } elseif ($selected_team === 'TS' || $selected_team === 'QC') {
+        $active_list = $ts_qc_team_members;
     } else {
-        $query = "SELECT DISTINCT em.employee_id, em.employee_name, em.employee_username 
-                  FROM employee_master em
-                  WHERE (em.user_role_id = 4 OR em.user_role_id = 11)
-                    AND (em.status = 'Active' OR em.status IS NULL)
-                  ORDER BY em.employee_username ASC";
-        $stmt = $mysqli->prepare($query);
+        $active_list = $all_uq_members;
     }
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $tms[] = $row;
+
+    // Fetch TMs for Filter Dropdown, Assign Form, and Target Revision
+    if (!empty($active_list)) {
+        $in_list = "'" . implode("','", array_map([$mysqli, 'real_escape_string'], $active_list)) . "'";
+        $query = "SELECT DISTINCT employee_id, employee_name, employee_username 
+                  FROM employee_master 
+                  WHERE employee_username IN ($in_list)
+                    AND (status = 'Active' OR status IS NULL OR status = '')
+                  ORDER BY employee_username ASC";
+        $result = $mysqli->query($query);
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $tms[] = $row;
+            }
+        }
     }
-    $stmt->close();
+} else {
+    // Non-UQ Team (e.g. R. Shanthi, S. Sivakumar, D. Mohan, M. Selvarani)
+    $selected_team = '';
+    
+    // Resolve TL names / reporting manager names
+    $tl_rep_names = [];
+    if ($my_tl_id > 0) {
+        $tl_lookup_q = $mysqli->query("SELECT employee_name, employee_username FROM employee_master WHERE employee_id = " . (int)$my_tl_id);
+        if ($tl_lookup_q && $tl_r = $tl_lookup_q->fetch_assoc()) {
+            $tl_rep_names[] = $tl_r['employee_name'];
+            $tl_rep_names[] = str_replace(' ', '', $tl_r['employee_name']);
+            $tl_rep_names[] = $tl_r['employee_username'];
+        }
+    }
+    if (!empty($current_user_name)) {
+        $tl_rep_names[] = $current_user_name;
+        $tl_rep_names[] = str_replace(' ', '', $current_user_name);
+        $tl_rep_names[] = $current_user;
+    }
+    $tl_rep_names = array_unique(array_filter($tl_rep_names));
+    
+    if (!empty($tl_rep_names)) {
+        $in_tl_names = "'" . implode("','", array_map([$mysqli, 'real_escape_string'], $tl_rep_names)) . "'";
+        $query = "SELECT DISTINCT employee_id, employee_name, employee_username 
+                  FROM employee_master 
+                  WHERE reporting_manager IN ($in_tl_names)
+                    AND (status = 'Active' OR status IS NULL OR status = '')
+                  ORDER BY employee_name ASC";
+        $result = $mysqli->query($query);
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $tms[] = $row;
+                $active_list[] = $row['employee_username'];
+            }
+        }
+    }
 }
 
 // Handle form submission (Only TL & SubTL allowed)
@@ -190,9 +305,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array((int)$current_user_role, [
             $from_date = $week_dates['from_date'];
             $to_date = $week_dates['to_date'];
             
-            // Check for overlapping targets
+            // Check for overlapping targets (exclude week_number = 0 target revision entries)
             $check_stmt = $mysqli->prepare("SELECT id FROM weekly_targets 
                                            WHERE tm_id = ? 
+                                           AND week_number > 0
                                            AND (
                                                (from_date <= ? AND to_date >= ?) OR
                                                (from_date <= ? AND to_date >= ?) OR
@@ -398,11 +514,31 @@ WHERE wt.week_number > 0";
 $params = [];
 $types = '';
 
-if ($filter_tl_id > 0) {
-    $target_query .= " AND (wt.tl_id = ? OR CAST(tm.reporting_manager AS CHAR) COLLATE utf8mb4_unicode_ci = (SELECT CAST(employee_name AS CHAR) COLLATE utf8mb4_unicode_ci FROM employee_master WHERE employee_id = ? LIMIT 1))";
-    $params[] = $filter_tl_id;
-    $params[] = $filter_tl_id;
-    $types .= 'ii';
+if ($is_uq_team) {
+    if (!empty($active_list)) {
+        $in_ph = implode(',', array_fill(0, count($active_list), '?'));
+        $target_query .= " AND wt.tm_id IN ($in_ph)";
+        foreach ($active_list as $u) {
+            $params[] = $u;
+            $types .= 's';
+        }
+    }
+} else {
+    // Non-UQ team: show targets only for their team members or assigned under their TL
+    if (!empty($active_list)) {
+        $in_ph = implode(',', array_fill(0, count($active_list), '?'));
+        $target_query .= " AND (wt.tm_id IN ($in_ph) OR wt.tl_id = ?)";
+        foreach ($active_list as $u) {
+            $params[] = $u;
+            $types .= 's';
+        }
+        $params[] = $my_tl_id;
+        $types .= 'i';
+    } else {
+        $target_query .= " AND wt.tl_id = ?";
+        $params[] = $my_tl_id;
+        $types .= 'i';
+    }
 }
 
 // Apply Team Member filter if specified
@@ -502,9 +638,10 @@ require 'header.php';
 
     /* Sticky Table Header */
     .table thead th {
-        position: sticky;
-        top: 70px;
-        z-index: 900;
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 70px !important;
+        z-index: 800 !important;
         background-color: var(--ash, #6c757d) !important;
         font-weight: 600;
         font-size: 0.82rem;
@@ -602,18 +739,21 @@ require 'header.php';
     <!-- Filter Section -->
     <div class="filter-section">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label for="tl_id" class="form-label small fw-semibold">Select Team Leader</label>
-                <select name="tl_id" id="tl_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">All Team Leaders</option>
-                    <?php foreach($tls as $tl): ?>
-                    <option value="<?= h($tl['employee_id']) ?>" 
-                            <?= $filter_tl_id == $tl['employee_id'] ? 'selected' : '' ?>>
-                        <?= h($tl['employee_name']) ?>
-                    </option>
-                    <?php endforeach; ?>
+            <!-- Team Filter (CE, LE, TS, QC) - Only for UQ Team -->
+            <?php if ($is_uq_team): ?>
+            <div class="col-md-2">
+                <label for="team_filter" class="form-label small fw-semibold">Team</label>
+                <select name="team_filter" id="team_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <?php if ($is_tl): ?>
+                    <option value="" <?= empty($_GET['team_filter']) ? 'selected' : '' ?>>All Teams</option>
+                    <?php endif; ?>
+                    <option value="CE" <?= $selected_team === 'CE' ? 'selected' : '' ?>>CE</option>
+                    <option value="LE" <?= $selected_team === 'LE' ? 'selected' : '' ?>>LE</option>
+                    <option value="TS" <?= $selected_team === 'TS' ? 'selected' : '' ?>>TS (PAG)</option>
+                    <option value="QC" <?= $selected_team === 'QC' ? 'selected' : '' ?>>QC</option>
                 </select>
             </div>
+            <?php endif; ?>
 
             <div class="col-md">
                 <label for="tm_filter" class="form-label small fw-semibold">Team Member</label>
@@ -631,8 +771,16 @@ require 'header.php';
                 <label for="week_filter" class="form-label small fw-semibold">Week</label>
                 <select name="week_filter" id="week_filter" class="form-select form-select-sm">
                     <option value="">All Weeks</option>
-                    <?php for($w=1; $w<=53; $w++): ?>
-                        <option value="W<?= $w ?>" <?= (isset($_GET['week_filter']) && $_GET['week_filter'] == 'W'.$w) ? 'selected' : '' ?>>W<?= str_pad($w, 2, '0', STR_PAD_LEFT) ?></option>
+                    <?php 
+                    $filter_year = $_GET['year_filter'] ?? date('Y');
+                    for($w=1; $w<=52; $w++): 
+                        $w_dates = getWeekDates($w, $filter_year);
+                        $from_txt = date('d-M-y', strtotime($w_dates['from_date']));
+                        $to_txt = date('d-M-y', strtotime($w_dates['to_date']));
+                    ?>
+                        <option value="W<?= $w ?>" <?= (isset($_GET['week_filter']) && $_GET['week_filter'] == 'W'.$w) ? 'selected' : '' ?>>
+                            W<?= str_pad($w, 2, '0', STR_PAD_LEFT) ?> (<?= $from_txt ?> to <?= $to_txt ?>)
+                        </option>
                     <?php endfor; ?>
                 </select>
             </div>
@@ -659,10 +807,69 @@ require 'header.php';
         </form>
     </div>
 
+        <!-- ROW 1: Left: Assign Weekly Target (View Only) & Quick Stats (col-md-4) | Right: Assigned Targets Table (col-md-8) -->
         <div class="row">
-            <!-- Quick Stats (Full Width Top for TM View-Only) -->
-            <div class="col-12">
+            <!-- Left Side: Assign Target Form (View Only) & Quick Stats -->
+            <div class="col-md-4">
                 <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Assign Weekly Target</h5>
+                    </div>
+                    <div class="card-body">
+                        <form autocomplete="off">
+                            <div class="mb-3">
+                                <label for="tm_id" class="form-label">Team Member</label>
+                                <select name="tm_id" id="tm_id" class="form-select" disabled>
+                                    <option value="<?= h($current_user) ?>" selected>
+                                        <?= h($current_user_name) ?> (<?= h($current_user) ?>)
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="target_limit" class="form-label">Target Limit</label>
+                                <input type="number" class="form-control" id="target_limit" name="target_limit" 
+                                       readonly disabled placeholder="Assigned by Team Leader">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="week_input" class="form-label">Week</label>
+                                <div class="week-input-container">
+                                    <select class="form-select" id="week_input" name="week_input" disabled>
+                                        <option value="">Select Week</option>
+                                        <?php 
+                                        $curr_form_year = date('Y');
+                                        for($w=1; $w<=52; $w++): 
+                                            $w_dates = getWeekDates($w, $curr_form_year);
+                                            $from_txt = date('d-M-y', strtotime($w_dates['from_date']));
+                                            $to_txt = date('d-M-y', strtotime($w_dates['to_date']));
+                                        ?>
+                                            <option value="W<?= $w ?>">W<?= str_pad($w, 2, "0", STR_PAD_LEFT) ?> (<?= $from_txt ?> to <?= $to_txt ?>)</option>
+                                        <?php endfor; ?>
+                                    </select>
+                                    <input type="number" class="form-control" id="year" name="year" 
+                                           value="<?= date('Y') ?>" style="width: 100px;" readonly disabled>
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i> Week assigned by TL / SubTL
+                                </div>
+                            </div>
+                            
+                            <div id="weekDates" class="alert alert-info">
+                                <small><i class="fas fa-lock me-1"></i> Target assignment is view-only for team members</small>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-success" disabled style="opacity: 0.65; cursor: not-allowed;">
+                                    <i class="fas fa-paper-plane me-1"></i> Assign Target
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="card mt-3">
                     <div class="card-header">
                         <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Quick Stats</h6>
                     </div>
@@ -702,27 +909,25 @@ require 'header.php';
                 </div>
             </div>
 
-            <!-- Targets List (Full Width) -->
-            <div class="col-12">
+            <!-- Right Side: Assigned Targets Table -->
+            <div class="col-md-8">
                 <div class="card">
-                    <!-- <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"> -->
-                         <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Assigned Targets</h5>
                         <span class="badge bg-light text-dark">
                             <?= count($targets) ?> Target(s)
                         </span>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" style="overflow: visible;">
+                        <div class="table-container" style="overflow: visible;">
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th width="50">S.No</th>
-                                        <th>TL</th>
                                         <th>Team Member</th>
-                                        <th width="80">Week</th>
-                                        <th width="120" class="text-center">Target Limit</th>
-                                        <th width="200">Progress</th>
+                                        <th width="100">Week</th>
+                                        <th width="130" class="text-center">Target Limit</th>
+                                        <th width="240">Progress</th>
                                         <th width="100">Status</th>
                                     </tr>
                                 </thead>
@@ -731,9 +936,6 @@ require 'header.php';
                                         <?php $sno = 1; foreach($targets as $target): ?>
                                         <tr>
                                             <td class="fw-bold"><?= $sno++ ?></td>
-                                            <td>
-                                                <small><?= h($target['tl_name']) ?></small>
-                                            </td>
                                             <td>
                                                 <div class="fw-semibold"><?= h($target['tm_name']) ?></div>
                                                 <small class="text-muted"><?= h($target['tm_username']) ?></small>
@@ -771,31 +973,11 @@ require 'header.php';
                                                     <?= h($target['status']) ?>
                                                 </span>
                                             </td>
-                                            <!-- <td class="text-center">
-                                                <div class="btn-group btn-group-sm">
-                                                    button class="btn btn-info" title="Update Progress"
-                                                            onclick="updateProgress(<?= $target['id'] ?>, '<?= h($target['tm_name']) ?>')">
-                                                        <i class="fas fa-chart-line"></i>
-                                                    </button
-                                                    <button class="btn btn-warning" title="Edit Target"
-                                                            onclick="editTarget(<?= $target['id'] ?>, <?= h($target['target_limit']) ?>, 'W<?= h($target['week_number']) ?>', <?= h($target['year']) ?>)">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <form method="post" style="display:inline;" 
-                                                          onsubmit="return confirm('Delete this target?')">
-                                                        <input type="hidden" name="action" value="delete_target">
-                                                        <input type="hidden" name="target_id" value="<?= h($target['id']) ?>">
-                                                        <button type="submit" class="btn btn-danger" title="Delete">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td> -->
                                         </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <tr>
-                                            <td colspan="7" class="text-center py-5">
+                                            <td colspan="6" class="text-center py-5">
                                                 <div class="text-muted">
                                                     <i class="fas fa-bullseye fa-3x mb-3"></i>
                                                     <h5>No targets found</h5>
@@ -811,7 +993,7 @@ require 'header.php';
             </div>
         </div>
 
-        <!-- Target Revision Section (NEW ROW) -->
+        <!-- ROW 2: Target Revision Table (Full Width) -->
         <div class="row mt-4">
             <div class="col-12">
                 <form method="post">
@@ -821,15 +1003,15 @@ require 'header.php';
                             <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Target Revision</h5>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive" style="overflow: visible;">
+                            <div class="table-container" style="overflow: visible;">
                                 <table class="table table-hover align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
+                                            <th width="120">ID</th>
                                             <th width="200">Month with year</th>
                                             <th>Team Member</th>
-                                            <th width="200">Current Target</th>
-                                            <th width="200">Target Revision</th>
+                                            <th width="180">Current Target</th>
+                                            <th width="180">Target Revision</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -983,6 +1165,49 @@ require 'header.php';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const companyWeeks = <?= json_encode(getCompanyWeekDefinitions()) ?>;
+
+        function updateWeekSelectOptions(selectEl, year) {
+            if (!selectEl) return;
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            Array.from(selectEl.options).forEach(opt => {
+                const m = opt.value.match(/W(\d+)/i);
+                if (m) {
+                    const wn = parseInt(m[1]);
+                    const w = companyWeeks[wn];
+                    if (w) {
+                        const sy = (w.start_m >= 4) ? year : (year + 1);
+                        const ey = (w.end_m >= 4 && w.end_m >= w.start_m) ? year : (year + 1);
+                        const syShort = String(sy).slice(-2);
+                        const eyShort = String(ey).slice(-2);
+                        const sStr = `${String(w.start_d).padStart(2, '0')}-${monthNames[w.start_m - 1]}-${syShort}`;
+                        const eStr = `${String(w.end_d).padStart(2, '0')}-${monthNames[w.end_m - 1]}-${eyShort}`;
+                        opt.textContent = `W${String(wn).padStart(2, '0')} (${sStr} to ${eStr})`;
+                    }
+                }
+            });
+        }
+
+        function calculateWeekDates(weekInput, yearInput, displayDiv) {
+            const weekMatch = weekInput.value.match(/W(\d+)/i);
+            if (weekMatch) {
+                const weekNumber = parseInt(weekMatch[1]);
+                const year = parseInt(yearInput.value) || new Date().getFullYear();
+                const w = companyWeeks[weekNumber];
+                if (w) {
+                    const sy = (w.start_m >= 4) ? year : (year + 1);
+                    const ey = (w.end_m >= 4 && w.end_m >= w.start_m) ? year : (year + 1);
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const startDateStr = `${String(w.start_d).padStart(2, '0')}-${monthNames[w.start_m - 1]}-${sy}`;
+                    const endDateStr = `${String(w.end_d).padStart(2, '0')}-${monthNames[w.end_m - 1]}-${ey}`;
+                    displayDiv.innerHTML = `
+                        <div class="fw-bold">Week ${weekNumber}, ${year} (${w.month})</div>
+                        <small>${startDateStr} to ${endDateStr}</small>
+                    `;
+                }
+            }
+        }
+
         // Calculate and display week dates when week input changes
         document.addEventListener('DOMContentLoaded', function() {
             const weekInput = document.getElementById('week_input');
@@ -993,79 +1218,46 @@ require 'header.php';
             const editYearInput = document.getElementById('edit_year');
             const editWeekDatesDiv = document.getElementById('editWeekDates');
             
-            function calculateWeekDates(weekInput, yearInput, displayDiv) {
-                const weekMatch = weekInput.value.match(/W(\d+)/i);
-                if (weekMatch) {
-                    const weekNumber = parseInt(weekMatch[1]);
-                    const year = parseInt(yearInput.value);
-                    
-                    if (weekNumber >= 1 && weekNumber <= 53) {
-                        // Operational year starts from April 1
-                        const aprilFirst = new Date(year, 3, 1); // Month 3 is April
-                        const dayOfWeek = aprilFirst.getDay(); // 0 is Sunday, 1 is Monday
-                        
-                        // Find first Monday on or after April 1
-                        const diffToMonday = (dayOfWeek === 1) ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
-                        const firstMonday = new Date(aprilFirst);
-                        firstMonday.setDate(firstMonday.getDate() + diffToMonday);
-                        
-                        const weekStart = new Date(firstMonday);
-                        weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
-                        
-                        const weekEnd = new Date(weekStart);
-                        weekEnd.setDate(weekEnd.getDate() + 5); // Monday to Saturday (e.g. 26 Oct to 31 Oct)
-                        
-                        const formatDate = (date) => {
-                            return date.toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                            });
-                        };
-                        
-                        displayDiv.innerHTML = `
-                            <div class="fw-bold">Week ${weekNumber}, ${year}</div>
-                            <small>${formatDate(weekStart)} to ${formatDate(weekEnd)}</small>
-                        `;
-                    }
-                }
+            // For new target form
+            if (weekInput) {
+                weekInput.addEventListener('change', function() {
+                    calculateWeekDates(weekInput, yearInput, weekDatesDiv);
+                });
             }
             
-            // For new target form
-            weekInput.addEventListener('input', function() {
-                calculateWeekDates(weekInput, yearInput, weekDatesDiv);
-            });
-            
-            yearInput.addEventListener('change', function() {
-                calculateWeekDates(weekInput, yearInput, weekDatesDiv);
-            });
+            if (yearInput) {
+                yearInput.addEventListener('change', function() {
+                    updateWeekSelectOptions(weekInput, parseInt(this.value) || new Date().getFullYear());
+                    calculateWeekDates(weekInput, yearInput, weekDatesDiv);
+                });
+            }
             
             // For edit form
-            editWeekInput.addEventListener('input', function() {
-                calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
-            });
+            if (editWeekInput) {
+                editWeekInput.addEventListener('change', function() {
+                    calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
+                });
+            }
             
-            editYearInput.addEventListener('change', function() {
-                calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
-            });
-            
-            // Auto-format week input
-            weekInput.addEventListener('blur', function() {
-                const value = this.value.trim().toUpperCase();
-                if (value && !value.startsWith('W')) {
-                    this.value = 'W' + value.replace(/\D/g, '');
-                }
-            });
-            
-            editWeekInput.addEventListener('blur', function() {
-                const value = this.value.trim().toUpperCase();
-                if (value && !value.startsWith('W')) {
-                    this.value = 'W' + value.replace(/\D/g, '');
-                }
-            });
+            if (editYearInput) {
+                editYearInput.addEventListener('change', function() {
+                    updateWeekSelectOptions(editWeekInput, parseInt(this.value) || new Date().getFullYear());
+                    calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
+                });
+            }
+
+            // For top filter
+            const filterYearSelect = document.getElementById('year_filter');
+            if (filterYearSelect) {
+                filterYearSelect.addEventListener('change', function() {
+                    updateWeekSelectOptions(document.getElementById('week_filter'), parseInt(this.value) || new Date().getFullYear());
+                });
+            }
             
             // Calculate initial week dates
-            calculateWeekDates(weekInput, yearInput, weekDatesDiv);
+            if (weekInput && yearInput && weekDatesDiv) {
+                calculateWeekDates(weekInput, yearInput, weekDatesDiv);
+            }
         });
         
         // Update progress
@@ -1115,35 +1307,12 @@ require 'header.php';
             const editYearInput = document.getElementById('edit_year');
             const editWeekDatesDiv = document.getElementById('editWeekDates');
             
-            // Calculate and display week dates (April Year Base)
-            const weekMatch = weekInput.match(/W(\d+)/i);
-            if (weekMatch) {
-                const weekNumber = parseInt(weekMatch[1]);
-                const aprilFirst = new Date(year, 3, 1);
-                const dayOfWeek = aprilFirst.getDay();
-                const diffToMonday = (dayOfWeek === 1) ? 0 : (dayOfWeek === 0 ? 1 : (8 - dayOfWeek));
-                const firstMonday = new Date(aprilFirst);
-                firstMonday.setDate(firstMonday.getDate() + diffToMonday);
-                
-                const weekStart = new Date(firstMonday);
-                weekStart.setDate(weekStart.getDate() + (weekNumber - 1) * 7);
-                
-                const weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekEnd.getDate() + 5);
-                
-                const formatDate = (date) => {
-                    return date.toLocaleDateString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                    });
-                };
-                
-                editWeekDatesDiv.innerHTML = `
-                    <div class="fw-bold">Week ${weekNumber}, ${year}</div>
-                    <small>${formatDate(weekStart)} to ${formatDate(weekEnd)}</small>
-                `;
-            }
+            updateWeekSelectOptions(editWeekInput, parseInt(year) || new Date().getFullYear());
+            calculateWeekDates(editWeekInput, editYearInput, editWeekDatesDiv);
+            
+            const modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        }
             
             const modal = new bootstrap.Modal(document.getElementById('editModal'));
             modal.show();
