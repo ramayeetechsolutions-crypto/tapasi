@@ -1,7 +1,9 @@
 <?php
 // Helper function to safely print data and prevent errors
-function h($s) {
-    return htmlspecialchars((string)$s, ENT_QUOTES);
+if (!function_exists('h')) {
+    function h($s) {
+        return htmlspecialchars((string)$s, ENT_QUOTES);
+    }
 }
 
 // Start session and check login
@@ -81,55 +83,124 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_leave_count') {
 }
 
 // --- APRIL-BASED OPERATIONAL WEEK DATE CALCULATOR ---
-function getOpWeekDates($week_number, $year = null) {
-    if ($year === null) $year = date('Y');
-    $april_first = strtotime($year . '-04-01');
-    $day_of_week = date('N', $april_first);
-    $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
-    $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
-    $week_end = strtotime('+5 days', $week_start); // Monday to Saturday
-    return [
-        'from_date' => date('Y-m-d', $week_start),
-        'to_date' => date('Y-m-d', $week_end)
-    ];
+if (!function_exists('getOpWeekDates')) {
+    function getOpWeekDates($week_number, $year = null) {
+        if ($year === null) $year = date('Y');
+        $april_first = strtotime($year . '-04-01');
+        $day_of_week = date('N', $april_first);
+        $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+        $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
+        $week_end = strtotime('+5 days', $week_start); // Monday to Saturday
+        return [
+            'from_date' => date('Y-m-d', $week_start),
+            'to_date' => date('Y-m-d', $week_end)
+        ];
+    }
 }
 
 // Current Operational Week (April based)
-function getCurrentOpWeek($year = null) {
-    if ($year === null) $year = date('Y');
-    $now = time();
-    $april_first = strtotime($year . '-04-01');
-    if ($now < $april_first) {
-        $year = $year - 1;
+if (!function_exists('getCurrentOpWeek')) {
+    function getCurrentOpWeek($year = null) {
+        if ($year === null) $year = date('Y');
+        $now = time();
         $april_first = strtotime($year . '-04-01');
+        if ($now < $april_first) {
+            $year = $year - 1;
+            $april_first = strtotime($year . '-04-01');
+        }
+        $day_of_week = date('N', $april_first);
+        $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+        $diff_weeks = floor(($now - $first_monday) / (7 * 86400)) + 1;
+        return max(1, min(53, (int)$diff_weeks));
     }
-    $day_of_week = date('N', $april_first);
-    $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
-    $diff_weeks = floor(($now - $first_monday) / (7 * 86400)) + 1;
-    return max(1, min(53, (int)$diff_weeks));
+}
+
+// Fiscal Weeks Calculation function (April 1st based)
+if (!function_exists('getFiscalWeeks')) {
+    function getFiscalWeeks($fy_year) {
+        $weeks = [];
+        $fy_start = new DateTime("{$fy_year}-04-01");
+        $fy_end = new DateTime(($fy_year + 1) . "-03-31");
+        $cur_start = clone $fy_start;
+        $w = 1;
+        while ($cur_start <= $fy_end) {
+            $end = clone $cur_start;
+            $end->modify('+5 days');
+            if ($end > $fy_end) { $end = clone $fy_end; }
+            $weeks[$w] = [
+                'week' => $w,
+                'start' => $cur_start->format('Y-m-d'),
+                'end' => $end->format('Y-m-d'),
+                'year' => $fy_year
+            ];
+            $cur_start = clone $end;
+            while ($cur_start->format('N') != 1 && $cur_start <= $fy_end) {
+                $cur_start->modify('+1 day');
+            }
+            $w++;
+        }
+        return $weeks;
+    }
+}
+
+if (!function_exists('calculateFiscalWeekNumber')) {
+    function calculateFiscalWeekNumber($dateStr) {
+        if (!$dateStr) return 1;
+        $d = new DateTime($dateStr);
+        $year = (int)$d->format('Y');
+        $month = (int)$d->format('m');
+        $fiscalStart = ($month < 4) ? new DateTime(($year - 1) . '-04-01') : new DateTime($year . '-04-01');
+        if ($d < $fiscalStart) return 1;
+        $cur = clone $fiscalStart;
+        $sundays = 0;
+        while ($cur < $d) {
+            if ($cur->format('w') == 0) $sundays++;
+            $cur->modify('+1 day');
+        }
+        return (1 + $sundays);
+    }
 }
 
 // --- FILTERS & DYNAMIC WEEKS / MONTH LOGIC ---
 $current_user = $_SESSION['username'] ?? '';
 
 // Get Filters
-$filter_mode = $_GET['filter_mode'] ?? 'week'; // 'week' or 'month'
+$start_date_param = trim($_GET['start_date'] ?? '');
+$end_date_param = trim($_GET['end_date'] ?? '');
 $filter_tm = $_GET['filter_tm'] ?? '';
 $filter_process = $_GET['filter_process'] ?? [];
-$filter_week = $_GET['filter_week'] ?? getCurrentOpWeek();
-$filter_month = (int)($_GET['filter_month'] ?? date('n'));
-$filter_year = date('Y');
 
-// Calculate 4 Dynamic Weeks for Columns
+$today_dt = new DateTime();
+$curr_fy_y = (int)$today_dt->format('Y');
+if ((int)$today_dt->format('n') < 4) { $curr_fy_y--; }
+
+if (!empty($start_date_param) && !empty($end_date_param)) {
+    $w1_from = $start_date_param;
+    $w1_to = $end_date_param;
+    $s_dt = new DateTime($w1_from);
+    $fy_y = (int)$s_dt->format('Y');
+    if ((int)$s_dt->format('n') < 4) { $fy_y--; }
+    $filter_year = $fy_y;
+    $filter_week = calculateFiscalWeekNumber($w1_from);
+} else {
+    $filter_week = (int)($_GET['filter_week'] ?? calculateFiscalWeekNumber(date('Y-m-d')));
+    $filter_year = (int)($_GET['filter_year'] ?? $curr_fy_y);
+    $fy_weeks = getFiscalWeeks($filter_year);
+    if (isset($fy_weeks[$filter_week])) {
+        $w1_from = $fy_weeks[$filter_week]['start'];
+        $w1_to = $fy_weeks[$filter_week]['end'];
+    } else {
+        $w1_dates = getOpWeekDates($filter_week, $filter_year);
+        $w1_from = $w1_dates['from_date'];
+        $w1_to = $w1_dates['to_date'];
+    }
+}
+
+// Calculate 4 Dynamic Weeks for Columns (Forward Order)
 $w1 = (int)$filter_week;
-$w2 = $w1 - 1 > 0 ? $w1 - 1 : 52 + ($w1 - 1);
-$w3 = $w2 - 1 > 0 ? $w2 - 1 : 52 + ($w2 - 1);
-$w4 = $w3 - 1 > 0 ? $w3 - 1 : 52 + ($w3 - 1);
-
-// Dates for Week 1 (Selected Week)
-$w1_dates = getOpWeekDates($w1, $filter_year);
-$w1_from = $w1_dates['from_date'];
-$w1_to = $w1_dates['to_date'];
+$w2 = $w1 + 1 <= 53 ? $w1 + 1 : ($w1 + 1) - 53;
+$w3 = $w2 + 1 <= 53 ? $w2 + 1 : ($w2 + 1) - 53;
+$w4 = $w3 + 1 <= 53 ? $w3 + 1 : ($w3 + 1) - 53;
 
 // 1. Get the logged-in user's employee_name / Reporting Manager (Login-wise dynamic)
 $user_employee_name = '';
@@ -146,28 +217,16 @@ if ($stmt_user) {
 }
 $user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager : $logged_in_name;
 
-// Prepare Queries based on Mode (Weekly vs Monthly)
-if ($filter_mode === 'month') {
-    $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND year = ?";
-    $stmt_target = $mysqli->prepare($target_sql);
+// Target Query
+$target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
+$stmt_target = $mysqli->prepare($target_sql);
 
-    // Production Query fetching Article Count (word_count) for AP
-    $prod_sql = "SELECT SUM(j.word_count) as total_prod FROM ap_assign a JOIN jobs j ON a.job_id = j.job_id WHERE a.process_member = ? AND a.process_status = 'Completed' AND MONTH(a.date) = ? AND YEAR(a.date) = ?";
-    $stmt_prod = $mysqli->prepare($prod_sql);
-    
-    $error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND MONTH(date) = ? AND YEAR(date) = ?";
-    $stmt_error = $mysqli->prepare($error_sql);
-} else {
-    $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
-    $stmt_target = $mysqli->prepare($target_sql);
+// Production Query fetching Article Count (word_count) for AP
+$prod_sql = "SELECT SUM(j.word_count) as total_prod FROM ap_assign a JOIN jobs j ON a.job_id = j.job_id WHERE a.process_member = ? AND a.process_status = 'Completed' AND DATE(a.date) BETWEEN ? AND ?";
+$stmt_prod = $mysqli->prepare($prod_sql);
 
-    // Production Query fetching Article Count (word_count) for AP
-    $prod_sql = "SELECT SUM(j.word_count) as total_prod FROM ap_assign a JOIN jobs j ON a.job_id = j.job_id WHERE a.process_member = ? AND a.process_status = 'Completed' AND DATE(a.date) BETWEEN ? AND ?";
-    $stmt_prod = $mysqli->prepare($prod_sql);
-
-    $error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND DATE(date) BETWEEN ? AND ?";
-    $stmt_error = $mysqli->prepare($error_sql);
-}
+$error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND DATE(date) BETWEEN ? AND ?";
+$stmt_error = $mysqli->prepare($error_sql);
 
 // Fallback query to get the latest target if current week has no target assigned
 $target_fallback_sql = "SELECT target_limit FROM weekly_targets WHERE tm_id = ? ORDER BY id DESC LIMIT 1";
@@ -241,11 +300,7 @@ if (!empty($user_employee_name)) {
             $target = 0;
             $leave_count = 0;
             if ($stmt_target) {
-                if ($filter_mode === 'month') {
-                    $stmt_target->bind_param("si", $emp_username, $filter_year);
-                } else {
-                    $stmt_target->bind_param("sii", $emp_username, $w1, $filter_year);
-                }
+                $stmt_target->bind_param("sii", $emp_username, $w1, $filter_year);
                 $stmt_target->execute();
                 $res_target = $stmt_target->get_result()->fetch_assoc();
                 $target = $res_target['total_target'] ?? 0;
@@ -257,18 +312,14 @@ if (!empty($user_employee_name)) {
                     $stmt_target_fallback->execute();
                     $res_fallback = $stmt_target_fallback->get_result()->fetch_assoc();
                     $base_target = $res_fallback['target_limit'] ?? 0;
-                    $target = ($filter_mode === 'month') ? ($base_target * 4) : $base_target;
+                    $target = $base_target;
                 }
             }
             
             // Fetch Production (Article Count sum from AP jobs)
             $production = 0;
             if (isset($stmt_prod) && $stmt_prod) {
-                if ($filter_mode === 'month') {
-                    $stmt_prod->bind_param("sii", $emp_username, $filter_month, $filter_year);
-                } else {
-                    $stmt_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
-                }
+                $stmt_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
                 $stmt_prod->execute();
                 $res_prod = $stmt_prod->get_result()->fetch_assoc();
                 $production = $res_prod['total_prod'] ?? 0;
@@ -277,11 +328,7 @@ if (!empty($user_employee_name)) {
             // Get Errors
             $errors = 0;
             if ($stmt_error) {
-                if ($filter_mode === 'month') {
-                    $stmt_error->bind_param("sii", $emp_name, $filter_month, $filter_year);
-                } else {
-                    $stmt_error->bind_param("sss", $emp_name, $w1_from, $w1_to);
-                }
+                $stmt_error->bind_param("sss", $emp_name, $w1_from, $w1_to);
                 $stmt_error->execute();
                 $res_error = $stmt_error->get_result()->fetch_assoc();
                 $errors = $res_error['error_count'] ?? 0;
@@ -570,10 +617,87 @@ if(isset($stmt_prod) && $stmt_prod) $stmt_prod->close();
             ];
         }
     ?>
-    <!-- FILTER FORM -->
+    <!-- FILTER FORM (Matching XML Meeting Report) -->
     <div class="card mb-3 shadow-sm border-0">
-        <div class="card-body py-2">
-            <form method="GET" class="row g-2 align-items-end">
+        <div class="card-body py-3">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">Start Date</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="<?= h($w1_from) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">End Date</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="<?= h($w1_to) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">Select Week</label>
+                    <select id="week_selector" class="form-select form-select-sm">
+                        <option value="">Custom Date</option>
+                        <?php
+                        $fiscal_weeks = getFiscalWeeks($filter_year);
+                        foreach ($fiscal_weeks as $fw) {
+                            $w = $fw['week'];
+                            $w_start = $fw['start'];
+                            $w_end = $fw['end'];
+                            $w_start_dmy = date('d-m-Y', strtotime($w_start));
+                            $val = "{$w_start}|{$w_end}";
+                            $selected = ($val === "$w1_from|$w1_to" || ((int)$filter_week === $w && empty($start_date_param))) ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected} data-week='{$w}' data-year='{$filter_year}'>Week {$w} ({$w_start_dmy})</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">Select Month</label>
+                    <select id="month_selector" class="form-select form-select-sm">
+                        <option value="">Select Month</option>
+                        <?php
+                        $fy_base = $filter_year;
+                        $fy_months = [
+                            ['m' => 4, 'y' => $fy_base, 'name' => 'April'],
+                            ['m' => 5, 'y' => $fy_base, 'name' => 'May'],
+                            ['m' => 6, 'y' => $fy_base, 'name' => 'June'],
+                            ['m' => 7, 'y' => $fy_base, 'name' => 'July'],
+                            ['m' => 8, 'y' => $fy_base, 'name' => 'August'],
+                            ['m' => 9, 'y' => $fy_base, 'name' => 'September'],
+                            ['m' => 10, 'y' => $fy_base, 'name' => 'October'],
+                            ['m' => 11, 'y' => $fy_base, 'name' => 'November'],
+                            ['m' => 12, 'y' => $fy_base, 'name' => 'December'],
+                            ['m' => 1, 'y' => $fy_base + 1, 'name' => 'January'],
+                            ['m' => 2, 'y' => $fy_base + 1, 'name' => 'February'],
+                            ['m' => 3, 'y' => $fy_base + 1, 'name' => 'March']
+                        ];
+                        foreach ($fy_months as $fym) {
+                            $m_str = str_pad($fym['m'], 2, '0', STR_PAD_LEFT);
+                            $y_str = $fym['y'];
+                            $m_start = "{$y_str}-{$m_str}-01";
+                            $last_day = date('t', strtotime($m_start));
+                            $m_end = "{$y_str}-{$m_str}-{$last_day}";
+                            $val = "{$m_start}|{$m_end}";
+                            $selected = ($val === "$w1_from|$w1_to") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>{$fym['name']} {$y_str}</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-1">Select Year</label>
+                    <select id="year_selector" class="form-select form-select-sm">
+                        <option value="">Select Year</option>
+                        <?php
+                        $curr_fy_start = (int)date('Y');
+                        if ((int)date('n') < 4) { $curr_fy_start--; }
+                        for ($fy = $curr_fy_start + 1; $fy >= $curr_fy_start - 3; $fy--) {
+                            $fy_next = $fy + 1;
+                            $fy_start_date = "$fy-04-01";
+                            $fy_end_date = "$fy_next-03-31";
+                            $val = "{$fy_start_date}|{$fy_end_date}";
+                            $selected = ($val === "$w1_from|$w1_to") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>{$fy} - {$fy_next} (April - March)</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold mb-1">Team Member</label>
                     <select name="filter_tm" class="form-select form-select-sm">
@@ -603,86 +727,100 @@ if(isset($stmt_prod) && $stmt_prod) $stmt_prod->close();
                     </div>
                 </div>
 
-                <script>
-                    function toggleProcessMenu(e) {
-                        e.preventDefault();
-                        var menu = document.getElementById('processMenu');
-                        if(menu.style.display === 'none' || menu.style.display === '') {
-                            menu.style.display = 'block';
-                        } else {
-                            menu.style.display = 'none';
-                        }
-                    }
-                    document.addEventListener('click', function(e) {
-                        var menu = document.getElementById('processMenu');
-                        var btn = document.getElementById('processBtn');
-                        if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
-                            menu.style.display = 'none';
-                        }
-                    });
-                </script>
+                <input type="hidden" name="filter_week" id="hidden_week" value="<?= h($filter_week) ?>">
+                <input type="hidden" name="filter_year" id="hidden_year" value="<?= h($filter_year) ?>">
 
-                <!-- Report Type: Weekly or Monthly -->
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold mb-1">Report View</label>
-                    <select name="filter_mode" id="filterModeSelect" class="form-select form-select-sm" onchange="toggleFilterType()">
-                        <option value="week" <?= $filter_mode === 'week' ? 'selected' : '' ?>>Weekly Base</option>
-                        <option value="month" <?= $filter_mode === 'month' ? 'selected' : '' ?>>Monthly Base</option>
-                    </select>
-                </div>
-
-                <!-- Week Dropdown -->
-                <div class="col-md-2" id="weekFilterDiv" style="<?= $filter_mode === 'month' ? 'display:none;' : '' ?>">
-                    <label class="form-label small fw-bold mb-1">Week</label>
-                    <select name="filter_week" class="form-select form-select-sm">
-                        <?php for($i=1; $i<=53; $i++): ?>
-                            <option value="<?= $i ?>" <?= $w1 == $i ? 'selected' : '' ?>>Week <?= $i ?></option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
-
-                <!-- Month Dropdown -->
-                <div class="col-md-2" id="monthFilterDiv" style="<?= $filter_mode === 'month' ? '' : 'display:none;' ?>">
-                    <label class="form-label small fw-bold mb-1">Month</label>
-                    <select name="filter_month" class="form-select form-select-sm">
-                        <?php for($m=1; $m<=12; $m++): 
-                            $m_name = date('F', mktime(0, 0, 0, $m, 1));
-                        ?>
-                            <option value="<?= $m ?>" <?= $filter_month == $m ? 'selected' : '' ?>><?= $m_name ?></option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary btn-sm me-1"><i class="fas fa-filter"></i> Filter</button>
-                    <a href="ap_meeting.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Clear</a>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="ap_meeting.php" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> Clear Filters</a>
                 </div>
             </form>
         </div>
     </div>
-    
+
     <script>
-    function toggleFilterType() {
-        var mode = document.getElementById('filterModeSelect').value;
-        if (mode === 'month') {
-            document.getElementById('weekFilterDiv').style.display = 'none';
-            document.getElementById('monthFilterDiv').style.display = 'block';
-        } else {
-            document.getElementById('weekFilterDiv').style.display = 'block';
-            document.getElementById('monthFilterDiv').style.display = 'none';
+        function toggleProcessMenu(e) {
+            e.preventDefault();
+            var menu = document.getElementById('processMenu');
+            if(menu.style.display === 'none' || menu.style.display === '') {
+                menu.style.display = 'block';
+            } else {
+                menu.style.display = 'none';
+            }
         }
-    }
+        document.addEventListener('click', function(e) {
+            var menu = document.getElementById('processMenu');
+            var btn = document.getElementById('processBtn');
+            if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
+        // Auto-fill Start and End dates when a Week/Month/Year is selected
+        document.addEventListener('DOMContentLoaded', function() {
+            var weekSel = document.getElementById('week_selector');
+            var monthSel = document.getElementById('month_selector');
+            var yearSel = document.getElementById('year_selector');
+            var startDateInput = document.querySelector('input[name="start_date"]');
+            var endDateInput = document.querySelector('input[name="end_date"]');
+            var hiddenWeek = document.getElementById('hidden_week');
+            var hiddenYear = document.getElementById('hidden_year');
+
+            if (weekSel) {
+                weekSel.addEventListener('change', function() {
+                    var val = this.value;
+                    if (val) {
+                        var dates = val.split('|');
+                        if (startDateInput) startDateInput.value = dates[0];
+                        if (endDateInput) endDateInput.value = dates[1];
+                        if (monthSel) monthSel.value = '';
+                        if (yearSel) yearSel.value = '';
+                        var opt = this.options[this.selectedIndex];
+                        if (hiddenWeek && opt.dataset.week) hiddenWeek.value = opt.dataset.week;
+                        if (hiddenYear && opt.dataset.year) hiddenYear.value = opt.dataset.year;
+                    }
+                });
+            }
+
+            if (monthSel) {
+                monthSel.addEventListener('change', function() {
+                    var val = this.value;
+                    if (val) {
+                        var dates = val.split('|');
+                        if (startDateInput) startDateInput.value = dates[0];
+                        if (endDateInput) endDateInput.value = dates[1];
+                        if (weekSel) weekSel.value = '';
+                        if (yearSel) yearSel.value = '';
+                        if (hiddenWeek) hiddenWeek.value = '';
+                    }
+                });
+            }
+
+            if (yearSel) {
+                yearSel.addEventListener('change', function() {
+                    var val = this.value;
+                    if (val) {
+                        var dates = val.split('|');
+                        if (startDateInput) startDateInput.value = dates[0];
+                        if (endDateInput) endDateInput.value = dates[1];
+                        if (weekSel) weekSel.value = '';
+                        if (monthSel) monthSel.value = '';
+                        if (hiddenWeek) hiddenWeek.value = '';
+                    }
+                });
+            }
+        });
     </script>
     
     <!-- REPORT TABLE -->
-    <h5 class="section-title"><i class="fas fa-table text-primary"></i> <?= ($filter_mode === 'month') ? date('F', mktime(0,0,0,$filter_month,1)) . ' Monthly Report Data' : 'Weekly Report Data' ?></h5>
+    <h5 class="section-title"><i class="fas fa-table text-primary"></i> Weekly Report Data</h5>
     <div class="table-container">
         <div class="table-responsive">
             <table class="table table-hover table-bordered">
                 <thead>
                     <tr>
                         <th colspan="17" style="background-color: #475569 !important; font-size:1rem;">
-                            <?= ($filter_mode === 'month') ? 'MONTHLY REPORT - ' . strtoupper(date('F Y', mktime(0,0,0,$filter_month,1))) : 'WEEKLY REPORT' ?>
+                            WEEKLY REPORT (<?= date('d-m-Y', strtotime($w1_from)) ?> to <?= date('d-m-Y', strtotime($w1_to)) ?>)
                         </th>
                     </tr>
                     <tr>
