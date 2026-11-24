@@ -264,25 +264,25 @@ h6.text-white,
     gap: 12px !important;
 }
 
-.page-title-container > h1,
-.page-title-container > h2,
-.page-title-container > h3,
-.page-title-container > h4,
-.page-title-container > h5,
-.page-title-container > h6,
-.page-title-container > div:first-child:not(:last-child) {
+.page-title-container>h1,
+.page-title-container>h2,
+.page-title-container>h3,
+.page-title-container>h4,
+.page-title-container>h5,
+.page-title-container>h6,
+.page-title-container>div:first-child:not(:last-child) {
     margin-bottom: 0 !important;
     flex-shrink: 1 !important;
 }
 
-.page-title-container > a.btn,
-.page-title-container > button.btn,
-.page-title-container > a[class*="btn"],
-.page-title-container > button[class*="btn"],
-.page-title-container > .btn-group,
-.page-title-container > div:has(.btn),
-.page-title-container > div:last-child:not(:first-child),
-.dashboard-header > div:first-child > div:last-child,
+.page-title-container>a.btn,
+.page-title-container>button.btn,
+.page-title-container>a[class*="btn"],
+.page-title-container>button[class*="btn"],
+.page-title-container>.btn-group,
+.page-title-container>div:has(.btn),
+.page-title-container>div:last-child:not(:first-child),
+.dashboard-header>div:first-child>div:last-child,
 .dashboard-header .d-flex.align-items-center.gap-2,
 .dashboard-header .date-badge,
 .dashboard-header .dashboard-date {
@@ -295,7 +295,7 @@ h6.text-white,
     width: 100% !important;
 }
 
-.dashboard-header > div:first-child {
+.dashboard-header>div:first-child {
     width: 100% !important;
     flex: 1 1 100% !important;
     display: flex !important;
@@ -308,10 +308,10 @@ h6.text-white,
    ========================================================================= */
 
 /* 500px - 550px cards (e.g. job_master, etc.) */
-.container:has(> .card[style*="max-width:500px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 500px"]) > .page-title-container,
-.container:has(> .card[style*="max-width:550px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 550px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:500px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 500px"])>.page-title-container,
+.container:has(> .card[style*="max-width:550px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 550px"])>.page-title-container,
 .page-title-container:has(+ .card[style*="max-width:500px"]),
 .page-title-container:has(+ .card[style*="max-width: 500px"]),
 .page-title-container:has(+ .card[style*="max-width:550px"]),
@@ -330,10 +330,10 @@ h6.text-white,
 }
 
 /* 600px - 650px cards (e.g. user_role_master, client_master small, etc.) */
-.container:has(> .card[style*="max-width:600px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 600px"]) > .page-title-container,
-.container:has(> .card[style*="max-width:650px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 650px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:600px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 600px"])>.page-title-container,
+.container:has(> .card[style*="max-width:650px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 650px"])>.page-title-container,
 .page-title-container:has(+ .card[style*="max-width:600px"]),
 .page-title-container:has(+ .card[style*="max-width: 600px"]),
 .page-title-container:has(+ .card[style*="max-width:650px"]),
@@ -352,10 +352,10 @@ h6.text-white,
 }
 
 /* 800px - 900px cards (e.g. company_master, client_master, employee_master, etc.) */
-.container:has(> .card[style*="max-width:800px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 800px"]) > .page-title-container,
-.container:has(> .card[style*="max-width:900px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 900px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:800px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 800px"])>.page-title-container,
+.container:has(> .card[style*="max-width:900px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 900px"])>.page-title-container,
 .page-title-container:has(+ .card[style*="max-width:800px"]),
 .page-title-container:has(+ .card[style*="max-width: 800px"]),
 .page-title-container:has(+ .card[style*="max-width:900px"]),
@@ -370,8 +370,8 @@ h6.text-white,
 }
 
 /* 980px cards (e.g. job_management) */
-.container:has(> .card[style*="max-width:980px"]) > .page-title-container,
-.container:has(> .card[style*="max-width: 980px"]) > .page-title-container,
+.container:has(> .card[style*="max-width:980px"])>.page-title-container,
+.container:has(> .card[style*="max-width: 980px"])>.page-title-container,
 .page-title-container:has(+ .card[style*="max-width:980px"]),
 .page-title-container:has(+ .card[style*="max-width: 980px"]) {
     max-width: 980px !important;
@@ -380,14 +380,14 @@ h6.text-white,
 }
 
 /* Centered row columns (col-md-6 / col-lg-6) */
-.container:has(> .row.justify-content-center > .col-md-6) > .page-title-container,
-.container:has(> .row.justify-content-center > .col-lg-6) > .page-title-container,
-.container-fluid:has(> .row.justify-content-center > .col-md-6) > .page-title-container,
-.container-fluid:has(> .row.justify-content-center > .col-lg-6) > .page-title-container,
-.container:has(> * > .row.justify-content-center > .col-md-6) > .page-title-container,
-.container:has(> * > .row.justify-content-center > .col-lg-6) > .page-title-container,
-.container-fluid:has(> * > .row.justify-content-center > .col-md-6) > .page-title-container,
-.container-fluid:has(> * > .row.justify-content-center > .col-lg-6) > .page-title-container,
+.container:has(> .row.justify-content-center > .col-md-6)>.page-title-container,
+.container:has(> .row.justify-content-center > .col-lg-6)>.page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-md-6)>.page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-lg-6)>.page-title-container,
+.container:has(> * > .row.justify-content-center > .col-md-6)>.page-title-container,
+.container:has(> * > .row.justify-content-center > .col-lg-6)>.page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-md-6)>.page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-lg-6)>.page-title-container,
 .page-title-container:has(+ .row.justify-content-center > .col-md-6),
 .page-title-container:has(+ .row.justify-content-center > .col-lg-6),
 .page-title-container:has(~ .row.justify-content-center > .col-md-6),
@@ -402,14 +402,14 @@ h6.text-white,
 }
 
 /* Centered row columns (col-md-8 / col-lg-8) */
-.container:has(> .row.justify-content-center > .col-md-8) > .page-title-container,
-.container:has(> .row.justify-content-center > .col-lg-8) > .page-title-container,
-.container-fluid:has(> .row.justify-content-center > .col-md-8) > .page-title-container,
-.container-fluid:has(> .row.justify-content-center > .col-lg-8) > .page-title-container,
-.container:has(> * > .row.justify-content-center > .col-md-8) > .page-title-container,
-.container:has(> * > .row.justify-content-center > .col-lg-8) > .page-title-container,
-.container-fluid:has(> * > .row.justify-content-center > .col-md-8) > .page-title-container,
-.container-fluid:has(> * > .row.justify-content-center > .col-lg-8) > .page-title-container,
+.container:has(> .row.justify-content-center > .col-md-8)>.page-title-container,
+.container:has(> .row.justify-content-center > .col-lg-8)>.page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-md-8)>.page-title-container,
+.container-fluid:has(> .row.justify-content-center > .col-lg-8)>.page-title-container,
+.container:has(> * > .row.justify-content-center > .col-md-8)>.page-title-container,
+.container:has(> * > .row.justify-content-center > .col-lg-8)>.page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-md-8)>.page-title-container,
+.container-fluid:has(> * > .row.justify-content-center > .col-lg-8)>.page-title-container,
 .page-title-container:has(+ .row.justify-content-center > .col-md-8),
 .page-title-container:has(+ .row.justify-content-center > .col-lg-8),
 .page-title-container:has(~ .row.justify-content-center > .col-md-8),
@@ -424,10 +424,10 @@ h6.text-white,
 }
 
 /* When page-title-container is placed directly inside centered columns */
-.row.justify-content-center > .col-md-6 > .page-title-container,
-.row.justify-content-center > .col-lg-6 > .page-title-container,
-.row.justify-content-center > .col-md-8 > .page-title-container,
-.row.justify-content-center > .col-lg-8 > .page-title-container {
+.row.justify-content-center>.col-md-6>.page-title-container,
+.row.justify-content-center>.col-lg-6>.page-title-container,
+.row.justify-content-center>.col-md-8>.page-title-container,
+.row.justify-content-center>.col-lg-8>.page-title-container {
     width: 100% !important;
     max-width: 100% !important;
     margin-left: 0 !important;
@@ -753,8 +753,8 @@ table.table-grey th,
 table.dataTable thead th,
 .table-container table thead th,
 .table-responsive table thead th,
-.table > :not(caption) > thead > * > *,
-.table > thead > tr > th {
+.table> :not(caption)>thead>*>*,
+.table>thead>tr>th {
     font-family: var(--erp-font-family) !important;
     font-size: var(--erp-table-header-font-size) !important;
     font-weight: 700 !important;
@@ -960,6 +960,7 @@ table tbody td.sticky-col-4,
     max-width: 110px !important;
     box-sizing: border-box !important;
 }
+
 #completedJobsTable thead th:nth-child(2),
 #completedJobsTable tbody td:nth-child(2) {
     position: sticky !important;
@@ -969,6 +970,7 @@ table tbody td.sticky-col-4,
     max-width: 200px !important;
     box-sizing: border-box !important;
 }
+
 #completedJobsTable thead th:nth-child(3),
 #completedJobsTable tbody td:nth-child(3) {
     position: sticky !important;
@@ -1097,6 +1099,7 @@ table tbody tr:hover td.sticky-col-4,
 #trackingTable tbody td {
     transition: transform 0.15s ease, background-color 0.15s ease;
 }
+
 #trackingTable tbody tr:hover td {
     cursor: pointer;
     transform: scale(1.025);
@@ -1105,12 +1108,14 @@ table tbody tr:hover td.sticky-col-4,
     z-index: 15 !important;
     position: relative;
 }
+
 #trackingTable tbody tr:hover td.sticky-col-1 {
     transform-origin: left center;
     background-color: #e9ecef !important;
     z-index: 25 !important;
     box-shadow: none !important;
 }
+
 #trackingTable tbody tr:hover td.sticky-col-2,
 #trackingTable tbody tr:hover td.sticky-col-3,
 #trackingTable tbody tr:hover td.sticky-col-4 {
@@ -1118,6 +1123,7 @@ table tbody tr:hover td.sticky-col-4,
     z-index: 25 !important;
     box-shadow: none !important;
 }
+
 #trackingTable tbody tr:hover td.sticky-act-col {
     transform-origin: right center;
     background-color: #e9ecef !important;
@@ -1132,18 +1138,21 @@ table tbody tr:hover td.sticky-col-4,
     color: #ffffff !important;
     font-weight: bold !important;
 }
+
 #trackingTable tbody td.bg-cell-completed,
 #trackingTable tbody tr td.bg-cell-completed {
     background-color: #198754 !important;
     color: #ffffff !important;
     font-weight: bold !important;
 }
+
 #trackingTable tbody td.bg-cell-assigned,
 #trackingTable tbody tr td.bg-cell-assigned {
     background-color: #fd7e14 !important;
     color: #ffffff !important;
     font-weight: bold !important;
 }
+
 #trackingTable tbody td.bg-cell-unassigned,
 #trackingTable tbody tr td.bg-cell-unassigned {
     background-color: #ffc107 !important;
@@ -1157,16 +1166,19 @@ table tbody tr:hover td.sticky-col-4,
     color: #ffffff !important;
     box-shadow: none !important;
 }
+
 #trackingTable tbody tr:hover td.bg-cell-completed {
     background-color: #20a768 !important;
     color: #ffffff !important;
     box-shadow: none !important;
 }
+
 #trackingTable tbody tr:hover td.bg-cell-assigned {
     background-color: #ff8f33 !important;
     color: #ffffff !important;
     box-shadow: none !important;
 }
+
 #trackingTable tbody tr:hover td.bg-cell-unassigned {
     background-color: #ffd233 !important;
     color: #000000 !important;
@@ -1414,36 +1426,61 @@ body>.content-wrapper,
 body>main,
 .container,
 .container-fluid,
-.container.mt-1, .container-fluid.mt-1,
-.container.mt-2, .container-fluid.mt-2,
-.container.mt-3, .container-fluid.mt-3,
-.container.mt-4, .container-fluid.mt-4,
-.container.mt-5, .container-fluid.mt-5,
-.container.py-1, .container-fluid.py-1,
-.container.py-2, .container-fluid.py-2,
-.container.py-3, .container-fluid.py-3,
-.container.py-4, .container-fluid.py-4,
-.container.py-5, .container-fluid.py-5,
-.container.pt-1, .container-fluid.pt-1,
-.container.pt-2, .container-fluid.pt-2,
-.container.pt-3, .container-fluid.pt-3,
-.container.pt-4, .container-fluid.pt-4,
-.container.pt-5, .container-fluid.pt-5 {
+.container.mt-1,
+.container-fluid.mt-1,
+.container.mt-2,
+.container-fluid.mt-2,
+.container.mt-3,
+.container-fluid.mt-3,
+.container.mt-4,
+.container-fluid.mt-4,
+.container.mt-5,
+.container-fluid.mt-5,
+.container.py-1,
+.container-fluid.py-1,
+.container.py-2,
+.container-fluid.py-2,
+.container.py-3,
+.container-fluid.py-3,
+.container.py-4,
+.container-fluid.py-4,
+.container.py-5,
+.container-fluid.py-5,
+.container.pt-1,
+.container-fluid.pt-1,
+.container.pt-2,
+.container-fluid.pt-2,
+.container.pt-3,
+.container-fluid.pt-3,
+.container.pt-4,
+.container-fluid.pt-4,
+.container.pt-5,
+.container-fluid.pt-5 {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
 
 /* Neutralize legacy 50px-100px top margins or paddings on wrappers */
-[style*="margin-top: 50px"], [style*="margin-top:50px"],
-[style*="margin-top: 60px"], [style*="margin-top:60px"],
-[style*="margin-top: 70px"], [style*="margin-top:70px"],
-[style*="margin-top: 80px"], [style*="margin-top:80px"],
-[style*="margin-top: 90px"], [style*="margin-top:90px"],
-[style*="margin-top: 100px"], [style*="margin-top:100px"],
-[style*="padding-top: 50px"], [style*="padding-top:50px"],
-[style*="padding-top: 60px"], [style*="padding-top:60px"],
-[style*="padding-top: 70px"], [style*="padding-top:70px"],
-[style*="padding-top: 80px"], [style*="padding-top:80px"] {
+[style*="margin-top: 50px"],
+[style*="margin-top:50px"],
+[style*="margin-top: 60px"],
+[style*="margin-top:60px"],
+[style*="margin-top: 70px"],
+[style*="margin-top:70px"],
+[style*="margin-top: 80px"],
+[style*="margin-top:80px"],
+[style*="margin-top: 90px"],
+[style*="margin-top:90px"],
+[style*="margin-top: 100px"],
+[style*="margin-top:100px"],
+[style*="padding-top: 50px"],
+[style*="padding-top:50px"],
+[style*="padding-top: 60px"],
+[style*="padding-top:60px"],
+[style*="padding-top: 70px"],
+[style*="padding-top:70px"],
+[style*="padding-top: 80px"],
+[style*="padding-top:80px"] {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
@@ -1461,14 +1498,14 @@ body>main,
 }
 
 /* Ensure first header in any container sits closely under the navbar */
-.main-container > .page-title-container:first-child,
-.main-container > .page-header:first-child,
-.main-content > .page-title-container:first-child,
-.main-content > .page-header:first-child,
-.container > .page-title-container:first-child,
-.container > .page-header:first-child,
-.container-fluid > .page-title-container:first-child,
-.container-fluid > .page-header:first-child {
+.main-container>.page-title-container:first-child,
+.main-container>.page-header:first-child,
+.main-content>.page-title-container:first-child,
+.main-content>.page-header:first-child,
+.container>.page-title-container:first-child,
+.container>.page-header:first-child,
+.container-fluid>.page-title-container:first-child,
+.container-fluid>.page-header:first-child {
     margin-top: 4px !important;
 }
 
@@ -1554,13 +1591,13 @@ body>.page-title-container>.container-fluid {
     color: #ffffff !important;
 }
 
-.page-header > a.btn,
-.page-header > button.btn,
-.page-header > a[class*="btn"],
-.page-header > button[class*="btn"],
-.page-header > .btn-group,
-.page-header > div:has(.btn),
-.page-header > div:last-child:not(:first-child) {
+.page-header>a.btn,
+.page-header>button.btn,
+.page-header>a[class*="btn"],
+.page-header>button[class*="btn"],
+.page-header>.btn-group,
+.page-header>div:has(.btn),
+.page-header>div:last-child:not(:first-child) {
     margin-left: auto !important;
 }
 
@@ -2015,6 +2052,51 @@ select.form-select-sm {
 .table-sticky-assign.table-bordered tbody td,
 .table-sticky-assign> :not(caption)>*>* {
     border: 1px solid #dee2e6 !important;
+}
+
+/* Table Grid Styles - Clear Horizontal and Vertical Lines (Matching Screenshot 2) */
+.table-grid,
+.table-grid thead th,
+.table-grid tbody td {
+    border: 1px solid #dee2e6 !important;
+}
+
+.table-grid {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+}
+
+.table-grid thead th {
+    background-color: #5e6b77 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 12.5px !important;
+    padding: 8px 10px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.table-grid tbody td {
+    vertical-align: middle !important;
+    padding: 6px 10px !important;
+    font-size: 12.5px !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.table-grid tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
+    background-color: #f2f4f6 !important;
+}
+
+.table-grid tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
+    background-color: #ffffff !important;
+}
+
+.table-grid tbody tr:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
+    background-color: #c4cbd3 !important;
+    cursor: pointer !important;
 }
 
 /* Header Cells (Dark Grey #5e6b77 matching xml_unique_start.php) */
@@ -2596,4 +2678,86 @@ select.form-select-sm {
     background-color: #f1f5f9 !important;
     border-color: #cbd5e1 !important;
     color: #0f172a !important;
+}
+
+/* =========================================================================
+   SALES & IT MODULE TABLE STYLING (matching UQ Process xml_unique_start.php)
+   ========================================================================= */
+body.sales-module .table,
+body.it-module .table,
+.sales-module .table,
+.it-module .table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+body.sales-module .table thead th,
+body.it-module .table thead th,
+.sales-module .table thead th,
+.it-module .table thead th {
+    border-bottom: 1px solid #dee2e6 !important;
+    border-top: 1px solid #dee2e6 !important;
+}
+
+body.sales-module .table td,
+body.sales-module .table tbody td,
+body.it-module .table td,
+body.it-module .table tbody td,
+.sales-module .table td,
+.sales-module .table tbody td,
+.it-module .table td,
+.it-module .table tbody td {
+    vertical-align: middle !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+/* Zebra Striping: Odd Rows Mild Ash #f8f9fa */
+body.sales-module .table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.sales-module table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.sales-module .table:not(.details-table).table-striped tbody tr:nth-of-type(odd)>*:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.it-module .table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.it-module table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.it-module .table:not(.details-table).table-striped tbody tr:nth-of-type(odd)>*:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+.sales-module .table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+.it-module .table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value) {
+    background-color: #f8f9fa !important;
+}
+
+/* Zebra Striping: Even Rows White #ffffff */
+body.sales-module .table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.sales-module table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.sales-module .table:not(.details-table).table-striped tbody tr:nth-of-type(even)>*:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.it-module .table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.it-module table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+body.it-module .table:not(.details-table).table-striped tbody tr:nth-of-type(even)>*:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+.sales-module .table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+.it-module .table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value) {
+    background-color: #ffffff !important;
+}
+
+/* Ensure Verify Details details-table has no row background color */
+.details-table,
+.details-table tbody,
+.details-table tr,
+.details-table tbody tr,
+.details-table td,
+.details-table tbody tr td,
+.details-table .field-name,
+.details-table .field-value {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+}
+
+/* Hover Effect: #e8f4fd */
+body.sales-module .table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.sales-module table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.sales-module .table-hover tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.sales-module .table.table-hover tbody tr:hover>*:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.it-module .table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.it-module table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.it-module .table-hover tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+body.it-module .table.table-hover tbody tr:hover>*:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+.sales-module .table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+.it-module .table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *) {
+    background-color: #e8f4fd !important;
 }

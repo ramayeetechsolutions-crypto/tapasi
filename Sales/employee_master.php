@@ -469,8 +469,25 @@ require 'header.php';
         box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
     }
     .table {
-        border-collapse: separate;
-        border-spacing: 0;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+    .table tbody td,
+    table tbody td {
+        vertical-align: middle !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+    .table tbody tr:nth-child(even) td,
+    table tbody tr:nth-child(even) td {
+        background-color: #f2f4f6 !important;
+    }
+    .table tbody tr:nth-child(odd) td,
+    table tbody tr:nth-child(odd) td {
+        background-color: #ffffff !important;
+    }
+    .table tbody tr:hover td,
+    table tbody tr:hover td {
+        background-color: #e9ecef !important;
     }
     .card, .card-body, .table-responsive, .table-container {
         overflow: visible !important;

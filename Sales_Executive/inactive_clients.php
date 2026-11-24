@@ -437,10 +437,46 @@ $result = $mysqli->query($sql);
 require 'header.php'; 
 ?>
 <style>
-    .table thead th {
+    .table {
+        margin-bottom: 0 !important;
+        width: 100% !important;
+    }
+    .table thead th,
+    table thead th {
         background-color: #6c757d !important;
-        color: white !important;
-        border-bottom: none !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.80rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        padding: 12px 10px !important;
+        border: none !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+    }
+    .table td,
+    .table tbody td,
+    table tbody td {
+        vertical-align: middle !important;
+        padding: 10px 12px !important;
+        font-size: 0.80rem !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+    .table tbody tr:nth-child(odd) td,
+    table tbody tr:nth-child(odd) td {
+        background-color: #f8f9fa !important;
+    }
+    .table tbody tr:nth-child(even) td,
+    table tbody tr:nth-child(even) td {
+        background-color: #ffffff !important;
+    }
+    .table-hover tbody tr:hover td,
+    .table tbody tr:hover td {
+        background-color: #e8f4fd !important;
+        transition: all 0.2s ease-in-out;
     }
 </style>
 
@@ -601,37 +637,37 @@ require 'header.php';
     <!-- DATA TABLE -->
     <div class="card shadow border-0">
         <div class="card-header text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #6c757d !important; background: #6c757d !important;">
-            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Inactive Clients List</h5>
-            <span class="badge bg-light text-dark">Total: <?= $result->num_rows ?></span>
+            <h5 class="mb-0 fs-6 fw-bold text-white"><i class="fas fa-list me-2"></i>Inactive Clients List</h5>
+            <span class="badge rounded-pill px-3 py-1 fw-bold" style="font-size: 11px; background-color: #3d4750; color: #ffffff; border: 1px solid rgba(255,255,255,0.3);">Total: <?= $result->num_rows ?></span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0 align-middle" style="font-size: 0.85rem;">
+                <table class="table table-hover align-middle mb-0" id="inactiveClientTable" style="font-size: 0.80rem;">
                     <thead>
-                        <tr>
-                            <th>S.No</th>
-                            <th>Client Name</th>
-                            <th>Country</th>
-                            <th>Currency</th>
-                            <th>Journal Name</th>
-                            <th>Services</th>
-                            <th>Frequency of the Journal</th>
-                            <th>Year</th>
-                            <th>File Last Received (Month & Year)</th>
-                            <th>Reason</th>
-                            <th>Last Date</th>
-                            <th>Status</th>
-                            <th width="120">Actions</th>
+                        <tr class="text-center align-middle">
+                            <th>S.NO</th>
+                            <th class="text-start">CLIENT NAME</th>
+                            <th>COUNTRY</th>
+                            <th>CURRENCY</th>
+                            <th>JOURNAL NAME</th>
+                            <th>SERVICES</th>
+                            <th>FREQUENCY OF THE JOURNAL</th>
+                            <th>YEAR</th>
+                            <th>FILE LAST RECEIVED<br>(MONTH & YEAR)</th>
+                            <th>REASON</th>
+                            <th>LAST DATE</th>
+                            <th>STATUS</th>
+                            <th style="min-width: 105px;">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if ($result && $result->num_rows > 0): $i=0; ?>
                             <?php while ($row = $result->fetch_assoc()): $i++; ?>
-                            <tr>
+                            <tr class="text-center align-middle">
                                 <td class="fw-bold"><?= $i ?></td>
-                                <td class="fw-bold text-start">
+                                <td class="fw-bold text-start" style="white-space: nowrap;">
                                     <?= h($row['client_name']) ?><br>
-                                    <small class="text-muted">ID: <?= h($row['client_id']) ?></small>
+                                    <small class="text-muted fw-normal">ID: <?= h($row['client_id']) ?></small>
                                 </td>
                                 <td><?= h($row['country']) ?: '—' ?></td>
                                 <td><?= h($row['currency']) ?: '—' ?></td>
@@ -649,41 +685,45 @@ require 'header.php';
                                     ?>
                                 </td>
                                 <td><?= h($row['frequency']) ?: '—' ?></td>
-                                <td><span class="badge bg-secondary"><?= h($row['year_stopped']) ?: '—' ?></span></td>
+                                <td><span class="badge rounded-pill bg-secondary px-2 py-1" style="font-size: 11px; min-width: 25px;"><?= h($row['year_stopped']) ?: '—' ?></span></td>
                                 <td><?= h($row['last_received_month_year']) ?: '—' ?></td>
                                
-                                 <td class="text-danger text-start" style="max-width: 200px; white-space: normal;" title="<?= h($row['reason'] ?? '') ?>">
+                                <td style="max-width: 180px; white-space: normal;">
                                     <?php
-                                    $reasonStr = (string)($row['reason'] ?? '');
-                                    echo h(substr($reasonStr, 0, 50)) . (strlen($reasonStr) > 50 ? '...' : '');
+                                    $reasonStr = trim((string)($row['reason'] ?? ''));
+                                    if (!empty($reasonStr)) {
+                                        echo '<span class="fw-semibold" style="color: #dc3545; font-size: 11.5px;" title="' . h($reasonStr) . '">' . h(substr($reasonStr, 0, 50)) . (strlen($reasonStr) > 50 ? '...' : '') . '</span>';
+                                    } else {
+                                        echo '—';
+                                    }
                                     ?>
                                 </td>
-                                 <td><?= formatDate($row['last_file_receive_date']) ?></td>
+                                <td><?= formatDate($row['last_file_receive_date']) ?></td>
                                 <td>
-                                    <span class="badge bg-danger">Inactive</span><br>
-                                    <small class="text-muted"><?= formatDate($row['inactive_date']) ?></small>
+                                    <span class="badge rounded-pill bg-danger" style="font-size: 10.5px; padding: 3px 8px; font-weight: 700;">Inactive</span><br>
+                                    <small class="text-muted" style="font-size: 11px;"><?= !empty($row['inactive_date']) && $row['inactive_date'] != '0000-00-00 00:00:00' ? formatDate($row['inactive_date']) : '—' ?></small>
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <div class="d-inline-flex gap-1 justify-content-center align-items-center">
                                         <a href="inactive_clients.php?mode=edit&client_id=<?= (int)$row['client_id'] ?>" 
-                                           class="btn btn-warning" title="Edit">
+                                           class="btn btn-warning btn-sm" style="padding: 2px 7px; border-radius: 4px; font-size: 12px;" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form method="post" style="display:inline;" 
+                                        <form method="post" style="display:inline; margin:0;" 
                                               onsubmit="return confirm('Reactivate this client? This will change status back to Active.')">
                                             <input type="hidden" name="action" value="reactivate">
                                             <input type="hidden" name="client_id" value="<?= (int)$row['client_id'] ?>">
-                                            <button type="submit" class="btn btn-success" title="Reactivate">
+                                            <button type="submit" class="btn btn-success btn-sm" style="padding: 2px 7px; border-radius: 4px; font-size: 12px;" title="Reactivate">
                                                 <i class="fas fa-undo"></i>
                                             </button>
                                         </form>
                                         <?php if (!empty($row['history_id'])): ?>
-                                        <form method="post" style="display:inline;" 
+                                        <form method="post" style="display:inline; margin:0;" 
                                               onsubmit="return confirm('Delete this history record? This will not affect client status.')">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= (int)$row['history_id'] ?>">
                                             <input type="hidden" name="client_id" value="<?= (int)$row['client_id'] ?>">
-                                            <button type="submit" class="btn btn-danger" title="Delete History">
+                                            <button type="submit" class="btn btn-danger btn-sm" style="padding: 2px 7px; border-radius: 4px; font-size: 12px;" title="Delete History">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>

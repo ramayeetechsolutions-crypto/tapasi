@@ -403,26 +403,38 @@ if (!$rows || $rows->num_rows === 0) {
         .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
         .close-modal:hover { color: #bbb; }
         
-        /* 2-column table styling */
+        /* 2-column table styling - Clean white background (no row colors) */
         .details-table { width: 100%; border-collapse: collapse; }
+        .details-table,
+        .details-table tbody,
+        .details-table tr,
+        .details-table tbody tr,
+        .details-table td,
+        .details-table tbody tr td {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+        }
         .details-table .field-name { 
-            font-weight: 600; 
-            width: 35%; 
-            background-color: #f8f9fa; 
-            padding: 12px 15px; 
-            border: 1px solid #dee2e6; 
-            color: #495057;
+            font-weight: 600 !important; 
+            width: 35% !important; 
+            background-color: #ffffff !important; 
+            background: #ffffff !important;
+            padding: 12px 15px !important; 
+            border: 1px solid #dee2e6 !important; 
+            color: #495057 !important;
         }
         .details-table .field-value { 
-            padding: 12px 15px; 
-            border: 1px solid #dee2e6; 
-            background-color: white;
+            padding: 12px 15px !important; 
+            border: 1px solid #dee2e6 !important; 
+            background-color: #ffffff !important;
+            background: #ffffff !important;
         }
-        .details-table tr:hover .field-value { 
-            background-color: #f8f9fa; 
-        }
+        .details-table tr:hover,
+        .details-table tr:hover td,
+        .details-table tr:hover .field-value,
         .details-table tr:hover .field-name { 
-            background-color: #e9ecef; 
+            background-color: #f8f9fa !important; 
+            background: #f8f9fa !important;
         }
         
         .status-badge { font-size: 12px; padding: 4px 8px; }

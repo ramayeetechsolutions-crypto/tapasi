@@ -389,12 +389,60 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                 height: 35px;
             }
         }
+
+        /* Zebra Striping & Table Row Colors matching UQ Process */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table thead th,
+        table thead th {
+            border-bottom: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+        .table td,
+        .table tbody td,
+        table tbody td {
+            vertical-align: middle !important;
+            border-bottom: 1px solid #dee2e6 !important;
+        }
+        .table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+        table:not(.details-table) tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+        .table:not(.details-table).table-striped tbody tr:nth-of-type(odd) > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+        .table-striped:not(.details-table) tbody tr:nth-of-type(odd) > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value) {
+            background-color: #f8f9fa !important;
+        }
+        .table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+        table:not(.details-table) tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+        .table:not(.details-table).table-striped tbody tr:nth-of-type(even) > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value),
+        .table-striped:not(.details-table) tbody tr:nth-of-type(even) > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value) {
+            background-color: #ffffff !important;
+        }
+        /* Ensure Verify Details details-table has no row background color */
+        .details-table,
+        .details-table tbody,
+        .details-table tr,
+        .details-table tbody tr,
+        .details-table td,
+        .details-table tbody tr td,
+        .details-table .field-name,
+        .details-table .field-value {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+        }
+        .table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+        table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+        .table-hover tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+        .table.table-hover tbody tr:hover > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
+        .table-hover tbody tr:hover > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *) {
+            background-color: #e8f4fd !important;
+        }
     </style>
     <!-- Tapasi Global Typography & Font Stylesheet -->
     <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 </head>
 
-<body>
+<body class="sales-module sales-executive-module">
     <header>
         <div class="header-container">
 
