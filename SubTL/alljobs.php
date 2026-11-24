@@ -638,12 +638,20 @@ require 'header.php';
             margin-bottom: 0;
         }
         
-                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        /* Grid Table Styles - Matching xml/xml_unique_start.php (Single 1px #dee2e6 lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
         .table th,
-        .table thead th {
+        .table thead th,
+        .table-sticky-assign thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             font-weight: 600;
             font-size: 12.5px;
             text-transform: uppercase;
@@ -652,25 +660,58 @@ require 'header.php';
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
+        }
+        .table th:first-child,
+        .table thead th:first-child,
+        .table-sticky-assign thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
         .table td,
-        .table tbody td {
+        .table tbody td,
+        .table-sticky-assign tbody td {
             vertical-align: middle;
             padding: 6px 10px;
             font-size: 12.5px;
             color: #334155;
-            border: 1px solid #dee2e6 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
             white-space: nowrap;
         }
+        .table td:first-child,
+        .table tbody td:first-child,
+        .table-sticky-assign tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table th.sticky-assign-col-last,
+        .table thead th.sticky-assign-col-last,
+        .table td.sticky-assign-col-last,
+        .table tbody td.sticky-assign-col-last,
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
+        }
         
-        /* Visible Zebra Striping matching xml/xml_unique_start.php */
-        .table tbody tr:nth-child(even) td {
+        .table> :not(caption)>*>*,
+        .table-sticky-assign> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td,
+        .table-sticky-assign tbody tr:nth-child(even) td {
             background-color: #f2f4f6 !important;
         }
         
-        .table tbody tr:nth-child(odd) td {
+        .table tbody tr:nth-child(odd) td,
+        .table-sticky-assign tbody tr:nth-child(odd) td {
             background-color: #ffffff !important;
         }
         
@@ -807,19 +848,29 @@ require 'header.php';
         }
         
         .due-date {
-            font-weight: 500;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            padding: 2px 7px !important;
+            border-radius: 4px !important;
+            letter-spacing: 0.01em !important;
+            box-shadow: none !important;
+            border: 1px solid transparent !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            line-height: 1.3 !important;
+            white-space: nowrap !important;
         }
         
-        .due-date.urgent {
-            color: #dc2626;
-        }
-        
+        .due-date.urgent,
         .due-date.warning {
-            color: #d97706;
+            background-color: #fee2e2 !important;
+            color: #dc2626 !important;
         }
         
         .due-date.normal {
-            color: #059669;
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
         }
         
         .alert {
@@ -902,22 +953,20 @@ require 'header.php';
     <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
 
     <div class="container-fluid px-2 pt-3">
-        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
-                        <i class="fas fa-table me-2" style="color: #ffffff !important;"></i>
-                        LE Assign - CE
-                    </h4>
-                </div>
-                <div>
-                    <a href="jobs.php" class="btn btn-light btn-sm fw-semibold me-2">
-                        <i class="fas fa-arrow-left me-1"></i> Back to Jobs
-                    </a>
-                    <span class="badge bg-light text-dark fw-semibold">
-                        <i class="fas fa-users me-1 text-primary"></i> <?= count($les) ?> Team Members Available
-                    </span>
-                </div>
+        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
+            <div style="text-align: left;">
+                <h4 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important; display: flex; align-items: center; justify-content: flex-start;">
+                    <i class="fas fa-table me-2" style="color: #ffffff !important;"></i>
+                    LE Assign - CE
+                </h4>
+            </div>
+            <div style="margin-left: auto; display: flex; align-items: center;">
+                <a href="jobs.php" class="btn btn-outline-light text-white btn-sm me-2">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Jobs
+                </a>
+                <span class="badge bg-primary">
+                    <i class="fas fa-users me-1"></i> <?= count($les) ?> Team Members Available
+                </span>
             </div>
         </div>
         <?php if (!empty($_GET['msg'])): ?>
@@ -1078,7 +1127,7 @@ require 'header.php';
                                 // Due date color coding
                                 $days_remaining = $row['days_remaining'] ?? 0;
                                 $due_class = '';
-                                if ($days_remaining < 2) {
+                                if ($days_remaining <= 2) {
                                     $due_class = 'urgent';
                                 } elseif ($days_remaining < 4) {
                                     $due_class = 'warning';

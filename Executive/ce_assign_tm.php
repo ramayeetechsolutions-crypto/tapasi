@@ -1485,7 +1485,7 @@ require 'header.php';
                                 
                                 // Due date color coding
                                 $due_class = '';
-                                if ($row['days_remaining'] < 2) {
+                                if ($row['days_remaining'] <= 2) {
                                     $due_class = 'urgent';
                                 } elseif ($row['days_remaining'] < 4) {
                                     $due_class = 'warning';

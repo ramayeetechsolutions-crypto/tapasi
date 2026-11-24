@@ -2738,7 +2738,9 @@ td.sticky-assign-col-last {
 
 /* Badges (Due Date, Process, Status, TAT) */
 .table-sticky-assign .badge,
-.table-sticky-assign .due-date {
+.table-sticky-assign .due-date,
+.table .due-date,
+.due-date {
     font-size: 11px !important;
     font-weight: 600 !important;
     padding: 2px 7px !important;
@@ -2778,17 +2780,19 @@ td.sticky-assign-col-last {
     color: #212529 !important;
 }
 
-.table-sticky-assign .due-date.urgent {
+.table-sticky-assign .due-date.urgent,
+.table .due-date.urgent,
+.due-date.urgent,
+.table-sticky-assign .due-date.warning,
+.table .due-date.warning,
+.due-date.warning {
     background-color: #fee2e2 !important;
     color: #dc2626 !important;
 }
 
-.table-sticky-assign .due-date.warning {
-    background-color: #fef3c7 !important;
-    color: #d97706 !important;
-}
-
-.table-sticky-assign .due-date.normal {
+.table-sticky-assign .due-date.normal,
+.table .due-date.normal,
+.due-date.normal {
     background-color: #dcfce7 !important;
     color: #15803d !important;
 }

@@ -327,52 +327,112 @@ require 'header.php';
             color: white;
         }
 
-        /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        /* Grid Table Styles - Matching xml/xml_unique_start.php (Single 1px #dee2e6 lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
         .table th,
-        .table thead th {
+        .table thead th,
+        .table-sticky-assign thead th,
+        #jobTable th,
+        #jobTable thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             font-weight: 600;
-            font-size: 12.5px;
+            font-size: 11px !important;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 8px 10px;
+            padding: 6px 8px !important;
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
+        }
+        .table th:first-child,
+        .table thead th:first-child,
+        .table-sticky-assign thead th:first-child,
+        #jobTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
         .table td,
-        .table tbody td {
-            vertical-align: middle;
-            padding: 6px 10px;
-            font-size: 12.5px;
-            color: #334155;
-            border: 1px solid #dee2e6 !important;
+        .table tbody td,
+        .table-sticky-assign tbody td,
+        #jobTable td,
+        #jobTable tbody td {
+            vertical-align: middle !important;
+            padding: 4px 6px !important;
+            font-size: 10px !important;
+            color: #334155 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
             white-space: nowrap;
+            line-height: 1.25 !important;
+        }
+        .table td:first-child,
+        .table tbody td:first-child,
+        .table-sticky-assign tbody td:first-child,
+        #jobTable tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table th.sticky-assign-col-last,
+        .table thead th.sticky-assign-col-last,
+        .table td.sticky-assign-col-last,
+        .table tbody td.sticky-assign-col-last,
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
         }
         
-        /* Visible Zebra Striping matching xml/xml_unique_start.php */
-        .table tbody tr:nth-child(even) td {
+        .table> :not(caption)>*>*,
+        .table-sticky-assign> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td,
+        .table-sticky-assign tbody tr:nth-child(even) td {
             background-color: #f2f4f6 !important;
         }
         
-        .table tbody tr:nth-child(odd) td {
+        .table tbody tr:nth-child(odd) td,
+        .table-sticky-assign tbody tr:nth-child(odd) td {
             background-color: #ffffff !important;
         }
         
         /* Full Row Hover Effect matching xml/xml_unique_start.php */
-        .table tbody tr:hover td {
+        .table tbody tr:hover td,
+        .table-sticky-assign tbody tr:hover td {
             background-color: #c4cbd3 !important;
             cursor: pointer;
             transition: background-color 0.1s ease;
         }
         
         .table tbody tr:hover td.sticky-assign-col,
-        .table tbody tr:hover td.sticky-assign-cell {
+        .table tbody tr:hover td.sticky-assign-cell,
+        .table-sticky-assign tbody tr:hover td.sticky-assign-col,
+        .table-sticky-assign tbody tr:hover td.sticky-assign-cell {
             background-color: #e9ecef !important;
+        }
+
+        #jobTable tbody td * {
+            font-size: 10px !important;
+        }
+
+        #jobTable tbody td small {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
         }
 
 /* Select2 Custom Style - Exactly matching CE Report / CE Assign (26px height & 11px font) */
@@ -461,46 +521,80 @@ require 'header.php';
     background-color: #0d6efd !important;
     color: #ffffff !important;
 }
-table td,th { vertical-align: middle; padding: 6px 8px; white-space: nowrap; font-size: 0.9rem; }
-
-/* --- Vibrant Color Scheme --- */
-.status-in-progress {
-    background-color: #FF6347; 
-    color: white; 
-    font-weight: 600;
-    border-radius: 12px;
-    padding: 0.3em 0.8em;
-    font-size: 0.9em;
-    display: inline-block;
-}
-
-.status-completed {
-    background-color: #009688; 
-    color: white; 
-    font-weight: 600;
-    border-radius: 12px;
-    padding: 0.3em 0.8em;
-    font-size: 0.9em;
-    display: inline-block;
-}
-
-.status-need-to-assign {
-    background-color: #FFA500; 
-    color: white; 
-    font-weight: 600;
-    border-radius: 12px;
-    padding: 0.3em 0.8em;
-    font-size: 0.9em;
-    display: inline-block;
-}
-
-/* Date and time styling */
-table td {
-    font-size: 0.85rem;
-}
-
 .badge {
-    font-size: 0.75rem;
+    font-size: 10px !important;
+}
+
+/* Badge Styles matching CE Report page - Compact vibrant solid colors */
+.badge.bg-secondary,
+.table .badge.bg-secondary,
+.table-sticky-assign .badge.bg-secondary,
+#jobTable .badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
+}
+
+.badge.bg-success,
+.table .badge.bg-success,
+.table-sticky-assign .badge.bg-success,
+#jobTable .badge.bg-success {
+    background-color: #28a745 !important;
+    color: #ffffff !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
+}
+
+.badge.bg-danger,
+.table .badge.bg-danger,
+.table-sticky-assign .badge.bg-danger,
+#jobTable .badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
+}
+
+.badge.bg-warning,
+.table .badge.bg-warning,
+.table-sticky-assign .badge.bg-warning,
+#jobTable .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
+}
+
+.badge.bg-info,
+.table .badge.bg-info,
+.table-sticky-assign .badge.bg-info,
+#jobTable .badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #000000 !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    display: inline-block !important;
+}
+
+#jobTable .badge {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+    border-radius: 4px !important;
 }
 
 /* Dashboard Cards */
@@ -549,19 +643,19 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     if (empty($st)) $st = 'Need to Assign';
     
     if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
-        $badge = '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Completed</span>';
+        $badge = '<span class="badge" style="background-color: #28a745 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Completed</span>';
     } elseif (strcasecmp($st, 'Need to Assign') === 0) {
-        $badge = '<span class="badge" style="background-color: #0d6efd; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Need to Assign</span>';
+        $badge = '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Need to Assign</span>';
     } else {
         // In Progress / WIP -> Orange
         $label = (strcasecmp($st, 'WIP') === 0) ? 'In Progress' : h($st);
-        $badge = '<span class="badge" style="background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . $label . '</span>';
+        $badge = '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">' . $label . '</span>';
     }
     
     if (!empty($username)) {
         $name = $emp_map[$username] ?? '';
         $display = $name ? h($name) . " (" . h($username) . ")" : h($username);
-        return $badge . '<br><small style="color: #6c757d; font-size: 10px; font-weight: 600; display: block; margin-top: 4px; white-space: nowrap;">' . $display . '</small>';
+        return $badge . '<br><small style="color: #6c757d; font-size: 9px !important; font-weight: 600; display: block; margin-top: 2px !important; white-space: nowrap;">' . $display . '</small>';
     }
     return $badge;
 }
@@ -662,7 +756,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                         <option value="journal_issue" <?=$sort==='journal_issue'?'selected':''?>>Issue</option>
                         <option value="process" <?=$sort==='process'?'selected':''?>>Process</option>
                     </select>
-                </div>
+                </div> 
                 <div class="col-md-2">
                     <label class="form-label small mb-1">Employee</label>
                     <select name="filter_emp" class="form-select form-select-sm">
@@ -811,7 +905,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h(!empty($row['eq']) ? $row['eq'] : ($row['ce_eq'] ?? '0')) ?></td>
                              <td><?= h(!empty($row['images']) ? $row['images'] : ($row['ce_images'] ?? '0')) ?></td>
                             <td><?= h(!empty($row['tables_count']) ? $row['tables_count'] : ($row['ce_tables'] ?? '0')) ?></td>
-                            <td><span class="badge bg-secondary"><?= h($row['process']) ?></span></td>
+                            <td><span class="badge bg-secondary" style="background-color: #6c757d !important; color: #ffffff !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;"><?= h($row['process']) ?></span></td>
                             <td><?= formatDateOnly($row['due_date'], 'd-m-Y') ?></td>
                             <td><?= getStatusBadge($ce_stat, $row['assigned_to_content'] ?? '', $emp_map) ?></td>
                             <td><?= !empty($row['word_count']) ? number_format((int)$row['word_count']) : '0' ?></td>
@@ -827,14 +921,14 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= !empty($row['le_qc_end_time']) ? date('H:i', strtotime($row['le_qc_end_time'])) : '—' ?></td>
                             <td>
                                 <?php if (!empty($row['status_button'])): ?>
-                                    <span class="badge <?= $row['status_button'] === 'Moved' ? 'bg-success' : 'bg-info text-dark' ?>"><?= h($row['status_button']) ?></span>
+                                    <span class="badge <?= $row['status_button'] === 'Moved' ? 'bg-success' : 'bg-info text-dark' ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($row['status_button']) ?></span>
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
                             </td>
                             <td>
                                 <?php if (!empty($row['priority'])): ?>
-                                    <span class="badge <?= $row['priority'] === 'Urgent' ? 'bg-danger' : 'bg-warning text-dark' ?>"><?= h($row['priority']) ?></span>
+                                    <span class="badge <?= $row['priority'] === 'Urgent' ? 'bg-danger' : 'bg-warning text-dark' ?>" style="<?= $row['priority'] === 'Urgent' ? 'background-color: #dc3545 !important; color: #ffffff !important;' : 'background-color: #ffc107 !important; color: #212529 !important;' ?> padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;"><?= h($row['priority']) ?></span>
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
@@ -847,7 +941,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                     $bg = $le_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
                                 ?>
                                 <td>
-                                    <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
+                                    <span class="badge <?= $bg ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                                 </td>
                         </tr>
                         <?php endforeach; else: ?>
