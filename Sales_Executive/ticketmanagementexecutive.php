@@ -212,19 +212,22 @@ $params = [$current_user_name, $current_user_name];
 $types = 'ss';
 
 if ($q !== '') {
-    $sql .= " AND (c.created_by LIKE ? OR c.issues LIKE ? OR c.cabin LIKE ? OR c.system_no LIKE ?)";
+    $sql .= " AND (c.id LIKE ? OR c.created_by LIKE ? OR c.department LIKE ? OR c.system_no LIKE ? OR c.cabin LIKE ? OR c.issues LIKE ? OR c.complaint_type LIKE ? OR c.severity LIKE ? OR c.assigned_to LIKE ?)";
     $like = "%$q%";
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $types .= 'ssss';
+    for ($i = 0; $i < 9; $i++) {
+        $params[] = $like;
+    }
+    $types .= str_repeat('s', 9);
 }
 
 if ($statusFilter !== '') {
-    $sql .= " AND c.status = ?";
-    $params[] = $statusFilter;
-    $types .= 's';
+    if ($statusFilter === 'Pending') {
+        $sql .= " AND (c.status = 'Pending' OR (c.status != 'Closed' AND c.status != 'Reviewed' AND c.status != 'Long Pending') OR c.status IS NULL)";
+    } else {
+        $sql .= " AND c.status = ?";
+        $params[] = $statusFilter;
+        $types .= 's';
+    }
 }
 
 if ($sortBy === 'complaint_date') {
@@ -689,12 +692,14 @@ if ($current_user_name) {
             <div class="card-body">
                 <form method="get" class="row g-3">
                     <div class="col-md-3">
-                        <input type="text" name="q" class="form-control" placeholder="Search by issue, system, or cabin..." value="<?= h($q) ?>">
+                        <input type="text" name="q" class="form-control" placeholder="Search by ID, name, team, system, issue..." value="<?= h($q) ?>">
                     </div>
                     <div class="col-md-2">
                         <select name="status" class="form-select">
                             <option value="">All Status</option>
                             <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                            <option value="Reviewed" <?= $statusFilter === 'Reviewed' ? 'selected' : '' ?>>Reviewed</option>
+                            <option value="Long Pending" <?= $statusFilter === 'Long Pending' ? 'selected' : '' ?>>Long Pending</option>
                             <option value="Closed" <?= $statusFilter === 'Closed' ? 'selected' : '' ?>>Closed</option>
                         </select>
                     </div>
@@ -712,9 +717,9 @@ if ($current_user_name) {
                             <option value="ASC" <?= $sortOrder === 'ASC' ? 'selected' : '' ?>>Oldest First</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-search me-1"></i> Search</button>
-                        <a href="ticketmanagementexecutive.php" class="btn btn-secondary ms-2"><i class="fas fa-times"></i></a>
+                    <div class="col-md-2 d-flex align-items-center">
+                        <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="ticketmanagementexecutive.php" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> Clear</a>
                     </div>
                 </form>
             </div>
@@ -782,6 +787,10 @@ if ($current_user_name) {
                                     <td>
                                         <?php if($row['status'] === 'Closed'): ?>
                                             <span class="badge bg-success">Closed</span>
+                                        <?php elseif($row['status'] === 'Long Pending'): ?>
+                                            <span class="badge bg-danger">Long Pending</span>
+                                        <?php elseif($row['status'] === 'Reviewed'): ?>
+                                            <span class="badge bg-info text-dark">Reviewed</span>
                                         <?php else: ?>
                                             <span class="badge bg-warning">Pending</span>
                                         <?php endif; ?>

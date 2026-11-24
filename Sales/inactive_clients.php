@@ -627,8 +627,8 @@ require 'header.php';
                     <input type="text" name="q" class="form-control" placeholder="Sort by Client Name, ID, Country, Currency, Journal, Reason..." value="<?= h($searchQuery) ?>">
                 </div>
                 <div class="col-md-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-filter me-1"></i>Filter</button>
-                    <a href="inactive_clients.php" class="btn btn-outline-secondary flex-grow-1"><i class="fas fa-times me-1"></i>Reset</a>
+                    <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-filter me-1"></i>Apply Filters</button>
+                    <a href="inactive_clients.php" class="btn btn-outline-secondary flex-grow-1"><i class="fas fa-times me-1"></i>Clear</a>
                 </div>
             </form>
         </div>

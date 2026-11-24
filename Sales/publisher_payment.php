@@ -549,8 +549,8 @@ require 'header.php';
 
                     <!-- Actions -->
                     <div class="col-lg-2 col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm"><i class="fas fa-filter me-1"></i> Filter</button>
-                        <a href="publisher_payment.php" class="btn btn-light border shadow-sm" title="Clear all filters"><i class="fas fa-undo"></i></a>
+                        <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="publisher_payment.php" class="btn btn-light border shadow-sm text-nowrap" title="Clear all filters"><i class="fas fa-times me-1"></i> Clear</a>
                     </div>
                 </form>
             </div>

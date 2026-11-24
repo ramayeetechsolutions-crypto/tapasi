@@ -253,8 +253,8 @@ $jobs = $mysqli->query($sql);
                     </select>
                 </div>
                 <div class="col-md-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-dark px-4">Filter</button>
-                    <a href="job_master.php" class="btn btn-outline-secondary px-4">Reset</a>
+                    <button type="submit" class="btn btn-dark px-4"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="job_master.php" class="btn btn-outline-secondary px-4"><i class="fas fa-times me-1"></i> Clear</a>
                 </div>
             </form>
         </div>

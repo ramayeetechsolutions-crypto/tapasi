@@ -1034,10 +1034,10 @@ require 'header.php';
                 <!-- 6. Action Buttons -->
                 <div class="col-xl-2 col-lg-3 col-md-4 d-flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm shadow-sm flex-grow-1" title="Apply Filters">
-                        <i class="fas fa-filter"></i> Apply
+                        <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
-                    <a href="nda_details.php" class="btn btn-outline-secondary btn-sm shadow-sm flex-grow-1" title="Reset Filters">
-                        <i class="fas fa-times"></i> Reset
+                    <a href="nda_details.php" class="btn btn-outline-secondary btn-sm shadow-sm flex-grow-1" title="Clear Filters">
+                        <i class="fas fa-times me-1"></i> Clear
                     </a>
                 </div>
 
