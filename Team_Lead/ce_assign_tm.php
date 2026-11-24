@@ -44,7 +44,20 @@ if ($check_i_col && $check_i_col->num_rows == 0) {
 $check_moved_col = $mysqli->query("SHOW COLUMNS FROM ce LIKE 'is_moved'");
 if ($check_moved_col && $check_moved_col->num_rows == 0) {
     $mysqli->query("ALTER TABLE ce ADD COLUMN is_moved TINYINT(1) DEFAULT 0");
-    $mysqli->query("UPDATE ce SET is_moved = 1, remarks = NULL WHERE TRIM(COALESCE(remarks, '')) = 'Moved'");
+    $mysqli->query("UPDATE ce SET is_moved = 1, remarks = 'Moved' WHERE TRIM(COALESCE(remarks, '')) = 'Moved'");
+}
+
+// Auto-add independent stage status columns to ce table if not exists
+$check_stage_cols = [
+    'ce_status' => "VARCHAR(50) DEFAULT 'Need to Assign'",
+    'ref_status' => "VARCHAR(50) DEFAULT 'Need to Assign'",
+    'fqa_status' => "VARCHAR(50) DEFAULT 'Need to Assign'"
+];
+foreach ($check_stage_cols as $sc => $sdef) {
+    $chk_sc = $mysqli->query("SHOW COLUMNS FROM ce LIKE '$sc'");
+    if ($chk_sc && $chk_sc->num_rows == 0) {
+        $mysqli->query("ALTER TABLE ce ADD COLUMN $sc $sdef");
+    }
 }
 
 function h($s) {
@@ -68,13 +81,39 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     $target_type = $_POST['type'] ?? 'ce';
     $new_status = trim($_POST['status']);
 
-    // Fetch current status, assigned TMs, and times to combine and validate
-    $get_stat = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to AS fqa_tm, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+    // Fetch current status, stage statuses, assigned TMs, and times
+    $get_stat = $mysqli->prepare("SELECT ce.status, ce.ce_status, ce.ref_status, ce.fqa_status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to AS fqa_tm, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
     $get_stat->bind_param("i", $ce_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
     $curr_status = $curr_data['status'] ?? '';
+    $curr_ce_status = $curr_data['ce_status'] ?? '';
+    $curr_ref_status = $curr_data['ref_status'] ?? '';
+    $curr_fqa_status = $curr_data['fqa_status'] ?? '';
     $get_stat->close();
+
+    // Fallbacks if columns were newly added
+    if (empty($curr_ce_status)) {
+        if (in_array($curr_status, ['CE Done', 'CE & REF Done']) || ($curr_status === 'Completed' && !empty($curr_data['assigned_to_content']))) {
+            $curr_ce_status = 'Completed';
+        } elseif (!empty($curr_data['assigned_to_content'])) {
+            $curr_ce_status = 'In Progress';
+        } else {
+            $curr_ce_status = 'Need to Assign';
+        }
+    }
+    if (empty($curr_ref_status)) {
+        if (in_array($curr_status, ['REF Done', 'CE & REF Done']) || ($curr_status === 'Completed' && !empty($curr_data['assigned_to_img']) && !empty($curr_data['ref_start_time']))) {
+            $curr_ref_status = 'Completed';
+        } elseif (!empty($curr_data['assigned_to_img'])) {
+            $curr_ref_status = 'In Progress';
+        } else {
+            $curr_ref_status = 'Need to Assign';
+        }
+    }
+    if (empty($curr_fqa_status)) {
+        $curr_fqa_status = ($curr_status === 'Completed') ? 'Completed' : (!empty($curr_data['fqa_tm']) ? 'In Progress' : 'Need to Assign');
+    }
 
     // Mandatory TM & Time Validation for 'Completed' Status
     if ($new_status === 'Completed') {
@@ -113,8 +152,9 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
                 exit;
             }
 
-            $ce_done = in_array($curr_status, ['CE Done', 'CE & REF Done', 'Completed']);
-            $ref_done = in_array($curr_status, ['REF Done', 'CE & REF Done', 'Completed']);
+            // Either CE or REF must be Completed! If both are still in progress / need to assign, block FQA!
+            $ce_done = ($curr_ce_status === 'Completed');
+            $ref_done = ($curr_ref_status === 'Completed');
             if (!$ce_done && !$ref_done) {
                 echo json_encode(['success' => false, 'message' => 'Please complete either CE Assignment or REF Assignment before marking FQA as Completed.']);
                 exit;
@@ -126,34 +166,43 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         }
     }
 
-    $db_status = $curr_status; // default to current
-
+    // Update target stage status independently
     if ($target_type === 'ce') {
-        if ($new_status === 'Completed') {
-            $db_status = ($curr_status === 'REF Done') ? 'CE & REF Done' : 'CE Done';
-        } elseif ($new_status === 'In Progress') {
-            $db_status = ($curr_status === 'CE & REF Done') ? 'REF Done' : 'In Progress';
-        }
+        $curr_ce_status = $new_status;
     } elseif ($target_type === 'ref') {
-        if ($new_status === 'Completed') {
-            $db_status = ($curr_status === 'CE Done') ? 'CE & REF Done' : 'REF Done';
-        } elseif ($new_status === 'In Progress') {
-            $db_status = ($curr_status === 'CE & REF Done') ? 'CE Done' : 'In Progress';
-        }
+        $curr_ref_status = $new_status;
     } elseif ($target_type === 'fqa') {
-        if ($new_status === 'Completed') {
-            $db_status = 'Completed';
-        }
+        $curr_fqa_status = $new_status;
     }
 
-    $update_query = "UPDATE ce SET status = ?, last_updated = NOW() WHERE id = ?";
-    if ($target_type === 'fqa' && $new_status === 'Completed') {
-        $update_query = "UPDATE ce SET status = ?, ce_date = CURDATE(), last_updated = NOW() WHERE id = ?";
+    // Compute composite ce.status for backwards compatibility with downstream modules
+    if ($curr_fqa_status === 'Completed') {
+        $db_status = 'Completed';
+    } elseif ($curr_ce_status === 'Completed' && $curr_ref_status === 'Completed') {
+        $db_status = 'CE & REF Done';
+    } elseif ($curr_ce_status === 'Completed') {
+        $db_status = 'CE Done';
+    } elseif ($curr_ref_status === 'Completed') {
+        $db_status = 'REF Done';
+    } elseif ($curr_ce_status === 'In Progress' || $curr_ref_status === 'In Progress' || $curr_fqa_status === 'In Progress') {
+        $db_status = 'In Progress';
+    } else {
+        $db_status = 'Need to Assign';
     }
+
+    $update_query = "UPDATE ce SET status = ?, ce_status = ?, ref_status = ?, fqa_status = ?, ce_date = CASE WHEN ? = 'Completed' THEN CURDATE() ELSE ce_date END, last_updated = NOW() WHERE id = ?";
     $stmt = $mysqli->prepare($update_query);
-    $stmt->bind_param("si", $db_status, $ce_id);
+    $stmt->bind_param("sssssi", $db_status, $curr_ce_status, $curr_ref_status, $curr_fqa_status, $curr_fqa_status, $ce_id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'status' => $db_status, 'new_status' => $new_status, 'type' => $target_type]);
+        echo json_encode([
+            'success' => true, 
+            'status' => $db_status, 
+            'new_status' => $new_status, 
+            'ce_status' => $curr_ce_status,
+            'ref_status' => $curr_ref_status,
+            'fqa_status' => $curr_fqa_status,
+            'type' => $target_type
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
     }
@@ -171,9 +220,9 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     // Allowed fields for security
     $allowed_fields = ['eq', 'images', 'tables_count', 'ref', 'ce_start_time', 'ce_end_time', 'ref_start_time', 'ref_end_time', 'fqa_start_time', 'fqa_end_time', 'word_count', 'remarks', 'priority'];
     if (in_array($field, $allowed_fields)) {
-        // Validation for 'Moved': CE, REF, and FQA assignments must all be assigned and Completed before moving!
+        // Validation for 'Moved': FQA must be Completed, and either CE or REF must be Completed before moving!
         if ($field === 'remarks' && $val === 'Moved') {
-            $check_stmt = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+            $check_stmt = $mysqli->prepare("SELECT ce.status, ce.ce_status, ce.ref_status, ce.fqa_status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
             $check_stmt->bind_param("i", $ce_id);
             $check_stmt->execute();
             $check_row = $check_stmt->get_result()->fetch_assoc();
@@ -191,20 +240,24 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
                 }
             }
 
-            $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
-            $ref_assigned = !empty(trim($check_row['assigned_to_img'] ?? ''));
-            $is_completed = ($check_row['status'] === 'Completed');
+            $fqa_completed = (($check_row['fqa_status'] ?? '') === 'Completed' || $check_row['status'] === 'Completed');
+            $fqa_has_times = (!empty($check_row['fqa_start_time']) && !empty($check_row['fqa_end_time']));
+            $fqa_ok = ($fqa_assigned && $fqa_completed && $fqa_has_times);
 
-            if (!$ce_assigned || !$ref_assigned || !$fqa_assigned || !$is_completed) {
-                $missing = [];
-                if (!$ce_assigned) $missing[] = 'CE TM not assigned';
-                if (!$ref_assigned) $missing[] = 'REF TM not assigned';
-                if (!$fqa_assigned) $missing[] = 'FQA TM not assigned';
-                if (!$is_completed) $missing[] = 'CE / REF / FQA not Completed';
-                
+            $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
+            $ce_completed = (($check_row['ce_status'] ?? '') === 'Completed' || in_array($check_row['status'], ['CE Done', 'CE & REF Done', 'Completed']));
+            $ce_has_times = (!empty($check_row['ce_start_time']) && !empty($check_row['ce_end_time']));
+            $ce_ok = ($ce_assigned && $ce_completed && $ce_has_times);
+
+            $ref_assigned = !empty(trim($check_row['assigned_to_img'] ?? ''));
+            $ref_completed = (($check_row['ref_status'] ?? '') === 'Completed' || in_array($check_row['status'], ['REF Done', 'CE & REF Done']));
+            $ref_has_times = (!empty($check_row['ref_start_time']) && !empty($check_row['ref_end_time']));
+            $ref_ok = ($ref_assigned && $ref_completed && $ref_has_times);
+
+            if (!$fqa_ok || (!$ce_ok && !$ref_ok)) {
                 echo json_encode([
                     'success' => false, 
-                    'message' => 'Cannot move! ' . implode(', ', $missing) . '. CE, REF, and FQA must all be Completed before moving.'
+                    'message' => 'Cannot move! FQA must be Completed, and either CE Assignment or REF Assignment must be Completed before moving.'
                 ]);
                 exit;
             }
@@ -218,6 +271,9 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             $stmt->bind_param("si", $val, $ce_id);
         }
         if ($stmt->execute()) {
+            if ($field === 'remarks' && $val === 'Moved') {
+                $mysqli->query("UPDATE ce SET is_moved = 1 WHERE id = $ce_id");
+            }
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -234,8 +290,8 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_ce') {
     header('Content-Type: application/json');
     $ce_id = (int)$_POST['ce_id'];
 
-    // Validation: CE, REF, and FQA assignments must all be assigned and Completed before moving
-    $check_stmt = $mysqli->prepare("SELECT ce.status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
+    // Validation: FQA must be Completed, and either CE or REF must be Completed before moving
+    $check_stmt = $mysqli->prepare("SELECT ce.status, ce.ce_status, ce.ref_status, ce.fqa_status, ce.assigned_to_content, ce.assigned_to_img, j.assigned_to as fqa_tm, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time FROM ce LEFT JOIN jobs j ON ce.job_id = j.job_id WHERE ce.id = ?");
     $check_stmt->bind_param("i", $ce_id);
     $check_stmt->execute();
     $check_row = $check_stmt->get_result()->fetch_assoc();
@@ -258,25 +314,29 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_ce') {
         }
     }
 
+    $fqa_completed = (($check_row['fqa_status'] ?? '') === 'Completed' || $check_row['status'] === 'Completed');
+    $fqa_has_times = (!empty($check_row['fqa_start_time']) && !empty($check_row['fqa_end_time']));
+    $fqa_ok = ($fqa_assigned && $fqa_completed && $fqa_has_times);
+
     $ce_assigned = !empty(trim($check_row['assigned_to_content'] ?? ''));
+    $ce_completed = (($check_row['ce_status'] ?? '') === 'Completed' || in_array($check_row['status'], ['CE Done', 'CE & REF Done', 'Completed']));
+    $ce_has_times = (!empty($check_row['ce_start_time']) && !empty($check_row['ce_end_time']));
+    $ce_ok = ($ce_assigned && $ce_completed && $ce_has_times);
+
     $ref_assigned = !empty(trim($check_row['assigned_to_img'] ?? ''));
-    $is_completed = ($check_row['status'] === 'Completed');
+    $ref_completed = (($check_row['ref_status'] ?? '') === 'Completed' || in_array($check_row['status'], ['REF Done', 'CE & REF Done']));
+    $ref_has_times = (!empty($check_row['ref_start_time']) && !empty($check_row['ref_end_time']));
+    $ref_ok = ($ref_assigned && $ref_completed && $ref_has_times);
 
-    if (!$ce_assigned || !$ref_assigned || !$fqa_assigned || !$is_completed) {
-        $missing = [];
-        if (!$ce_assigned) $missing[] = 'CE TM not assigned';
-        if (!$ref_assigned) $missing[] = 'REF TM not assigned';
-        if (!$fqa_assigned) $missing[] = 'FQA TM not assigned';
-        if (!$is_completed) $missing[] = 'CE / REF / FQA not Completed';
-
+    if (!$fqa_ok || (!$ce_ok && !$ref_ok)) {
         echo json_encode([
             'success' => false,
-            'message' => 'Cannot move! ' . implode(', ', $missing) . '. CE, REF, and FQA must all be Completed before moving.'
+            'message' => 'Cannot move! FQA must be Completed, and either CE Assignment or REF Assignment must be Completed before moving.'
         ]);
         exit;
     }
 
-    $stmt = $mysqli->prepare("UPDATE ce SET is_moved = 1, last_updated = NOW() WHERE id = ?");
+    $stmt = $mysqli->prepare("UPDATE ce SET is_moved = 1, remarks = 'Moved', last_updated = NOW() WHERE id = ?");
     $stmt->bind_param("i", $ce_id);
     if ($stmt->execute()) {
         echo json_encode(['success' => true]);
@@ -344,15 +404,15 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
 
         // Target field in CE table
         if ($type == 'content') {
-            $update_ce = "UPDATE ce SET assigned_to_content = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET assigned_to_content = ?, ce_status = CASE WHEN ce_status IN ('Need to Assign', '') OR ce_status IS NULL THEN 'In Progress' ELSE ce_status END, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
             $stmt->bind_param("si", $assigned_to, $ce_id);
         } elseif ($type == 'images') {
-            $update_ce = "UPDATE ce SET assigned_to_img = ?, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET assigned_to_img = ?, ref_status = CASE WHEN ref_status IN ('Need to Assign', '') OR ref_status IS NULL THEN 'In Progress' ELSE ref_status END, status = CASE WHEN status = 'Need to Assign' THEN 'In Progress' ELSE status END, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
             $stmt->bind_param("si", $assigned_to, $ce_id);
         } elseif ($type == 'fqa') {
-            $update_ce = "UPDATE ce SET last_updated = NOW() WHERE id = ?";
+            $update_ce = "UPDATE ce SET fqa_status = CASE WHEN fqa_status IN ('Need to Assign', '') OR fqa_status IS NULL THEN 'In Progress' ELSE fqa_status END, last_updated = NOW() WHERE id = ?";
             $stmt = $mysqli->prepare($update_ce);
             $stmt->bind_param("i", $ce_id);
         }
@@ -1466,8 +1526,8 @@ require 'header.php';
                                     <!-- 9. CE Assignment (Content) -->
                                     <td class="assignment-cell">
                                         <?php 
-                                            $ce_done = in_array($row['status'], ['CE Done', 'CE & REF Done', 'Completed']);
-                                            $ce_inprogress = (!$ce_done && !empty($row['assigned_to_content']));
+                                            $ce_done = (($row['ce_status'] ?? '') === 'Completed') || (empty($row['ce_status']) && in_array($row['status'], ['CE Done', 'CE & REF Done', 'Completed']));
+                                            $ce_inprogress = (!$ce_done && (!empty($row['assigned_to_content']) || ($row['ce_status'] ?? '') === 'In Progress'));
 
                                             $ce_curr_status = 'Need to Assign';
                                             $ce_badge_cls = '';
@@ -1537,8 +1597,9 @@ require 'header.php';
                                     <!-- 11. REF Assignment (Reference/Images) -->
                                     <td class="assignment-cell">
                                         <?php 
-                                            $ref_done = in_array($row['status'], ['REF Done', 'CE & REF Done', 'Completed']);
-                                            $ref_inprogress = (!$ref_done && !empty($row['assigned_to_img']));
+                                            // REF is completed ONLY if ref_status is explicitly Completed, or legacy 'REF Done' / 'CE & REF Done'
+                                            $ref_done = (($row['ref_status'] ?? '') === 'Completed') || (empty($row['ref_status']) && in_array($row['status'], ['REF Done', 'CE & REF Done']) && !empty($row['assigned_to_img']));
+                                            $ref_inprogress = (!$ref_done && (!empty($row['assigned_to_img']) || ($row['ref_status'] ?? '') === 'In Progress'));
 
                                             $ref_curr_status = 'Need to Assign';
                                             $ref_badge_cls = '';
@@ -1604,8 +1665,8 @@ require 'header.php';
                                             $is_tl_default = (in_array($raw_fqa_user, ['T.G. Bragadeeshwaran', 'TL- TPS004', 'TL- TPS032', 'TL- TPS002', 'TL- TPS005', 'TL']) || ($raw_fqa_user === $reporting_manager && !empty($reporting_manager)));
                                             
                                             $fqa_user = $is_tl_default ? '' : $raw_fqa_user;
-                                            $fqa_done = ($row['status'] === 'Completed' && !empty($fqa_user));
-                                            $fqa_inprogress = (!$fqa_done && !empty($fqa_user));
+                                            $fqa_done = (($row['fqa_status'] ?? '') === 'Completed') || (empty($row['fqa_status']) && $row['status'] === 'Completed' && !empty($fqa_user));
+                                            $fqa_inprogress = (!$fqa_done && (!empty($fqa_user) || ($row['fqa_status'] ?? '') === 'In Progress'));
 
                                             $fqa_curr_status = 'Need to Assign';
                                             $fqa_badge_cls = '';
@@ -1884,7 +1945,6 @@ require 'header.php';
                             }
                         }
                     }
-                    setTimeout(() => { window.location.reload(); }, 600);
                 } else { 
                     if (select) { select.value = prevValue; }
                     showNotification('danger', 'Error updating status: ' + (data.message || '')); 
@@ -1921,11 +1981,11 @@ require 'header.php';
                     const refOk = refSel && refSel.value === 'Completed' && ((refTm && refTm.value !== '') || refHasBadge);
                     const fqaOk = fqaSel && fqaSel.value === 'Completed' && ((fqaTm && fqaTm.value !== '') || fqaHasBadge);
 
-                    if (!ceOk || !refOk || !fqaOk) {
+                    if (!fqaOk || (!ceOk && !refOk)) {
                         if (element) {
                             element.value = element.getAttribute('data-prev') || '';
                         }
-                        showNotification('danger', 'Cannot move! CE, REF, and FQA must all have a TM assigned and be marked Completed.');
+                        showNotification('danger', 'Cannot move! FQA must be Completed, and either CE Assignment or REF Assignment must be Completed.');
                         return;
                     }
                 }
@@ -2009,8 +2069,8 @@ require 'header.php';
                 const refOk = refSel && refSel.value === 'Completed' && ((refTm && refTm.value !== '') || refHasBadge);
                 const fqaOk = fqaSel && fqaSel.value === 'Completed' && ((fqaTm && fqaTm.value !== '') || fqaHasBadge);
 
-                if (!ceOk || !refOk || !fqaOk) {
-                    showNotification('danger', 'Cannot move! CE, REF, and FQA must all have a TM assigned and be marked Completed.');
+                if (!fqaOk || (!ceOk && !refOk)) {
+                    showNotification('danger', 'Cannot move! FQA must be Completed, and either CE Assignment or REF Assignment must be Completed.');
                     return;
                 }
             }

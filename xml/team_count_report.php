@@ -56,6 +56,35 @@ if (!function_exists('formatProcessHeader')) {
     }
 }
 
+if (!function_exists('getFiscalWeeks')) {
+    function getFiscalWeeks($fy_year) {
+        $cur_start = new DateTime("$fy_year-04-01");
+        $fy_end = new DateTime(($fy_year + 1) . "-03-31");
+        $weeks = [];
+        $w = 1;
+        while ($cur_start <= $fy_end) {
+            $w_start = $cur_start->format('Y-m-d');
+            $end = clone $cur_start;
+            while ($end->format('N') != 6 && $end < $fy_end) {
+                $end->modify('+1 day');
+            }
+            $w_end = $end->format('Y-m-d');
+            $weeks[$w] = [
+                'week' => $w,
+                'start' => $w_start,
+                'end' => $w_end,
+                'year' => $fy_year
+            ];
+            $cur_start = clone $end;
+            while ($cur_start->format('N') != 1 && $cur_start <= $fy_end) {
+                $cur_start->modify('+1 day');
+            }
+            $w++;
+        }
+        return $weeks;
+    }
+}
+
 $current_user = $_SESSION['username'] ?? '';
 
 // Get employee name from employee_master table
@@ -608,29 +637,22 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                     <select id="week_selector" class="form-select">
                         <option value="">Custom Date</option>
                         <?php
-                        $current_month = date('n');
-                        $year = date('Y');
+                        $current_month = (int)date('n');
+                        $year = (int)date('Y');
                         
                         // Financial year logic: If month is Jan, Feb, or Mar, use previous year's April
                         if ($current_month < 4) {
                             $year--; 
                         }
                         
-                        // Start from the First Monday of April
-                        $dto = new DateTime("first monday of april $year");
-                        
-                        for ($w = 1; $w <= 52; $w++) {
-                            $w_start = $dto->format('Y-m-d');
-                            
-                            // End date is Saturday (+5 days from Monday)
-                            $end_dto = clone $dto;
-                            $end_dto->modify('+5 days'); 
-                            $w_end = $end_dto->format('Y-m-d');
-                            
-                            echo "<option value='{$w_start}|{$w_end}'>Week {$w} ({$w_start})</option>";
-                            
-                            // Move to next week's Monday
-                            $dto->modify('+1 week');
+                        $fiscal_weeks = getFiscalWeeks($year);
+                        foreach ($fiscal_weeks as $fw) {
+                            $w_num = $fw['week'];
+                            $w_start = $fw['start'];
+                            $w_end = $fw['end'];
+                            $val = "{$w_start}|{$w_end}";
+                            $selected = ($val === "$start_date|$end_date") ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>Week {$w_num} ({$w_start})</option>";
                         }
                         ?>
                     </select>

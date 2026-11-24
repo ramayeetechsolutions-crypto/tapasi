@@ -404,8 +404,8 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 $where_conditions = [
     "(le.status_button IS NULL OR le.status_button != 'Moved')",
     "(ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')", 
-    "ce.remarks = 'Moved'", 
-    "(REPLACE(jm.job_name, ' ', '') = 'CE+PAG' OR REPLACE(jm.job_name, ' ', '') = 'CE+TS')"
+    "(ce.is_moved = 1 OR TRIM(COALESCE(ce.remarks, '')) = 'Moved')", 
+    "(REPLACE(jm.job_name, ' ', '') IN ('CE+PAG', 'CE+TS', 'CE+TS+XML', 'CE+TS+QC', 'CE+TS+QC+XML', 'LE'))"
 ];
 
 $params = [];
@@ -503,8 +503,8 @@ $stats_query = "SELECT
                 LEFT JOIN ce ON ce.job_id = j.job_id
                 WHERE (le.status_button IS NULL OR le.status_button != 'Moved')
                 AND (ce.status LIKE '%Completed%' OR ce.status LIKE '%Done%')
-                AND ce.remarks = 'Moved'
-                AND (REPLACE(jm.job_name, ' ', '') = 'CE+PAG' OR REPLACE(jm.job_name, ' ', '') = 'CE+TS')";
+                AND (ce.is_moved = 1 OR TRIM(COALESCE(ce.remarks, '')) = 'Moved')
+                AND (REPLACE(jm.job_name, ' ', '') IN ('CE+PAG', 'CE+TS', 'CE+TS+XML', 'CE+TS+QC', 'CE+TS+QC+XML', 'LE'))";
 $stats_result = $mysqli->query($stats_query);
 $stats = $stats_result->fetch_assoc();
 
