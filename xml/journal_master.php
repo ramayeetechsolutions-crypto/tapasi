@@ -546,13 +546,33 @@ $months = getMonths();
             max-width: 1800px;
             margin: 0 auto;
         }
-        .table th {
-            background-color: var(--ash, #6c757d) !important;
-            color: #ffffff !important;
-            border: none;
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
-        .table td {
-            vertical-align: middle;
+        .table th,
+        .table thead th {
+            background-color: var(--ash, #5e6b77) !important;
+            color: #ffffff !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+        }
+        .table td,
+        .table tbody td {
+            vertical-align: middle !important;
+            border-bottom: 1px solid #dee2e6 !important;
+        }
+        .table tbody tr:nth-child(even) td,
+        table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td,
+        table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td,
+        table tbody tr:hover td {
+            background-color: #e9ecef !important;
         }
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);

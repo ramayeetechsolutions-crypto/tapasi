@@ -440,8 +440,53 @@ $clients = getClients($mysqli);
 
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; }
         .main-content { padding: 20px; max-width: 1600px; margin: 0 auto; }
-        .table th { background-color: var(--ash, #6c757d) !important; color: #ffffff !important; border: none; padding: 10px; font-weight: 600; white-space: nowrap;}
-        .table td { vertical-align: middle; padding: 8px 10px; }
+        
+        /* Table Styles matching media_1795436893250_0a22383d.png */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #dee2e6 !important;
+            width: 100% !important;
+            background-color: #ffffff !important;
+        }
+        .table thead th { 
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important; 
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-left: none !important;
+            padding: 8px 10px !important; 
+            font-weight: 700 !important; 
+            font-size: 12.5px !important;
+            white-space: nowrap;
+            vertical-align: middle;
+            text-transform: uppercase;
+        }
+        .table thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        .table tbody td { 
+            vertical-align: middle !important; 
+            padding: 8px 10px !important; 
+            font-size: 12.5px !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-top: none !important;
+            border-left: none !important;
+        }
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        .table tbody tr:hover td {
+            background-color: #e9ecef !important;
+        }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .text-truncate-custom { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; cursor: pointer; }
         .readonly-box { background-color: #e9ecef; border: 1px solid #ced4da; padding: 0.375rem 0.75rem; border-radius: 0.25rem; min-height: 35px; }
@@ -603,47 +648,47 @@ $clients = getClients($mysqli);
                     <table class="table table-hover table-bordered mb-0">
                         <thead>
                             <tr>
-                                <th class="sticky-col-1">S.No</th>
-                                <th class="sticky-col-2">Client Name</th>
-                                <th class="sticky-col-3">Journal Name</th>
-                                <th>Status</th>
-                                <th>Company Name</th>
-                                <th>Season</th>
-                                <th>Mail ID(Production)</th>
-                                <th>Remarks</th>
-                                <th>DTD</th>
-                                <th class="text-center">Actions</th>
+                                <th style="width: 50px;" class="text-center">S.NO</th>
+                                <th>CLIENT NAME</th>
+                                <th>JOURNAL NAME</th>
+                                <th class="text-center">STATUS</th>
+                                <th>COMPANY NAME</th>
+                                <th class="text-center">SEASON</th>
+                                <th class="text-center">MAIL ID(PRODUCTION)</th>
+                                <th class="text-center">REMARKS</th>
+                                <th class="text-center">DTD</th>
+                                <th class="text-center" style="width: 95px;">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if($entries && $entries->num_rows > 0): $i = 1;?>
                                 <?php while($row = $entries->fetch_assoc()): ?>
                                 <tr>
-                                    <td class="text-center fw-bold sticky-col-1"><?= $i++ ?></td>
-                                    <td class="fw-bold text-primary sticky-col-2"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
-                                    <td class="sticky-col-3"><?= h($row['journal_name']) ?: '-' ?></td>
+                                    <td class="text-center fw-bold"><?= $i++ ?></td>
+                                    <td class="fw-bold text-primary"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
+                                    <td><?= h($row['journal_name']) ?: '-' ?></td>
                                     <td class="text-center">
-                                        <form method="post" style="display:inline;">
+                                        <form method="post" style="display:inline; margin:0;">
                                             <input type="hidden" name="action" value="toggle">
                                             <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                            <button type="submit" class="btn btn-sm <?= $row['status'] === 'Active' ? 'btn-success' : 'btn-danger' ?>" style="font-size:10px; padding:2px 5px;">
+                                            <button type="submit" class="btn btn-sm <?= $row['status'] === 'Active' ? 'btn-success' : 'btn-danger' ?>" style="font-size:11px; padding:2px 8px; border-radius:4px; font-weight:700;">
                                                 <?= h($row['status']) ?>
                                             </button>
                                         </form>
                                     </td>
                                     <td><span class="text-truncate-custom" title="<?= h($row['company_name']) ?>"><?= h($row['company_name']) ?: '-' ?></span></td>
-                                    <td><?= h($row['season']) ?: '-' ?></td>
-                                    <td><span class="text-truncate-custom" title="<?= h($row['production_email']) ?>"><?= h($row['production_email']) ?: '-' ?></span></td>
-                                    <td><span class="text-truncate-custom" title="<?= h($row['remarks']) ?>"><?= h($row['remarks']) ?: '-' ?></span></td>
-                                    <td><?= h($row['dtd']) ?: '-' ?></td>
+                                    <td class="text-center"><?= h($row['season']) ?: '-' ?></td>
+                                    <td class="text-center"><span class="text-truncate-custom" title="<?= h($row['production_email']) ?>"><?= h($row['production_email']) ?: '-' ?></span></td>
+                                    <td class="text-center"><span class="text-truncate-custom" title="<?= h($row['remarks']) ?>"><?= h($row['remarks']) ?: '-' ?></span></td>
+                                    <td class="text-center"><?= h($row['dtd']) ?: '-' ?></td>
                                     
                                     <td class="text-center">
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="xml_clients.php?mode=edit&id=<?= (int)$row['id'] ?>" class="btn btn-warning"><i class="fas fa-edit"></i></a>
-                                            <form method="post" style="display:inline;" onsubmit="return confirm('Delete this entry?')">
+                                        <div class="d-inline-flex gap-1 justify-content-center align-items-center">
+                                            <a href="xml_clients.php?mode=edit&id=<?= (int)$row['id'] ?>" class="btn btn-warning btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
+                                            <form method="post" style="display:inline; margin:0;" onsubmit="return confirm('Delete this entry?')">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                                <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i></button>
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Delete"><i class="fas fa-trash"></i></button>
                                             </form>
                                         </div>
                                     </td>

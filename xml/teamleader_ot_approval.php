@@ -314,30 +314,86 @@ include 'header.php';
         gap: 8px;
     }
 
-    /* Sticky Table Header */
-    .table thead th {
-        position: sticky;
-        top: 70px;
-        z-index: 900;
-        background-color: var(--ash, #6c757d) !important;
-        font-weight: 600;
-        font-size: 0.82rem;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: white !important;
-        padding: 0.75rem 0.5rem;
-        border: 1px solid #6c757d !important;
-        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
+    /* Scrollable Container with Sticky Table Header */
+    .table-responsive {
+        max-height: 60vh !important;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        position: relative !important;
+        scrollbar-color: #6c757d #f1f1f1 !important;
+        scrollbar-width: thin !important;
+    }
+    .table-responsive::-webkit-scrollbar {
+        width: 10px !important;
+        height: 10px !important;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1 !important;
+        border-radius: 4px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #6c757d !important;
+        border-radius: 4px;
+    }
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #5a6268 !important;
+    }
+
+    table thead,
+    .table thead {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 100 !important;
+        background-color: #5e6b77 !important;
+    }
+
+    table thead th,
+    .table thead th,
+    .table thead tr:first-child th,
+    .table-responsive table thead th,
+    .table-responsive table thead tr:first-child th,
+    .table-container table thead th,
+    .table-container table thead tr:first-child th,
+    .table > :not(caption) > thead > * > *,
+    .table > thead > tr > th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 100 !important;
+        background-color: #5e6b77 !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.82rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.03em !important;
+        padding: 0.75rem 0.5rem !important;
+        border: 1px solid #dee2e6 !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+        white-space: nowrap !important;
     }
     .table {
-        border-collapse: separate;
-        border-spacing: 0;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        width: 100% !important;
+        margin-bottom: 0 !important;
     }
-    .card, .card-body, .table-responsive, .table-container {
-        overflow: visible !important;
+    .table tbody td,
+    table tbody td {
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+    .table tbody tr:nth-child(even) td,
+    table tbody tr:nth-child(even) td {
+        background-color: #f2f4f6 !important;
+    }
+    .table tbody tr:nth-child(odd) td,
+    table tbody tr:nth-child(odd) td {
+        background-color: #ffffff !important;
+    }
+    .table tbody tr:hover td,
+    table tbody tr:hover td {
+        background-color: #e9ecef !important;
     }
     .card-header {
-        background-color: var(--ash, #6c757d) !important;
+        background-color: var(--ash, #5e6b77) !important;
         color: white !important;
     }
 </style>
@@ -477,7 +533,7 @@ include 'header.php';
             </h6>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive" style="overflow: visible;">
+            <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>

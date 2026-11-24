@@ -482,8 +482,36 @@ $managers = getManagers($mysqli);
 
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .main-content { padding: 20px; max-width: 2500px; margin: 0 auto; }
-        .table th { background-color:  var(--ash, #6c757d) !important; color: #ffffff !important; border: none; white-space: nowrap; }
-        .table td { vertical-align: middle; font-size: 0.9rem; }
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th,
+        .table thead th { 
+            background-color: var(--ash, #5e6b77) !important; 
+            color: #ffffff !important; 
+            border-bottom: 1px solid #dee2e6 !important; 
+            border-top: 1px solid #dee2e6 !important;
+            white-space: nowrap; 
+        }
+        .table td,
+        .table tbody td { 
+            vertical-align: middle !important; 
+            font-size: 0.9rem; 
+            border-bottom: 1px solid #dee2e6 !important;
+        }
+        .table tbody tr:nth-child(even) td,
+        table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td,
+        table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td,
+        table tbody tr:hover td {
+            background-color: #e9ecef !important;
+        }
         .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid rgba(0, 0, 0, 0.125); }
         .journal-name-cell, .email-cell, .url-cell { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; position: relative; }
         .journal-name-cell:hover::after { content: attr(title); position: absolute; top: 100%; left: 0; background: white; border: 1px solid #ddd; padding: 10px; z-index: 1000; max-width: 400px; box-shadow: 0 0 10px rgba(0,0,0,0.1); white-space: normal; word-wrap: break-word; }

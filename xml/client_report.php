@@ -297,6 +297,10 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
             overflow-y: auto;
             position: relative;
         }
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
         .table th,
         #jobsTable thead th,
         .table thead th {
@@ -305,13 +309,30 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
             z-index: 100 !important;
             background-color: #5e6b77 !important;
             color: #ffffff !important; 
-            border: 1px solid #dee2e6 !important; /* Vertical lines for header */
+            border: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
             text-align: center;
             box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.3);
         }
-        .table td {
-            vertical-align: middle;
-            border: 1px solid #dee2e6; /* Vertical lines for data cells */
+        .table td,
+        .table tbody td,
+        #jobsTable tbody td {
+            vertical-align: middle !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+        }
+        .table tbody tr:nth-child(even) td,
+        #jobsTable tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td,
+        #jobsTable tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td,
+        #jobsTable tbody tr:hover td {
+            background-color: #e9ecef !important;
         }
         
         .card {

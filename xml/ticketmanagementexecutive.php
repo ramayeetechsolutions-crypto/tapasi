@@ -374,9 +374,10 @@ if ($current_user_name) {
             position: sticky;
             top: 70px;
             z-index: 900;
-            background-color: var(--ash, #6c757d) !important; 
+            background-color: var(--ash, #5e6b77) !important; 
             color: white !important; 
-            border: 1px solid #6c757d !important; 
+            border-bottom: 1px solid #dee2e6 !important; 
+            border-top: 1px solid #dee2e6 !important;
             font-size: 11px; 
             font-weight: bold;
             text-transform: uppercase;
@@ -385,20 +386,33 @@ if ($current_user_name) {
             box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.15);
         }
         .table {
-            border-collapse: separate;
-            border-spacing: 0;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
         }
         .card, .card-body, .table-responsive, .table-container {
             overflow: visible !important;
         }
         .card-header {
-            background-color: var(--ash, #6c757d) !important;
+            background-color: var(--ash, #5e6b77) !important;
             color: white !important;
         }
-        .table td { 
+        .table td, .table tbody td { 
             vertical-align: middle; 
             font-size: 12px; 
             padding: 8px 5px; 
+            border-bottom: 1px solid #dee2e6 !important;
+        }
+        .table tbody tr:nth-child(even) td,
+        table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td,
+        table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td,
+        table tbody tr:hover td {
+            background-color: #e9ecef !important;
         }
         .card { 
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); 
