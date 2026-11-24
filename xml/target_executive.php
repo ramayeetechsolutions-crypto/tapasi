@@ -107,8 +107,18 @@ $processes = [
 // Combine Fixed Targets with Daily Production Data
 $my_data = [];
 
-// 1. Fetch Fixed Targets assigned by the TL from `daily_targets_xml`
-$stmt_fixed = $mysqli->prepare("SELECT process_id, MAX(target_limit) as target_limit FROM daily_targets_xml WHERE tm_id = ? GROUP BY process_id");
+// 1. Fetch Fixed Targets assigned by the TL from `daily_targets_xml` (Latest Target based on MAX id)
+$query_fixed = "
+    SELECT t1.process_id, t1.target_limit 
+    FROM daily_targets_xml t1
+    INNER JOIN (
+        SELECT process_id, MAX(id) as latest_id 
+        FROM daily_targets_xml 
+        WHERE tm_id = ? 
+        GROUP BY process_id
+    ) t2 ON t1.id = t2.latest_id
+";
+$stmt_fixed = $mysqli->prepare($query_fixed);
 $stmt_fixed->bind_param("i", $current_user_id);
 $stmt_fixed->execute();
 $res_fixed = $stmt_fixed->get_result();
