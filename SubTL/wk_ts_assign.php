@@ -438,8 +438,8 @@ require 'header.php';
                 <table class="table table-hover table-bordered mb-0 table-sticky-assign" style="min-width: 1950px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
-                            <th>QC Completed Date</th>
-                            <th>PAG Completed Date</th>
+                            <th>QC Comp. Date</th>
+                            <th>PAG Comp. Date</th>
                             <th>Rec. Date</th>
                             <th>Issue</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
