@@ -796,9 +796,9 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                 <table class="table table-hover table-striped table-bordered table-sticky-assign" id="jobTable" style="min-width: 2200px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
-                            <th>LE Completed Date</th>
-                            <th>CE Completed Date</th>
-                            <th>Received Date</th>
+                            <th>LE Comp. Date</th>
+                            <th>CE Comp. Date</th>
+                            <th>Rec. Date</th>
                             <th>Client</th>
                             <th>Journal</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
