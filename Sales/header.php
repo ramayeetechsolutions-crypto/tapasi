@@ -538,7 +538,9 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                         </a>
                         <ul class="nav-dropdown">
                             <li><a href="employee_master.php" class="<?= $currentPage === 'employee_master.php' ? 'active' : '' ?>"><i class="fas fa-id-card"></i> Profile</a></li>
+                            <?php if (!isset($_SESSION['sales_exec'])): ?>
                             <li><a href="teamleader_ot_approval.php" class="<?= $currentPage === 'teamleader_ot_approval.php' ? 'active' : '' ?>"><i class="fas fa-clock"></i> OT Approvals</a></li>
+                            <?php endif; ?>
                         </ul>
                     </li>
 

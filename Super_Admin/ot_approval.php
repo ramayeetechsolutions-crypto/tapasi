@@ -93,7 +93,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// --- 2. HANDLE EXCEL DOWNLOAD ---
+// --- 2. FILTERS (STATUS, TYPE, EMPLOYEE) ---
+$status_filter = $_GET['status'] ?? 'all'; // all, pending, approved, rejected
+$status_condition = "";
+if ($status_filter == 'pending') {
+    $status_condition = "AND la.status = 'Pending'";
+} elseif ($status_filter == 'approved') {
+    $status_condition = "AND la.status = 'Approved'";
+} elseif ($status_filter == 'rejected') {
+    $status_condition = "AND la.status = 'Rejected'";
+}
+
+$type_filter = $_GET['type'] ?? 'all'; // all, OT_Claim, Permission
+$type_condition = "";
+if ($type_filter == 'OT_Claim' || $type_filter == 'ot') {
+    $type_condition = "AND la.request_type = 'OT_Claim'";
+} elseif ($type_filter == 'Permission' || $type_filter == 'permission') {
+    $type_condition = "AND la.request_type = 'Permission'";
+}
+
+$employee_filter = $_GET['employee'] ?? 'all';
+$employee_condition = "";
+if ($employee_filter != 'all' && !empty($employee_filter)) {
+    $safe_emp = $mysqli->real_escape_string($employee_filter);
+    $employee_condition = "AND la.employee_username = '$safe_emp'";
+}
+
+// Fetch employee list for filter dropdown
+$emp_dropdown_query = "SELECT DISTINCT em.employee_username, em.employee_name 
+                      FROM employee_master em 
+                      WHERE em.user_role_id IN (2, 3, 9, 10)
+                         OR em.employee_username IN (
+                             SELECT DISTINCT la.employee_username 
+                             FROM leave_applications la 
+                             JOIN employee_master em2 ON la.employee_username = em2.employee_username 
+                             WHERE em2.user_role_id IN (2, 3, 9, 10) 
+                             AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
+                         )
+                      ORDER BY em.employee_name ASC";
+$emp_dropdown_result = $mysqli->query($emp_dropdown_query);
+$employee_list = [];
+if ($emp_dropdown_result && $emp_dropdown_result->num_rows > 0) {
+    while ($emp_row = $emp_dropdown_result->fetch_assoc()) {
+        $employee_list[] = $emp_row;
+    }
+}
+
+// Helper query params for tab links
+$type_param = ($type_filter != 'all' && !empty($type_filter)) ? '&type=' . urlencode($type_filter) : '';
+$emp_param = ($employee_filter != 'all' && !empty($employee_filter)) ? '&employee=' . urlencode($employee_filter) : '';
+
+// --- 3. HANDLE EXCEL DOWNLOAD ---
 if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     // Fetch data for Excel
     $excel_query = "SELECT 
@@ -117,6 +167,9 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
                    LEFT JOIN process_master pm ON la.process = pm.process_id
                    WHERE em.user_role_id IN (2, 3, 9, 10) 
                    AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
+                   $status_condition
+                   $type_condition
+                   $employee_condition
                    ORDER BY la.from_date DESC, la.id DESC";
     
     $excel_result = $mysqli->query($excel_query);
@@ -154,17 +207,6 @@ if (isset($_GET['download']) && $_GET['download'] == 'excel') {
     
     echo '</table>';
     exit();
-}
-
-// --- 3. STATUS FILTER ---
-$status_filter = $_GET['status'] ?? 'all'; // all, pending, approved, rejected
-$status_condition = "";
-if ($status_filter == 'pending') {
-    $status_condition = "AND la.status = 'Pending'";
-} elseif ($status_filter == 'approved') {
-    $status_condition = "AND la.status = 'Approved'";
-} elseif ($status_filter == 'rejected') {
-    $status_condition = "AND la.status = 'Rejected'";
 }
 
 include 'header.php';
@@ -404,32 +446,77 @@ include 'header.php';
         </div>
     </div>
 
-    <!-- Status Filter Tabs -->
+    <!-- Status Filter Tabs & Filter Controls -->
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body py-2">
-            <div class="status-filter">
-                <ul class="nav nav-tabs border-0">
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'all' ? 'active' : '' ?>" href="?status=all">
-                            All Claims (<?= ($stats['pending_count'] + $stats['approved_count'] + $stats['rejected_count']) ?? 0 ?>)
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="status-filter">
+                    <ul class="nav nav-tabs border-0 mb-0">
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'all' ? 'active' : '' ?>" href="?status=all<?= $type_param ?><?= $emp_param ?>">
+                                All Claims (<?= ($stats['pending_count'] + $stats['approved_count'] + $stats['rejected_count']) ?? 0 ?>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'pending' ? 'active' : '' ?>" href="?status=pending<?= $type_param ?><?= $emp_param ?>">
+                                Pending (<?= $stats['pending_count'] ?? 0 ?>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'approved' ? 'active' : '' ?>" href="?status=approved<?= $type_param ?><?= $emp_param ?>">
+                                Approved (<?= $stats['approved_count'] ?? 0 ?>)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= $status_filter == 'rejected' ? 'active' : '' ?>" href="?status=rejected<?= $type_param ?><?= $emp_param ?>">
+                                Rejected (<?= $stats['rejected_count'] ?? 0 ?>)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Filter Controls Form -->
+                <form method="GET" action="" class="d-flex flex-wrap align-items-center gap-2 m-0" id="filterForm">
+                    <!-- Type Filter -->
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="small text-muted fw-bold mb-0 text-nowrap"><i class="fas fa-filter text-secondary me-1"></i>Type:</label>
+                        <select name="type" class="form-select form-select-sm" style="width: auto; min-width: 125px;" onchange="this.form.submit()">
+                            <option value="all" <?= $type_filter == 'all' ? 'selected' : '' ?>>All Types</option>
+                            <option value="OT_Claim" <?= ($type_filter == 'OT_Claim' || $type_filter == 'ot') ? 'selected' : '' ?>>OT Claim</option>
+                            <option value="Permission" <?= ($type_filter == 'Permission' || $type_filter == 'permission') ? 'selected' : '' ?>>Permission</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="small text-muted fw-bold mb-0 text-nowrap">Status:</label>
+                        <select name="status" class="form-select form-select-sm" style="width: auto; min-width: 120px;" onchange="this.form.submit()">
+                            <option value="all" <?= $status_filter == 'all' ? 'selected' : '' ?>>All Status</option>
+                            <option value="pending" <?= $status_filter == 'pending' ? 'selected' : '' ?>>Pending</option>
+                            <option value="approved" <?= $status_filter == 'approved' ? 'selected' : '' ?>>Approved</option>
+                            <option value="rejected" <?= $status_filter == 'rejected' ? 'selected' : '' ?>>Rejected</option>
+                        </select>
+                    </div>
+
+                    <!-- Employee Filter -->
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="small text-muted fw-bold mb-0 text-nowrap">Employee:</label>
+                        <select name="employee" class="form-select form-select-sm" style="width: auto; min-width: 160px;" onchange="this.form.submit()">
+                            <option value="all">All Employees</option>
+                            <?php foreach ($employee_list as $emp): ?>
+                                <option value="<?= htmlspecialchars($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($emp['employee_name']) ?> (<?= htmlspecialchars($emp['employee_username']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <?php if ($status_filter != 'all' || ($type_filter != 'all' && !empty($type_filter)) || ($employee_filter != 'all' && !empty($employee_filter))): ?>
+                        <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Reset Filters">
+                            <i class="fas fa-undo me-1"></i>Reset
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'pending' ? 'active' : '' ?>" href="?status=pending">
-                            Pending (<?= $stats['pending_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'approved' ? 'active' : '' ?>" href="?status=approved">
-                            Approved (<?= $stats['approved_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= $status_filter == 'rejected' ? 'active' : '' ?>" href="?status=rejected">
-                            Rejected (<?= $stats['rejected_count'] ?? 0 ?>)
-                        </a>
-                    </li>
-                </ul>
+                    <?php endif; ?>
+                </form>
             </div>
         </div>
     </div>
@@ -468,7 +555,24 @@ include 'header.php';
             <h6 class="mb-0 fw-bold">
                 OT Approvals - TL & Admins 
                 <span class="float-end">
-                    <small>Showing: <?= ucfirst($status_filter) ?></small>
+                    <?php
+                    $showing_parts = [ucfirst($status_filter)];
+                    if ($type_filter != 'all') {
+                        $showing_parts[] = ($type_filter == 'OT_Claim' ? 'OT Claim' : $type_filter);
+                    }
+                    if ($employee_filter != 'all') {
+                        $emp_display_name = $employee_filter;
+                        foreach ($employee_list as $emp_item) {
+                            if ($emp_item['employee_username'] == $employee_filter) {
+                                $emp_display_name = $emp_item['employee_name'];
+                                break;
+                            }
+                        }
+                        $showing_parts[] = htmlspecialchars($emp_display_name);
+                    }
+                    $showing_text = implode(' | ', $showing_parts);
+                    ?>
+                    <small>Showing: <?= $showing_text ?></small>
                 </span>
             </h6>
         </div>
@@ -499,7 +603,7 @@ include 'header.php';
                     </thead>
                     <tbody>
                         <?php
-                        // Fetch OT claims from same team with status filter
+                        // Fetch OT claims from same team with status, type, and employee filters
                         $query = "SELECT 
                                 la.*,
                                 em.employee_name,
@@ -511,6 +615,8 @@ include 'header.php';
                                WHERE em.user_role_id IN (2, 3, 9, 10) 
                                AND la.request_type IN ('OT_Claim', 'Comp_Off_Leave', 'Permission')
                                $status_condition
+                               $type_condition
+                               $employee_condition
                                ORDER BY la.from_date DESC, la.id DESC";
                         
                         $result = $mysqli->query($query);
