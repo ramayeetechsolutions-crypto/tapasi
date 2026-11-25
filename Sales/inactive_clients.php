@@ -478,6 +478,35 @@ require 'header.php';
         background-color: #e8f4fd !important;
         transition: all 0.2s ease-in-out;
     }
+    /* Sticky Actions Column */
+    .table thead th.sticky-actions-col,
+    table thead th.sticky-actions-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 10 !important;
+        background-color: #6c757d !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+    }
+    .table tbody tr:nth-child(odd) td.sticky-actions-col,
+    table tbody tr:nth-child(odd) td.sticky-actions-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 5 !important;
+        background-color: #f8f9fa !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+    }
+    .table tbody tr:nth-child(even) td.sticky-actions-col,
+    table tbody tr:nth-child(even) td.sticky-actions-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 5 !important;
+        background-color: #ffffff !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+    }
+    .table-hover tbody tr:hover td.sticky-actions-col,
+    .table tbody tr:hover td.sticky-actions-col {
+        background-color: #e8f4fd !important;
+    }
 </style>
 
 <div class="container-fluid py-4 main-content">
@@ -657,7 +686,7 @@ require 'header.php';
                             <th>REASON</th>
                             <th>LAST DATE</th>
                             <th>STATUS</th>
-                            <th style="min-width: 105px;">ACTIONS</th>
+                            <th style="min-width: 105px;" class="sticky-actions-col">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -703,7 +732,7 @@ require 'header.php';
                                     <span class="badge rounded-pill bg-danger" style="font-size: 10.5px; padding: 3px 8px; font-weight: 700;">Inactive</span><br>
                                     <small class="text-muted" style="font-size: 11px;"><?= !empty($row['inactive_date']) && $row['inactive_date'] != '0000-00-00 00:00:00' ? formatDate($row['inactive_date']) : '—' ?></small>
                                 </td>
-                                <td>
+                                <td class="sticky-actions-col">
                                     <div class="d-inline-flex gap-1 justify-content-center align-items-center">
                                         <a href="inactive_clients.php?mode=edit&client_id=<?= (int)$row['client_id'] ?>" 
                                            class="btn btn-warning btn-sm" style="padding: 2px 7px; border-radius: 4px; font-size: 12px;" title="Edit">

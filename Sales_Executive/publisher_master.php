@@ -500,6 +500,24 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
             vertical-align: middle;
             font-size: 13px;
         }
+        /* Sticky Actions Column */
+        .table th.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 10 !important;
+            background-color: #6c757d !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+        }
+        .table td.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 5 !important;
+            background-color: #ffffff !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+        }
+        .table tbody tr:hover td.sticky-actions-col {
+            background-color: #f8fafc !important;
+        }
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             border: 1px solid rgba(0, 0, 0, 0.125);
@@ -758,7 +776,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                 <th>Designation</th>
                                 <th>Link</th>
                                 <th>Status</th>
-                                <th width="120" class="text-center">Actions</th>
+                                <th width="120" class="text-center sticky-actions-col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -806,7 +824,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                         ?>
                                         <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center sticky-actions-col">
                                         <div class="btn-group btn-group-sm" role="group">
                                             <!-- Edit Button -->
                                             <a href="publisher_master.php?mode=edit&id=<?= (int)$row['id'] ?>" 

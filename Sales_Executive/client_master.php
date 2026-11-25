@@ -588,6 +588,24 @@ require 'header.php';
         .btn-group-sm > .btn {
             padding: 0.25rem 0.5rem;
         }
+        /* Sticky Actions Column */
+        .table th.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 10 !important;
+            background-color: #6c757d !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+        }
+        .table td.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 5 !important;
+            background-color: #ffffff !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+        }
+        .table-hover tbody tr:hover td.sticky-actions-col {
+            background-color: #e8f4fd !important;
+        }
         .status-badge {
             font-size: 0.75rem;
             padding: 0.35em 0.65em;
@@ -937,7 +955,7 @@ require 'header.php';
                             <th>Pay Mode</th>
                             <th>Remarks</th>
                             <th>Status</th>
-                            <th class="text-center" style="width: 120px;">Actions</th>
+                            <th class="text-center sticky-actions-col" style="width: 120px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -988,7 +1006,7 @@ require 'header.php';
                                     </button>
                                 </form>
                             </td>
-                            <td class="text-center">
+                            <td class="text-center sticky-actions-col">
                                 <div class="btn-group btn-group-sm shadow-sm" role="group">
                                     <a class="btn btn-outline-primary" href="client_master.php?mode=edit&id=<?= (int)$row['client_id'] ?>" title="Edit Client">
                                         <i class="fas fa-edit"></i>

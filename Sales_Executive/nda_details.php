@@ -5,9 +5,25 @@ error_reporting(E_ALL);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // ---------- Auto-migration for Database Columns ----------
+// Ensure client_master columns that must be nullable are nullable (prevents "doesn't have a default value" on import)
+$cm_fix_cols = ['template' => 'text', 'tds_percentage' => 'double(10,2)', 'igst' => 'double(10,2)'];
+foreach ($cm_fix_cols as $col => $type) {
+    $chk = $mysqli->query("SHOW COLUMNS FROM client_master LIKE '$col'");
+    if ($chk && $chk->num_rows > 0) {
+        $col_info = $chk->fetch_assoc();
+        if ($col_info['Null'] === 'NO') {
+            $mysqli->query("ALTER TABLE client_master MODIFY COLUMN `$col` $type NULL");
+        }
+    }
+}
+
 $check_prev_col = $mysqli->query("SHOW COLUMNS FROM nda_details LIKE 'previous_status'");
 if ($check_prev_col && $check_prev_col->num_rows == 0) {
     $mysqli->query("ALTER TABLE nda_details ADD COLUMN previous_status VARCHAR(255) NULL AFTER revision_amount_status");
+}
+$check_year_col = $mysqli->query("SHOW COLUMNS FROM nda_details LIKE 'signed_year'");
+if ($check_year_col && $check_year_col->num_rows == 0) {
+    $mysqli->query("ALTER TABLE nda_details ADD COLUMN signed_year VARCHAR(10) NULL AFTER signed_date");
 }
 $check_prev_cm = $mysqli->query("SHOW COLUMNS FROM client_master LIKE 'previous_status'");
 if ($check_prev_cm && $check_prev_cm->num_rows == 0) {
@@ -106,50 +122,128 @@ function encode_split_rate($with, $without) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_excel') {
     
     if (isset($_FILES['excel_file']) && $_FILES['excel_file']['error'] === 0) {
-        if (!file_exists($libPath)) {
-            redirect_with(['msg' => 'SimpleXLSX library not found. Please install it.', 'type' => 'danger']);
-        }
-        
-        require_once $libPath;
-        $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+        $uploaded_name = strtolower($_FILES['excel_file']['name']);
+        $is_csv = (pathinfo($uploaded_name, PATHINFO_EXTENSION) === 'csv');
 
-        if ($xlsx) {
-            $rows = $xlsx->rows();
+        // ---- Parse CSV ----
+        if ($is_csv) {
+            $tmp = $_FILES['excel_file']['tmp_name'];
+            $handle = fopen($tmp, 'r');
+            $rows = [];
+            if ($handle) {
+                while (($line = fgetcsv($handle, 0, ',')) !== false) {
+                    $rows[] = $line;
+                }
+                fclose($handle);
+            }
+            $parse_ok = !empty($rows);
+        } else {
+            // ---- Parse XLSX / XLS ----
+            if (!file_exists($libPath)) {
+                redirect_with(['msg' => 'SimpleXLSX library not found. Please install it.', 'type' => 'danger']);
+            }
+            require_once $libPath;
+            $xlsx = Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']);
+            $rows = $xlsx ? $xlsx->rows() : [];
+            $parse_ok = ($xlsx !== false);
+        }
+
+        if ($parse_ok) {
             $count_added = 0;
             $count_skipped = 0;
             $errors =[];
 
-            // Detect if 30-column header with Previous Status is present
-            $has_prev_status = false;
-            if (!empty($rows[0])) {
-                foreach ($rows[0] as $h_cell) {
-                    if (stripos(trim((string)$h_cell), 'previous') !== false) {
-                        $has_prev_status = true;
-                        break;
+            // Build normalized header index map if headers exist
+            $header_map = [];
+            if (!empty($rows[0]) && is_array($rows[0])) {
+                foreach ($rows[0] as $col_idx => $header_val) {
+                    $norm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', (string)$header_val)));
+                    if ($norm !== '') {
+                        $header_map[$norm] = $col_idx;
                     }
                 }
             }
+            $has_header_names = isset($header_map['clientname']) || isset($header_map['name']);
 
             foreach ($rows as $k => $r) {
                 if ($k === 0) continue; // Skip Header row
 
                 try {
-                    // $r[0] is S.No (Ignored)
-                    $client_name = trim($r[1] ?? ''); // Shifted to index 1
-                    if (empty($client_name)) {
-                        $count_skipped++;
-                        continue;
-                    }
+                    if ($has_header_names) {
+                        $get_cell = function($aliases, $default = '') use ($r, $header_map) {
+                            if (!is_array($aliases)) $aliases = [$aliases];
+                            foreach ($aliases as $alias) {
+                                $k_norm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', (string)$alias)));
+                                if (isset($header_map[$k_norm])) {
+                                    $idx = $header_map[$k_norm];
+                                    if (isset($r[$idx])) {
+                                        return trim((string)$r[$idx]);
+                                    }
+                                }
+                            }
+                            return $default;
+                        };
 
-                    // Extract Country and Statuses based on header detection
-                    $country = $mysqli->real_escape_string(trim($r[2] ?? ''));
-                    if ($has_prev_status) {
+                        $get_split = function($field, $label) use ($get_cell) {
+                            $w = $get_cell([$field . 'with', $label . 'with', $field . '_with', $label . ' (with)']);
+                            $wo = $get_cell([$field . 'wo', $field . 'without', $label . 'wo', $label . 'without', $field . '_without', $label . ' (w/o)', $label . ' (without)']);
+                            if ($w !== '' || $wo !== '') {
+                                return encode_split_rate($w, $wo);
+                            }
+                            return $get_cell([$field, $label]);
+                        };
+
+                        $client_name     = $get_cell(['clientname', 'name']);
+                        if (empty($client_name)) {
+                            $count_skipped++;
+                            continue;
+                        }
+                        $country         = $mysqli->real_escape_string($get_cell(['country']));
+                        $previous_status = $mysqli->real_escape_string($get_cell(['previousstatus', 'prevstatus']));
+                        $client_status   = $mysqli->real_escape_string($get_cell(['currentstatus', 'status'], 'Active'));
+                        $nda_status      = $mysqli->real_escape_string($get_cell(['ndastatus', 'nda'], 'No'));
+                        $revision_status = $mysqli->real_escape_string($get_cell(['revamt', 'revisionamountstatus', 'revisionstatus'], 'No'));
+                        $signed_date_raw = $get_cell(['signeddate', 'dateofsigning', 'date']);
+                        $signed_year_raw = $get_cell(['year', 'signedyear', 'signingyear']);
+
+                        $workflow_all    = $mysqli->real_escape_string($get_cell(['all', 'workflowall']));
+                        $ce_ts           = $mysqli->real_escape_string($get_split('ce_ts', 'cets'));
+                        $ce_ts_xml       = $mysqli->real_escape_string($get_split('ce_ts_xml', 'cetsxml'));
+                        $ce              = $mysqli->real_escape_string($get_split('ce', 'ce'));
+                        $ts              = $mysqli->real_escape_string($get_split('ts', 'ts'));
+                        $pmc             = $mysqli->real_escape_string($get_split('pmc', 'pmc'));
+                        $pubmed          = $mysqli->real_escape_string($get_cell(['pubmed']));
+                        $clockss         = $mysqli->real_escape_string($get_cell(['clockss']));
+                        $scielo          = $mysqli->real_escape_string($get_cell(['scielo']));
+                        $crossref        = $mysqli->real_escape_string($get_cell(['crossref']));
+                        $doaj            = $mysqli->real_escape_string($get_cell(['doaj']));
+                        $bibilat         = $mysqli->real_escape_string($get_cell(['bibilat']));
+                        $medes           = $mysqli->real_escape_string($get_cell(['medes']));
+                        $pdf_to_xml      = $mysqli->real_escape_string($get_split('pdf_to_xml', 'pdftoxml'));
+                        $html            = $mysqli->real_escape_string($get_split('html', 'html'));
+                        $new_html        = $mysqli->real_escape_string($get_cell(['newhtml', 'new_html']));
+                        $direct_html     = $mysqli->real_escape_string($get_split('direct_html', 'directhtml'));
+                        $xml_html        = $mysqli->real_escape_string($get_split('xml_html', 'xmlhtml'));
+                        $image           = $mysqli->real_escape_string($get_cell(['image']));
+                        $math            = $mysqli->real_escape_string($get_cell(['math']));
+                        $remarks         = $mysqli->real_escape_string($get_cell(['remarks']));
+                        $cm_template     = $get_cell(['template']);
+                        $cm_tds          = $get_cell(['tds', 'tdspercentage']);
+                        $cm_igst         = $get_cell(['igst']);
+                    } else {
+                        // Positional fallback for legacy files
+                        $client_name = trim($r[1] ?? '');
+                        if (empty($client_name)) {
+                            $count_skipped++;
+                            continue;
+                        }
+                        $country = $mysqli->real_escape_string(trim($r[2] ?? ''));
                         $previous_status = $mysqli->real_escape_string(trim($r[3] ?? ''));
                         $client_status   = $mysqli->real_escape_string(trim($r[4] ?? 'Active'));
                         $nda_status      = $mysqli->real_escape_string(trim($r[5] ?? 'No'));
                         $revision_status = $mysqli->real_escape_string(trim($r[6] ?? 'No'));
                         $signed_date_raw = $r[7] ?? '';
-                        // Workflow Fields (indices shifted by +1)
+                        $signed_year_raw = $r[8] ?? '';
                         $workflow_all    = $mysqli->real_escape_string(trim($r[9] ?? ''));
                         $ce_ts           = $mysqli->real_escape_string(trim($r[10] ?? ''));
                         $ce_ts_xml       = $mysqli->real_escape_string(trim($r[11] ?? ''));
@@ -171,36 +265,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $image           = $mysqli->real_escape_string(trim($r[27] ?? ''));
                         $math            = $mysqli->real_escape_string(trim($r[28] ?? ''));
                         $remarks         = $mysqli->real_escape_string(trim($r[29] ?? ''));
-                    } else {
-                        $previous_status = '';
-                        $client_status   = $mysqli->real_escape_string(trim($r[3] ?? 'Active'));
-                        $nda_status      = $mysqli->real_escape_string(trim($r[4] ?? 'No'));
-                        $revision_status = $mysqli->real_escape_string(trim($r[5] ?? 'No'));
-                        $signed_date_raw = $r[6] ?? '';
-                        // Workflow Fields
-                        $workflow_all    = $mysqli->real_escape_string(trim($r[8] ?? ''));
-                        $ce_ts           = $mysqli->real_escape_string(trim($r[9] ?? ''));
-                        $ce_ts_xml       = $mysqli->real_escape_string(trim($r[10] ?? ''));
-                        $ce              = $mysqli->real_escape_string(trim($r[11] ?? ''));
-                        $ts              = $mysqli->real_escape_string(trim($r[12] ?? ''));
-                        $pmc             = $mysqli->real_escape_string(trim($r[13] ?? ''));
-                        $pubmed          = $mysqli->real_escape_string(trim($r[14] ?? ''));
-                        $clockss         = $mysqli->real_escape_string(trim($r[15] ?? ''));
-                        $scielo          = $mysqli->real_escape_string(trim($r[16] ?? ''));
-                        $crossref        = $mysqli->real_escape_string(trim($r[17] ?? ''));
-                        $doaj            = $mysqli->real_escape_string(trim($r[18] ?? ''));
-                        $bibilat         = $mysqli->real_escape_string(trim($r[19] ?? ''));
-                        $medes           = $mysqli->real_escape_string(trim($r[20] ?? ''));
-                        $pdf_to_xml      = $mysqli->real_escape_string(trim($r[21] ?? ''));
-                        $html            = $mysqli->real_escape_string(trim($r[22] ?? ''));
-                        $new_html        = $mysqli->real_escape_string(trim($r[23] ?? ''));
-                        $direct_html     = $mysqli->real_escape_string(trim($r[24] ?? ''));
-                        $xml_html        = $mysqli->real_escape_string(trim($r[25] ?? ''));
-                        $image           = $mysqli->real_escape_string(trim($r[26] ?? ''));
-                        $math            = $mysqli->real_escape_string(trim($r[27] ?? ''));
-                        $remarks         = $mysqli->real_escape_string(trim($r[28] ?? ''));
+                        $cm_template     = trim($r[30] ?? '');
+                        $cm_tds          = trim($r[31] ?? '');
+                        $cm_igst         = trim($r[32] ?? '');
                     }
                     if (empty($client_status)) { $client_status = 'Active'; }
+
+                    // Convert blank billing values to NULL for client_master
+                    $sql_template = ($cm_template !== '') ? "'" . $mysqli->real_escape_string($cm_template) . "'" : "NULL";
+                    $sql_tds      = ($cm_tds !== '' && is_numeric($cm_tds))  ? (float)$cm_tds  : "NULL";
+                    $sql_igst     = ($cm_igst !== '' && is_numeric($cm_igst)) ? (float)$cm_igst : "NULL";
 
                     // Check if client exists in client_master (unique constraint)
                     $check_client = $mysqli->query("SELECT client_id FROM client_master WHERE client_name = '" . $mysqli->real_escape_string($client_name) . "'");
@@ -209,11 +283,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         // Client exists - use existing client_id
                         $client_id = $check_client->fetch_assoc()['client_id'];
                         
-                        // Optionally update country/status if needed
-                        $mysqli->query("UPDATE client_master SET country='$country', status='$client_status', previous_status='$previous_status' WHERE client_id=$client_id");
+                        // Update country/status and billing fields if provided
+                        $update_parts = "country='$country', status='$client_status', previous_status='$previous_status'";
+                        if ($sql_template !== "NULL") $update_parts .= ", template=$sql_template";
+                        if ($sql_tds      !== "NULL") $update_parts .= ", tds_percentage=$sql_tds";
+                        if ($sql_igst     !== "NULL") $update_parts .= ", igst=$sql_igst";
+                        $mysqli->query("UPDATE client_master SET $update_parts WHERE client_id=$client_id");
                     } else {
                         // Create new client (unique entry)
-                        $sql_client = "INSERT INTO client_master (client_name, country, status, previous_status) VALUES ('" . $mysqli->real_escape_string($client_name) . "', '$country', '$client_status', '$previous_status')";
+                        $sql_client = "INSERT INTO client_master (client_name, country, status, previous_status, template, tds_percentage, igst) VALUES ('" . $mysqli->real_escape_string($client_name) . "', '$country', '$client_status', '$previous_status', $sql_template, $sql_tds, $sql_igst)";
                         if ($mysqli->query($sql_client)) {
                             $client_id = $mysqli->insert_id;
                         } else {
@@ -223,7 +301,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         }
                     }
 
-                    // Process Date
+                    // Process Date & Year
                     $signed_date = NULL;
                     if (!empty($signed_date_raw)) {
                         if (is_numeric($signed_date_raw)) {
@@ -236,13 +314,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                     $sql_date = $signed_date ? "'" . $mysqli->real_escape_string($signed_date) . "'" : "NULL";
 
+                    $signed_year = trim((string)($signed_year_raw ?? ''));
+                    if ($signed_year === '' && $signed_date) {
+                        $signed_year = date('Y', strtotime($signed_date));
+                    }
+                    $sql_year = $mysqli->real_escape_string($signed_year);
+
                     // Always insert new NDA record (allow multiple NDAs per client)
                     $sql = "INSERT INTO nda_details (
-                            client_id, previous_status, nda_status, revision_amount_status, signed_date, 
+                            client_id, previous_status, nda_status, revision_amount_status, signed_date, signed_year,
                             workflow_all, ce_ts, ce_ts_xml, ce, ts, pmc, pubmed, clockss, scielo, crossref, doaj, bibilat, medes, pdf_to_xml, html, new_html, direct_html, xml_html, image, math, remarks,
                             created_at, updated_at
                         ) VALUES (
-                            $client_id, '$previous_status', '$nda_status', '$revision_status', $sql_date, 
+                            $client_id, '$previous_status', '$nda_status', '$revision_status', $sql_date, '$sql_year',
                             '$workflow_all', '$ce_ts', '$ce_ts_xml', '$ce', '$ts', '$pmc', '$pubmed', '$clockss', '$scielo', '$crossref', '$doaj', '$bibilat', '$medes', '$pdf_to_xml', '$html', '$new_html', '$direct_html', '$xml_html', '$image', '$math', '$remarks',
                             NOW(), NOW()
                         )";
@@ -267,7 +351,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             redirect_with(['msg' => $msg, 'type' => ($count_added > 0) ? 'success' : 'warning']);
             
         } else {
-            redirect_with(['msg' => 'Failed to parse Excel file.', 'type' => 'danger']);
+            redirect_with(['msg' => 'Failed to parse file. Please upload a valid .xlsx, .xls, or .csv file.', 'type' => 'danger']);
         }
     }
 }
@@ -317,6 +401,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
         $revision_status = $mysqli->real_escape_string($_POST['revision_amount_status'] ?? 'No');
         $signed_date = $_POST['signed_date'] ?? NULL;
         $sql_date = empty($signed_date) ? "NULL" : "'" . $mysqli->real_escape_string(date('Y-m-d', strtotime($signed_date))) . "'";
+        $signed_year = trim($_POST['signed_year'] ?? '');
+        if ($signed_year === '' && !empty($signed_date)) {
+            $signed_year = date('Y', strtotime($signed_date));
+        }
+        $signed_year = $mysqli->real_escape_string($signed_year);
         $remarks = $mysqli->real_escape_string($_POST['remarks'] ?? '');
 
         // Workflow fields - Process split with/without or fallback to direct value
@@ -382,11 +471,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             
             // Create the NDA record for this client (allow multiple NDAs per client)
             $sql = "INSERT INTO nda_details (
-                        client_id, nda_status, revision_amount_status, previous_status, signed_date, 
+                        client_id, nda_status, revision_amount_status, previous_status, signed_date, signed_year, 
                         workflow_all, ce_ts, ce_ts_xml, ce, ts, pmc, pubmed, clockss, scielo, crossref, doaj, bibilat, medes, pdf_to_xml, html, new_html, direct_html, xml_html, image, math, remarks,
                         created_at, updated_at
                     ) VALUES (
-                        $target_client_id, '$nda_status', '$revision_status', '$previous_status', $sql_date, 
+                        $target_client_id, '$nda_status', '$revision_status', '$previous_status', $sql_date, '$signed_year', 
                         '$workflow_all', '$ce_ts', '$ce_ts_xml', '$ce', '$ts', '$pmc', '$pubmed', '$clockss', '$scielo', '$crossref', '$doaj', '$bibilat', '$medes', '$pdf_to_xml', '$html', '$new_html', '$direct_html', '$xml_html', '$image', '$math', '$remarks',
                         NOW(), NOW()
                     )";
@@ -412,6 +501,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
                             revision_amount_status = '$revision_status', 
                             previous_status = '$previous_status',
                             signed_date = $sql_date,
+                            signed_year = '$signed_year',
                             workflow_all = '$workflow_all', 
                             ce_ts = '$ce_ts', 
                             ce_ts_xml = '$ce_ts_xml', 
@@ -564,7 +654,7 @@ if ($to_year !== '' && is_numeric($to_year)) {
     $ref_year = (int)date('Y');
 }
 if ($ref_year > 0) {
-    $status_expr = "IF(EXISTS(SELECT 1 FROM nda_details y WHERE y.client_id = cm.client_id AND YEAR(y.signed_date) = $ref_year), 'Active', 'Inactive')";
+    $status_expr = "IF(EXISTS(SELECT 1 FROM nda_details y WHERE y.client_id = cm.client_id AND COALESCE(NULLIF(y.signed_year, ''), YEAR(y.signed_date)) = $ref_year), 'Active', 'Inactive')";
 } else {
     $status_expr = "cm.status";
 }
@@ -574,7 +664,7 @@ $sql = "SELECT
             COALESCE(nd.previous_status, cm.previous_status, '') as previous_status,
             IFNULL(nd.nda_status, 'No') as nda_status, 
             IFNULL(nd.revision_amount_status, 'No') as revision_amount_status, 
-            nd.signed_date, nd.remarks,
+            nd.signed_date, nd.signed_year, nd.remarks,
             nd.workflow_all, nd.ce_ts, nd.ce_ts_xml, nd.ce, nd.ts, nd.pmc, nd.pubmed, nd.clockss, nd.scielo, nd.crossref, nd.doaj, nd.bibilat, nd.medes, nd.pdf_to_xml, nd.html, nd.new_html, nd.direct_html, nd.xml_html, nd.image, nd.math
         FROM client_master cm
         LEFT JOIN nda_details nd ON cm.client_id = nd.client_id";
@@ -598,14 +688,14 @@ if ($filter_nda === 'Yes') {
 
 // 3. From Year Filter
 if ($from_year !== '' && is_numeric($from_year)) {
-    $cond[] = "YEAR(nd.signed_date) >= ?";
+    $cond[] = "COALESCE(NULLIF(nd.signed_year, ''), YEAR(nd.signed_date)) >= ?";
     $params[] = (int)$from_year;
     $types .= "i";
 }
 
 // 4. To Year Filter
 if ($to_year !== '' && is_numeric($to_year)) {
-    $cond[] = "YEAR(nd.signed_date) <= ?";
+    $cond[] = "COALESCE(NULLIF(nd.signed_year, ''), YEAR(nd.signed_date)) <= ?";
     $params[] = (int)$to_year;
     $types .= "i";
 }
@@ -733,6 +823,28 @@ require 'header.php';
 
     .nda-table tbody tr td:first-child {
         border-left: 1px solid #e9ecef !important;
+    }
+
+    /* Sticky Actions column */
+    .nda-table thead tr:first-child th.sticky-actions-col {
+        position: sticky !important;
+        top: 0 !important;
+        right: 0 !important;
+        z-index: 35 !important;
+        background-color: #6c757d !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .nda-table tbody td.sticky-actions-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 10 !important;
+        background-color: #ffffff !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .nda-table tbody tr:hover td.sticky-actions-col {
+        background-color: #f8fafc !important;
     }
 </style>
 
@@ -888,23 +1000,28 @@ require 'header.php';
                 <!-- NDA Information (Multiple records allowed) -->
                 <h6 class="border-bottom pb-2 text-success fw-bold"><i class="fas fa-file-contract me-2"></i>NDA Details (Multiple Records Allowed)</h6>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">NDA Status (Signed?)</label>
                         <select name="nda_status" class="form-select form-select-sm">
                             <option value="No" <?= (strtolower($editClient['nda_status'] ?? '') == 'no' || $isAdd) ? 'selected' : '' ?>>No</option>
                             <option value="Yes" <?= (strtolower($editClient['nda_status'] ?? '') == 'yes') ? 'selected' : '' ?>>Yes</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Revision Amount Status</label>
                         <select name="revision_amount_status" class="form-select form-select-sm">
                             <option value="No" <?= (strtolower($editClient['revision_amount_status'] ?? '') == 'no' || $isAdd) ? 'selected' : '' ?>>No</option>
                             <option value="Yes" <?= (strtolower($editClient['revision_amount_status'] ?? '') == 'yes') ? 'selected' : '' ?>>Yes</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label small">Date of Signing</label>
-                        <input type="date" name="signed_date" class="form-control form-control-sm" value="<?= !empty($editClient['signed_date']) && $editClient['signed_date'] != '0000-00-00' ? date('Y-m-d', strtotime($editClient['signed_date'])) : '' ?>">
+                        <input type="date" name="signed_date" id="signed_date_input" class="form-control form-control-sm" value="<?= !empty($editClient['signed_date']) && $editClient['signed_date'] != '0000-00-00' ? date('Y-m-d', strtotime($editClient['signed_date'])) : '' ?>" onchange="autoFillYear(this.value)">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Signed Year</label>
+                        <input type="text" name="signed_year" id="signed_year_input" class="form-control form-control-sm" value="<?= h($editClient['signed_year'] ?? (!empty($editClient['signed_date']) && $editClient['signed_date'] != '0000-00-00' ? date('Y', strtotime($editClient['signed_date'])) : '')) ?>" placeholder="e.g. 2026">
+                        <small class="text-muted" style="font-size: 0.72rem;">Enter year or auto-fills from date</small>
                     </div>
                     <div class="col-md-12">
                         <label class="form-label small">Remarks</label>
@@ -1084,7 +1201,7 @@ require 'header.php';
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="Math">Math</th>
                             <th rowspan="2" class="py-2 text-center border-end align-middle" title="Remarks">Remarks</th>
 
-                            <th rowspan="2" class="py-2 text-center align-middle">Actions</th>
+                            <th rowspan="2" class="py-2 text-center align-middle sticky-actions-col">Actions</th>
                         </tr>
                         <!-- Row 2: Sub-headers for Split Columns using exact table-dark header style -->
                         <tr style="font-size: 0.68rem;">
@@ -1150,7 +1267,7 @@ require 'header.php';
                                 <?= strtolower($row['revision_amount_status']) === 'yes' ? '<span class="text-warning fw-bold"><i class="fas fa-check"></i></span>' : '<span class="text-muted">-</span>' ?>
                             </td>
                             <td class="text-center border-end"><?= h(formatDate($row['signed_date'])) ?></td>
-                            <td class="text-center fw-bold text-info border-end"><?= (!empty($row['signed_date']) && $row['signed_date'] != '0000-00-00') ? date('Y', strtotime($row['signed_date'])) : '-' ?></td>
+                            <td class="text-center fw-bold text-info border-end"><?= !empty($row['signed_year']) ? h($row['signed_year']) : ((!empty($row['signed_date']) && $row['signed_date'] != '0000-00-00') ? date('Y', strtotime($row['signed_date'])) : '-') ?></td>
                             
                             <!-- Workflows -->
                             <td class="text-center border-end"><?= h($row['workflow_all'] ?? '') ?></td>
@@ -1214,7 +1331,7 @@ require 'header.php';
                             </td>
 
                             <!-- Action Tools: Edit and Delete -->
-                            <td class="text-center text-nowrap">
+                            <td class="text-center text-nowrap sticky-actions-col">
                                 <div class="btn-group btn-group-sm" role="group">
                                     <a href="nda_details.php?mode=edit&id=<?= (int)$row['nda_id'] ?>" 
                                        class="btn btn-warning" title="Edit NDA Record">
@@ -1264,8 +1381,8 @@ require 'header.php';
                     <div class="modal-body p-4">
                         <div class="row bg-light rounded p-3 mb-4 shadow-sm border">
                             <div class="col-md-8">
-                                <label class="form-label fw-bold text-dark">Select Excel File (.xlsx, .xls)</label>
-                                <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls" required>
+                                <label class="form-label fw-bold text-dark">Select File (.xlsx, .xls, .csv)</label>
+                                <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
                             </div>
                             <div class="col-md-4 d-flex align-items-end">
                                 <button type="button" class="btn btn-success w-100 shadow-sm" onclick="downloadSample()">
@@ -1275,18 +1392,18 @@ require 'header.php';
                         </div>
                         
                         <div class="alert alert-secondary border-0 shadow-sm">
-                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-list-ol me-2 text-primary"></i>Excel Format (30 Columns Required):</h6>
-                            <p class="mb-2 text-muted small">Columns 1(S.No) and 9(Signed Year) are ignored during import. Client names are unique in client_master, but multiple NDA records per client are allowed.</p>
+                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-list-ol me-2 text-primary"></i>Template Column Format (Matches UI Headers):</h6>
+                            <p class="mb-2 text-muted small">Supports separate <strong>WITH</strong> and <strong>W/O</strong> (Without) columns matching the table, plus custom <strong>Year</strong>. Headers are automatically detected.</p>
                             <div class="table-responsive bg-white rounded border">
-                                <table class="table table-sm table-bordered mb-0 align-middle text-center small" style="font-size: 0.70rem;">
+                                <table class="table table-sm table-bordered mb-0 align-middle text-center small" style="font-size: 0.68rem;">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>H</th><th>I</th><th>J</th><th>K</th><th>L</th><th>M</th><th>N</th><th>O</th><th>P</th><th>Q</th><th>R</th><th>S</th><th>T</th><th>U</th><th>V</th><th>W</th><th>X</th><th>Y</th><th>Z</th><th>AA</th><th>AB</th><th>AC</th><th>AD</th>
+                                            <th>S.No</th><th class="text-primary fw-bold">Client Name*</th><th>Country</th><th>Previous Status</th><th>Current Status</th><th>NDA Status</th><th>Rev.Amt</th><th>Signed Date</th><th class="text-info fw-bold">Year</th><th>All</th><th>CE+TS WITH</th><th>CE+TS W/O</th><th>CE+TS+XML WITH</th><th>CE+TS+XML W/O</th><th>CE WITH</th><th>CE W/O</th><th>TS WITH</th><th>TS W/O</th><th>PMC WITH</th><th>PMC W/O</th><th>PUBMED</th><th>CLOCKSS</th><th>SCIELO</th><th>Crossref</th><th>DOAJ</th><th>BIBILAT</th><th>MEDES</th><th>PDF to XML WITH</th><th>PDF to XML W/O</th><th>HTML WITH</th><th>HTML W/O</th><th>New HTML</th><th>Direct HTML WITH</th><th>Direct HTML W/O</th><th>XML+HTML WITH</th><th>XML+HTML W/O</th><th>Image</th><th>Math</th><th>Remarks</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-muted">
                                         <tr>
-                                            <td>S.No</td><td class="text-primary fw-bold">Client Name*</td><td>Country</td><td>Previous Status</td><td>Current Status</td><td>NDA Status</td><td>Rev amt</td><td>Signed Date</td><td>Signed Year</td><td>All</td><td>CE+TS</td><td>CE+TS+XML</td><td>CE</td><td>TS</td><td>PMC</td><td>PUBMED</td><td>CLOCKSS</td><td>SCIELO</td><td>Crossref</td><td>DOAJ</td><td>BIBILAT</td><td>MEDES</td><td>PDF to XML</td><td>HTML</td><td>New HTML</td><td>Direct HTML</td><td>XML+HTML</td><td>Image</td><td>Math</td><td>Remarks</td>
+                                            <td>1</td><td class="text-primary">ABC Corp</td><td>India</td><td>Lead</td><td>Active</td><td>Yes</td><td>Yes</td><td>2025-10-24</td><td>2025</td><td>10</td><td>10</td><td>8</td><td>10</td><td>8</td><td>10</td><td>8</td><td>10</td><td>8</td><td>10</td><td>8</td><td>10</td><td>10</td><td>10</td><td>10</td><td>10</td><td>10</td><td>10</td><td>10</td><td>8</td><td>10</td><td>8</td><td>10</td><td>10</td><td>8</td><td>10</td><td>8</td><td>10</td><td>10</td><td>Sample remarks</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1346,11 +1463,21 @@ require 'header.php';
         }
     }
 
+    function autoFillYear(dateVal) {
+        var yearInput = document.getElementById('signed_year_input');
+        if (yearInput && !yearInput.value && dateVal) {
+            var parts = dateVal.split('-');
+            if (parts.length > 0 && parts[0].length === 4) {
+                yearInput.value = parts[0];
+            }
+        }
+    }
+
     function downloadSample() {
-        const sampleContent = "S.No,Client Name,Country,Previous Status,Current Status,NDA Status,Rev amt,Signed Date,Signed Year,All,CE+TS,CE+TS+XML,CE,TS,PMC,PUBMED,CLOCKSS,SCIELO,Crossref,DOAJ,BIBILAT,MEDES,PDF to XML,HTML,New HTML,Direct HTML,XML+HTML,Image,Math,Remarks\n" +
-                             "1,ABC Corp,India,Lead,Active,Yes,Yes,10/24/2025,2025,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,Standard terms applied\n" +
-                             "2,ABC Corp,India,Active,Active,No,No,11/15/2025,2025,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,Second NDA record for same client\n" +
-                             "3,XYZ Ltd,USA,New,Active,Yes,Yes,10/24/2025,2025,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,Special terms";
+        const sampleContent = "S.No,Client Name,Country,Previous Status,Current Status,NDA Status,Rev.Amt,Signed Date,Year,All,CE+TS WITH,CE+TS W/O,CE+TS+XML WITH,CE+TS+XML W/O,CE WITH,CE W/O,TS WITH,TS W/O,PMC WITH,PMC W/O,PUBMED,CLOCKSS,SCIELO,Crossref,DOAJ,BIBILAT,MEDES,PDF to XML WITH,PDF to XML W/O,HTML WITH,HTML W/O,New HTML,Direct HTML WITH,Direct HTML W/O,XML+HTML WITH,XML+HTML W/O,Image,Math,Remarks\n" +
+                             "1,ABC Corp,India,Lead,Active,Yes,Yes,2025-10-24,2025,10,10,8,10,8,10,8,10,8,10,8,10,10,10,10,10,10,10,10,8,10,8,10,10,8,10,8,10,10,Standard terms applied\n" +
+                             "2,XYZ Ltd,USA,New,Active,Yes,No,2025-11-15,2025,8,8,6,8,6,8,6,8,6,8,6,8,8,8,8,8,8,8,8,6,8,6,8,8,6,8,6,8,8,Second NDA record\n" +
+                             "3,Global Media,UK,Active,Active,Yes,Yes,2026-01-10,2026,12,12,10,12,10,12,10,12,10,12,10,12,12,12,12,12,12,12,12,10,12,10,12,12,10,12,10,12,12,Annual contract";
         const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
