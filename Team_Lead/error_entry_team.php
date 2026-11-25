@@ -21,6 +21,31 @@ function redirect_with($params = []) {
     exit;
 }
 
+// Auto ensure internal_external column exists in article_errors
+$chk_ie = $mysqli->query("SHOW COLUMNS FROM article_errors LIKE 'internal_external'");
+if ($chk_ie && $chk_ie->num_rows == 0) {
+    $mysqli->query("ALTER TABLE article_errors ADD COLUMN internal_external VARCHAR(50) DEFAULT 'Internal'");
+}
+
+// Fiscal Week Number calculation (April 1st to March 31st)
+if (!function_exists('calculateFiscalWeekNumber')) {
+    function calculateFiscalWeekNumber($dateStr) {
+        if (!$dateStr) return 1;
+        $d = new DateTime($dateStr);
+        $year = (int)$d->format('Y');
+        $month = (int)$d->format('m');
+        $fiscalStart = ($month < 4) ? new DateTime(($year - 1) . '-04-01') : new DateTime($year . '-04-01');
+        if ($d < $fiscalStart) return 1;
+        $cur = clone $fiscalStart;
+        $sundays = 0;
+        while ($cur < $d) {
+            if ($cur->format('w') == 0) $sundays++;
+            $cur->modify('+1 day');
+        }
+        return (1 + $sundays);
+    }
+}
+
 // Fetch dropdown data from master tables (Filtered for UQ members only)
 $employees = $mysqli->query("
     SELECT DISTINCT em.employee_name 
@@ -82,13 +107,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_subtype = trim($_POST['error_subtype'] ?? '');
         $yn = trim($_POST['yn'] ?? '');
         
-        // Basic validation
-        if ($week === '' || $date === '' || $client === '') {
-            redirect_with(['msg' => 'Week, Date and Client are required.', 'type' => 'danger']);
-        }
-        
         // Convert date format for MySQL
         $mysql_date = date('Y-m-d', strtotime($date));
+
+        // If week is empty, calculate financial week (April 1 to March 31)
+        if ($week === '' && !empty($mysql_date) && $mysql_date !== '1970-01-01') {
+            $fiscal_wk = calculateFiscalWeekNumber($mysql_date);
+            $week = "Week " . $fiscal_wk;
+        }
+
+        // Default internal_external
+        if ($internal_external === '') {
+            $internal_external = 'Internal';
+        }
+
+        // Basic validation
+        if ($date === '' || $client === '') {
+            redirect_with(['msg' => 'Date and Client are required.', 'type' => 'danger']);
+        }
+        if ($week === '') {
+            $week = 'Week 1';
+        }
 
         // Photo Upload Logic
         $error_photo = '';
@@ -105,9 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if ($action === 'add') {
-            $stmt = $mysqli->prepare("INSERT INTO article_errors (week, date, client, article, type_of_errors, error_subtype, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date) 
-                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
-            $stmt->bind_param("ssssssssss", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $error_photo);
+            $stmt = $mysqli->prepare("INSERT INTO article_errors (week, date, client, article, type_of_errors, error_subtype, team_error_made_by, error_taken_by, reason_for_errors, error_photo, internal_external, status, created_date) 
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())");
+            $stmt->bind_param("sssssssssss", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $error_photo, $internal_external);
             
             if ($stmt->execute()) {
                 redirect_with(['msg' => "Article error entry added successfully", 'type' => 'success']);
@@ -122,11 +161,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($id > 0) {
                 if ($error_photo !== '') {
-                    $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, type_of_errors = ?, error_subtype = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ?, error_photo = ? WHERE id = ?");
-                    $stmt->bind_param("ssssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $error_photo, $id);
+                    $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, type_of_errors = ?, error_subtype = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ?, error_photo = ?, internal_external = ? WHERE id = ?");
+                    $stmt->bind_param("sssssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $error_photo, $internal_external, $id);
                 } else {
-                    $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, type_of_errors = ?, error_subtype = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ? WHERE id = ?");
-                    $stmt->bind_param("sssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $id);
+                    $stmt = $mysqli->prepare("UPDATE article_errors SET week = ?, date = ?, client = ?, article = ?, type_of_errors = ?, error_subtype = ?, team_error_made_by = ?, error_taken_by = ?, reason_for_errors = ?, internal_external = ? WHERE id = ?");
+                    $stmt->bind_param("ssssssssssi", $week, $mysql_date, $client, $article, $type_of_errors, $error_subtype, $team_error_made_by, $error_taken_by, $reason_for_errors, $internal_external, $id);
                 }
                 
                 if ($stmt->execute()) {
@@ -275,7 +314,7 @@ $editEntry = null;
 if ($mode === 'edit') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id > 0) {
-        $stmt = $mysqli->prepare("SELECT id, week, date, 'UQ' AS team, 'UQ' AS department, '' AS internal_external, client, article, type_of_errors, error_subtype, '' AS yn, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date 
+        $stmt = $mysqli->prepare("SELECT id, week, date, 'UQ' AS team, 'UQ' AS department, COALESCE(NULLIF(internal_external, ''), 'Internal') AS internal_external, client, article, type_of_errors, error_subtype, '' AS yn, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date 
                                  FROM article_errors WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -301,7 +340,7 @@ $sort = $_GET['sort'] ?? 'created_date';
 $dir = strtolower($_GET['dir'] ?? 'desc');
 
 // Build query
-$sql = "SELECT id, week, date, 'UQ' AS team, 'UQ' AS department, '' AS internal_external, client, article, type_of_errors, error_subtype, '' AS yn, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date 
+$sql = "SELECT id, week, date, 'UQ' AS team, 'UQ' AS department, COALESCE(NULLIF(internal_external, ''), 'Internal') AS internal_external, client, article, type_of_errors, error_subtype, '' AS yn, team_error_made_by, error_taken_by, reason_for_errors, error_photo, status, created_date 
         FROM article_errors";
 $cond = [];
 $params = [];
@@ -573,8 +612,8 @@ if (!$entries) {
                                 <label for="week" class="form-label">Week <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="week" name="week" 
                                        value="<?= h($editEntry['week'] ?? '') ?>" 
-                                       placeholder="e.g., Week 1, Jan-2024" required>
-                                <div class="form-text">Format: Week 1, Jan-2024</div>
+                                       placeholder="e.g., Week 35" required>
+                                <div class="form-text">Financial Year (Apr-Mar) Week</div>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -632,8 +671,7 @@ if (!$entries) {
                             <div class="mb-3">
                                 <label for="internal_external" class="form-label">Internal / External</label>
                                 <select class="form-select" id="internal_external" name="internal_external">
-                                    <option value="">Select</option>
-                                    <option value="Internal" <?= ($editEntry['internal_external'] ?? '') === 'Internal' ? 'selected' : '' ?>>Internal</option>
+                                    <option value="Internal" <?= ($editEntry['internal_external'] ?? 'Internal') === 'Internal' ? 'selected' : '' ?>>Internal</option>
                                     <option value="External" <?= ($editEntry['internal_external'] ?? '') === 'External' ? 'selected' : '' ?>>External</option>
                                 </select>
                             </div>
@@ -1162,8 +1200,56 @@ if (!$entries) {
                 minimumResultsForSearch: 5
             });
 
-            // Date picker functionality
+            // Financial Week calculation (April 1 to March 31 - Matches XML / Meeting reports)
+            function getFiscalWeekNumber(dateStr) {
+                if (!dateStr) return '';
+                let d, m, y;
+                if (dateStr.includes('-')) {
+                    const p = dateStr.split('-');
+                    if (p[0].length === 4) {
+                        y = parseInt(p[0], 10);
+                        m = parseInt(p[1], 10);
+                        d = parseInt(p[2], 10);
+                    } else {
+                        d = parseInt(p[0], 10);
+                        m = parseInt(p[1], 10);
+                        y = parseInt(p[2], 10);
+                    }
+                } else {
+                    return '';
+                }
+                if (!d || !m || !y || isNaN(d) || isNaN(m) || isNaN(y)) return '';
+
+                const targetDate = new Date(y, m - 1, d);
+                const fiscalStartYear = (m < 4) ? (y - 1) : y;
+                const fiscalStart = new Date(fiscalStartYear, 3, 1); // April 1st
+
+                if (targetDate < fiscalStart) return 1;
+
+                let sundays = 0;
+                let cur = new Date(fiscalStart);
+                while (cur < targetDate) {
+                    if (cur.getDay() === 0) { // Sunday
+                        sundays++;
+                    }
+                    cur.setDate(cur.getDate() + 1);
+                }
+                return (1 + sundays);
+            }
+
             const dateInput = document.getElementById('date');
+            const weekInput = document.getElementById('week');
+
+            function syncFiscalWeek() {
+                if (dateInput && weekInput && dateInput.value) {
+                    const wk = getFiscalWeekNumber(dateInput.value);
+                    if (wk) {
+                        weekInput.value = 'Week ' + wk;
+                    }
+                }
+            }
+
+            // Date picker & financial week auto-fill
             if (dateInput) {
                 dateInput.addEventListener('focus', function() {
                     if (!this.value) {
@@ -1172,6 +1258,16 @@ if (!$entries) {
                         const month = String(today.getMonth() + 1).padStart(2, '0');
                         const year = today.getFullYear();
                         this.value = `${day}-${month}-${year}`;
+                        if (weekInput && !weekInput.value) {
+                            syncFiscalWeek();
+                        }
+                    }
+                });
+
+                dateInput.addEventListener('change', syncFiscalWeek);
+                dateInput.addEventListener('input', function() {
+                    if (this.value && this.value.length === 10) {
+                        syncFiscalWeek();
                     }
                 });
             }
@@ -1205,6 +1301,11 @@ if (!$entries) {
                         isValid = false;
                     }
                     
+                    // Auto-calculate week if date is provided and week is empty
+                    if (dateInput && weekInput && !weekInput.value.trim() && dateInput.value.trim()) {
+                        syncFiscalWeek();
+                    }
+
                     // Validate week
                     if (!weekInput.value.trim()) {
                         weekInput.classList.add('is-invalid');

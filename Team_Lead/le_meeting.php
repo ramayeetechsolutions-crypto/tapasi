@@ -20,6 +20,10 @@ $chk_cols = $mysqli->query("SHOW COLUMNS FROM weekly_targets LIKE 'reason'");
 if ($chk_cols && $chk_cols->num_rows == 0) {
     $mysqli->query("ALTER TABLE weekly_targets ADD COLUMN reason TEXT DEFAULT NULL");
 }
+$chk_ie = $mysqli->query("SHOW COLUMNS FROM article_errors LIKE 'internal_external'");
+if ($chk_ie && $chk_ie->num_rows == 0) {
+    $mysqli->query("ALTER TABLE article_errors ADD COLUMN internal_external VARCHAR(50) DEFAULT 'Internal'");
+}
 
 // --- AJAX SAVE LOGIC FOR WEEKLY DATA ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_weekly_data') {
@@ -197,8 +201,11 @@ $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as tot
 $stmt_target = $mysqli->prepare($target_sql);
 
 // Error Query
-$error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND DATE(date) BETWEEN ? AND ?";
-$stmt_error = $mysqli->prepare($error_sql);
+$internal_error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND (LOWER(internal_external) = 'internal' OR internal_external IS NULL OR internal_external = '') AND DATE(date) BETWEEN ? AND ?";
+$stmt_internal_error = $mysqli->prepare($internal_error_sql);
+
+$external_error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND LOWER(internal_external) = 'external' AND DATE(date) BETWEEN ? AND ?";
+$stmt_external_error = $mysqli->prepare($external_error_sql);
 
 // 2. Fetch all team members under this TL with Filters & Ascending Order
 $team_data = [];
@@ -311,29 +318,51 @@ if (!empty($user_employee_name)) {
                 $stmt_p->close();
             }
             
-            // Get Errors
-            $errors = 0;
-            if ($stmt_error) {
-                $stmt_error->bind_param("sss", $emp_name, $w1_from, $w1_to);
-                $stmt_error->execute();
-                $res_error = $stmt_error->get_result()->fetch_assoc();
-                $errors = $res_error['error_count'] ?? 0;
+            // Get Internal & External Errors
+            $internal_errors = 0;
+            if ($stmt_internal_error) {
+                $stmt_internal_error->bind_param("sss", $emp_name, $w1_from, $w1_to);
+                $stmt_internal_error->execute();
+                $res_ie = $stmt_internal_error->get_result()->fetch_assoc();
+                $internal_errors = (int)($res_ie['error_count'] ?? 0);
             }
 
-            // Calculations
-            $production_points = $production;
-            $errors_points = $errors * 2;
-            $prod_pct = ($target > 0) ? round(($production / $target) * 100, 2) : 0;
+            $external_errors = 0;
+            if ($stmt_external_error) {
+                $stmt_external_error->bind_param("sss", $emp_name, $w1_from, $w1_to);
+                $stmt_external_error->execute();
+                $res_ee = $stmt_external_error->get_result()->fetch_assoc();
+                $external_errors = (int)($res_ee['error_count'] ?? 0);
+            }
 
+            $internal_err_points = $internal_errors * 2;
+            $external_err_points = $external_errors * 4;
+            $total_error_points = $internal_err_points + $external_err_points;
+
+            // Calculations based on formulas:
+            // Production points = Production / (Target / 100)
+            if ($target > 0) {
+                $production_points = round($production / ($target / 100), 2);
+                $prod_pct = round(($production / $target) * 100, 2);
+            } else {
+                $production_points = $production;
+                $prod_pct = 0;
+            }
+
+            // Accuracy % = (Production points - Errors points) / Production points * 100
             $accuracy = 0;
-            if ($production > 0) {
-                $accuracy = round((($production - $errors_points) / $production) * 100, 2);
+            if ($production_points > 0) {
+                $accuracy = round((($production_points - $total_error_points) / $production_points) * 100, 2);
+                if ($accuracy < 0) $accuracy = 0;
+                if ($accuracy > 100) $accuracy = 100;
+            } elseif ($production > 0) {
+                $accuracy = round((($production - $total_error_points) / $production) * 100, 2);
                 if ($accuracy < 0) $accuracy = 0;
                 if ($accuracy > 100) $accuracy = 100;
             }
 
-            // --- NET PRODUCTION %: matches Production % when 0 errors, accounts for error impact against target ---
-            $net_prod_pct = ($target > 0) ? round((($production - $errors_points) / $target) * 100, 2) : 0;
+            // Net Production % = Production % - Total Error Points
+            $net_prod_pct = ($target > 0) ? round($prod_pct - $total_error_points, 2) : 0;
             if ($net_prod_pct < 0) $net_prod_pct = 0;
             $net_prod_decimal = $net_prod_pct / 100;
             
@@ -345,8 +374,12 @@ if (!empty($user_employee_name)) {
                 'target' => $target,
                 'production' => $production,
                 'prod_points' => $production_points,
-                'errors' => $errors,
-                'err_points' => $errors_points,
+                'internal_errors' => $internal_errors,
+                'internal_err_points' => $internal_err_points,
+                'external_errors' => $external_errors,
+                'external_err_points' => $external_err_points,
+                'errors' => ($internal_errors + $external_errors),
+                'err_points' => $total_error_points,
                 'prod_pct' => $prod_pct,
                 'accuracy' => $accuracy,
                 'net_prod_pct' => $net_prod_pct,
@@ -358,7 +391,8 @@ if (!empty($user_employee_name)) {
     }
 }
 if(isset($stmt_target) && $stmt_target instanceof mysqli_stmt) { @$stmt_target->close(); }
-if(isset($stmt_error) && $stmt_error instanceof mysqli_stmt) { @$stmt_error->close(); }
+if(isset($stmt_internal_error) && $stmt_internal_error instanceof mysqli_stmt) { @$stmt_internal_error->close(); }
+if(isset($stmt_external_error) && $stmt_external_error instanceof mysqli_stmt) { @$stmt_external_error->close(); }
 
 // Fetch weekly reasons for team members
 $weekly_reasons = [];
@@ -898,7 +932,7 @@ if (!function_exists('h')) {
             <table class="table table-hover table-striped table-bordered align-middle">
                 <thead>
                     <tr>
-                        <th colspan="17" style="background-color: #475569 !important; font-size:1rem;">
+                        <th colspan="19" style="background-color: #475569 !important; font-size:1rem;">
                             WEEKLY REPORT (<?= date('d-m-Y', strtotime($w1_from)) ?> to <?= date('d-m-Y', strtotime($w1_to)) ?>)
                         </th>
                     </tr>
@@ -910,8 +944,10 @@ if (!function_exists('h')) {
                         <th>Target</th>
                         <th>Production</th>
                         <th>Prod Points</th>
-                        <th>Errors</th>
-                        <th>Err Points</th>
+                        <th>Internal Error</th>
+                        <th>Error Points</th>
+                        <th>External Error</th>
+                        <th>Error Points</th>
                         <th>Production %</th>
                         <th>Accuracy %</th>
                         <th>NET Prod %</th>
@@ -934,8 +970,10 @@ if (!function_exists('h')) {
                                 <td class="text-danger-fw"><?= h($emp['target']) ?></td>
                                 <td><?= h($emp['production']) ?></td>
                                 <td class="fw-bold text-success"><?= h($emp['prod_points']) ?></td>
-                                <td class="fw-bold"><?= h($emp['errors']) ?></td>
-                                <td class="fw-bold text-danger"><?= h($emp['err_points']) ?></td>
+                                <td class="fw-bold" style="<?= $emp['internal_errors'] > 0 ? 'background-color: #ffc000 !important; color: #000000 !important;' : '' ?>"><?= (int)$emp['internal_errors'] ?></td>
+                                <td class="fw-bold text-danger"><?= (int)$emp['internal_err_points'] ?></td>
+                                <td class="fw-bold" style="<?= $emp['external_errors'] > 0 ? 'background-color: #ff0000 !important; color: #ffffff !important;' : '' ?>"><?= (int)$emp['external_errors'] ?></td>
+                                <td class="fw-bold text-danger"><?= (int)$emp['external_err_points'] ?></td>
                                 <td class="text-primary-fw"><?= h($emp['prod_pct']) ?>%</td>
                                 <td class="text-primary-fw"><?= h($emp['accuracy']) ?>%</td>
                                 <td class="text-primary-fw"><?= h($emp['net_prod_pct']) ?>%</td>
@@ -974,7 +1012,7 @@ if (!function_exists('h')) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="15" class="text-center py-4">No team members found under your profile.</td>
+                            <td colspan="19" class="text-center py-4">No team members found under your profile.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
