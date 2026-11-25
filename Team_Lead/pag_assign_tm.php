@@ -497,10 +497,10 @@ require 'header.php';
             border-right: 1px solid #dee2e6 !important;
             border-left: none !important;
             font-weight: 600;
-            font-size: 12.5px;
+            font-size: 11px !important;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 8px 10px;
+            padding: 6px 8px !important;
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
@@ -515,21 +515,41 @@ require 'header.php';
         .table td,
         .table tbody td,
         .table-sticky-assign tbody td {
-            vertical-align: middle;
-            padding: 6px 10px;
-            font-size: 12.5px;
-            color: #334155;
+            vertical-align: middle !important;
+            padding: 4px 6px !important;
+            font-size: 10px !important;
+            color: #334155 !important;
             border-top: none !important;
             border-bottom: 1px solid #dee2e6 !important;
             border-right: 1px solid #dee2e6 !important;
             border-left: none !important;
             text-align: center;
             white-space: nowrap;
+            line-height: 1.25 !important;
         }
         .table td:first-child,
         .table tbody td:first-child,
         .table-sticky-assign tbody td:first-child {
             border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table tbody td *,
+        .table-sticky-assign tbody td * {
+            font-size: 10px !important;
+        }
+
+        .table tbody td small,
+        .table-sticky-assign tbody td small {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
+        }
+
+        .table .badge,
+        .table-sticky-assign .badge {
+            font-size: 10px !important;
+            padding: 2px 6px !important;
+            font-weight: 600 !important;
+            border-radius: 4px !important;
         }
 
         .table th.sticky-assign-col-last,
@@ -814,7 +834,7 @@ require 'header.php';
                         <tr>
                             <th>LE moved Date</th>
                             <th>CE moved Date</th>
-                            <th>Received Date</th>
+                            <th>Rec. Date</th>
                             <th>Client</th>
                             <th>Journals</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>

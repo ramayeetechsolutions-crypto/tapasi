@@ -640,7 +640,7 @@ require 'header.php';
                 <table class="table table-hover table-bordered mb-0 table-sticky-assign" style="min-width: 2250px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
-                            <th style="white-space: nowrap;">Received Date</th>
+                            <th style="white-space: nowrap;">Rec. Date</th>
                             <th>Client</th>
                             <th>Mail Subject</th>
                             <th>Process</th>

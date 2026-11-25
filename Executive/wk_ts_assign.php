@@ -444,7 +444,7 @@ require 'header.php';
                         <tr>
                             <th>QC Completed Date</th>
                             <th>PAG Completed Date</th>
-                            <th>Recevied Date</th>
+                            <th>Rec. Date</th>
                             <th>Issue</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>
                             <th>Pages</th>

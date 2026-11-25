@@ -684,9 +684,9 @@ table td:nth-child(26) {
                 <table class="table table-striped table-bordered" id="jobTable">
                     <thead class="table-light">
                         <tr>
-                        <th>LE Completed Date</th>
-                        <th>CE Completed Date</th>
-                        <th>Received Date</th>
+                        <th>LE Comp. Date</th>
+                        <th>CE Comp. Date</th>
+                        <th>Rec. Date</th>
                         <th>Client</th>
                         <th>Journal</th>
                         <th>Articles</th>

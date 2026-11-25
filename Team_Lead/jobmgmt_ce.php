@@ -859,8 +859,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     <thead>
                         <tr>
                             <th>S.No</th>
-                            <th>Received Date</th>
-                            <th>CE Completed Date</th>
+                            <th>Rec. Date</th>
+                            <th>CE Comp. Date</th>
                             <th>Client</th>
                             <th>Journal</th>
                             <th class="col-article" style="width: 135px; min-width: 135px; max-width: 135px;">Articles</th>

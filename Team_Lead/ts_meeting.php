@@ -500,10 +500,10 @@ if($stmt_error) $stmt_error->close();
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
             font-weight: 600;
-            font-size: 12.5px;
+            font-size: 11px !important;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 8px 10px;
+            padding: 6px 8px !important;
             border-top: 1px solid #dee2e6 !important;
             border-bottom: 1px solid #dee2e6 !important;
             border-right: 1px solid #dee2e6 !important;
@@ -519,19 +519,36 @@ if($stmt_error) $stmt_error->close();
         }
         .table td,
         .table tbody td {
-            padding: 6px 10px;
-            font-size: 12.5px;
-            color: #334155;
-            vertical-align: middle;
+            padding: 4px 6px !important;
+            font-size: 10px !important;
+            color: #334155 !important;
+            vertical-align: middle !important;
             border-top: none !important;
             border-bottom: 1px solid #dee2e6 !important;
             border-right: 1px solid #dee2e6 !important;
             border-left: none !important;
             text-align: center;
+            line-height: 1.25 !important;
         }
         .table td:first-child,
         .table tbody td:first-child {
             border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table tbody td * {
+            font-size: 10px !important;
+        }
+
+        .table tbody td small {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
+        }
+
+        .table .badge {
+            font-size: 10px !important;
+            padding: 2px 6px !important;
+            font-weight: 600 !important;
+            border-radius: 4px !important;
         }
         .sticky-assign-col-last {
             border-right: 1px solid #dee2e6 !important;
