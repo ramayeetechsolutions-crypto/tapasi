@@ -217,10 +217,8 @@ if (!empty($allowed_process_ids)) {
     $clean_ids = array_map('intval', $allowed_process_ids);
     $where[] = "j.process_id IN (" . implode(',', $clean_ids) . ")";
 }
-
 // FIX: Show everything EXCEPT standalone 'CE'
 $where[] = "jm.job_name != 'CE'";
-
 // Search query filter
 if ($q) {
     $where[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ?)";
@@ -393,53 +391,121 @@ if ($results->num_rows > 0) {
             color: white;
         }
 
-table td { vertical-align: middle; padding: 6px 8px; white-space: nowrap; font-size: 0.9rem; }
-        /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        /* Grid Table Styles - Matching xml/xml_unique_start.php (Single 1px #dee2e6 lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
         .table th,
-        .table thead th {
+        .table thead th,
+        .table-sticky-assign thead th,
+        #jobTable th,
+        #jobTable thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             font-weight: 600;
-            font-size: 12.5px;
+            font-size: 11px !important;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 8px 10px;
+            padding: 6px 8px !important;
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
+        }
+        .table th:first-child,
+        .table thead th:first-child,
+        .table-sticky-assign thead th:first-child,
+        #jobTable thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
         .table td,
-        .table tbody td {
-            vertical-align: middle;
-            padding: 6px 10px;
-            font-size: 12.5px;
-            color: #334155;
-            border: 1px solid #dee2e6 !important;
+        .table tbody td,
+        .table-sticky-assign tbody td,
+        #jobTable td,
+        #jobTable tbody td {
+            vertical-align: middle !important;
+            padding: 4px 6px !important;
+            font-size: 10px !important;
+            color: #334155 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
             white-space: nowrap;
+            line-height: 1.25 !important;
+        }
+        .table td:first-child,
+        .table tbody td:first-child,
+        .table-sticky-assign tbody td:first-child,
+        #jobTable tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        #jobTable tbody td * {
+            font-size: 10px !important;
+        }
+
+        #jobTable tbody td small {
+            font-size: 9px !important;
+            line-height: 1.1 !important;
+        }
+
+        .table th.sticky-assign-col-last,
+        .table thead th.sticky-assign-col-last,
+        .table td.sticky-assign-col-last,
+        .table tbody td.sticky-assign-col-last,
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
         }
         
-        /* Visible Zebra Striping matching xml/xml_unique_start.php */
-        .table tbody tr:nth-child(even) td {
+        .table> :not(caption)>*>*,
+        .table-sticky-assign> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td,
+        .table-sticky-assign tbody tr:nth-child(even) td {
             background-color: #f2f4f6 !important;
         }
         
-        .table tbody tr:nth-child(odd) td {
+        .table tbody tr:nth-child(odd) td,
+        .table-sticky-assign tbody tr:nth-child(odd) td {
             background-color: #ffffff !important;
         }
         
         /* Full Row Hover Effect matching xml/xml_unique_start.php */
-        .table tbody tr:hover td {
+        .table tbody tr:hover td,
+        .table-sticky-assign tbody tr:hover td {
             background-color: #c4cbd3 !important;
             cursor: pointer;
             transition: background-color 0.1s ease;
         }
         
         .table tbody tr:hover td.sticky-assign-col,
-        .table tbody tr:hover td.sticky-assign-cell {
+        .table tbody tr:hover td.sticky-assign-cell,
+        .table-sticky-assign tbody tr:hover td.sticky-assign-col,
+        .table-sticky-assign tbody tr:hover td.sticky-assign-cell {
             background-color: #e9ecef !important;
+        }
+
+        .table .badge,
+        .table-sticky-assign .badge,
+        #jobTable .badge {
+            padding: 2px 6px !important;
+            font-size: 10px !important;
+            border-radius: 4px !important;
+            font-weight: 600 !important;
         }
 
 /* --- Vibrant Color Scheme --- */
@@ -528,19 +594,19 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     if (empty($st) || $st === 'Need to Assign') $st = 'Need to Assign';
     
     if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
-        $badge = '<span class="badge" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Completed</span>';
+        $badge = '<span class="badge" style="background-color: #28a745 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Completed</span>';
     } elseif ($st === 'Need to Assign') {
-        $badge = '<span class="badge" style="background-color: #ffc107; color: black; padding: 4px 8px; border-radius: 4px; font-size: 11px;">Need to Assign</span>';
+        $badge = '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Need to Assign</span>';
     } else {
         $label = (strcasecmp($st, 'In Progress') === 0) ? 'In Progress' : h($st);
-        $badge = '<span class="badge" style="background-color: #fd7e14; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">' . $label . '</span>';
+        $badge = '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">' . $label . '</span>';
     }
     
     if (!empty($username)) {
         $name = $emp_map[$username] ?? '';
         $display = $name ? h($name) . " (" . h($username) . ")" : h($username);
         $user_color = (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) ? '#15803d' : '#6c757d';
-        return $badge . '<br><small style="color: ' . $user_color . '; font-size: 10px; font-weight: 600; display: block; margin-top: 4px; white-space: nowrap;"><i class="fas fa-user"></i> ' . $display . '</small>';
+        return $badge . '<br><small style="color: ' . $user_color . '; font-size: 9px !important; font-weight: 600; display: block; margin-top: 2px !important; white-space: nowrap;"><i class="fas fa-user"></i> ' . $display . '</small>';
     }
     return $badge;
 }
@@ -664,7 +730,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height:650px; overflow:auto;">
-                <table class="table table-hover table-striped table-bordered table-sticky-assign" id="jobTable" style="min-width: 2400px; border-collapse: separate; border-spacing: 0;">
+                <table class="table table-hover table-striped table-bordered align-middle table-sticky-assign" id="jobTable" style="min-width: 2400px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>LE moved Date</th>
@@ -713,7 +779,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h($row['pages'] ?? '0') ?></td>
                             <td><?= h($row['images'] ?? '0') ?></td>
                             <td><?= h($row['tables_count'] ?? '0') ?></td>
-                            <td><span class="badge bg-secondary"><?= h($row['process']) ?></span></td>
+                            <td><span class="badge bg-secondary" style="background-color: #6c757d !important; color: #ffffff !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;"><?= h($row['process']) ?></span></td>
                             <!-- CE Status (Green when Completed + Completed By Who) -->
                             <?php 
                                 $ce_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']);
@@ -721,12 +787,12 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 $ce_emp = !empty($row['ce_assigned_to']) ? $row['ce_assigned_to'] : (!empty($row['assigned_ce']) ? $row['assigned_ce'] : ($row['ce_done_by'] ?? ''));
                             ?>
                             <td>
-                                <span class="badge <?= $ce_cls ?>"><?= h($row['ce_status'] ?? 'Pending') ?></span>
+                                <span class="badge <?= $ce_cls ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($row['ce_status'] ?? 'Pending') ?></span>
                                 <?php if (!empty($ce_emp)): 
                                     $ce_name = $emp_map[$ce_emp] ?? '';
                                     $ce_display = $ce_name ? h($ce_name) . " (" . h($ce_emp) . ")" : h($ce_emp);
                                 ?>
-                                    <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                    <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
                                         <i class="fas fa-user"></i> <?= $ce_display ?>
                                     </div>
                                 <?php endif; ?>
@@ -739,12 +805,12 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 $le_emp = !empty($row['le_qc_assigned_to']) ? $row['le_qc_assigned_to'] : (!empty($row['le_assigned_to']) ? $row['le_assigned_to'] : (!empty($row['assigned_le']) ? $row['assigned_le'] : ($row['le_done_by'] ?? '')));
                             ?>
                             <td>
-                                <span class="badge <?= $le_cls ?>"><?= h($row['le_status'] ?? 'Pending') ?></span>
+                                <span class="badge <?= $le_cls ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($row['le_status'] ?? 'Pending') ?></span>
                                 <?php if (!empty($le_emp)): 
                                     $le_name = $emp_map[$le_emp] ?? '';
                                     $le_display = $le_name ? h($le_name) . " (" . h($le_emp) . ")" : h($le_emp);
                                 ?>
-                                    <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                    <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
                                         <i class="fas fa-user"></i> <?= $le_display ?>
                                     </div>
                                 <?php endif; ?>
@@ -764,12 +830,12 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 $pag_emp = !empty($row['pag_assigned_to']) ? $row['pag_assigned_to'] : (!empty($row['pag_crx_assigned_to']) ? $row['pag_crx_assigned_to'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_done_by'] ?? '')));
                             ?>
                             <td>
-                                <span class="badge <?= $pag_cls ?>"><?= h($pag_display_status) ?></span>
+                                <span class="badge <?= $pag_cls ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($pag_display_status) ?></span>
                                 <?php if (!empty($pag_emp)): 
                                     $pag_name = $emp_map[$pag_emp] ?? '';
                                     $pag_display = $pag_name ? h($pag_name) . " (" . h($pag_emp) . ")" : h($pag_emp);
                                 ?>
-                                    <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                    <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
                                         <i class="fas fa-user"></i> <?= $pag_display ?>
                                     </div>
                                 <?php endif; ?>
@@ -786,6 +852,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- Dispatch & Upload -->
                             <td><?= !empty($row['dispatch_date']) && $row['dispatch_date'] != '0000-00-00 00:00:00' ? formatDateOnly(substr($row['dispatch_date'], 0, 10), 'd-m-Y') : '—' ?></td>
                             <?php 
+                                // QC Completed = QC row. CRX columns must show dash.
+                                // Only show CRX data when QC is NOT Completed AND QC_CRX stage IS Moved.
                                 $qc_completed = in_array(($row['qc_status'] ?? ''), ['Completed', 'Done']);
                                 $is_crx_moved = (!empty($row['is_moved']) && $row['is_moved'] == 1) || (($row['qc_crx_stage'] ?? '') === 'Moved');
                                 $up_by = !empty($row['crx_upload_by']) ? $row['crx_upload_by'] : ($row['qc_upload_by'] ?? '');
@@ -813,7 +881,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                         $tm_name = $emp_map[$row['pag_crx_assigned_to']] ?? '';
                                         $tm_display = $tm_name ? h($tm_name) . " (" . h($row['pag_crx_assigned_to']) . ")" : h($row['pag_crx_assigned_to']);
                                     ?>
-                                        <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                        <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
                                             <i class="fas fa-user"></i> <?= $tm_display ?>
                                         </div>
                                     <?php endif; ?>
@@ -836,7 +904,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- Path & Priority -->
                             <td>
                                 <?php if(!empty($row['path'])): ?>
-                                    <span class="badge <?= (strtoupper($row['path']) === 'CRX') ? 'bg-warning text-dark' : 'bg-success text-white' ?>">
+                                    <span class="badge <?= (strtoupper($row['path']) === 'CRX') ? 'bg-warning text-dark' : 'bg-success text-white' ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;">
                                         <?= h($row['path']) ?>
                                     </span>
                                 <?php else: ?>
@@ -845,18 +913,17 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             </td>
                             <td>
                                 <?php if(!empty($row['priority'])): ?>
-                                    <span class="badge <?= ($row['priority'] === 'Urgent') ? 'bg-danger' : 'bg-warning text-dark' ?>">
+                                    <span class="badge <?= ($row['priority'] === 'Urgent') ? 'bg-danger' : 'bg-warning text-dark' ?>" style="<?= ($row['priority'] === 'Urgent') ? 'background-color: #dc3545 !important; color: #ffffff !important;' : 'background-color: #ffc107 !important; color: #212529 !important;' ?> padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">
                                         <?= h($row['priority']) ?>
                                     </span>
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
                             </td>
-                            
-                            <!-- Status Column (Moved indicator) -->
+                                                        <!-- Status Column (Moved badge) -->
                             <td class="text-center">
                                 <?php if ($is_crx_moved): ?>
-                                    <span class="badge bg-success text-white px-2 py-1"><i class="fas fa-paper-plane me-1"></i> Moved</span>
+                                    <span class="badge bg-success text-white px-2 py-1" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><i class="fas fa-paper-plane me-1"></i> Moved</span>
                                 <?php else: ?>
                                     —
                                 <?php endif; ?>
@@ -870,7 +937,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 $bg = $qc_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
                             ?>
                             <td>
-                                <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
+                                <span class="badge <?= $bg ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                             </td>
                         </tr>
                         <?php endforeach; else: ?>

@@ -457,12 +457,20 @@ require 'header.php';
         .filter-section { background: white; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0; }
         .table-container { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .table { margin-bottom: 0; }
-                /* Grid Table Styles - Matching xml/xml_unique_start.php */
+        /* Grid Table Styles - Matching xml/xml_unique_start.php (Single 1px #dee2e6 lines) */
+        .table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
         .table th,
-        .table thead th {
+        .table thead th,
+        .table-sticky-assign thead th {
             background-color: #5e6b77 !important; 
             color: #ffffff !important;
-            border: 1px solid #dee2e6 !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             font-weight: 600;
             font-size: 12.5px;
             text-transform: uppercase;
@@ -471,37 +479,73 @@ require 'header.php';
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
+        }
+        .table th:first-child,
+        .table thead th:first-child,
+        .table-sticky-assign thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
         }
         
         .table td,
-        .table tbody td {
+        .table tbody td,
+        .table-sticky-assign tbody td {
             vertical-align: middle;
             padding: 6px 10px;
             font-size: 12.5px;
             color: #334155;
-            border: 1px solid #dee2e6 !important;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
             white-space: nowrap;
         }
+        .table td:first-child,
+        .table tbody td:first-child,
+        .table-sticky-assign tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+
+        .table th.sticky-assign-col-last,
+        .table thead th.sticky-assign-col-last,
+        .table td.sticky-assign-col-last,
+        .table tbody td.sticky-assign-col-last,
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
+        }
         
-        /* Visible Zebra Striping matching xml/xml_unique_start.php */
-        .table tbody tr:nth-child(even) td {
+        .table> :not(caption)>*>*,
+        .table-sticky-assign> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td,
+        .table-sticky-assign tbody tr:nth-child(even) td {
             background-color: #f2f4f6 !important;
         }
         
-        .table tbody tr:nth-child(odd) td {
+        .table tbody tr:nth-child(odd) td,
+        .table-sticky-assign tbody tr:nth-child(odd) td {
             background-color: #ffffff !important;
         }
         
         /* Full Row Hover Effect matching xml/xml_unique_start.php */
-        .table tbody tr:hover td {
+        .table tbody tr:hover td,
+        .table-sticky-assign tbody tr:hover td {
             background-color: #c4cbd3 !important;
             cursor: pointer;
             transition: background-color 0.1s ease;
         }
         
         .table tbody tr:hover td.sticky-assign-col,
-        .table tbody tr:hover td.sticky-assign-cell {
+        .table tbody tr:hover td.sticky-assign-cell,
+        .table-sticky-assign tbody tr:hover td.sticky-assign-col,
+        .table-sticky-assign tbody tr:hover td.sticky-assign-cell {
             background-color: #e9ecef !important;
         }
         .status-badge { display: inline-block; padding: 0.2rem 0.4rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 500; }
@@ -519,10 +563,31 @@ require 'header.php';
         .text-truncate { max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .empty-state { text-align: center; padding: 3rem; }
         .empty-state i { font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem; }
-        .due-date { font-weight: 500; }
-        .due-date.urgent { color: #dc2626; }
-        .due-date.warning { color: #d97706; }
-        .due-date.normal { color: #059669; }
+        .due-date {
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            padding: 2px 7px !important;
+            border-radius: 4px !important;
+            letter-spacing: 0.01em !important;
+            box-shadow: none !important;
+            border: 1px solid transparent !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            line-height: 1.3 !important;
+            white-space: nowrap !important;
+        }
+        
+        .due-date.urgent,
+        .due-date.warning {
+            background-color: #fee2e2 !important;
+            color: #dc2626 !important;
+        }
+        
+        .due-date.normal {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+        }
         .assignment-cell { min-width: 130px; }
         .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 9999; }
         .loading-overlay.active { display: flex; }
@@ -713,7 +778,7 @@ require 'header.php';
         <!-- Main Grid/Table -->
         <div class="table-container">
             <div class="table-responsive">
-                <table class="table table-hover table-bordered table-sticky-assign" style="min-width: 1800px; border-collapse: separate; border-spacing: 0;">
+                <table class="table table-hover table-striped table-bordered align-middle table-sticky-assign" style="min-width: 1800px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
                             <th>LE moved Date</th>
@@ -730,8 +795,8 @@ require 'header.php';
                             <th>Due Date</th>
                             <th>FQA Status</th>
                             <th>LE Status</th>
-                            <th style="min-width: 300px;">Word process</th>
-                            <th style="min-width: 300px;">TS</th>
+                            <th style="width: 140px; min-width: 140px;">Word process</th>
+                            <th style="width: 140px; min-width: 140px;">TS</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
                             <th>Path</th>
@@ -747,6 +812,17 @@ require 'header.php';
                                 
                                 $word_stat = $row['word_status'] ?? 'Need to Assign';
                                 $pag_stat = $row['pag_status_col'] ?? 'Need to Assign';
+
+                                // Due date color coding
+                                $days_remaining = $row['days_remaining'] ?? 0;
+                                $due_class = '';
+                                if ($days_remaining <= 2) {
+                                    $due_class = 'urgent';
+                                } elseif ($days_remaining < 4) {
+                                    $due_class = 'warning';
+                                } else {
+                                    $due_class = 'normal';
+                                }
                             ?>
                                 <tr class="<?= $row_class ?>" id="row-<?= $row['id'] ?>">
                                     <!-- LE Moved Date -->
@@ -807,7 +883,18 @@ require 'header.php';
                                     <!-- Process -->
                                     <td><span class="badge bg-secondary"><?= h($row['process_name'] ?? 'N/A') ?></span></td>
                                     <!-- Due Date -->
-                                    <td><?= formatDate($row['due_date']) ?></td>
+                                    <td>
+                                        <?php 
+                                        $due = $row['due_date'] ?? '';
+                                        if ($due && $due != '0000-00-00' && $due != '0000-00-00 00:00:00'): 
+                                        ?>
+                                            <span class="due-date <?= $due_class ?>" title="<?= $days_remaining ?> days remaining">
+                                                <?= formatDate($due) ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <!-- FQA Status -->
                                     <?php
                                         $proc_name = strtoupper(str_replace(' ', '', $row['process_name'] ?? ''));
@@ -872,7 +959,7 @@ require 'header.php';
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
                                         <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($word_stat) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value, this)">
+                                            <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($word_stat) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value, this)">
                                                 <option value="Need to Assign" <?= ($word_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="W-In process" <?= ($word_stat == 'W-In process' || $word_stat == 'In Progress') ? 'selected' : '' ?>>W-In process</option>
                                                 <option value="W-Complete" <?= ($word_stat == 'W-Complete' || $word_stat == 'Completed') ? 'selected' : '' ?>>W-Complete</option>
@@ -922,7 +1009,7 @@ require 'header.php';
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
                                         <div class="mb-1">
-                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 130px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($pag_curr_status) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'pag', this.value, this)">
+                                            <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($pag_curr_status) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'pag', this.value, this)">
                                                 <option value="Need to Assign" <?= ($pag_curr_status == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
                                                 <option value="In Progress" <?= ($pag_curr_status == 'In Progress') ? 'selected' : '' ?>>In Progress</option>
                                                 <option value="Completed" <?= ($pag_curr_status == 'Completed') ? 'selected' : '' ?>>Completed</option>

@@ -792,8 +792,8 @@ table.dataTable thead th,
     font-size: var(--erp-table-header-font-size) !important;
     font-weight: 700 !important;
     color: #ffffff !important;
-    background-color: #6c757d !important;
-    border-color: #5a6268 !important;
+    background-color: #5e6b77 !important;
+    border-color: #dee2e6 !important;
     text-transform: uppercase;
     letter-spacing: 0.025em;
     vertical-align: middle;
@@ -801,7 +801,66 @@ table.dataTable thead th,
     top: 0 !important;
     z-index: 100 !important;
     background-clip: padding-box !important;
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: none !important;
+}
+
+/* Global Mild Grid Lines matching CE Module (#dee2e6 single lines) */
+.table-responsive table,
+.table-container table,
+.table-responsive .table,
+.table-container .table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.table-responsive table th,
+.table-container table th,
+.table-responsive .table th,
+.table-container .table th,
+.table-responsive table thead th,
+.table-container table thead th,
+.table-responsive .table thead th,
+.table-container .table thead th {
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
+}
+
+.table-responsive table th:first-child,
+.table-container table th:first-child,
+.table-responsive .table th:first-child,
+.table-container .table th:first-child,
+.table-responsive table thead th:first-child,
+.table-container table thead th:first-child,
+.table-responsive .table thead th:first-child,
+.table-container .table thead th:first-child {
+    border-left: 1px solid #dee2e6 !important;
+}
+
+.table-responsive table td,
+.table-container table td,
+.table-responsive .table td,
+.table-container .table td,
+.table-responsive table tbody td,
+.table-container table tbody td,
+.table-responsive .table tbody td,
+.table-container .table tbody td {
+    border-top: none !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-right: 1px solid #dee2e6 !important;
+    border-left: none !important;
+}
+
+.table-responsive table td:first-child,
+.table-container table td:first-child,
+.table-responsive .table td:first-child,
+.table-container .table td:first-child,
+.table-responsive table tbody td:first-child,
+.table-container table tbody td:first-child,
+.table-responsive .table tbody td:first-child,
+.table-container .table tbody td:first-child {
+    border-left: 1px solid #dee2e6 !important;
 }
 
 /* Multi-row thead support: ensure 2nd header row sticks below 1st header row instead of overlapping at top: 0 */

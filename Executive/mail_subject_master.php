@@ -134,7 +134,7 @@ if (!empty($types)) {
 <style>
     body { background-color: #f8f9fa; }
     .main-content { padding: 20px; max-width: 1400px; margin: 0 auto; }
-    .mail-id { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; }
+    .mail-id { font-family: inherit; }
     .disabled-btn { cursor: not-allowed !important; opacity: 0.6; }
     
     .table {
@@ -277,7 +277,7 @@ if (!empty($types)) {
                                     $is_locked = ($row['job_count'] > 0); 
                                 ?>
                                 <tr>
-                                    <td><span class="mail-id"><?= $i ?></span></td>
+                                    <td><?= $i ?></td>
                                   <td><?= h($row['mail_subject']) ?></td>
                                     <td><span class="badge bg-info"><?= formatDate($row['date']) ?></span></td>
                                     <td>

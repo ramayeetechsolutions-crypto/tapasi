@@ -408,6 +408,7 @@ if($stmt_error) $stmt_error->close();
             color: white;
             padding: 12px 20px;
             border-radius: 12px;
+            margin-top: 75px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -423,37 +424,63 @@ if($stmt_error) $stmt_error->close();
         .page-title-container h4,
         .page-title-container h5,
         .page-title-container h6 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin: 0 !important;
+            font-size: 1.15rem !important;
+            font-weight: 600 !important;
+            color: white !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            line-height: 1.2 !important;
         }
 
         .page-title-container p {
-            color: rgba(255, 255, 255, 0.85);
-            margin: 0;
+            color: rgba(255, 255, 255, 0.85) !important;
+            margin: 2px 0 0 0 !important;
+            font-size: 0.8rem !important;
+            line-height: 1.2 !important;
         }
 
         .page-title-container i {
-            color: white;
+            color: white !important;
+        }
+
+        /* Header Action Button & Hover State (No pure white washout) */
+        .page-title-container .btn-outline-light,
+        .page-title-container .btn-outline-secondary {
+            background-color: transparent !important;
+            border-color: rgba(255, 255, 255, 0.85) !important;
+            color: #ffffff !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+
+        .page-title-container .btn-outline-light *,
+        .page-title-container .btn-outline-secondary * {
+            color: #ffffff !important;
+        }
+
+        .page-title-container .btn-outline-light:hover,
+        .page-title-container .btn-outline-light:focus,
+        .page-title-container .btn-outline-light:active,
+        .page-title-container .btn-outline-secondary:hover,
+        .page-title-container .btn-outline-secondary:focus,
+        .page-title-container .btn-outline-secondary:active {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border-color: #ffffff !important;
+            color: #ffffff !important;
+        }
+
+        .page-title-container .btn-outline-light:hover *,
+        .page-title-container .btn-outline-light:focus *,
+        .page-title-container .btn-outline-light:active *,
+        .page-title-container .btn-outline-secondary:hover *,
+        .page-title-container .btn-outline-secondary:focus *,
+        .page-title-container .btn-outline-secondary:active * {
+            color: #ffffff !important;
         }
 
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         body { background-color: #f8fafc; }
-        
-        .page-header {
-            background: var(--ash, #6c757d) !important; color: white !important; border-radius: 12px;;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1rem 0;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            margin-top: 70px;
-        }
-        .page-header h4, .page-header h1, .page-header h2, .page-header h3, .page-header h5, .page-header i { color: #ffffff !important; }
-        .page-header p { color: rgba(255, 255, 255, 0.85) !important; }
         
         .table-container {
             background: white;
@@ -464,29 +491,71 @@ if($stmt_error) $stmt_error->close();
             margin-bottom: 2rem;
         }
         
-        .table { margin-bottom: 0; }
+        .table { 
+            margin-bottom: 0; 
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .table th,
         .table thead th {
-            background-color: #707981 !important; 
-            color: white !important;
+            background-color: #5e6b77 !important; 
+            color: #ffffff !important;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 12.5px;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            padding: 0.8rem 0.5rem;
-            border: 1px solid #5a6268 !important;
+            padding: 8px 10px;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             white-space: nowrap;
             text-align: center;
             vertical-align: middle;
+            box-shadow: none !important;
         }
+        .table th:first-child,
+        .table thead th:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        .table td,
         .table tbody td {
-            padding: 0.6rem 0.4rem;
-            font-size: 0.85rem;
+            padding: 6px 10px;
+            font-size: 12.5px;
             color: #334155;
             vertical-align: middle;
-            border: 1px solid #cbd5e1;
+            border-top: none !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            border-left: none !important;
             text-align: center;
         }
-        .table tbody tr:hover { background-color: #f8fafc; }
+        .table td:first-child,
+        .table tbody td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        .sticky-assign-col-last {
+            border-right: 1px solid #dee2e6 !important;
+        }
+        .table> :not(caption)>*>*,
+        .table-striped>tbody>tr:nth-of-type(odd)>*,
+        .table-striped>tbody>tr:nth-of-type(even)>* {
+            --bs-table-accent-bg: transparent !important;
+            box-shadow: none !important;
+        }
+
+        /* Visible Zebra Striping matching xml/xml_unique_start.php (White and Light Ash) */
+        .table tbody tr:nth-child(even) td {
+            background-color: #f2f4f6 !important;
+        }
+        .table tbody tr:nth-child(odd) td {
+            background-color: #ffffff !important;
+        }
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
         .text-start { text-align: left !important; }
         
         .text-danger-fw { color: #dc2626; font-weight: 600; }
@@ -515,9 +584,34 @@ if($stmt_error) $stmt_error->close();
             background: white;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
-            padding: 1.5rem;
+            overflow: hidden;
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             margin-bottom: 2rem;
+            padding: 0 !important;
+        }
+        .chart-header {
+            background-color: var(--ash, #5e6b77) !important;
+            color: #ffffff !important;
+            padding: 10px 16px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            border-top-left-radius: 11px;
+            border-top-right-radius: 11px;
+        }
+        .chart-header h5,
+        .chart-header h6,
+        .chart-header i {
+            color: #ffffff !important;
+            margin: 0 !important;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+        .chart-body {
+            padding: 1.5rem;
         }
         .section-title {
             font-weight: 700;
@@ -531,26 +625,21 @@ if($stmt_error) $stmt_error->close();
 </head>
 <body>
 
-<div class="page-header">
-    <div class="container-fluid px-4">
-        <div class="page-title-container">
-            <div>
-                <h4 class="mb-1 mb-0 text-white" >
-                    <i class="fas fa-check-double me-2" ></i>
-                    QC Meeting
-                </h4>
-                <p class="mb-0 text-muted small">Weekly Production (Pages) & Accuracy Report</p>
-            </div>
-            <div>
-                <a href="jobmgmt_qc.php" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i> Back to Reports
-                </a>
-            </div>
+<div class="container-fluid px-4">
+    <div class="page-title-container">
+        <div>
+            <h4 class="text-white">
+                <i class="fas fa-check-double me-2"></i>
+                QC Meeting
+            </h4>
+            <p>Weekly Production & Accuracy Report</p>
+        </div>
+        <div>
+            <a href="jobmgmt_qc.php" class="btn btn-outline-light btn-sm" style="font-size: 0.8rem; padding: 4px 12px;">
+                <i class="fas fa-arrow-left me-1"></i> Back to QC Reports
+            </a>
         </div>
     </div>
-</div>
-
-<div class="container-fluid px-4">
 
 <?php
         // Fetch values for Dropdowns
@@ -781,7 +870,7 @@ if($stmt_error) $stmt_error->close();
     <h5 class="section-title"><i class="fas fa-table text-primary"></i> Weekly Report Data</h5>
     <div class="table-container">
         <div class="table-responsive">
-            <table class="table table-hover table-bordered">
+            <table class="table table-hover table-striped table-bordered align-middle">
                 <thead>
                     <tr>
                         <th colspan="17" style="background-color: #475569 !important; font-size:1rem;">
@@ -851,9 +940,13 @@ if($stmt_error) $stmt_error->close();
     </div>
 
     <!-- BAR DIAGRAM -->
-    <h5 class="section-title mt-4"><i class="fas fa-chart-bar text-primary"></i> Production vs Accuracy Chart</h5>
-    <div class="chart-card">
-        <canvas id="productionChart" height="100"></canvas>
+    <div class="chart-card mt-4">
+        <div class="chart-header">
+            <h5 class="mb-0 text-white"><i class="fas fa-chart-bar text-white"></i> Production vs Accuracy Chart</h5>
+        </div>
+        <div class="chart-body">
+            <canvas id="productionChart" height="100"></canvas>
+        </div>
     </div>
 
 </div>
