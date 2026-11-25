@@ -560,7 +560,7 @@ table td {
 .card-total { background: linear-gradient(45deg, #667eea, #764ba2); }
 .card-completed { background: linear-gradient(45deg, #11998e, #38ef7d); }
 .card-progress { background: linear-gradient(45deg, #ff8c00, #ff2d00); }
-.card-pending { background: linear-gradient(45deg, #f46b45, #eea849); }
+.card-pending { background: linear-gradient(45deg, #0d6efd, #0b5ed7); }
 
 .dashboard-card .count {
     font-size: 2rem;
@@ -595,10 +595,12 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     
     if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
         $badge = '<span class="badge" style="background-color: #28a745 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Completed</span>';
-    } elseif ($st === 'Need to Assign') {
-        $badge = '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Need to Assign</span>';
+    } elseif (strcasecmp($st, 'Need to Assign') === 0) {
+        $badge = '<span class="badge" style="background-color: #0d6efd !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Need to Assign</span>';
+    } elseif (strcasecmp($st, 'Pending') === 0) {
+        $badge = '<span class="badge" style="background-color: #ffc107 !important; color: #212529 !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Pending</span>';
     } else {
-        $label = (strcasecmp($st, 'In Progress') === 0) ? 'In Progress' : h($st);
+        $label = (strcasecmp($st, 'In Progress') === 0 || strcasecmp($st, 'WIP') === 0) ? 'In Progress' : h($st);
         $badge = '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">' . $label . '</span>';
     }
     
