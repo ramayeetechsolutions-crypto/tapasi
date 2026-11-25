@@ -1095,7 +1095,7 @@ require 'header.php';
                     <thead>
                         <tr>
                             <th>S.No</th>
-                            <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">CE c date</th>
+                            <th>CE Comp. Date</th>
                             <th style="width:60px; max-width:60px; white-space:normal; line-height:1.1;">R.date</th>
                             <th>Client</th>
                             <th>Journal</th>
