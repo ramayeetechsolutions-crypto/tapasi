@@ -11,11 +11,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (!isset($_SESSION['username'])) {
+    if (isset($_POST['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
     header("Location: ../index.php");
     exit;
 }
 
-require 'header.php'; // Include your existing header
+require_once 'db.php';
 
 // --- AUTO ENSURE COLUMNS EXIST IN weekly_targets ---
 $chk_cols = $mysqli->query("SHOW COLUMNS FROM weekly_targets LIKE 'reason'");
@@ -33,7 +38,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_weekly_data') {
     $emp_id = $_POST['emp_id'] ?? '';
     $week_num = (int)($_POST['week_num'] ?? 0);
     $reason = trim($_POST['reason'] ?? '');
-    $year = date('Y');
+    $year = !empty($_POST['year']) ? (int)$_POST['year'] : date('Y');
 
     // Check if data already exists for this week
     $check_sql = "SELECT id FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
@@ -81,6 +86,8 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_leave_count') {
     echo json_encode(['success' => true]);
     exit;
 }
+
+require 'header.php'; // Include your existing header
 
 // --- APRIL-BASED OPERATIONAL WEEK DATE CALCULATOR (Matches target_assignment.php) ---
 if (!function_exists('getOpWeekDates')) {
@@ -411,6 +418,25 @@ if (!empty($user_employee_name)) {
 if($stmt_target) $stmt_target->close();
 if($stmt_prod) $stmt_prod->close();
 if($stmt_error) $stmt_error->close();
+
+// Fetch weekly reasons for team members
+$weekly_reasons = [];
+if (!empty($team_data)) {
+    $emp_ids_clean = [];
+    foreach ($team_data as $t_emp) {
+        $emp_ids_clean[] = "'" . $mysqli->real_escape_string($t_emp['id']) . "'";
+    }
+    $in_ids = implode(',', $emp_ids_clean);
+    $weeks_list = implode(',', [(int)$w1, (int)$w2, (int)$w3, (int)$w4]);
+    $curr_y = (int)date('Y');
+    $f_y = (int)$filter_year;
+    $res_q = $mysqli->query("SELECT tm_id, week_number, reason FROM weekly_targets WHERE tm_id IN ($in_ids) AND week_number IN ($weeks_list) AND (year = $f_y OR year = $curr_y) AND reason IS NOT NULL AND TRIM(reason) != '' ORDER BY id ASC");
+    if ($res_q) {
+        while ($r_row = $res_q->fetch_assoc()) {
+            $weekly_reasons[$r_row['tm_id']][$r_row['week_number']] = $r_row['reason'];
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -604,6 +630,37 @@ if($stmt_error) $stmt_error->close();
         .btn-edit:hover {
             background-color: #e2e8f0;
             color: #1e293b;
+        }
+        .reason-cell-btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            color: #1e40af;
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            max-width: 140px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reason-cell-btn:hover {
+            background-color: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        .reason-cell-btn .reason-text {
+            display: inline-block;
+            max-width: 105px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+            font-weight: 500;
         }
         
         .chart-card {
@@ -949,10 +1006,35 @@ if($stmt_error) $stmt_error->close();
                                                onchange="saveLeaveInline('<?= h($emp['id']) ?>', <?= $w1 ?>, this.value)">
                                     </div>
                                 </td>
-                                <td><a href="javascript:void(0);" class="btn-edit" onclick="openEditModal('<?= h($emp['id']) ?>', '<?= h($emp['name']) ?>', <?= $w1 ?>)"><i class="fas fa-edit"></i> Edit</a></td>
-                                <td><a href="javascript:void(0);" class="btn-edit" onclick="openEditModal('<?= h($emp['id']) ?>', '<?= h($emp['name']) ?>', <?= $w2 ?>)"><i class="fas fa-edit"></i> Edit</a></td>
-                                <td><a href="javascript:void(0);" class="btn-edit" onclick="openEditModal('<?= h($emp['id']) ?>', '<?= h($emp['name']) ?>', <?= $w3 ?>)"><i class="fas fa-edit"></i> Edit</a></td>
-                                <td><a href="javascript:void(0);" class="btn-edit" onclick="openEditModal('<?= h($emp['id']) ?>', '<?= h($emp['name']) ?>', <?= $w4 ?>)"><i class="fas fa-edit"></i> Edit</a></td>
+                                <?php foreach ([$w1, $w2, $w3, $w4] as $wn): 
+                                    $r_txt = trim($weekly_reasons[$emp['id']][$wn] ?? '');
+                                ?>
+                                    <td>
+                                        <?php if ($r_txt !== ''): ?>
+                                            <a href="javascript:void(0);" 
+                                               class="reason-cell-btn" 
+                                               data-emp-id="<?= h($emp['id']) ?>" 
+                                               data-emp-name="<?= h($emp['name']) ?>" 
+                                               data-week-num="<?= $wn ?>" 
+                                               data-reason="<?= h($r_txt) ?>" 
+                                               onclick="openEditModalFromEl(this)" 
+                                               title="<?= h($r_txt) ?> (Click to edit)">
+                                                <span class="reason-text"><?= h($r_txt) ?></span>
+                                                <i class="fas fa-edit text-primary"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="javascript:void(0);" 
+                                               class="btn-edit" 
+                                               data-emp-id="<?= h($emp['id']) ?>" 
+                                               data-emp-name="<?= h($emp['name']) ?>" 
+                                               data-week-num="<?= $wn ?>" 
+                                               data-reason="" 
+                                               onclick="openEditModalFromEl(this)">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endforeach; ?>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -1032,15 +1114,23 @@ if($stmt_error) $stmt_error->close();
 <!-- Scripts for Chart.js & Dynamic Data & Modals -->
 <script>
     // --- MODAL JAVASCRIPT LOGIC ---
-    function openEditModal(empId, empName, weekNum) {
+    function openEditModalFromEl(el) {
+        const empId = el.getAttribute('data-emp-id') || '';
+        const empName = el.getAttribute('data-emp-name') || '';
+        const weekNum = el.getAttribute('data-week-num') || '';
+        const reason = el.getAttribute('data-reason') || '';
+        openEditModal(empId, empName, weekNum, reason);
+    }
+
+    function openEditModal(empId, empName, weekNum, currentReason = '') {
         // Set values in the modal
         document.getElementById('editEmpId').value = empId;
         document.getElementById('editEmpName').value = empName;
         document.getElementById('editWeekNum').value = weekNum;
         document.getElementById('editWeekModalLabel').innerText = "Edit Week " + weekNum + " Data";
         
-        // Clear previous input field
-        document.getElementById('editReason').value = '';
+        // Populate existing reason if available
+        document.getElementById('editReason').value = currentReason || '';
 
         // Show the Bootstrap modal
         var editModal = new bootstrap.Modal(document.getElementById('editWeekModal'));
@@ -1058,24 +1148,35 @@ if($stmt_error) $stmt_error->close();
         formData.append('emp_id', empId);
         formData.append('week_num', weekNum);
         formData.append('reason', reason);
+        formData.append('year', '<?= (int)($filter_year ?? date('Y')) ?>');
 
         fetch('ce_meeting.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData.toString()
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
             if(data.success) {
                 var editModalElement = document.getElementById('editWeekModal');
                 var modalInstance = bootstrap.Modal.getInstance(editModalElement);
-                modalInstance.hide();
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
                 location.reload(); 
             } else {
-                alert("Error saving data!");
+                alert("Error saving data: " + (data.error || "Unknown server error"));
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Error saving data: " + error.message);
+        });
     }
 
     // --- SAVE LEAVE INLINE VIA AJAX ---

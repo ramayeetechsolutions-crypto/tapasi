@@ -197,6 +197,24 @@ require 'header.php';
         color: white !important;
         border-bottom: none !important;
     }
+    /* Sticky Action Column */
+    .table thead th.sticky-actions-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 10 !important;
+        background-color: #6c757d !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+    }
+    .table tbody td.sticky-actions-col {
+        position: sticky !important;
+        right: 0 !important;
+        z-index: 5 !important;
+        background-color: #ffffff !important;
+        box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+    }
+    .table-hover tbody tr:hover td.sticky-actions-col {
+        background-color: #f8fafc !important;
+    }
 </style>
 <?php
 
@@ -365,7 +383,7 @@ $publishers = $mysqli->query($sql);
                         <th>Next Follow-up</th>
                         <th>Last Action</th>
                         <th>Status</th>
-                        <th class="text-end">Action</th>
+                        <th class="text-end sticky-actions-col">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -421,7 +439,7 @@ $publishers = $mysqli->query($sql);
                                 <span class="badge <?= $statusClass ?>"><?= h($row['last_status']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td class="text-end">
+                        <td class="text-end sticky-actions-col">
                             <button onclick="event.stopPropagation(); openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" class="btn btn-sm btn-outline-primary">Log</button>
                         </td>
                     </tr>
