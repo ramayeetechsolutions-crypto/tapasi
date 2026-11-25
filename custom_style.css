@@ -1704,9 +1704,14 @@ body>.page-title-container>.container-fluid {
 .page-header>a[class*="btn"],
 .page-header>button[class*="btn"],
 .page-header>.btn-group,
-.page-header>div:has(.btn),
+.page-header>div:has(.btn):not(:first-child),
 .page-header>div:last-child:not(:first-child) {
     margin-left: auto !important;
+}
+
+.page-header>div:only-child {
+    margin-left: 0 !important;
+    width: 100% !important;
 }
 
 /* =========================================================================

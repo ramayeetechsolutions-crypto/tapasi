@@ -1076,21 +1076,21 @@ require 'header.php';
 </head>
 <body>
     <div class="container-fluid px-3 pt-3">
-        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-bottom: 20px !important;">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important;">
-                        <i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>
-                        Manage Jobs
-                    </h5>
-                    <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage and track all jobs</small>
-                </div>
-                <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
-                    <a href="ap_jobs.php?mode=add" class="btn btn-light btn-sm fw-semibold">
-                        <i class="fas fa-plus me-1 text-primary"></i> Add Job(s)
-                    </a>
-                <?php endif; ?>
+        <div class="page-header" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; border-radius: 12px !important; padding: 12px 20px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
+            <div style="text-align: left;">
+                <h5 class="mb-0 text-white" style="font-weight: 700; color: #ffffff !important; font-size: 1.25rem !important; display: flex; align-items: center; justify-content: flex-start;">
+                    <i class="fas fa-briefcase me-2" style="color: #ffffff !important;"></i>
+                    Manage Jobs
+                </h5>
+                <small class="text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage and track all jobs</small>
             </div>
+            <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
+                <div style="margin-left: auto;">
+                    <a href="ap_jobs.php?mode=add" class="btn btn-light btn-sm fw-semibold shadow-sm" style="color: #212529 !important; background-color: #ffffff !important; border: 1px solid #dee2e6 !important;">
+                        <i class="fas fa-plus me-1" style="color: #0d6efd !important; font-weight: 900;"></i> Add Job(s)
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
         <?php if (!empty($_GET['msg'])): ?>
             <div class="alert alert-<?= h($_GET['type'] ?? 'info') ?> alert-dismissible fade show py-2">
