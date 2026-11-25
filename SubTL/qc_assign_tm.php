@@ -808,8 +808,8 @@ require 'header.php';
                 <table class="table table-hover table-striped table-bordered align-middle table-sticky-assign" style="min-width: 1200px; border-collapse: separate; border-spacing: 0;">
                     <thead>
                         <tr>
-                            <th>LE moved Date</th>
-                            <th>CE moved Date</th>
+                            <th>LE Moved Dt</th>
+                            <th>CE Moved Dt</th>
                             <th>Rec. Date</th>
                             <th>Client</th>
                             <th>Journal</th>
