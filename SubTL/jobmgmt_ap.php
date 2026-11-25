@@ -198,16 +198,25 @@ table td { vertical-align: middle; padding: 6px 8px; font-size: 0.85rem; }
 .card-total { background: linear-gradient(45deg, #667eea, #764ba2); }
 .card-completed { background: linear-gradient(45deg, #11998e, #38ef7d); }
 .card-progress { background: linear-gradient(45deg, #ff8c00, #ff2d00); }
-.card-pending { background: linear-gradient(45deg, #f46b45, #eea849); }
+.card-pending { background: linear-gradient(45deg, #0d6efd, #0b5ed7); }
 .dashboard-card .count { font-size: 2rem; font-weight: bold; margin-bottom: 5px; }
 .dashboard-card .label { font-size: 0.9rem; opacity: 0.9; }
 </style>
 
 <?php
 function getStatusBadge($status) {
-    if ($status === 'Completed') return '<span class="badge bg-success">Completed</span>';
-    if ($status === 'Need to Assign') return '<span class="badge bg-warning text-dark">Need to Assign</span>';
-    return '<span class="badge bg-info">In Progress</span>';
+    $st = trim((string)$status);
+    if (empty($st) || $st === 'Need to Assign') {
+        return '<span class="badge" style="background-color: #0d6efd !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Need to Assign</span>';
+    }
+    if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
+        return '<span class="badge" style="background-color: #28a745 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Completed</span>';
+    }
+    if (strcasecmp($st, 'Pending') === 0) {
+        return '<span class="badge" style="background-color: #ffc107 !important; color: #212529 !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Pending</span>';
+    }
+    $label = (strcasecmp($st, 'WIP') === 0 || strcasecmp($st, 'Inprogress') === 0) ? 'In Progress' : h($st);
+    return '<span class="badge" style="background-color: #fd7e14 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">' . $label . '</span>';
 }
 ?>
 
