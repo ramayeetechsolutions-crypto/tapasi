@@ -323,7 +323,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($job_id > 0) {
             // Check if QC or all assignments are completed
             $all_done = (strpos($qc_u, '✓') !== false);
-            $new_status = $all_done ? 'Despatched' : 'Inprocess';
+
+            // Check current status to preserve Rework/Correction
+            $curr_stat_res = $mysqli->query("SELECT job_status FROM unique_xml_jobs WHERE job_id = $job_id LIMIT 1");
+            $curr_status = ($curr_stat_res && $cs_row = $curr_stat_res->fetch_assoc()) ? trim((string)$cs_row['job_status']) : '';
+
+            if ($curr_status === 'Rework/Correction') {
+                $new_status = 'Rework/Correction';
+            } else {
+                $new_status = $all_done ? 'Despatched' : 'Inprocess';
+            }
             $auto_dispatch = $all_done ? date('Y-m-d H:i:s') : null;
 
             $upd_sql = "UPDATE unique_xml_jobs SET 
@@ -340,7 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $upd_stmt->execute();
                 $upd_stmt->close();
 
-                if ($all_done) {
+                if ($all_done && $curr_status !== 'Rework/Correction') {
                     $mysqli->query("UPDATE jobs SET dispatch_date = CURDATE() WHERE job_id = $job_id");
                 }
 
@@ -484,14 +493,22 @@ elseif ($filter_tat === 'asc' || $filter_tat === 'desc') {
 
 $where_sql = $where ? "WHERE " . implode(" AND ", $where) : "";
 
-// 1. First: Automatically mark jobs as Despatched when QC or processes are completed (✓ / Done)
+// 1. First: Automatically mark jobs as Despatched when QC or processes are completed (✓ / Done) (Excluding Rework/Correction)
 $mysqli->query("UPDATE unique_xml_jobs u 
                 JOIN jobs j ON u.job_id = j.job_id
                 SET u.job_status = 'Despatched', 
                     u.despatched_date = IF(u.despatched_date IS NULL OR u.despatched_date < '2000-01-01', NOW(), u.despatched_date),
                     j.dispatch_date = IF(j.dispatch_date IS NULL OR j.dispatch_date < '2000-01-01', NOW(), j.dispatch_date)
                 WHERE (u.QC_user LIKE '%✓%' OR u.QC_user LIKE '%Done%' OR u.QC_user LIKE '%Completed%')
+                  AND (u.job_status != 'Rework/Correction' OR u.job_status IS NULL)
                   AND (u.job_status != 'Despatched' OR u.despatched_date IS NULL OR u.despatched_date < '2000-01-01')");
+
+// For Rework/Correction jobs: automatically set dispatched date when completed, preserving Rework/Correction status
+$mysqli->query("UPDATE unique_xml_jobs u 
+                SET u.despatched_date = IF(u.despatched_date IS NULL OR u.despatched_date < '2000-01-01', NOW(), u.despatched_date)
+                WHERE (u.QC_user LIKE '%✓%' OR u.QC_user LIKE '%Done%' OR u.QC_user LIKE '%Completed%')
+                  AND u.job_status = 'Rework/Correction'
+                  AND (u.despatched_date IS NULL OR u.despatched_date < '2000-01-01')");
 
 // 2. Second: Fetch fresh, updated data for the table display
 $sql = "SELECT 
@@ -524,6 +541,9 @@ $stats =[
     'missed_tat' => 0, 'billed' => 0, 'xml_pending' => 0, 'html_pending' => 0
 ];
 
+$main_jobs = [];
+$rework_jobs = [];
+
 if ($results && $results->num_rows > 0) {
     while ($row = $results->fetch_assoc()) {
         if ($row['process'] == 'CE+PAG+XML') $stats['cepagxml']++;
@@ -539,8 +559,14 @@ if ($results && $results->num_rows > 0) {
         } else {
             $stats['xml_pending']++;
         }
+
+        // Separate jobs: Rework/Correction jobs go to bottom table, all other jobs stay in top table
+        if (trim((string)($row['job_status'] ?? '')) === 'Rework/Correction') {
+            $rework_jobs[] = $row;
+        } else {
+            $main_jobs[] = $row;
+        }
     }
-    $results->data_seek(0);
 }
 ?>
 <!DOCTYPE html>
@@ -552,19 +578,19 @@ if ($results && $results->num_rows > 0) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
     <style>
-        #trackingTable {
+        #trackingTable, #reworkTable {
             border-collapse: separate !important;
             border-spacing: 0 !important;
             width: 100% !important;
             margin-top: 0 !important;
             font-size: 12.5px;
         }
-        #trackingTable thead {
+        #trackingTable thead, #reworkTable thead {
             position: static !important;
         }
 
         /* 1. Header Styling matching xml/xml.php */
-        #trackingTable thead th { 
+        #trackingTable thead th, #reworkTable thead th { 
             position: sticky !important;
             top: 0 !important;
             z-index: 20 !important;
@@ -579,12 +605,12 @@ if ($results && $results->num_rows > 0) {
             padding: 8px 10px !important;
             white-space: nowrap;
         }
-        #trackingTable thead th:first-child {
+        #trackingTable thead th:first-child, #reworkTable thead th:first-child {
             border-left: 1px solid #dee2e6 !important;
         }
 
         /* 2. Cell Padding & Text Alignments matching xml/xml.php */
-        #trackingTable tbody td { 
+        #trackingTable tbody td, #reworkTable tbody td { 
             vertical-align: middle !important; 
             text-align: center;
             border-bottom: 1px solid #dee2e6 !important;
@@ -594,13 +620,14 @@ if ($results && $results->num_rows > 0) {
             font-size: 12.5px;
             transition: transform 0.15s ease, background-color 0.15s ease;
         }
-        #trackingTable tbody td:first-child {
+        #trackingTable tbody td:first-child, #reworkTable tbody td:first-child {
             border-left: 1px solid #dee2e6 !important;
         }
 
         /* 3. Sticky Columns Setup (Exact Widths matching xml/xml.php) */
         .table th.sticky-col-1, .table td.sticky-col-1,
-        #trackingTable thead th.sticky-col-1, #trackingTable tbody td.sticky-col-1 { 
+        #trackingTable thead th.sticky-col-1, #trackingTable tbody td.sticky-col-1,
+        #reworkTable thead th.sticky-col-1, #reworkTable tbody td.sticky-col-1 { 
             position: sticky !important; 
             left: 0 !important; 
             min-width: 45px !important; 
@@ -609,7 +636,8 @@ if ($results && $results->num_rows > 0) {
             box-sizing: border-box !important; 
         }
         .table th.sticky-col-2, .table td.sticky-col-2,
-        #trackingTable thead th.sticky-col-2, #trackingTable tbody td.sticky-col-2 { 
+        #trackingTable thead th.sticky-col-2, #trackingTable tbody td.sticky-col-2,
+        #reworkTable thead th.sticky-col-2, #reworkTable tbody td.sticky-col-2 { 
             position: sticky !important; 
             left: 45px !important; 
             min-width: 140px !important; 
@@ -618,7 +646,8 @@ if ($results && $results->num_rows > 0) {
             box-sizing: border-box !important; 
         }
         .table th.sticky-col-3, .table td.sticky-col-3,
-        #trackingTable thead th.sticky-col-3, #trackingTable tbody td.sticky-col-3 { 
+        #trackingTable thead th.sticky-col-3, #trackingTable tbody td.sticky-col-3,
+        #reworkTable thead th.sticky-col-3, #reworkTable tbody td.sticky-col-3 { 
             position: sticky !important; 
             left: 185px !important; 
             min-width: 140px !important; 
@@ -627,10 +656,11 @@ if ($results && $results->num_rows > 0) {
             box-sizing: border-box !important; 
             overflow: hidden !important; 
             text-overflow: ellipsis !important; 
-            white-space: nowrap !important;
+            white-space: nowrap !important; 
         }
         .table th.sticky-col-4, .table td.sticky-col-4,
-        #trackingTable thead th.sticky-col-4, #trackingTable tbody td.sticky-col-4 { 
+        #trackingTable thead th.sticky-col-4, #trackingTable tbody td.sticky-col-4,
+        #reworkTable thead th.sticky-col-4, #reworkTable tbody td.sticky-col-4 { 
             position: sticky !important; 
             left: 325px !important; 
             border-right: 1px solid #dee2e6 !important; 
@@ -640,7 +670,7 @@ if ($results && $results->num_rows > 0) {
             box-sizing: border-box !important; 
             overflow: hidden !important; 
             text-overflow: ellipsis !important; 
-            white-space: nowrap !important;
+            white-space: nowrap !important; 
         }
 
         .table td.sticky-col-1,
@@ -650,7 +680,11 @@ if ($results && $results->num_rows > 0) {
         #trackingTable tbody td.sticky-col-1,
         #trackingTable tbody td.sticky-col-2,
         #trackingTable tbody td.sticky-col-3,
-        #trackingTable tbody td.sticky-col-4 {
+        #trackingTable tbody td.sticky-col-4,
+        #reworkTable tbody td.sticky-col-1,
+        #reworkTable tbody td.sticky-col-2,
+        #reworkTable tbody td.sticky-col-3,
+        #reworkTable tbody td.sticky-col-4 {
             z-index: 10 !important;
         }
 
@@ -662,7 +696,11 @@ if ($results && $results->num_rows > 0) {
         #trackingTable thead th.sticky-col-1,
         #trackingTable thead th.sticky-col-2,
         #trackingTable thead th.sticky-col-3,
-        #trackingTable thead th.sticky-col-4 {
+        #trackingTable thead th.sticky-col-4,
+        #reworkTable thead th.sticky-col-1,
+        #reworkTable thead th.sticky-col-2,
+        #reworkTable thead th.sticky-col-3,
+        #reworkTable thead th.sticky-col-4 {
             position: sticky !important;
             top: 0 !important;
             background-color: #5e6b77 !important;
@@ -678,7 +716,11 @@ if ($results && $results->num_rows > 0) {
         #trackingTable tbody tr:nth-child(even) td.sticky-col-1,
         #trackingTable tbody tr:nth-child(even) td.sticky-col-2,
         #trackingTable tbody tr:nth-child(even) td.sticky-col-3,
-        #trackingTable tbody tr:nth-child(even) td.sticky-col-4 {
+        #trackingTable tbody tr:nth-child(even) td.sticky-col-4,
+        #reworkTable tbody tr:nth-child(even) td.sticky-col-1,
+        #reworkTable tbody tr:nth-child(even) td.sticky-col-2,
+        #reworkTable tbody tr:nth-child(even) td.sticky-col-3,
+        #reworkTable tbody tr:nth-child(even) td.sticky-col-4 {
             background-color: #f2f4f6 !important;
         }
         .table tbody tr:nth-child(odd) td.sticky-col-1,
@@ -688,23 +730,31 @@ if ($results && $results->num_rows > 0) {
         #trackingTable tbody tr:nth-child(odd) td.sticky-col-1,
         #trackingTable tbody tr:nth-child(odd) td.sticky-col-2,
         #trackingTable tbody tr:nth-child(odd) td.sticky-col-3,
-        #trackingTable tbody tr:nth-child(odd) td.sticky-col-4 {
+        #trackingTable tbody tr:nth-child(odd) td.sticky-col-4,
+        #reworkTable tbody tr:nth-child(odd) td.sticky-col-1,
+        #reworkTable tbody tr:nth-child(odd) td.sticky-col-2,
+        #reworkTable tbody tr:nth-child(odd) td.sticky-col-3,
+        #reworkTable tbody tr:nth-child(odd) td.sticky-col-4 {
             background-color: #ffffff !important;
         }
 
         /* 5. Zebra Striping Logic (matching xml/xml.php) - Exclude status colored cells */
-        #trackingTable tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
+        #trackingTable tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
             background-color: #f2f4f6 !important;
         }
-        #trackingTable tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
+        #trackingTable tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr:nth-child(odd) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
             background-color: #ffffff !important;
         }
 
         /* 6. FULL ROW HOVER EFFECT - Zoom text only on hover, brighten, no shadow */
-        #trackingTable tbody tr:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
+        #trackingTable tbody tr:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned) {
             background-color: #e9ecef !important;
         }
-        #trackingTable tbody tr:hover td {
+        #trackingTable tbody tr:hover td,
+        #reworkTable tbody tr:hover td {
             cursor: pointer;
             transform: scale(1.025);
             box-shadow: none !important;
@@ -714,7 +764,8 @@ if ($results && $results->num_rows > 0) {
         }
 
         /* Highlight the sticky columns too when hovering & maintain sticky alignment */
-        #trackingTable tbody tr:hover td.sticky-col-1 {
+        #trackingTable tbody tr:hover td.sticky-col-1,
+        #reworkTable tbody tr:hover td.sticky-col-1 {
             background-color: #e9ecef !important;
             transform-origin: left center;
             z-index: 25 !important;
@@ -722,12 +773,16 @@ if ($results && $results->num_rows > 0) {
         }
         #trackingTable tbody tr:hover td.sticky-col-2,
         #trackingTable tbody tr:hover td.sticky-col-3,
-        #trackingTable tbody tr:hover td.sticky-col-4 {
+        #trackingTable tbody tr:hover td.sticky-col-4,
+        #reworkTable tbody tr:hover td.sticky-col-2,
+        #reworkTable tbody tr:hover td.sticky-col-3,
+        #reworkTable tbody tr:hover td.sticky-col-4 {
             background-color: #e9ecef !important;
             z-index: 25 !important;
             box-shadow: none !important;
         }
-        #trackingTable tbody tr:hover td.sticky-act-col {
+        #trackingTable tbody tr:hover td.sticky-act-col,
+        #reworkTable tbody tr:hover td.sticky-act-col {
             background-color: #e9ecef !important;
             transform-origin: right center;
             z-index: 25 !important;
@@ -735,7 +790,8 @@ if ($results && $results->num_rows > 0) {
         }
 
         /* 7. Sticky Right Column (Act.) */
-        #trackingTable thead th.sticky-act-col {
+        #trackingTable thead th.sticky-act-col,
+        #reworkTable thead th.sticky-act-col {
             position: sticky !important;
             top: 0 !important;
             right: 0 !important;
@@ -747,7 +803,8 @@ if ($results && $results->num_rows > 0) {
             width: 85px !important;
             box-sizing: border-box !important;
         }
-        #trackingTable tbody td.sticky-act-col {
+        #trackingTable tbody td.sticky-act-col,
+        #reworkTable tbody td.sticky-act-col {
             position: sticky !important;
             right: 0 !important;
             z-index: 10 !important;
@@ -756,9 +813,12 @@ if ($results && $results->num_rows > 0) {
             width: 85px !important;
             box-sizing: border-box !important;
         }
-        #trackingTable tbody tr:nth-child(even) td.sticky-act-col { background-color: #f2f4f6 !important; }
-        #trackingTable tbody tr:nth-child(odd) td.sticky-act-col { background-color: #ffffff !important; }
-        #trackingTable tbody tr:hover td.sticky-act-col { background-color: #c4cbd3 !important; }
+        #trackingTable tbody tr:nth-child(even) td.sticky-act-col,
+        #reworkTable tbody tr:nth-child(even) td.sticky-act-col { background-color: #f2f4f6 !important; }
+        #trackingTable tbody tr:nth-child(odd) td.sticky-act-col,
+        #reworkTable tbody tr:nth-child(odd) td.sticky-act-col { background-color: #ffffff !important; }
+        #trackingTable tbody tr:hover td.sticky-act-col,
+        #reworkTable tbody tr:hover td.sticky-act-col { background-color: #c4cbd3 !important; }
 
         body { background-color: #f5f7fa; font-size: 12.5px; }
         .card { border: none; border-radius: 8px; box-shadow: 0 1px 10px rgba(0,0,0,0.05); }
@@ -798,25 +858,37 @@ if ($results && $results->num_rows > 0) {
         /* Custom Colors for Assigned User Columns (High Specificity to preserve exact colors) */
         #trackingTable tbody td.bg-primary,
         #trackingTable tbody tr td.bg-primary,
+        #reworkTable tbody td.bg-primary,
+        #reworkTable tbody tr td.bg-primary,
         .bg-primary { background-color: #0d6efd !important; color: #ffffff !important; font-weight: bold !important; }
         
         #trackingTable tbody td.bg-cell-completed,
         #trackingTable tbody tr td.bg-cell-completed,
+        #reworkTable tbody td.bg-cell-completed,
+        #reworkTable tbody tr td.bg-cell-completed,
         .bg-cell-completed { background-color: #198754 !important; color: #ffffff !important; font-weight: bold !important; }
         
         #trackingTable tbody td.bg-cell-assigned,
         #trackingTable tbody tr td.bg-cell-assigned,
+        #reworkTable tbody td.bg-cell-assigned,
+        #reworkTable tbody tr td.bg-cell-assigned,
         .bg-cell-assigned { background-color: #fd7e14 !important; color: #ffffff !important; font-weight: bold !important; }
         
         #trackingTable tbody td.bg-cell-unassigned,
         #trackingTable tbody tr td.bg-cell-unassigned,
+        #reworkTable tbody td.bg-cell-unassigned,
+        #reworkTable tbody tr td.bg-cell-unassigned,
         .bg-cell-unassigned { background-color: #ffc107 !important; color: #000000 !important; font-weight: bold !important; }
 
         /* Row hover state brightens task status cell colors with zero shadow */
-        #trackingTable tbody tr:hover td.bg-primary { background-color: #267dff !important; color: #ffffff !important; box-shadow: none !important; }
-        #trackingTable tbody tr:hover td.bg-cell-completed { background-color: #20a768 !important; color: #ffffff !important; box-shadow: none !important; }
-        #trackingTable tbody tr:hover td.bg-cell-assigned { background-color: #ff8f33 !important; color: #ffffff !important; box-shadow: none !important; }
-        #trackingTable tbody tr:hover td.bg-cell-unassigned { background-color: #ffd233 !important; color: #000000 !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-primary,
+        #reworkTable tbody tr:hover td.bg-primary { background-color: #267dff !important; color: #ffffff !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-cell-completed,
+        #reworkTable tbody tr:hover td.bg-cell-completed { background-color: #20a768 !important; color: #ffffff !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-cell-assigned,
+        #reworkTable tbody tr:hover td.bg-cell-assigned { background-color: #ff8f33 !important; color: #ffffff !important; box-shadow: none !important; }
+        #trackingTable tbody tr:hover td.bg-cell-unassigned,
+        #reworkTable tbody tr:hover td.bg-cell-unassigned { background-color: #ffd233 !important; color: #000000 !important; box-shadow: none !important; }
         
         /* Status Badges */
         .badge-cyan { color: #000; font-weight: 700; font-size: 12px; }
@@ -1107,8 +1179,8 @@ if ($results && $results->num_rows > 0) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if ($results->num_rows > 0): $i=0;
-                                while($row = $results->fetch_assoc()): $i=$i+1; 
+                            <?php if (count($main_jobs) > 0): $i=0;
+                                foreach($main_jobs as $row): $i=$i+1; 
                                     $is_tracked = !empty($row['rec_date']);
                                     
                                     // Raw value formatted for Datetime-Local Picker
@@ -1491,12 +1563,413 @@ if ($results && $results->num_rows > 0) {
                                     </div>
                                 </td>
                             </tr>
-                            <?php endwhile; else: ?>
+                            <?php endforeach; else: ?>
                             <tr>
                                 <td colspan="30" class="text-center py-4 text-muted">
                                     <i class="fas fa-inbox fa-2x mb-2"></i>
                                     <h6>No XML jobs found</h6>
                                     <p class="mb-0">Try adjusting your filters or add a new job.</p>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remarks and Corrections Data Table -->
+        <div class="card shadow-sm border mt-4 mb-4">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background-color: #5e6b77; color: #ffffff;">
+                <h6 class="mb-0 fw-bold" style="font-size: 14px;"><i class="fas fa-tools me-2"></i>Remarks and Corrections</h6>
+                <span class="badge bg-light text-dark fw-bold"><?= count($rework_jobs) ?> Records</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0" id="reworkTable">
+                        <thead>
+                            <tr>
+                                <th class="sticky-col-1">S.No</th>
+                                <th class="sticky-col-2">Rec Date (Time)</th>
+                                <th class="sticky-col-3">Client Name</th>
+                                <th class="sticky-col-4">Journal / Issue</th>
+                                <th>No.of Article</th>
+                                
+                                <th>NLM</th>
+                                <th>JATS</th>
+                                <th>Clockss</th>
+                                <th>Scielo</th>
+                                <th>EBSCO</th>
+                                <th>PubMed</th>
+                                <th>Biblat</th>
+                                <th>DOAJ</th>
+                                
+                                <th>HTML</th>
+                                <th>New HTML</th>
+                                <th>Direct HTML</th>
+                                <th>Job Status</th>
+                                <th>TAT</th>
+                                <th>Missed TAT</th>
+                                
+                                <th>Img Inst.</th>
+
+                                <th>Image</th>
+                                <th>Table</th>
+                                <th>WP</th>
+                                <th>NLM</th>
+                                <th>JATS</th>
+                                <th>Clockss</th>
+                                <th>HTML</th>
+                                <th>New HTML</th>
+                                <th>Direct HTML</th>
+                                <th>Scielo</th>
+                                <th>EBSCO</th>
+                                <th>PubMed</th>
+                                <th>Biblat</th>
+                                <th>DOAJ</th>
+                                <th>QC</th>
+                                
+                                <th>Despatched Date</th>
+                                <th>Remarks</th>
+                                <th class="sticky-act-col">Act.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($rework_jobs) > 0): $k=0;
+                                foreach($rework_jobs as $row): $k=$k+1; 
+                                    $is_tracked = !empty($row['rec_date']);
+                                    
+                                    // Raw value formatted for Datetime-Local Picker
+                                    $recDateRaw = (!empty($row['rec_date']) && $row['rec_date'] != '0000-00-00 00:00:00') ? date('Y-m-d\TH:i', strtotime($row['rec_date'])) : '';
+                                    
+                                    // Parse TAT Date for the picker
+                                    $tatValRaw = $row['tat_to_client'];
+                                    $tatModalVal = '';
+                                    if(!empty($tatValRaw)) {
+                                        $tTime = strtotime($tatValRaw);
+                                        if($tTime) $tatModalVal = date('Y-m-d', $tTime);
+                                    }
+
+                                    // --- AUTO-DISPATCH CHECK FOR REMARKS AND CORRECTIONS ---
+                                    if ($is_tracked) {
+                                        $user_columns_check = [
+                                            $row['Image_user'], $row['Table_user'], $row['WPContent_user'], 
+                                            $row['nlm_user'], $row['jats_user'], $row['clockss_user'],
+                                            $row['Scielo_user'], $row['ebsco_user'], $row['pubmed_user'], 
+                                            $row['biblat_user'], $row['doaj_user'],
+                                            $row['HTML_user'], $row['new_html_user'], $row['direct_html_user'], $row['QC_user']
+                                        ];
+
+                                        $all_tasks_completed = true;
+                                        $has_valid_task = false;
+
+                                        foreach ($user_columns_check as $col_val) {
+                                            $v = trim((string)$col_val);
+                                            if ($v === 'N/A' || $v === 'NA' || $v === '-' || $v === '') {
+                                                continue; 
+                                            }
+                                            
+                                            $has_valid_task = true;
+                                            if (strpos($v, '✓') === false && strpos(strtolower($v), 'done') === false && strpos(strtolower($v), 'completed') === false) {
+                                                $all_tasks_completed = false;
+                                                break;
+                                            }
+                                        }
+                                        // For Rework/Correction jobs: preserve job_status = 'Rework/Correction' so it stays in this table, but record dispatched date
+                                        if ($has_valid_task && $all_tasks_completed) {
+                                            if (empty($row['despatched_date']) || $row['despatched_date'] == '0000-00-00' || $row['despatched_date'] == '0000-00-00 00:00:00') {
+                                                $row['despatched_date'] = date('Y-m-d H:i:s'); 
+                                                $upd_id = (int)$row['job_id'];
+                                                $upd_date = $row['despatched_date'];
+                                                $mysqli->query("UPDATE unique_xml_jobs SET despatched_date = '$upd_date' WHERE job_id = $upd_id");
+                                            }
+                                        }
+                                    }
+                            ?>
+                            <tr>
+                                <td class="fw-bold sticky-col-1"><?= $k ?></td>
+                                <td class="sticky-col-2"><?= $is_tracked ? formatDateTime($row['rec_date'], 'd-M-Y H:i') : '-' ?></td>
+                                <td class="text-primary fw-bold text-start sticky-col-3" title="<?= h($row['team_client_name'] ?: $row['client_name']) ?>"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
+                                <td class="text-start sticky-col-4" title="<?= h($row['journal_issue']) ?>"><?= h($row['journal_issue']) ?: '-' ?></td>
+                                <td><span class="fw-bold text-dark" style="font-size: 12px;"><?= h($row['article']) ?: '-' ?></span></td>
+                                
+                                <td>
+                                    <?php if(!empty($row['nlm']) && $row['nlm'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['nlm']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['jats']) && $row['jats'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['jats']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['clockss']) && $row['clockss'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['clockss']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['scielo']) && $row['scielo'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['scielo']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['ebsco']) && $row['ebsco'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['ebsco']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['pubmed']) && $row['pubmed'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['pubmed']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['biblat']) && $row['biblat'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['biblat']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['doaj']) && $row['doaj'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['doaj']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                
+                                <td>
+                                    <?php if(!empty($row['html']) && $row['html'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['html']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['new_html']) && $row['new_html'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['new_html']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if(!empty($row['direct_html']) && $row['direct_html'] !== '-'): ?>
+                                        <span class="badge-cyan"><?= h($row['direct_html']) ?></span>
+                                    <?php else: ?><span class="text-muted">-</span><?php endif; ?>
+                                </td>  
+                                <td>
+                                    <span class="badge" style="background-color: #6f42c1; color: #fff; font-weight: 700; padding: 3px 10px; border-radius: 12px; font-size: 10px;">Rework/Correction</span>
+                                </td>
+                                <td class="fw-bold"><?= $is_tracked && !empty($row['tat_to_client']) ? formatDateTime($row['tat_to_client'], 'd-M-Y') : '-' ?></td>
+                                <td>
+                                    <?php 
+                                    if ($is_tracked && !empty($row['tat_to_client'])) {
+                                        $today_ts = strtotime(date('Y-m-d'));
+                                        $tat_ts = strtotime($row['tat_to_client']);
+                                        
+                                        if ($today_ts > $tat_ts && empty($row['despatched_date'])) {
+                                            $diff = $today_ts - $tat_ts;
+                                            $days = floor($diff / (60 * 60 * 24));
+                                            $dayText = ($days > 1) ? " days" : " day";
+                                            echo '<span class="badge bg-danger">' . $days . $dayText . '</span>';
+                                        } else {
+                                            echo !empty($row['missed_tat']) ? h($row['missed_tat']) : '-';
+                                        }
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
+                                </td>
+                                
+                                <td><?= h($row['instruction_to_image']) ?: '-' ?></td>
+                              
+                                <!-- Exact Columns Assigned Users -->
+                                <?php if($is_tracked): 
+                                    $safe_trim = function($val) { return trim((string)$val); };
+
+                                    $img_na = ($safe_trim($row['instruction_to_image'])==='' || $safe_trim($row['instruction_to_image'])==='-' || strtolower($safe_trim($row['instruction_to_image']))==='no images');
+                                    $nlm_na = ($safe_trim($row['nlm'] ?? '')==='' || $safe_trim($row['nlm'] ?? '')==='-');
+                                    $jats_na = ($safe_trim($row['jats'] ?? '')==='' || $safe_trim($row['jats'] ?? '')==='-');
+                                    $clockss_na = ($safe_trim($row['clockss'] ?? '')==='' || $safe_trim($row['clockss'] ?? '')==='-');
+
+                                    $html_na = ($safe_trim($row['html'])==='' || $safe_trim($row['html'])==='-');
+                                    $nhtml_na = ($safe_trim($row['new_html'])==='' || $safe_trim($row['new_html'])==='-');
+                                    $dhtml_na = ($safe_trim($row['direct_html'])==='' || $safe_trim($row['direct_html'])==='-');
+
+                                    $scielo_na = ($safe_trim($row['scielo'] ?? '')==='' || $safe_trim($row['scielo'] ?? '')==='-');
+                                    $ebsco_na = ($safe_trim($row['ebsco'] ?? '')==='' || $safe_trim($row['ebsco'] ?? '')==='-');
+
+                                    $pubmed_na = ($safe_trim($row['pubmed'] ?? '')==='' || $safe_trim($row['pubmed'] ?? '')==='-');
+                                    $biblat_na = ($safe_trim($row['biblat'] ?? '')==='' || $safe_trim($row['biblat'] ?? '')==='-');
+                                    $doaj_na = ($safe_trim($row['doaj'] ?? '')==='' || $safe_trim($row['doaj'] ?? '')==='-');
+
+                                    $is_empty = function($val) use ($safe_trim) { 
+                                        $v = $safe_trim($val); 
+                                        return ($v === '' || $v === 'N/A' || $v === 'NA'); 
+                                    };
+
+                                    $valImg = $img_na ? 'N/A' : ($is_empty($row['Image_user']) ? '-' : $row['Image_user']);
+                                    $valTbl = $is_empty($row['Table_user']) ? '-' : $row['Table_user'];
+                                    $valWp = $is_empty($row['WPContent_user']) ? '-' : $row['WPContent_user'];
+
+                                    $valNlm = $nlm_na ? 'N/A' : ($is_empty($row['nlm_user'] ?? '') ? '-' : $row['nlm_user']);
+                                    $valJats = $jats_na ? 'N/A' : ($is_empty($row['jats_user'] ?? '') ? '-' : ($row['jats_user'] ?? ''));
+                                    $valClockss = $clockss_na ? 'N/A' : ($is_empty($row['clockss_user'] ?? '') ? '-' : ($row['clockss_user'] ?? ''));
+
+                                    $valHtml = $html_na ? 'N/A' : ($is_empty($row['HTML_user']) ? '-' : $row['HTML_user']);
+                                    $valNhtml = $nhtml_na ? 'N/A' : ($is_empty($row['new_html_user']) ? '-' : $row['new_html_user']);
+                                    $valDhtml = $dhtml_na ? 'N/A' : ($is_empty($row['direct_html_user'] ?? '') ? '-' : ($row['direct_html_user'] ?? ''));
+
+                                    $valScielo = $scielo_na ? 'N/A' : ($is_empty($row['Scielo_user'] ?? '') ? '-' : ($row['Scielo_user'] ?? ''));
+                                    $valEbsco = $ebsco_na ? 'N/A' : ($is_empty($row['ebsco_user'] ?? '') ? '-' : ($row['ebsco_user'] ?? ''));
+
+                                    $valPubmed = $pubmed_na ? 'N/A' : ($is_empty($row['pubmed_user'] ?? '') ? '-' : ($row['pubmed_user'] ?? ''));
+                                    $valBiblat = $biblat_na ? 'N/A' : ($is_empty($row['biblat_user'] ?? '') ? '-' : ($row['biblat_user'] ?? ''));
+                                    $valDoaj = $doaj_na ? 'N/A' : ($is_empty($row['doaj_user'] ?? '') ? '-' : ($row['doaj_user'] ?? ''));
+
+                                    $valQc = $is_empty($row['QC_user']) ? '-' : $row['QC_user'];
+                                ?>
+                                    <td class="<?= getUserColorClass($valImg) ?>"><?= renderUserVal($valImg) ?></td>
+                                    <td class="<?= getUserColorClass($valTbl) ?>"><?= renderUserVal($valTbl) ?></td>
+                                    <td class="<?= getUserColorClass($valWp) ?>"><?= renderUserVal($valWp) ?></td>
+                                    
+                                    <td class="<?= getUserColorClass($valNlm) ?>"><?= renderUserVal($valNlm) ?></td>
+                                    <td class="<?= getUserColorClass($valJats) ?>"><?= renderUserVal($valJats) ?></td>
+                                    <td class="<?= getUserColorClass($valClockss) ?>"><?= renderUserVal($valClockss) ?></td>
+
+                                    <td class="<?= getUserColorClass($valHtml) ?>"><?= renderUserVal($valHtml) ?></td>
+                                    <td class="<?= getUserColorClass($valNhtml) ?>"><?= renderUserVal($valNhtml) ?></td>
+                                    <td class="<?= getUserColorClass($valDhtml) ?>"><?= renderUserVal($valDhtml) ?></td>
+
+                                    <td class="<?= getUserColorClass($valScielo) ?>"><?= renderUserVal($valScielo) ?></td>
+                                    <td class="<?= getUserColorClass($valEbsco) ?>"><?= renderUserVal($valEbsco) ?></td>
+
+                                    <td class="<?= getUserColorClass($valPubmed) ?>"><?= renderUserVal($valPubmed) ?></td>
+                                    <td class="<?= getUserColorClass($valBiblat) ?>"><?= renderUserVal($valBiblat) ?></td>
+                                    <td class="<?= getUserColorClass($valDoaj) ?>"><?= renderUserVal($valDoaj) ?></td>
+
+                                    <td class="<?= getUserColorClass($valQc) ?>"><?= renderUserVal($valQc) ?></td>
+                                <?php else: ?>
+                                    <td colspan="15" class="bg-cell-unassigned text-center">-</td>
+                                <?php endif; ?>
+                                
+                                <td>
+                                    <?php 
+                                    $user_columns = [
+                                        $row['Image_user'], 
+                                        $row['Table_user'], 
+                                        $row['WPContent_user'], 
+                                        $row['nlm_user'], 
+                                        $row['HTML_user'], 
+                                        $row['new_html_user'], 
+                                        $row['Scielo_user'], 
+                                        $row['pubmed_user'], 
+                                        $row['QC_user']
+                                    ];
+
+                                    $has_orange_assigned = false;
+                                    $has_any_completed   = false;
+
+                                    foreach ($user_columns as $col_val) {
+                                        $color = getUserColorClass($col_val);
+                                        
+                                        if ($color === 'bg-cell-assigned') {
+                                            $has_orange_assigned = true;
+                                            break;
+                                        }
+                                        
+                                        if ($color === 'bg-cell-completed') {
+                                            $has_any_completed = true;
+                                        }
+                                    }
+
+                                    if ($is_tracked && !$has_orange_assigned && $has_any_completed && !empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00') {
+                                        echo formatDateTime($row['despatched_date'], 'd-M-Y H:i');
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
+                                </td>
+
+                                <td>
+                                    <?php if($is_tracked && !empty($row['remarks'])): ?>
+                                        <div class="text-truncate-custom" title="<?= h($row['remarks']) ?>"><?= h($row['remarks']) ?></div>
+                                    <?php else: ?>-<?php endif; ?>
+                                </td>
+                                
+                                <td class="align-middle sticky-act-col">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <!-- Edit Job Button -->
+                                        <button class="btn btn-sm btn-primary py-0 px-2 shadow-sm" title="Edit Job"
+                                            onclick="openJobModal(this)"
+                                            data-job-id="<?= $row['job_id'] ?>"
+                                            data-client-id="<?= $row['client_id'] ?>"
+                                            data-rec-date="<?= $recDateRaw ?>"
+                                            data-journal="<?= h(!empty($row['journal_issue']) ? $row['journal_issue'] : trim(($row['journal_name_client'] ?? '') . ' ' . ($row['issue'] ?? ''))) ?>"
+                                            data-articles="<?= h($row['articles'] ?? '') ?>"
+                                            data-nlm="<?= h($row['nlm'] ?? '') ?>"
+                                            data-jats="<?= h($row['jats'] ?? '') ?>"
+                                            data-clockss="<?= h($row['clockss'] ?? '') ?>"
+                                            data-scielo="<?= h($row['scielo'] ?? '') ?>"
+                                            data-ebsco="<?= h($row['ebsco'] ?? '') ?>"
+                                            data-pubmed="<?= h($row['pubmed'] ?? '') ?>"
+                                            data-biblat="<?= h($row['biblat'] ?? '') ?>"
+                                            data-doaj="<?= h($row['doaj'] ?? '') ?>"
+                                            data-html="<?= h($row['html'] ?? '') ?>"
+                                            data-new-html="<?= h($row['new_html'] ?? '') ?>"
+                                            data-direct-html="<?= h($row['direct_html'] ?? '') ?>"
+                                            data-tat="<?= $tatModalVal ?>"
+                                            data-missed-tat="<?= h($row['missed_tat'] ?? '') ?>"
+                                            data-job-status="<?= h($row['job_status'] ?? '') ?>"
+                                            data-despatched-date="<?= !empty($row['despatched_date']) ? date('Y-m-d\TH:i', strtotime($row['despatched_date'])) : '' ?>"
+                                            data-instruction="<?= h($row['instruction_to_image'] ?? '') ?>"
+                                            data-remarks="<?= h($row['remarks'] ?? '') ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+
+                                        <!-- Delete Job Button -->
+                                        <button class="btn btn-sm btn-danger py-0 px-2 shadow-sm" title="Delete Job" 
+                                                onclick="deleteJob(<?= $row['job_id'] ?>)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+
+                                        <!-- Assign TM Button -->
+                                        <?php if($is_tracked && $can_assign && ($has_orange_assigned || !$has_any_completed)): ?>
+                                            <button class="btn btn-sm btn-warning py-0 px-2 shadow-sm" title="Assign to TMs"
+                                                onclick="openAssignModal(this)"
+                                                data-job-id="<?= $row['job_id'] ?>"
+                                                data-img="<?= h($row['Image_user'] ?? '') ?>"
+                                                data-tbl="<?= h($row['Table_user'] ?? '') ?>"
+                                                data-wp="<?= h($row['WPContent_user'] ?? '') ?>"
+                                                data-nlm="<?= h($row['nlm_user'] ?? '') ?>"
+                                                data-jats="<?= h($row['jats_user'] ?? '') ?>"
+                                                data-clockss="<?= h($row['clockss_user'] ?? '') ?>"
+                                                data-scielo="<?= h($row['Scielo_user'] ?? '') ?>"
+                                                data-ebsco="<?= h($row['ebsco_user'] ?? '') ?>"
+                                                data-pubmed="<?= h($row['pubmed_user'] ?? '') ?>"
+                                                data-biblat="<?= h($row['biblat_user'] ?? '') ?>"
+                                                data-doaj="<?= h($row['doaj_user'] ?? '') ?>"
+                                                data-html="<?= h($row['HTML_user'] ?? '') ?>"
+                                                data-nhtml="<?= h($row['new_html_user'] ?? '') ?>"
+                                                data-dhtml="<?= h($row['direct_html_user'] ?? '') ?>"
+                                                data-qc="<?= h($row['QC_user'] ?? '') ?>"
+                                                
+                                                data-val-img="<?= h($row['instruction_to_image'] ?? '') ?>"
+                                                data-val-nlm="<?= h($row['nlm'] ?? '') ?>"
+                                                data-val-jats="<?= h($row['jats'] ?? '') ?>"
+                                                data-val-clockss="<?= h($row['clockss'] ?? '') ?>"
+                                                data-val-scielo="<?= h($row['scielo'] ?? '') ?>"
+                                                data-val-ebsco="<?= h($row['ebsco'] ?? '') ?>"
+                                                data-val-pubmed="<?= h($row['pubmed'] ?? '') ?>"
+                                                data-val-biblat="<?= h($row['biblat'] ?? '') ?>"
+                                                data-val-doaj="<?= h($row['doaj'] ?? '') ?>"
+                                                data-val-html="<?= h($row['html'] ?? '') ?>"
+                                                data-val-nhtml="<?= h($row['new_html'] ?? '') ?>"
+                                                data-val-dhtml="<?= h($row['direct_html'] ?? '') ?>"
+                                                >
+                                                <i class="fas fa-user-tag"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; else: ?>
+                            <tr>
+                                <td colspan="38" class="text-center py-4 text-muted">
+                                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                                    <h6>No Remarks and Corrections records found</h6>
                                 </td>
                             </tr>
                             <?php endif; ?>

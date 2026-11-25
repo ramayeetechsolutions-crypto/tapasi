@@ -92,7 +92,9 @@ function handleFullUpdateRequest() {
 
     // If date is entered, force Despatched status and Green status
     if (!empty($despatched_date)) {
-        $job_status = 'Despatched';
+        if ($job_status !== 'Rework/Correction') {
+            $job_status = 'Despatched';
+        }
         $status = 'Completed'; 
     }
     
@@ -134,13 +136,19 @@ function handleFullUpdateRequest() {
         }
 
         if ($all_done && $has_valid_task) {
-            
-            $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', job_status = 'Despatched', updated_at = NOW() WHERE id = $record_id");
+            $curr_check = $mysqli->query("SELECT job_status FROM unique_xml_jobs WHERE id = $record_id");
+            $curr_job_status = ($curr_check && $row_c = $curr_check->fetch_assoc()) ? trim((string)$row_c['job_status']) : '';
+
+            if ($curr_job_status === 'Rework/Correction') {
+                $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', despatched_date = IF(despatched_date IS NULL OR despatched_date < '2000-01-01', NOW(), despatched_date), updated_at = NOW() WHERE id = $record_id");
+            } else {
+                $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', job_status = 'Despatched', updated_at = NOW() WHERE id = $record_id");
+            }
             $status = 'Completed'; 
         }
         // ----------------------------------------------------------------------------------------------------
 
-        if ($status === 'Completed') {
+        if ($status === 'Completed' && ($curr_job_status ?? '') !== 'Rework/Correction') {
             $stmt = $mysqli->prepare("SELECT job_id FROM unique_xml_jobs WHERE id = ?");
             $stmt->bind_param("i", $record_id);
             $stmt->execute();
@@ -174,10 +182,20 @@ function handleAssignToMeRequest() {
     try {
         $assign_value = $username . '/' . date('d-m');
         
-        $query = "UPDATE unique_xml_jobs SET 
-                  $field = ?, updated_at = NOW(),
-                  status = 'Inprocess', job_status = 'Inprocess'
-                  WHERE id = ?";
+        $stat_check = $mysqli->query("SELECT job_status FROM unique_xml_jobs WHERE id = $record_id");
+        $curr_stat = ($stat_check && $sc_row = $stat_check->fetch_assoc()) ? trim((string)$sc_row['job_status']) : '';
+
+        if ($curr_stat === 'Rework/Correction') {
+            $query = "UPDATE unique_xml_jobs SET 
+                      $field = ?, updated_at = NOW(),
+                      status = 'Inprocess'
+                      WHERE id = ?";
+        } else {
+            $query = "UPDATE unique_xml_jobs SET 
+                      $field = ?, updated_at = NOW(),
+                      status = 'Inprocess', job_status = 'Inprocess'
+                      WHERE id = ?";
+        }
         
         $stmt = $mysqli->prepare($query);
         $stmt->bind_param("si", $assign_value, $record_id);
@@ -279,10 +297,18 @@ function handleCompleteRequest() {
         }
 
         if ($all_done) {
-            // FIX: Mark as Despatched so color turns GREEN
-            $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', job_status = 'Despatched', updated_at = NOW() WHERE id = $record_id");
-            if ($xml_job_id) updateJobsTableForXMLCompletion($xml_job_id, $username);
-            $response['message'] = 'All tasks completed! Row is now Green.';
+            $stat_check = $mysqli->query("SELECT job_status FROM unique_xml_jobs WHERE id = $record_id");
+            $curr_stat = ($stat_check && $sc_row = $stat_check->fetch_assoc()) ? trim((string)$sc_row['job_status']) : '';
+
+            if ($curr_stat === 'Rework/Correction') {
+                $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', despatched_date = IF(despatched_date IS NULL OR despatched_date < '2000-01-01', NOW(), despatched_date), updated_at = NOW() WHERE id = $record_id");
+                $response['message'] = 'All tasks completed! Row is now Green.';
+            } else {
+                // FIX: Mark as Despatched so color turns GREEN
+                $mysqli->query("UPDATE unique_xml_jobs SET status = 'Completed', job_status = 'Despatched', updated_at = NOW() WHERE id = $record_id");
+                if ($xml_job_id) updateJobsTableForXMLCompletion($xml_job_id, $username);
+                $response['message'] = 'All tasks completed! Row is now Green.';
+            }
         } else {
             $response['message'] = 'Task saved successfully.';
         }
@@ -960,6 +986,10 @@ function fetchData() {
                     render: function(data, type, row) {
                         let statusText = data;
                         
+                        if (data === 'Rework/Correction') {
+                            return `<span class="badge" style="background-color: #6f42c1; color: #fff; font-weight: 700; padding: 3px 10px; border-radius: 12px; font-size: 10px;">Rework/Correction</span>`;
+                        }
+
                         let tasks = [row.Image_user, row.Table_user, row.WPContent_user, row.nlm_user, row.jats_user, row.clockss_user, row.HTML_user, row.new_html_user, row.Scielo_user, row.ebsco_user, row.pubmed_user, row.biblat_user, row.doaj_user, row.QC_user];
                         let isAssigned = false;
                         
