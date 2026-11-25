@@ -194,7 +194,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_client_month_excel')
         die("Please select a client.");
     }
 
-    $where = "j.job_status = 'Despatched' AND (COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(j.journal_name_client, ''), '-') COLLATE utf8mb4_bin) = ?";
+    $where = "j.job_status = 'Despatched' AND (j.job_status != 'Rework/Correction') AND (COALESCE(NULLIF(c.team_client_name, ''), NULLIF(c.client_name, ''), NULLIF(j.journal_name_client, ''), '-') COLLATE utf8mb4_bin) = ?";
     $params = [$client];
     $types = "s";
 
@@ -401,7 +401,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_jobs') {
             LEFT JOIN jobs jb ON j.job_id = jb.job_id
             LEFT JOIN client_master c ON jb.client_id = c.client_id
             LEFT JOIN xml_job_articles a ON j.id = a.xml_job_id
-            WHERE j.job_status = 'Despatched' 
+            WHERE j.job_status = 'Despatched' AND (j.job_status != 'Rework/Correction') 
             ORDER BY 
                 j.updated_at DESC, 
                 j.id DESC, 
@@ -716,7 +716,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_all_issues') {
             FROM unique_xml_jobs j
             LEFT JOIN jobs jb ON j.job_id = jb.job_id
             LEFT JOIN client_master c ON jb.client_id = c.client_id
-            WHERE j.job_status = 'Despatched'
+            WHERE j.job_status = 'Despatched' AND (j.job_status != 'Rework/Correction')
         ";
         if (!empty($client)) {
             $sql .= " AND (c.team_client_name = ? OR c.client_name = ? OR j.journal_name_client = ?)";
