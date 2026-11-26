@@ -648,11 +648,11 @@ $allProducts = getAllProducts($mysqli);
                             <option value="used" <?= $fstatus === 'used' ? 'selected' : '' ?>>Used</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <button type="submit" class="btn btn-primary btn-sm me-2">
+                    <div class="col-md-3 d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                             <i class="fas fa-search me-1"></i> Search
                         </button>
-                        <a href="product_purchases.php" class="btn btn-secondary btn-sm">
+                        <a href="product_purchases.php" class="btn btn-secondary btn-sm text-nowrap">
                             <i class="fas fa-times me-1"></i> Clear
                         </a>
                     </div>

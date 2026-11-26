@@ -311,6 +311,11 @@ $result = $mysqli->query($sql);
             margin: 0;
         }
 
+        .page-title-container span,
+        .page-title-container .text-muted {
+            color: #ffffff !important;
+        }
+
         .page-title-container i {
             color: white;
         }
@@ -486,8 +491,8 @@ $result = $mysqli->query($sql);
         <div class="card">
             <div class="card-header bg-white py-3">
                 <div class="page-title-container">
-                    <h5 class="mb-0 mb-0 text-white">Laptop Inventory</h5>
-                    <span class="text-muted">Total: <?= $result ? $result->num_rows : 0 ?> records</span>
+                    <h5 class="mb-0 text-white">Laptop Inventory</h5>
+                    <span class="text-white" style="color: #ffffff !important;">Total: <?= $result ? $result->num_rows : 0 ?> records</span>
                 </div>
             </div>
             <div class="card-body p-0">

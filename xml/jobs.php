@@ -1098,8 +1098,8 @@ require 'header.php';
                         </a>
                     <?php endif; ?>
                 <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
-                    <a href="jobs.php?mode=add" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i> Add Job(s)
+                    <a href="jobs.php?mode=add" class="btn btn-success btn-sm fw-semibold shadow-sm" style="color: #ffffff !important; background-color: #198754 !important; background: #198754 !important; border-color: #198754 !important;">
+                        <i class="fas fa-plus me-1" style="color: #ffffff !important;"></i> Add Job(s)
                     </a>
                 <?php endif; ?>
             </div>

@@ -264,6 +264,15 @@ h6.text-white,
     gap: 12px !important;
 }
 
+.page-title-container span,
+.page-title-container .text-muted,
+.page-title-container small,
+.dashboard-header span,
+.dashboard-header .text-muted,
+.dashboard-header small {
+    color: #ffffff !important;
+}
+
 .page-title-container>h1,
 .page-title-container>h2,
 .page-title-container>h3,
@@ -3052,7 +3061,7 @@ table.inner-table tbody tr:hover > td,
 }
 
 /* Table Pagination Polish */
-.pagination .page-item .page-link {
+.pagination .page-item:not(.active) .page-link {
     border-radius: 6px !important;
     margin: 0 2px !important;
     border: 1px solid #e2e8f0 !important;
@@ -3069,10 +3078,48 @@ table.inner-table tbody tr:hover > td,
     border-color: #e2e8f0 !important;
 }
 
-.pagination .page-item:not(.disabled) .page-link:hover {
+.pagination .page-item:not(.disabled):not(.active) .page-link:hover {
     background-color: #f1f5f9 !important;
     border-color: #cbd5e1 !important;
     color: #0f172a !important;
+}
+
+/* Active Pagination Page - Solid Blue Background with Pure White Text */
+.pagination .page-item.active .page-link,
+.pagination .page-item.active .page-link:hover,
+.pagination .page-item.active .page-link:focus,
+.page-item.active .page-link,
+.page-item.active .page-link:hover,
+.page-item.active .page-link:focus,
+.pagination li.active a,
+.pagination li.active span,
+.pagination li.active .page-link,
+div.dataTables_wrapper div.dataTables_paginate ul.pagination li.active .page-link,
+div.dataTables_wrapper div.dataTables_paginate ul.pagination li.active a,
+div.dataTables_wrapper div.dataTables_paginate ul.pagination li.active span,
+div.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+div.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover,
+.dataTables_paginate .paginate_button.current,
+.dataTables_paginate .paginate_button.current:hover,
+.dataTables_paginate .paginate_button.active,
+.dataTables_paginate .paginate_button.active:hover {
+    background-color: #0d6efd !important;
+    background: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    margin: 0 2px !important;
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+}
+
+.pagination .page-item.active .page-link *,
+.page-item.active .page-link *,
+div.dataTables_wrapper div.dataTables_paginate ul.pagination li.active .page-link *,
+div.dataTables_wrapper .dataTables_paginate .paginate_button.current *,
+.dataTables_paginate .paginate_button.current * {
+    color: #ffffff !important;
 }
 
 /* =========================================================================
@@ -3651,7 +3698,9 @@ a[onclick*="export" i]:hover,
 .btn:has(.bi-download):hover,
 .btn:has(.bi-file-earmark-excel):hover,
 .btn[title*="Export" i]:hover,
-.btn[aria-label*="Export" i]:hover {
+.btn[aria-label*="Export" i]:hover,
+a[href*="jobs.php?mode=add"]:hover,
+a[href*="ap_jobs.php?mode=add"]:hover {
     background-color: #157347 !important;
     background: #157347 !important;
     border-color: #146c43 !important;
@@ -4145,4 +4194,53 @@ table .btn-delete,
     outline: none !important;
     background-color: transparent !important;
     background: transparent !important;
+}
+
+/* =========================================================================
+   TEXT & ICON MUST BE WHITE WHEREVER BLUE BACKGROUND IS PRESENT
+   ========================================================================= */
+html body .btn-primary,
+html body .btn-primary *,
+html body .btn-primary i,
+html body .btn-primary span,
+html body .btn-primary:hover *,
+html body .btn-primary:hover i,
+html body .btn-primary:hover span,
+html body .bg-primary,
+html body .bg-primary *,
+html body .bg-primary i,
+html body .bg-primary span,
+html body .badge.bg-primary,
+html body .badge.bg-primary *,
+html body .badge-primary,
+html body .badge-primary *,
+html body [style*="#0d6efd"],
+html body [style*="#0d6efd"] *,
+html body [style*="#0d6efd"] i,
+html body [style*="#0d6efd"] span,
+html body [style*="#0b5ed7"],
+html body [style*="#0b5ed7"] *,
+html body [style*="#0b5ed7"] i,
+html body [style*="#0b5ed7"] span,
+html body [style*="rgb(13, 110, 253)"],
+html body [style*="rgb(13, 110, 253)"] *,
+html body [style*="rgb(13, 110, 253)"] i,
+html body [style*="rgb(13, 110, 253)"] span,
+html body [style*="rgb(11, 94, 215)"],
+html body [style*="rgb(11, 94, 215)"] *,
+html body [style*="rgb(11, 94, 215)"] i,
+html body [style*="rgb(11, 94, 215)"] span,
+html body .page-item.active .page-link,
+html body .page-item.active .page-link *,
+html body .page-item.active .page-link:hover,
+html body .page-item.active .page-link:hover *,
+html body .pagination .page-item.active .page-link,
+html body .pagination .page-item.active .page-link *,
+html body .pagination .page-item.active a,
+html body .pagination .page-item.active span,
+html body .paginate_button.current,
+html body .paginate_button.current *,
+html body .dataTables_paginate .paginate_button.current,
+html body .dataTables_paginate .paginate_button.current * {
+    color: #ffffff !important;
 }

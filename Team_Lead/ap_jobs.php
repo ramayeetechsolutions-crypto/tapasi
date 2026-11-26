@@ -1086,8 +1086,8 @@ require 'header.php';
             </div>
             <?php if ($mode !== 'add' && $mode !== 'edit'): ?>
                 <div style="margin-left: auto;">
-                    <a href="ap_jobs.php?mode=add" class="btn btn-light btn-sm fw-semibold shadow-sm" style="color: #212529 !important; background-color: #ffffff !important; border: 1px solid #dee2e6 !important;">
-                        <i class="fas fa-plus me-1" style="color: #0d6efd !important; font-weight: 900;"></i> Add Job(s)
+                    <a href="ap_jobs.php?mode=add" class="btn btn-success btn-sm fw-semibold shadow-sm" style="color: #ffffff !important; background-color: #198754 !important; background: #198754 !important; border-color: #198754 !important;">
+                        <i class="fas fa-plus me-1" style="color: #ffffff !important; font-weight: 900;"></i> Add Job(s)
                     </a>
                 </div>
             <?php endif; ?>
