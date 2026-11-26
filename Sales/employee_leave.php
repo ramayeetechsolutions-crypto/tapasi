@@ -186,9 +186,9 @@ include 'header.php';
     
     /* Header Action Button (+ New Request) */
     .btn-header-action {
-        background-color: #ffffff !important;
-        color: #212529 !important;
-        border: 1px solid #ced4da !important;
+        background-color: #198754 !important;
+        color: #ffffff !important;
+        border: 1px solid #198754 !important;
         font-weight: 600 !important;
         padding: 8px 18px !important;
         border-radius: 8px !important;
@@ -202,18 +202,19 @@ include 'header.php';
     }
     
     .btn-header-action:hover {
-        background-color: #f8f9fa !important;
-        color: #0d6efd !important;
+        background-color: #157347 !important;
+        color: #ffffff !important;
+        border-color: #146c43 !important;
         transform: translateY(-1px);
         box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12) !important;
     }
     
     .btn-header-action i {
-        color: #0d6efd !important;
+        color: #ffffff !important;
         margin-right: 6px !important;
     }
     .btn-header-action span {
-        color: #212529 !important;
+        color: #ffffff !important;
         font-weight: 600 !important;
     }
 
@@ -321,9 +322,9 @@ include 'header.php';
                 </div>
                 
                 <!-- Button to Open Modal -->
-                <button type="button" class="btn btn-header-action" data-bs-toggle="modal" data-bs-target="#applyOTModal">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>New Request</span>
+                <button type="button" class="btn btn-success btn-header-action text-white" data-bs-toggle="modal" data-bs-target="#applyOTModal">
+                    <i class="fas fa-plus-circle text-white"></i>
+                    <span class="text-white">New Request</span>
                 </button>
             </div>
         </div>

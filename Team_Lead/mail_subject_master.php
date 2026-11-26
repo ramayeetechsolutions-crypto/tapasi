@@ -253,7 +253,7 @@ if (!empty($types)) {
                     <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage mail subject entries and job references</p>
                 </div>
                 <div>
-                    <a href="mail_subject_master.php?mode=add" class="btn btn-primary text-white fw-bold btn-sm shadow-sm">
+                    <a href="mail_subject_master.php?mode=add" class="btn btn-success text-white fw-bold btn-sm shadow-sm">
                         <i class="fas fa-plus me-1"></i> Add New
                     </a>
                 </div>
