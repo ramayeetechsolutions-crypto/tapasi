@@ -1346,6 +1346,7 @@ $clients_result = $mysqli->query("SELECT client_id, client_name, company_name FR
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
  
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1390,10 +1391,11 @@ $clients_result = $mysqli->query("SELECT client_id, client_name, company_name FR
             color: white;
         }
 
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #0056b3; padding-bottom: 20px; }
-        .form-section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; margin: 0 !important; padding-top: 76px !important; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 8px auto !important; background: white; padding: 12px 20px 20px !important; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0056b3; padding-bottom: 15px; }
+        .form-section { margin: 10px 0 !important; padding: 12px 15px !important; border: 1px solid #ddd; border-radius: 5px; }
+        .form-section:first-child { margin-top: 0 !important; padding-top: 8px !important; }
         .form-group { margin: 15px 0; display: inline-block; margin-right: 20px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         select, input[type="number"], input[type="text"] { padding: 8px; width: 150px; border: 1px solid #ddd; border-radius: 4px; }

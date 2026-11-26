@@ -273,7 +273,7 @@ require 'header.php';
 <th>Description</th>
 <th>Created By</th>
 <th>Created</th>
-<th class="text-end">Actions</th>
+<th class="text-end text-nowrap" style="white-space: nowrap !important; min-width: 90px; width: 100px;">Actions</th>
 </tr>
 </thead>
 <tbody>
@@ -292,13 +292,15 @@ require 'header.php';
 <td><?= h($row['job_description']) ?></td>
 <td><?= h($row['created_name'] ?: $row['created_by']) ?></td>
 <td><?= formatDate($row['created_date']) ?></td>
-<td class="text-end">
-<a class="btn btn-sm btn-warning" href="job_master.php?mode=edit&id=<?= (int)$row['job_id'] ?>"><i class="fa fa-edit"></i></a>
-<form method="post" style="display:inline;" onsubmit="return confirm('Delete job <?= h($row['job_name']) ?>?')">
-<input type="hidden" name="action" value="delete">
-<input type="hidden" name="job_id" value="<?= (int)$row['job_id'] ?>">
-<button class="btn btn-sm btn-danger"><i class="fa fa-trash"></i></button>
-</form>
+<td class="text-end text-nowrap" style="white-space: nowrap !important;">
+    <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap" style="white-space: nowrap !important;">
+        <a class="btn btn-sm btn-warning" href="job_master.php?mode=edit&id=<?= (int)$row['job_id'] ?>" title="Edit"><i class="fa fa-edit"></i></a>
+        <form method="post" class="d-inline m-0 p-0" style="display:inline;" onsubmit="return confirm('Delete job <?= h($row['job_name']) ?>?')">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="job_id" value="<?= (int)$row['job_id'] ?>">
+            <button class="btn btn-sm btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+        </form>
+    </div>
 </td>
 </tr>
 <?php endwhile; else: ?>
