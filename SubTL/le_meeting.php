@@ -18,48 +18,81 @@ require_once 'db.php';
 // --- AUTO ENSURE COLUMNS EXIST IN weekly_targets ---
 $chk_cols = $mysqli->query("SHOW COLUMNS FROM weekly_targets LIKE 'reason'");
 if ($chk_cols && $chk_cols->num_rows == 0) {
-    $mysqli->query("ALTER TABLE weekly_targets ADD COLUMN reason TEXT DEFAULT NULL");
+    @$mysqli->query("ALTER TABLE weekly_targets ADD COLUMN reason TEXT DEFAULT NULL");
 }
 $chk_ie = $mysqli->query("SHOW COLUMNS FROM article_errors LIKE 'internal_external'");
 if ($chk_ie && $chk_ie->num_rows == 0) {
-    $mysqli->query("ALTER TABLE article_errors ADD COLUMN internal_external VARCHAR(50) DEFAULT 'Internal'");
+    @$mysqli->query("ALTER TABLE article_errors ADD COLUMN internal_external VARCHAR(50) DEFAULT 'Internal'");
 }
 $chk_le_comp = $mysqli->query("SHOW COLUMNS FROM le LIKE 'le_comp_date'");
 if ($chk_le_comp && $chk_le_comp->num_rows == 0) {
-    $mysqli->query("ALTER TABLE le ADD COLUMN le_comp_date DATE NULL DEFAULT NULL");
+    @$mysqli->query("ALTER TABLE le ADD COLUMN le_comp_date DATE NULL DEFAULT NULL");
 }
 $chk_leqc_comp = $mysqli->query("SHOW COLUMNS FROM le LIKE 'leqc_comp_date'");
 if ($chk_leqc_comp && $chk_leqc_comp->num_rows == 0) {
-    $mysqli->query("ALTER TABLE le ADD COLUMN leqc_comp_date DATE NULL DEFAULT NULL");
+    @$mysqli->query("ALTER TABLE le ADD COLUMN leqc_comp_date DATE NULL DEFAULT NULL");
+}
+
+// Auto-ensure default values for NOT NULL columns to prevent strict mode errors on live/fresh DBs
+@$mysqli->query("ALTER TABLE weekly_targets MODIFY COLUMN from_date DATE DEFAULT '2000-01-01'");
+@$mysqli->query("ALTER TABLE weekly_targets MODIFY COLUMN to_date DATE DEFAULT '2000-01-01'");
+@$mysqli->query("ALTER TABLE weekly_targets MODIFY COLUMN tl_id INT DEFAULT 0");
+@$mysqli->query("ALTER TABLE weekly_targets MODIFY COLUMN assigned_by INT DEFAULT 0");
+@$mysqli->query("ALTER TABLE weekly_targets MODIFY COLUMN target_limit INT DEFAULT 0");
+
+// --- APRIL-BASED OPERATIONAL WEEK DATE CALCULATOR ---
+if (!function_exists('getOpWeekDates')) {
+    function getOpWeekDates($week_number, $year = null) {
+        if ($year === null) $year = date('Y');
+        $april_first = strtotime($year . '-04-01');
+        $day_of_week = date('N', $april_first);
+        $first_monday = ($day_of_week == 1) ? $april_first : strtotime('+' . (8 - $day_of_week) . ' days', $april_first);
+        $week_start = strtotime('+' . (($week_number - 1) * 7) . ' days', $first_monday);
+        $week_end = strtotime('+5 days', $week_start); // Monday to Saturday
+        return [
+            'from_date' => date('Y-m-d', $week_start),
+            'to_date' => date('Y-m-d', $week_end)
+        ];
+    }
 }
 
 // --- AJAX SAVE LOGIC FOR WEEKLY DATA ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_weekly_data') {
     header('Content-Type: application/json');
-    $emp_id = $_POST['emp_id'] ?? '';
-    $week_num = (int)($_POST['week_num'] ?? 0);
-    $reason = trim($_POST['reason'] ?? '');
-    $year = !empty($_POST['year']) ? (int)$_POST['year'] : date('Y');
+    try {
+        $emp_id = $_POST['emp_id'] ?? '';
+        $week_num = (int)($_POST['week_num'] ?? 0);
+        $reason = trim($_POST['reason'] ?? '');
+        $year = !empty($_POST['year']) ? (int)$_POST['year'] : date('Y');
 
-    // Check if data already exists for this week
-    $check_sql = "SELECT id FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
-    $stmt_chk = $mysqli->prepare($check_sql);
-    $stmt_chk->bind_param("sii", $emp_id, $week_num, $year);
-    $stmt_chk->execute();
-    $res_chk = $stmt_chk->get_result();
-    
-    if ($res_chk->num_rows > 0) {
-        // Update existing record
-        $upd = $mysqli->prepare("UPDATE weekly_targets SET reason=? WHERE tm_id=? AND week_number=? AND year=?");
-        $upd->bind_param("ssii", $reason, $emp_id, $week_num, $year);
-        $upd->execute();
-    } else {
-        // Insert new record
-        $ins = $mysqli->prepare("INSERT INTO weekly_targets (tm_id, week_number, year, reason, target_limit, achieved_target, assigned_date, status) VALUES (?, ?, ?, ?, 0, 0, NOW(), 'Active')");
-        $ins->bind_param("siis", $emp_id, $week_num, $year, $reason);
-        $ins->execute();
+        $dates = getOpWeekDates($week_num, $year);
+        $from_date = $dates['from_date'] ?? date('Y-m-d');
+        $to_date = $dates['to_date'] ?? date('Y-m-d');
+
+        // Check if data already exists for this week
+        $check_sql = "SELECT id FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
+        $stmt_chk = $mysqli->prepare($check_sql);
+        $stmt_chk->bind_param("sii", $emp_id, $week_num, $year);
+        $stmt_chk->execute();
+        $res_chk = $stmt_chk->get_result();
+        
+        if ($res_chk->num_rows > 0) {
+            // Update existing record
+            $upd = $mysqli->prepare("UPDATE weekly_targets SET reason=? WHERE tm_id=? AND week_number=? AND year=?");
+            $upd->bind_param("ssii", $reason, $emp_id, $week_num, $year);
+            $upd->execute();
+        } else {
+            // Insert new record
+            $ins = $mysqli->prepare("INSERT INTO weekly_targets 
+                (tl_id, tm_id, target_limit, from_date, to_date, assigned_by, assigned_date, achieved_target, status, week_number, year, reason, leave_count) 
+                VALUES (0, ?, 0, ?, ?, 0, NOW(), 0, 'Active', ?, ?, ?, 0)");
+            $ins->bind_param("ssssss", $emp_id, $from_date, $to_date, $week_num, $year, $reason);
+            $ins->execute();
+        }
+        echo json_encode(['success' => true]);
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
-    echo json_encode(['success' => true]);
     exit;
 }
 
