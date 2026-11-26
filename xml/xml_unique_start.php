@@ -1578,10 +1578,10 @@ if ($results && $results->num_rows > 0) {
             </div>
         </div>
 
-        <!-- Remarks and Corrections Data Table -->
+        <!-- Reworks and Corrections Data Table -->
         <div class="card shadow-sm border mt-4 mb-4">
             <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background-color: #5e6b77; color: #ffffff;">
-                <h6 class="mb-0 fw-bold" style="font-size: 14px;"><i class="fas fa-tools me-2"></i>Remarks and Corrections</h6>
+                <h6 class="mb-0 fw-bold" style="font-size: 14px;"><i class="fas fa-tools me-2"></i>Reworks and Corrections</h6>
                 <span class="badge bg-light text-dark fw-bold"><?= count($rework_jobs) ?> Records</span>
             </div>
             <div class="card-body p-0">
@@ -1969,7 +1969,7 @@ if ($results && $results->num_rows > 0) {
                             <tr>
                                 <td colspan="38" class="text-center py-4 text-muted">
                                     <i class="fas fa-inbox fa-2x mb-2"></i>
-                                    <h6>No Remarks and Corrections records found</h6>
+                                    <h6>No Reworks and Corrections records found</h6>
                                 </td>
                             </tr>
                             <?php endif; ?>

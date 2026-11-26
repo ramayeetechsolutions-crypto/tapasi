@@ -115,7 +115,7 @@ function handleFullUpdateRequest() {
         }
         $stmt->close();
         
-        $check = $mysqli->prepare("SELECT Image_user, Table_user, WPContent_user, nlm_user, jats_user, clockss_user, HTML_user, new_html_user, Scielo_user, ebsco_user, pubmed_user, biblat_user, doaj_user, QC_user FROM unique_xml_jobs WHERE id = ?");
+        $check = $mysqli->prepare("SELECT Image_user, Table_user, WPContent_user, nlm_user, jats_user, clockss_user, HTML_user, new_html_user, direct_html_user, Scielo_user, ebsco_user, pubmed_user, biblat_user, doaj_user, QC_user FROM unique_xml_jobs WHERE id = ?");
         $check->bind_param("i", $record_id);
         $check->execute();
         $res = $check->get_result()->fetch_assoc();
@@ -249,11 +249,8 @@ function handleCompleteRequest() {
     else if ($field === 'jats_user') $targetNum = $row_data['jats'] ?? '';
     else if ($field === 'clockss_user') $targetNum = $row_data['clockss'] ?? '';
     else if ($field === 'HTML_user') $targetNum = $row_data['html'] ?? '';
-    else if ($field === 'new_html_user') {
-        $new = trim((string)($row_data['new_html'] ?? ''));
-        $direct = trim((string)($row_data['direct_html'] ?? ''));
-        $targetNum = ($new !== '' && $new !== '-') ? $new : $direct;
-    }
+    else if ($field === 'new_html_user') $targetNum = $row_data['new_html'] ?? '';
+    else if ($field === 'direct_html_user') $targetNum = $row_data['direct_html'] ?? '';
     else if ($field === 'Scielo_user') $targetNum = $row_data['scielo'] ?? '';
     else if ($field === 'ebsco_user') $targetNum = $row_data['ebsco'] ?? '';
     else if ($field === 'pubmed_user') $targetNum = $row_data['pubmed'] ?? '';
@@ -283,7 +280,7 @@ function handleCompleteRequest() {
         $stmt->execute();
         $stmt->close();
         
-        $check = $mysqli->prepare("SELECT Image_user, Table_user, WPContent_user, nlm_user, jats_user, clockss_user, HTML_user, new_html_user, Scielo_user, ebsco_user, pubmed_user, biblat_user, doaj_user, QC_user FROM unique_xml_jobs WHERE id = ?");
+        $check = $mysqli->prepare("SELECT Image_user, Table_user, WPContent_user, nlm_user, jats_user, clockss_user, HTML_user, new_html_user, direct_html_user, Scielo_user, ebsco_user, pubmed_user, biblat_user, doaj_user, QC_user FROM unique_xml_jobs WHERE id = ?");
         $check->bind_param("i", $record_id);
         $check->execute();
         $res = $check->get_result()->fetch_assoc();
@@ -491,7 +488,8 @@ function fetchData() {
             $jats_na = ($safe_trim($row['jats'])==='' || $safe_trim($row['jats'])==='-');
             $clockss_na = ($safe_trim($row['clockss'])==='' || $safe_trim($row['clockss'])==='-');
             $html_na = ($safe_trim($row['html'])==='' || $safe_trim($row['html'])==='-');
-            $nhtml_na = (($safe_trim($row['new_html'])==='' || $safe_trim($row['new_html'])==='-') && ($safe_trim($row['direct_html'])==='' || $safe_trim($row['direct_html'])==='-'));
+            $nhtml_na = ($safe_trim($row['new_html'])==='' || $safe_trim($row['new_html'])==='-');
+            $dhtml_na = ($safe_trim($row['direct_html'])==='' || $safe_trim($row['direct_html'])==='-');
             $scielo_na = ($safe_trim($row['scielo'])==='' || $safe_trim($row['scielo'])==='-');
             $ebsco_na = ($safe_trim($row['ebsco'])==='' || $safe_trim($row['ebsco'])==='-');
             $pubmed_na = ($safe_trim($row['pubmed'])==='' || $safe_trim($row['pubmed'])==='-');
@@ -505,6 +503,7 @@ function fetchData() {
             if ($clockss_na && $safe_trim($row['clockss_user']) === '') $row['clockss_user'] = 'N/A';
             if ($html_na && $safe_trim($row['HTML_user']) === '') $row['HTML_user'] = 'N/A';
             if ($nhtml_na && $safe_trim($row['new_html_user']) === '') $row['new_html_user'] = 'N/A';
+            if ($dhtml_na && $safe_trim($row['direct_html_user']) === '') $row['direct_html_user'] = 'N/A';
             if ($scielo_na && $safe_trim($row['Scielo_user']) === '') $row['Scielo_user'] = 'N/A';
             if ($ebsco_na && $safe_trim($row['ebsco_user']) === '') $row['ebsco_user'] = 'N/A';
             if ($pubmed_na && $safe_trim($row['pubmed_user']) === '') $row['pubmed_user'] = 'N/A';
@@ -512,7 +511,7 @@ function fetchData() {
             if ($doaj_na && $safe_trim($row['doaj_user']) === '') $row['doaj_user'] = 'N/A';
 
             // --- Swap ID with FULL Name for Task Columns ---
-            $cols_to_map = ['Image_user', 'Table_user', 'WPContent_user', 'nlm_user', 'jats_user', 'clockss_user', 'HTML_user', 'new_html_user', 'Scielo_user', 'ebsco_user', 'pubmed_user', 'biblat_user', 'doaj_user', 'QC_user'];
+            $cols_to_map = ['Image_user', 'Table_user', 'WPContent_user', 'nlm_user', 'jats_user', 'clockss_user', 'HTML_user', 'new_html_user', 'direct_html_user', 'Scielo_user', 'ebsco_user', 'pubmed_user', 'biblat_user', 'doaj_user', 'QC_user'];
                 foreach ($cols_to_map as $c) {
                     $val = trim((string)$row[$c]);
                     $row[$c . '_raw'] = $val;   // <-- NEW LINE (raw username store panna)
@@ -877,7 +876,8 @@ function fetchData() {
                             <th>JATS</th>
                             <th>Clockss</th>
                             <th>HTML</th>
-                            <th>New HTML/Direct HTML</th>
+                            <th>New HTML</th>
+                            <th>Direct HTML</th>
                             <th>Scielo</th>
                             <th>EBSCO</th>
                             <th>PubMed</th>
@@ -990,7 +990,7 @@ function fetchData() {
                             return `<span class="badge" style="background-color: #6f42c1; color: #fff; font-weight: 700; padding: 3px 10px; border-radius: 12px; font-size: 10px;">Rework/Correction</span>`;
                         }
 
-                        let tasks = [row.Image_user, row.Table_user, row.WPContent_user, row.nlm_user, row.jats_user, row.clockss_user, row.HTML_user, row.new_html_user, row.Scielo_user, row.ebsco_user, row.pubmed_user, row.biblat_user, row.doaj_user, row.QC_user];
+                        let tasks = [row.Image_user, row.Table_user, row.WPContent_user, row.nlm_user, row.jats_user, row.clockss_user, row.HTML_user, row.new_html_user, row.direct_html_user, row.Scielo_user, row.ebsco_user, row.pubmed_user, row.biblat_user, row.doaj_user, row.QC_user];
                         let isAssigned = false;
                         
                         for(let i=0; i<tasks.length; i++) {
@@ -1053,7 +1053,7 @@ function fetchData() {
                 ...[
                     { field: 'Image_user' }, { field: 'Table_user' }, { field: 'WPContent_user' },
                     { field: 'nlm_user' }, { field: 'jats_user' }, { field: 'clockss_user' },
-                    { field: 'HTML_user' }, { field: 'new_html_user' }, 
+                    { field: 'HTML_user' }, { field: 'new_html_user' }, { field: 'direct_html_user' },
                     { field: 'Scielo_user' }, { field: 'ebsco_user' }, 
                     { field: 'pubmed_user' }, { field: 'biblat_user' }, { field: 'doaj_user' },
                     { field: 'QC_user' }
