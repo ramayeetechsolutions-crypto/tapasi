@@ -595,7 +595,7 @@ if (!$keyboards) {
         <div class="card mb-4">
             <div class="card-body">
                 <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <input type="text" name="q" class="form-control form-control-sm" 
                                placeholder="Search keyboards..." value="<?= h($q) ?>">
                     </div>
@@ -615,11 +615,11 @@ if (!$keyboards) {
                             <option value="team" <?= $sort === 'team' ? 'selected' : '' ?>>Sort by Team</option>
                         </select>
                     </div>
-                    <div class="col-md-12 mt-2">
-                        <button type="submit" class="btn btn-primary btn-sm me-2">
+                    <div class="col-md-3 d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                             <i class="fas fa-search me-1"></i> Search
                         </button>
-                        <a href="keyboard.php" class="btn btn-secondary btn-sm">
+                        <a href="keyboard.php" class="btn btn-secondary btn-sm text-nowrap">
                             <i class="fas fa-times me-1"></i> Clear
                         </a>
                     </div>

@@ -352,11 +352,11 @@ if (!$mice) {
         <div class="card mb-4">
             <div class="card-body">
                 <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <input type="text" name="q" class="form-control form-control-sm" 
                                placeholder="Search mice..." value="<?= h($q) ?>">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <select name="sort" class="form-select form-select-sm">
                             <option value="purchase_date" <?= $sort === 'purchase_date' ? 'selected' : '' ?>>Sort by Date</option>
                             <option value="model" <?= $sort === 'model' ? 'selected' : '' ?>>Sort by Model</option>
@@ -369,11 +369,11 @@ if (!$mice) {
                             <option value="asc" <?= $dir === 'asc' ? 'selected' : '' ?>>Ascending</option>
                         </select>
                     </div>
-                    <div class="col-md-12 mt-2">
-                        <button type="submit" class="btn btn-primary btn-sm me-2">
+                    <div class="col-md-auto d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
                             <i class="fas fa-search me-1"></i> Search
                         </button>
-                        <a href="mouse.php" class="btn btn-secondary btn-sm">
+                        <a href="mouse.php" class="btn btn-secondary btn-sm text-nowrap">
                             <i class="fas fa-times me-1"></i> Clear
                         </a>
                     </div>
