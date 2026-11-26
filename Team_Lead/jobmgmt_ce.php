@@ -131,6 +131,20 @@ while ($row_team = $res_team->fetch_assoc()) {
 }
 $stmt_team->close();
 
+// Only CE team members for Employee filter dropdown
+$ce_filter_members = [];
+$res_ce_emps = $mysqli->query("SELECT em.employee_username, em.employee_name 
+                               FROM employee_master em 
+                               WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                 AND em.status = 'Active' 
+                                 AND (FIND_IN_SET('1', em.process) OR em.process = 'CE' OR em.team_id = 6) 
+                               ORDER BY em.employee_name ASC");
+if ($res_ce_emps) {
+    while ($row_ce = $res_ce_emps->fetch_assoc()) {
+        $ce_filter_members[$row_ce['employee_username']] = $row_ce['employee_name'];
+    }
+}
+
 $team_condition = "j.assigned_to = ?";
 if (!empty($team_users)) {
     $team_list = implode(',', $team_users);
@@ -239,11 +253,14 @@ $sql = "SELECT
     -- Jobs table fields
     j.job_id, j.job_date, c.client_name, c.team_client_name, j.journal, j.issue, j.journal_issue, j.article,
     jm.job_name AS process, j.dispatch_date, j.file_path as jfile_path, j.assigned_to, j.due_date,
-    j.word_count,
+    COALESCE(NULLIF(ce.word_count, 0), j.word_count, 0) AS word_count,
     
     -- CE table fields
-   ce.eq as ce_eq, ce.ref as ce_ref, ce.images as ce_images, ce.tables_count as ce_tables,
-    ce.ce_date, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time, ce.done_by AS ce_done_by, ce.status AS ce_status,
+    COALESCE(ce.eq, j.equations, 0) as ce_eq, 
+    COALESCE(ce.ref, j.ref, 0) as ce_ref, 
+    COALESCE(ce.images, j.images, 0) as ce_images, 
+    COALESCE(ce.tables_count, j.tables, 0) as ce_tables,
+    COALESCE(ce.ce_comp_date, ce.ce_date) as ce_date, ce.ce_start_time, ce.ce_end_time, ce.ref_start_time, ce.ref_end_time, ce.fqa_start_time, ce.fqa_end_time, ce.done_by AS ce_done_by, ce.status AS ce_status,
     ce.assigned_to_content, ce.assigned_to_img, ce.priority, ce.remarks as ce_remarks, ce.is_moved, 
     
     -- From job_uploads table
@@ -810,7 +827,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     <label class="form-label small mb-1">Employee</label>
                     <select name="filter_emp" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
-                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                        <?php foreach ($ce_filter_members as $uname => $ename): ?>
                             <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
                                 <?= h($ename) ?> (<?= h($uname) ?>)
                             </option>

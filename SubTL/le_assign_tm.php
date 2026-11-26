@@ -30,7 +30,9 @@ $check_columns = [
     'assigned_to_le_qc' => "VARCHAR(100) NULL DEFAULT NULL",
     'wc_exref' => "VARCHAR(50) NULL DEFAULT NULL",
     'status_button' => "VARCHAR(100) NULL DEFAULT NULL",
-    'priority' => "VARCHAR(50) NULL DEFAULT NULL"
+    'priority' => "VARCHAR(50) NULL DEFAULT NULL",
+    'le_comp_date' => "DATE NULL DEFAULT NULL",
+    'leqc_comp_date' => "DATE NULL DEFAULT NULL"
 ];
 foreach ($check_columns as $col => $definition) {
     $check = $mysqli->query("SHOW COLUMNS FROM le LIKE '$col'");
@@ -133,6 +135,20 @@ if ($res_les) {
     }
 }
 
+// Only LE team members for filter section dropdown
+$le_filter_tms = [];
+$res_le_filter = $mysqli->query("SELECT em.employee_id, em.employee_username, em.employee_name 
+                                FROM employee_master em 
+                                WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                  AND em.status = 'Active' 
+                                  AND (FIND_IN_SET('2', em.process) OR em.process = 'LE' OR em.team_id = 10) 
+                                ORDER BY em.employee_name ASC");
+if ($res_le_filter) {
+    while ($le = $res_le_filter->fetch_assoc()) {
+        $le_filter_tms[] = $le;
+    }
+}
+
 // --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
@@ -174,20 +190,24 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     if ($target_type === 'le') {
         if ($new_status === 'Completed') {
             $db_status = $qc_side_done ? 'Completed' : 'LE Done';
+            $update_query = "UPDATE le SET status = ?, le_comp_date = CURDATE(), le_date = COALESCE(le_date, CURDATE()), last_updated = NOW() WHERE id = ?";
         } else {
             if ($qc_side_done) $db_status = 'LE-QC Done';
             else $db_status = ($new_status === 'In Progress') ? 'In Progress' : 'Need to Assign';
+            $update_query = "UPDATE le SET status = ?, le_comp_date = NULL, last_updated = NOW() WHERE id = ?";
         }
     } elseif ($target_type === 'le_qc') {
         if ($new_status === 'Completed') {
             $db_status = $le_side_done ? 'Completed' : 'LE-QC Done';
+            $update_query = "UPDATE le SET status = ?, leqc_comp_date = CURDATE(), le_date = COALESCE(le_date, CURDATE()), last_updated = NOW() WHERE id = ?";
         } else {
             if ($le_side_done) $db_status = 'LE Done';
             else $db_status = ($new_status === 'In Progress') ? 'In Progress' : 'Need to Assign';
+            $update_query = "UPDATE le SET status = ?, leqc_comp_date = NULL, last_updated = NOW() WHERE id = ?";
         }
     }
 
-    $stmt = $mysqli->prepare("UPDATE le SET status = ?, last_updated = NOW() WHERE id = ?");
+    $stmt = $mysqli->prepare($update_query);
     $stmt->bind_param("si", $db_status, $le_id);
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'status' => $db_status]);
@@ -1072,7 +1092,7 @@ require 'header.php';
                     <label class="form-label small">LE Member</label>
                     <select name="le_tm" class="form-select form-select-sm">
                         <option value="">All Members</option>
-                        <?php foreach ($les as $le): ?>
+                        <?php foreach ($le_filter_tms as $le): ?>
                             <option value="<?= h($le['employee_username']) ?>" 
                                 <?= $le_tm_filter == $le['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($le['employee_name']) ?> (<?= h($le['employee_username']) ?>)
@@ -1354,7 +1374,7 @@ require 'header.php';
                                                 data-previous="<?= h($row['assigned_to_le'] ?? '') ?>"
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le', this)">
                                             <option value=""><?= !empty($row['assigned_to_le']) ? 'Change LE TM' : 'Assign LE' ?></option>
-                                            <?php foreach ($les as $le): ?>
+                                            <?php foreach ($le_filter_tms as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= ($row['assigned_to_le'] == $le['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($le['employee_name']) ?> (<?= h($le['employee_username']) ?>)
                                                 </option>
@@ -1415,7 +1435,7 @@ require 'header.php';
                                                 data-previous="<?= h($row['assigned_to_le_qc'] ?? '') ?>"
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'le_qc', this)">
                                             <option value=""><?= !empty($row['assigned_to_le_qc']) ? 'Change LE-QC TM' : 'Assign LE-QC' ?></option>
-                                            <?php foreach ($les as $le): ?>
+                                            <?php foreach ($le_filter_tms as $le): ?>
                                                 <option value="<?= h($le['employee_username']) ?>" data-name="<?= h($le['employee_name']) ?>" <?= (($row['assigned_to_le_qc'] ?? '') == $le['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($le['employee_name']) ?> (<?= h($le['employee_username']) ?>)
                                                 </option>

@@ -32,6 +32,29 @@ if ($emp_filter_res) {
     }
 }
 
+// Only TS/QC team members for filter section dropdowns
+$ts_filter_tms = [];
+$res_ts_filter = $mysqli->query("SELECT em.employee_id, em.employee_username, em.employee_name 
+                                FROM employee_master em 
+                                WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                  AND em.status = 'Active' 
+                                  AND (
+                                      FIND_IN_SET('3', em.process) 
+                                      OR FIND_IN_SET('20', em.process) 
+                                      OR FIND_IN_SET('68', em.process) 
+                                      OR FIND_IN_SET('67', em.process) 
+                                      OR FIND_IN_SET('9', em.process) 
+                                      OR em.process = 'TS' 
+                                      OR em.team_id = 5
+                                  ) 
+                                  AND em.employee_username != 'TPS026' 
+                                ORDER BY em.employee_name ASC");
+if ($res_ts_filter) {
+    while ($ts_row = $res_ts_filter->fetch_assoc()) {
+        $ts_filter_tms[] = $ts_row;
+    }
+}
+
 // --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
@@ -743,7 +766,7 @@ require 'header.php';
                     <label class="form-label small">Employee</label>
                     <select name="employee" class="form-select form-select-sm">
                         <option value="">All Employees</option>
-                        <?php foreach ($all_employees as $emp): ?>
+                        <?php foreach ($ts_filter_tms as $emp): ?>
                             <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
                             </option>
@@ -754,7 +777,7 @@ require 'header.php';
                     <label class="form-label small">QC TM</label>
                     <select name="qc_tm" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
-                        <?php foreach ($tms as $tm): ?>
+                        <?php foreach ($ts_filter_tms as $tm): ?>
                             <option value="<?= h($tm['employee_username']) ?>" 
                                 <?= $qc_tm_filter == $tm['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($tm['employee_name']) ?>
@@ -947,7 +970,7 @@ require 'header.php';
                                                 data-previous="<?= h($row['assigned_to_qc'] ?? '') ?>"
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, this)">
                                             <option value=""><?= !empty($row['assigned_to_qc']) ? 'Change QC TM' : 'Assign LE-QC' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_qc'] == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?>
                                                 </option>
@@ -985,7 +1008,7 @@ require 'header.php';
                                     <td>
                                         <select class="form-select form-select-sm p-1" style="min-width: 100px; font-size: 11px;" onchange="updateInlineField(<?= $row['id'] ?>, 'upload_by', this.value)">
                                             <option value="">Select TM</option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" <?= (($row['upload_by'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?>
                                                 </option>

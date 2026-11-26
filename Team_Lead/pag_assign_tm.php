@@ -136,6 +136,29 @@ if ($emp_filter_res) {
     }
 }
 
+// Only TS/QC team members for filter section dropdowns
+$ts_filter_tms = [];
+$res_ts_filter = $mysqli->query("SELECT em.employee_id, em.employee_username, em.employee_name 
+                                FROM employee_master em 
+                                WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                  AND em.status = 'Active' 
+                                  AND (
+                                      FIND_IN_SET('3', em.process) 
+                                      OR FIND_IN_SET('20', em.process) 
+                                      OR FIND_IN_SET('68', em.process) 
+                                      OR FIND_IN_SET('67', em.process) 
+                                      OR FIND_IN_SET('9', em.process) 
+                                      OR em.process = 'TS' 
+                                      OR em.team_id = 5
+                                  ) 
+                                  AND em.employee_username != 'TPS026' 
+                                ORDER BY em.employee_name ASC");
+if ($res_ts_filter) {
+    while ($ts_row = $res_ts_filter->fetch_assoc()) {
+        $ts_filter_tms[] = $ts_row;
+    }
+}
+
 // --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
@@ -768,7 +791,7 @@ require 'header.php';
                     <label class="form-label small">Employee</label>
                     <select name="employee" class="form-select form-select-sm">
                         <option value="">All Employees</option>
-                        <?php foreach ($all_employees as $emp): ?>
+                        <?php foreach ($ts_filter_tms as $emp): ?>
                             <option value="<?= h($emp['employee_username']) ?>" <?= $employee_filter == $emp['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($emp['employee_name']) ?> (<?= h($emp['employee_username']) ?>)
                             </option>
@@ -779,7 +802,7 @@ require 'header.php';
                     <label class="form-label small">TS TM</label>
                     <select name="pag_tm" class="form-select form-select-sm">
                         <option value="">All</option>
-                        <?php foreach ($tms as $tm): ?>
+                        <?php foreach ($ts_filter_tms as $tm): ?>
                             <option value="<?= h($tm['employee_username']) ?>" 
                                 <?= $pag_tm_filter == $tm['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($tm['employee_name']) ?>
@@ -791,7 +814,7 @@ require 'header.php';
                     <label class="form-label small">Images TM</label>
                     <select name="images_tm" class="form-select form-select-sm">
                         <option value="">All</option>
-                        <?php foreach ($tms as $tm): ?>
+                        <?php foreach ($ts_filter_tms as $tm): ?>
                             <option value="<?= h($tm['employee_username']) ?>" 
                                 <?= $images_tm_filter == $tm['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($tm['employee_name']) ?>
@@ -960,7 +983,7 @@ require 'header.php';
                                                 data-previous="<?= h($row['assigned_to_table'] ?? '') ?>"
                                                 onchange="updateInlineField(<?= $row['id'] ?>, 'assigned_to_table', this.value, this)">
                                             <option value=""><?= !empty($row['assigned_to_table']) ? 'Change TM' : 'Assign TM' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" <?= (($row['assigned_to_table'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?>
                                                 </option>
@@ -1080,7 +1103,7 @@ require 'header.php';
                                                 data-previous="<?= h($row['assigned_to_img'] ?? '') ?>"
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'word', this)">
                                             <option value=""><?= !empty($row['assigned_to_img']) ? 'Change TM' : 'Assign TM' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_img'] == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?>
                                                 </option>
@@ -1129,7 +1152,7 @@ require 'header.php';
                                                 data-previous="<?= h($row['assigned_to_pag'] ?? '') ?>"
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'pag', this)">
                                             <option value=""><?= !empty($row['assigned_to_pag']) ? 'Change TM' : 'Assign TM' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($row['assigned_to_pag'] == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?>
                                                 </option>

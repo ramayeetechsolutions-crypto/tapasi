@@ -260,29 +260,40 @@ $stmt_target_fallback = $mysqli->prepare($target_fallback_sql);
 // 2. Fetch all team members under this TL with Filters & Ascending Order
 $team_data = [];
 if (!empty($user_employee_name)) {
-    $tm_sql = "SELECT employee_id, employee_username, employee_name, process, joining_date 
-               FROM employee_master 
-               WHERE reporting_manager = ? AND status = 'Active'";
+    $tm_sql = "SELECT em.employee_id, em.employee_username, em.employee_name, em.process, em.joining_date 
+               FROM employee_master em 
+               WHERE (em.reporting_manager = ? OR em.reporting_manager LIKE CONCAT('%', ?, '%')) 
+                 AND em.status = 'Active'
+                 AND (
+                     FIND_IN_SET('3', em.process) 
+                     OR FIND_IN_SET('20', em.process) 
+                     OR FIND_IN_SET('68', em.process) 
+                     OR FIND_IN_SET('67', em.process)
+                     OR FIND_IN_SET('9', em.process)
+                     OR em.process = 'TS'
+                     OR em.team_id = 5
+                 )
+                 AND em.employee_username != 'TPS026'";
     
     // Apply TM Filter
     if (!empty($filter_tm)) {
-        $tm_sql .= " AND employee_username = '" . $mysqli->real_escape_string($filter_tm) . "'";
+        $tm_sql .= " AND em.employee_username = '" . $mysqli->real_escape_string($filter_tm) . "'";
     }
     // Apply Process Filter (Multiple Checkboxes)
     if (!empty($filter_process) && is_array($filter_process)) {
         $process_conditions = [];
         foreach ($filter_process as $p_id) {
-            $process_conditions[] = "FIND_IN_SET('" . $mysqli->real_escape_string($p_id) . "', process)";
+            $process_conditions[] = "FIND_IN_SET('" . $mysqli->real_escape_string($p_id) . "', em.process)";
         }
         $tm_sql .= " AND (" . implode(" OR ", $process_conditions) . ")";
     }
     
-    $tm_sql .= " ORDER BY employee_username ASC";
+    $tm_sql .= " ORDER BY em.employee_username ASC";
     
     $stmt_tm = $mysqli->prepare($tm_sql);
     
     if ($stmt_tm) {
-        $stmt_tm->bind_param("s", $user_employee_name);
+        $stmt_tm->bind_param("ss", $user_employee_name, $user_employee_name);
         $stmt_tm->execute();
         $res_tm = $stmt_tm->get_result();
         
@@ -750,8 +761,22 @@ if (!empty($team_data)) {
     </div>
 
 <?php
-        // Fetch values for Dropdowns
-        $tm_filter_qry = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = '$user_employee_name' AND status = 'Active' ORDER BY employee_name ASC");
+        // Fetch values for Dropdowns (Only 9 TS/QC Team Members)
+        $tm_filter_qry = $mysqli->query("SELECT em.employee_username, em.employee_name 
+                                         FROM employee_master em 
+                                         WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                           AND em.status = 'Active' 
+                                           AND (
+                                               FIND_IN_SET('3', em.process) 
+                                               OR FIND_IN_SET('20', em.process) 
+                                               OR FIND_IN_SET('68', em.process) 
+                                               OR FIND_IN_SET('67', em.process)
+                                               OR FIND_IN_SET('9', em.process)
+                                               OR em.process = 'TS'
+                                               OR em.team_id = 5
+                                           )
+                                           AND em.employee_username != 'TPS026'
+                                         ORDER BY em.employee_name ASC");
         
         // Exact 17 processes from screenshot (CE & PAG Processes)
         $required_processes = [

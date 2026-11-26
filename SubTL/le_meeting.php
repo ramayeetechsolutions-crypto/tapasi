@@ -24,6 +24,14 @@ $chk_ie = $mysqli->query("SHOW COLUMNS FROM article_errors LIKE 'internal_extern
 if ($chk_ie && $chk_ie->num_rows == 0) {
     $mysqli->query("ALTER TABLE article_errors ADD COLUMN internal_external VARCHAR(50) DEFAULT 'Internal'");
 }
+$chk_le_comp = $mysqli->query("SHOW COLUMNS FROM le LIKE 'le_comp_date'");
+if ($chk_le_comp && $chk_le_comp->num_rows == 0) {
+    $mysqli->query("ALTER TABLE le ADD COLUMN le_comp_date DATE NULL DEFAULT NULL");
+}
+$chk_leqc_comp = $mysqli->query("SHOW COLUMNS FROM le LIKE 'leqc_comp_date'");
+if ($chk_leqc_comp && $chk_leqc_comp->num_rows == 0) {
+    $mysqli->query("ALTER TABLE le ADD COLUMN leqc_comp_date DATE NULL DEFAULT NULL");
+}
 
 // --- AJAX SAVE LOGIC FOR WEEKLY DATA ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'save_weekly_data') {
@@ -210,30 +218,32 @@ $stmt_external_error = $mysqli->prepare($external_error_sql);
 // 2. Fetch all team members under this TL with Filters & Ascending Order
 $team_data = [];
 if (!empty($user_employee_name)) {
-    $tm_sql = "SELECT employee_id, employee_username, employee_name, process, joining_date 
-               FROM employee_master 
-               WHERE reporting_manager = ? AND status = 'Active'";
+    $tm_sql = "SELECT em.employee_id, em.employee_username, em.employee_name, em.process, em.joining_date 
+               FROM employee_master em 
+               WHERE (em.reporting_manager = ? OR em.reporting_manager LIKE CONCAT('%', ?, '%')) 
+                 AND em.status = 'Active'
+                 AND (FIND_IN_SET('2', em.process) OR em.process = 'LE' OR em.team_id = 10)";
     
     // Apply TM Filter
     if (!empty($filter_tm)) {
-        $tm_sql .= " AND employee_username = '" . $mysqli->real_escape_string($filter_tm) . "'";
+        $tm_sql .= " AND em.employee_username = '" . $mysqli->real_escape_string($filter_tm) . "'";
     }
     // Apply Process Filter (Multiple Checkboxes)
     if (!empty($filter_process) && is_array($filter_process)) {
         $process_conditions = [];
         foreach ($filter_process as $p_id) {
-            $process_conditions[] = "FIND_IN_SET('" . $mysqli->real_escape_string($p_id) . "', process)";
+            $process_conditions[] = "FIND_IN_SET('" . $mysqli->real_escape_string($p_id) . "', em.process)";
         }
         $tm_sql .= " AND (" . implode(" OR ", $process_conditions) . ")";
     }
     
     // ASCENDING ORDER BY ID
-    $tm_sql .= " ORDER BY employee_username ASC";
+    $tm_sql .= " ORDER BY em.employee_username ASC";
     
     $stmt_tm = $mysqli->prepare($tm_sql);
     
     if ($stmt_tm) {
-        $stmt_tm->bind_param("s", $user_employee_name);
+        $stmt_tm->bind_param("ss", $user_employee_name, $user_employee_name);
         $stmt_tm->execute();
         $res_tm = $stmt_tm->get_result();
         
@@ -292,14 +302,8 @@ if (!empty($user_employee_name)) {
                 }
             }
             
-            // Check if member needs WC-ExRef calculation
-            $wc_exref_members = ['T. Priyadharshini', 'S. Kiruthika Singaravel', 'B. Arulmozhi', 'S. Abinaya'];
-            $use_wc_exref = in_array(trim($emp_name), $wc_exref_members);
-
-            // Dynamic Production Column Selection
-            $column_to_sum = $use_wc_exref 
-                ? "COALESCE(NULLIF(CAST(l.wc_exref AS UNSIGNED), 0), NULLIF(l.word_count, 0), NULLIF(j.word_count, 0), 0)"
-                : "COALESCE(NULLIF(l.word_count, 0), NULLIF(c.word_count, 0), NULLIF(j.word_count, 0), 0)";
+            // Dynamic Production Column Selection: if wc_exref > 0, use it; otherwise fall back to word_count
+            $column_to_sum = "COALESCE(NULLIF(CAST(l.wc_exref AS UNSIGNED), 0), NULLIF(l.word_count, 0), NULLIF(c.word_count, 0), NULLIF(j.word_count, 0), 0)";
 
             $production = 0;
             $dyn_prod_sql = "
@@ -307,8 +311,11 @@ if (!empty($user_employee_name)) {
                 FROM jobs j 
                 LEFT JOIN le l ON j.job_id = l.job_id 
                 LEFT JOIN ce c ON j.job_id = c.job_id
-                WHERE (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_to = ?)
-                AND DATE(j.job_date) BETWEEN ? AND ?
+                WHERE (
+                    (l.assigned_to_le = ? OR l.assigned_to_le_qc = ? OR j.assigned_to = ?)
+                    AND (l.status IN ('Completed', 'LE Done', 'Done', 'LE & LE-QC Done') OR l.le_comp_date IS NOT NULL)
+                    AND DATE(COALESCE(l.le_comp_date, l.le_date, l.date, j.job_date)) BETWEEN ? AND ?
+                )
             ";
             $stmt_p = $mysqli->prepare($dyn_prod_sql);
             if ($stmt_p) {
@@ -701,8 +708,13 @@ if (!function_exists('h')) {
     </div>
 
 <?php
-        // Fetch values for Dropdowns
-        $tm_filter_qry = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE reporting_manager = '$user_employee_name' AND status = 'Active' ORDER BY employee_name ASC");
+        // Fetch values for Dropdowns (Only 6 LE Team Members)
+        $tm_filter_qry = $mysqli->query("SELECT em.employee_username, em.employee_name 
+                                         FROM employee_master em 
+                                         WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                           AND em.status = 'Active' 
+                                           AND (FIND_IN_SET('2', em.process) OR em.process = 'LE' OR em.team_id = 10) 
+                                         ORDER BY em.employee_name ASC");
         
         // Exact 17 processes from screenshot (CE & PAG Processes)
         $required_processes = [
