@@ -491,6 +491,38 @@ if (!$entries) {
         .table td {
             vertical-align: middle;
         }
+        /* Sticky Actions Column */
+        .table thead th.sticky-actions-col,
+        .table th.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 10 !important;
+            background-color: #6c757d !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+            white-space: nowrap;
+        }
+        .table tbody tr:nth-child(odd) td.sticky-actions-col,
+        .table tr:nth-child(odd) td.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 5 !important;
+            background-color: #f8f9fa !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+            white-space: nowrap;
+        }
+        .table tbody tr:nth-child(even) td.sticky-actions-col,
+        .table tr:nth-child(even) td.sticky-actions-col {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 5 !important;
+            background-color: #ffffff !important;
+            box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+            white-space: nowrap;
+        }
+        .table-hover tbody tr:hover td.sticky-actions-col,
+        .table tbody tr:hover td.sticky-actions-col {
+            background-color: #e8f4fd !important;
+        }
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             border: 1px solid rgba(0, 0, 0, 0.125);
@@ -880,7 +912,7 @@ if (!$entries) {
                                 <th width="120">Error Taken By</th>
                                 <th width="120">Reason for Errors</th>
                                 <th width="120">Created Date</th>
-                                <th width="150" class="text-center">Actions</th>
+                                <th width="150" class="text-center sticky-actions-col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -923,7 +955,7 @@ if (!$entries) {
                                     <td>
                                         <small class="text-muted"><?= h(formatDate($row['created_date'])) ?></small>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center sticky-actions-col">
                                         <div class="btn-group btn-group-sm" role="group">
                                             <a href="error_entry_internal.php?mode=edit&id=<?= (int)$row['id'] ?>" 
                                                class="btn btn-warning" title="Edit Entry">
