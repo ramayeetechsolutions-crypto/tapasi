@@ -155,9 +155,9 @@ require 'header.php';
     .btn-delete { background: #fee2e2; color: #991b1b; border: none; }
     .btn-action:hover { transform: scale(1.1); }
     .btn-header-action {
-        background-color: #ffffff !important;
-        color: #212529 !important;
-        border: 1px solid #ced4da !important;
+        background-color: #198754 !important;
+        color: #ffffff !important;
+        border: 1px solid #198754 !important;
         font-weight: 600 !important;
         padding: 6px 16px !important;
         border-radius: 6px !important;
@@ -168,15 +168,16 @@ require 'header.php';
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
     }
     .btn-header-action:hover {
-        background-color: #f8f9fa !important;
-        color: #0d6efd !important;
+        background-color: #157347 !important;
+        color: #ffffff !important;
+        border-color: #146c43 !important;
     }
     .btn-header-action i {
-        color: #0d6efd !important;
+        color: #ffffff !important;
         margin-right: 6px !important;
     }
     .btn-header-action span {
-        color: #212529 !important;
+        color: #ffffff !important;
         font-weight: 600 !important;
     }
 </style>
@@ -242,9 +243,9 @@ require 'header.php';
                 <h1>
                     <i class="fa-solid fa-gears"></i> Process Master
                 </h1>
-                <a href="process_master.php?mode=add" class="btn-header-action">
-                    <i class="fa fa-plus"></i>
-                    <span>Add Process</span>
+                <a href="process_master.php?mode=add" class="btn btn-success btn-header-action text-white">
+                    <i class="fa fa-plus text-white"></i>
+                    <span class="text-white">Add Process</span>
                 </a>
             </div>
             

@@ -663,9 +663,9 @@ require 'header.php';
                 </h1>
             </div>
             <div>
-                <a href="employee_add.php" class="btn btn-header-action">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Add Employee</span>
+                <a href="employee_add.php" class="btn btn-success btn-header-action text-white">
+                    <i class="fas fa-plus-circle text-white"></i>
+                    <span class="text-white">Add Employee</span>
                 </a>
             </div>
         </div>

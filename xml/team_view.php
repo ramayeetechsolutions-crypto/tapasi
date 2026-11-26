@@ -412,7 +412,7 @@ $mysqli->close();
                         '<div>' +
                             /* Professional Grey Button */
                             '<a href="add_team_member.php?tl_name=' + encodeURIComponent(d.team_leader) + '" ' +
-                            'class="btn shadow-sm text-white px-4 py-2" style="background-color: #0d6efd; border-radius: 6px; font-weight: 500;">' +
+                            'class="btn btn-success shadow-sm text-white px-4 py-2" style="background-color: #198754; border-radius: 6px; font-weight: 500;">' +
                             '<i class="fas fa-user-plus me-2"></i>Add Team Member</a>' +
                         '</div>' +
                     '</div>';
@@ -469,8 +469,8 @@ $mysqli->close();
                             '<td>' + processBadges + '</td>' +
                             '<td class="text-center">' +
                                 '<a href="add_team_member.php?mode=edit&emp_username=' + execUsername + '&tl_name=' + encodeURIComponent(d.team_leader) + '" ' +
-                                'class="btn btn-sm shadow-sm text-white" style="background-color: #0d6efd; padding: 4px 12px; font-size: 11px;">' +
-                                '<i class="fas fa-edit"></i> Edit</a>' +
+                                'class="btn btn-sm btn-edit" title="Edit">' +
+                                '<i class="fas fa-edit"></i></a>' +
                             '</td>' +
                         '</tr>';
                     });
