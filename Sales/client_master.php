@@ -231,7 +231,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $frequency = $mysqli->real_escape_string(trim($_POST['frequency'] ?? ''));
         $link = $mysqli->real_escape_string(trim($_POST['link'] ?? ''));
         $payment_mode = $mysqli->real_escape_string(trim($_POST['payment_mode'] ?? ''));
-        $status = 'Active';
+        $status = trim($_POST['status'] ?? 'Active');
+        if (!in_array($status, ['Active', 'Passive', 'Inactive'])) {
+            $status = 'Active';
+        }
+        $status = $mysqli->real_escape_string($status);
 
         $word_rate = floatval($_POST['word_rate'] ?? 0);
         $page_rate = floatval($_POST['page_rate'] ?? 0);
@@ -313,6 +317,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $frequency = trim($_POST['frequency'] ?? '');
             $link = trim($_POST['link'] ?? '');
             $payment_mode = trim($_POST['payment_mode'] ?? '');
+            $status = trim($_POST['status'] ?? 'Active');
+            if (!in_array($status, ['Active', 'Passive', 'Inactive'])) {
+                $status = 'Active';
+            }
             
             $currency = trim($_POST['currency'] ?? ($country === 'India' ? 'INR' : 'USD'));
             $word_rate = floatval($_POST['word_rate'] ?? 0);
@@ -323,16 +331,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 client_name=?, team_client_name=?, initial=?, company_name=?, contact_person=?, email=?, general_email=?, invoice_email=?, production_email=?,
                 phone=?, additional_mobile=?, address=?, gst_no=?, additional_address=?, country=?, preferred_communication=?, preferred_language=?,
                 word_rate=?, page_rate=?, math_rate=?, ref_rate=?, currency=?, paypal_email=?, date=?,
-                payment=?, frequency=?, link=?, payment_mode=?, remarks=?
+                payment=?, frequency=?, link=?, payment_mode=?, remarks=?, status=?
                 WHERE client_id=?");
             
             if (!$stmt) {
                 redirect_with(['msg'=>'Database error: ' . $mysqli->error,'type'=>'danger']);
             }
             
-            // Total 30 Params
+            // Total 31 Params
             $stmt->bind_param(
-                "sssssssssssssssssddddssssssssi",
+                "sssssssssssssssssddddsssssssssi",
                 $client_name,          // 1: s
                 $team_client,          // 2: s
                 $initial,              // 3: s
@@ -362,7 +370,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $link,                 // 26: s
                 $payment_mode,         // 27: s
                 $remarks,              // 28: s
-                $id                    // 29: i
+                $status,               // 29: s
+                $id                    // 30: i
             );
 
             if ($stmt->execute()) {
@@ -402,7 +411,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $row = $res->get_result()->fetch_assoc();
             $res->close();
             if ($row) {
-                $newStatus = ($row['status'] === 'Active') ? 'Inactive' : 'Active';
+                $req_status = trim($_POST['new_status'] ?? '');
+                if (in_array($req_status, ['Active', 'Passive', 'Inactive'])) {
+                    $newStatus = $req_status;
+                } else {
+                    if ($row['status'] === 'Active') {
+                        $newStatus = 'Passive';
+                    } elseif ($row['status'] === 'Passive') {
+                        $newStatus = 'Inactive';
+                    } else {
+                        $newStatus = 'Active';
+                    }
+                }
                 $upd = $mysqli->prepare("UPDATE client_master SET status=? WHERE client_id=?");
                 $upd->bind_param("si", $newStatus, $id);
                 $upd->execute();
@@ -473,7 +493,7 @@ $sql = "SELECT cm.client_id, cm.client_name, cm.team_client_name, cm.company_nam
 $isPassive = ($fstatus === 'Passive');
 if ($isPassive) {
     $sql .= " LEFT JOIN jobs j ON cm.client_id = j.client_id 
-              WHERE j.client_id IS NULL";
+              WHERE (j.client_id IS NULL OR cm.status = 'Passive')";
 } else {
     $sql .= " WHERE 1=1";
 }
@@ -608,9 +628,25 @@ require 'header.php';
         }
         .status-badge {
             font-size: 0.75rem;
-            padding: 0.35em 0.65em;
+            padding: 0.35em 0.85em;
             border-radius: 50rem;
             font-weight: 600;
+            display: inline-block;
+        }
+        .status-badge-active {
+            background-color: #198754 !important;
+            color: #ffffff !important;
+            border: 1px solid #198754 !important;
+        }
+        .status-badge-passive {
+            background-color: #fd7e14 !important;
+            color: #ffffff !important;
+            border: 1px solid #fd7e14 !important;
+        }
+        .status-badge-inactive {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+            border: 1px solid #dc3545 !important;
         }
         .form-label {
             font-weight: 600;
@@ -853,6 +889,16 @@ require 'header.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
+
+                    <!-- Client Status Dropdown -->
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="Active" <?= ($editClient['status'] ?? 'Active')==='Active'?'selected':'' ?>>Active</option>
+                            <option value="Passive" <?= ($editClient['status'] ?? '')==='Passive'?'selected':'' ?>>Passive</option>
+                            <option value="Inactive" <?= ($editClient['status'] ?? '')==='Inactive'?'selected':'' ?>>Inactive</option>
+                        </select>
+                    </div>
                     
                 </div>
                 
@@ -907,8 +953,8 @@ require 'header.php';
                     <select name="status" class="form-select form-select-sm" id="statusFilter">
                         <option value="">Sort by Status</option>
                         <option value="Active" <?= $fstatus==='Active'?'selected':'' ?>>Active</option>
+                        <option value="Passive" <?= $fstatus==='Passive'?'selected':'' ?>>Passive</option>
                         <option value="Inactive" <?= $fstatus==='Inactive'?'selected':'' ?>>Inactive</option>
-                        <option value="Passive" <?= $fstatus==='Passive'?'selected':'' ?>>Passive (No Jobs)</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -998,13 +1044,52 @@ require 'header.php';
                                 </span>
                             </td>
                             <td>
-                                <form method="post" style="display:inline;" onsubmit="return confirm('Change status of <?= h($row['client_name']) ?> from <?= $row['status'] ?> to <?= $row['status']==='Active'?'Inactive':'Active' ?>?')">
-                                    <input type="hidden" name="action" value="toggle">
-                                    <input type="hidden" name="client_id" value="<?= (int)$row['client_id'] ?>">
-                                    <button type="submit" class="btn btn-sm shadow-sm status-badge <?= $row['status']==='Active'?'btn-success':'btn-secondary' ?>">
-                                        <?= h($row['status']) ?>
+                                <?php
+                                    $st_val = trim((string)($row['status'] ?? 'Active'));
+                                    $st_class = 'status-badge-active';
+                                    if ($st_val === 'Passive') {
+                                        $st_class = 'status-badge-passive';
+                                    } elseif ($st_val === 'Inactive') {
+                                        $st_class = 'status-badge-inactive';
+                                    }
+                                ?>
+                                <div class="dropdown d-inline-block">
+                                    <button type="button" class="btn btn-sm shadow-sm status-badge <?= $st_class ?> dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Click to change status">
+                                        <?= h($st_val) ?>
                                     </button>
-                                </form>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-1" style="font-size: 12px; min-width: 125px;">
+                                        <li>
+                                            <form method="post" class="m-0 p-0">
+                                                <input type="hidden" name="action" value="toggle">
+                                                <input type="hidden" name="client_id" value="<?= (int)$row['client_id'] ?>">
+                                                <input type="hidden" name="new_status" value="Active">
+                                                <button type="submit" class="dropdown-item py-1 fw-bold text-success d-flex align-items-center gap-2 <?= $st_val==='Active'?'bg-light':'' ?>">
+                                                    <span class="rounded-circle" style="width: 8px; height: 8px; background-color: #198754; display: inline-block;"></span> Active
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form method="post" class="m-0 p-0">
+                                                <input type="hidden" name="action" value="toggle">
+                                                <input type="hidden" name="client_id" value="<?= (int)$row['client_id'] ?>">
+                                                <input type="hidden" name="new_status" value="Passive">
+                                                <button type="submit" class="dropdown-item py-1 fw-bold d-flex align-items-center gap-2 <?= $st_val==='Passive'?'bg-light':'' ?>" style="color: #fd7e14;">
+                                                    <span class="rounded-circle" style="width: 8px; height: 8px; background-color: #fd7e14; display: inline-block;"></span> Passive
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form method="post" class="m-0 p-0">
+                                                <input type="hidden" name="action" value="toggle">
+                                                <input type="hidden" name="client_id" value="<?= (int)$row['client_id'] ?>">
+                                                <input type="hidden" name="new_status" value="Inactive">
+                                                <button type="submit" class="dropdown-item py-1 fw-bold text-danger d-flex align-items-center gap-2 <?= $st_val==='Inactive'?'bg-light':'' ?>">
+                                                    <span class="rounded-circle" style="width: 8px; height: 8px; background-color: #dc3545; display: inline-block;"></span> Inactive
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
                             </td>
                             <td class="text-center sticky-actions-col">
                                 <div class="btn-group btn-group-sm shadow-sm" role="group">
