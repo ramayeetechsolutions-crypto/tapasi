@@ -288,11 +288,16 @@ require 'header.php';
                                     <td class="text-start fw-bold text-primary"><?= htmlspecialchars($r['category_name']) ?></td>
                                     <td>
                                         <?php 
-                                            $badge = 'bg-success';
-                                            if($r['complexity'] == 'Medium') $badge = 'bg-warning text-dark';
-                                            if($r['complexity'] == 'Complex') $badge = 'bg-danger';
+                                            $badge_class = 'bg-success text-white';
+                                            $badge_style = '';
+                                            if($r['complexity'] == 'Medium') {
+                                                $badge_class = 'text-white';
+                                                $badge_style = 'style="background-color: #fd7e14 !important; color: #ffffff !important; font-weight: 600;"';
+                                            } elseif($r['complexity'] == 'Complex') {
+                                                $badge_class = 'bg-danger text-white';
+                                            }
                                         ?>
-                                        <span class="badge <?= $badge ?>"><?= htmlspecialchars($r['complexity']) ?></span>
+                                        <span class="badge <?= $badge_class ?>" <?= $badge_style ?>><?= htmlspecialchars($r['complexity']) ?></span>
                                     </td>
                                     <td class="fw-bold"><?= $r['eqn_from'] ?> - <?= $r['eqn_to'] ?></td>
                                     <td><?= $r['rate_year'] ?></td>
