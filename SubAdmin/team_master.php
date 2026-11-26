@@ -266,6 +266,10 @@ if (!$teams) {
         .table td {
             vertical-align: middle;
         }
+        .table tbody tr:hover td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
+        }
         .card {
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             border: 1px solid rgba(0, 0, 0, 0.125);
@@ -380,7 +384,7 @@ if (!$teams) {
         <div class="card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 team-master-table" id="teamMasterTable">
                         <thead class="table-light">
                             <tr>
                                 <th width="50">S.NO</th>

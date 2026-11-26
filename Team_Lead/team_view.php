@@ -108,7 +108,7 @@ $mysqli->close();
     <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-1.13.6/datatables.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Global Tapasi Stylesheet -->
-    <link rel="stylesheet" href="../custom_style.css">
+    <link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
     
     <style>
         .job-master-container {
@@ -128,12 +128,14 @@ $mysqli->close();
             padding: 12px 15px;
         }
         
-        #teamTable tbody tr {
-            transition: background-color 0.3s ease;
+        #teamTable > tbody > tr.team-leader-row {
+            transition: background-color 0.2s ease;
         }
         
-        #teamTable tbody tr:hover {
-            background-color: #f5f7fa;
+        #teamTable > tbody > tr.team-leader-row:hover > td,
+        .team-leader-row:hover > td {
+            background-color: #c4cbd3 !important;
+            cursor: pointer;
         }
         
         /* Team Leader Row Styling */
@@ -141,9 +143,106 @@ $mysqli->close();
             background-color: #f8f9fa;
             font-weight: 600;
         }
-        
-        .team-leader-row:hover {
-            background-color: #e9ecef !important;
+
+        /* Child Row Styling - prevent entire expanded row from turning blue/grey on hover */
+        #teamTable > tbody > tr:not(.team-leader-row),
+        #teamTable > tbody > tr:not(.team-leader-row) > td,
+        #teamTable > tbody > tr:not(.team-leader-row):hover,
+        #teamTable > tbody > tr:not(.team-leader-row):hover > td,
+        #teamTable tbody tr.child,
+        #teamTable tbody tr.child:hover,
+        #teamTable tbody tr.child > td,
+        #teamTable tbody tr.child:hover > td,
+        #teamTable tbody tr.shown + tr > td,
+        #teamTable tbody tr.shown + tr:hover > td {
+            background-color: transparent !important;
+            cursor: default !important;
+            box-shadow: none !important;
+        }
+
+        /* Inner Table Styling for Detail View */
+        .inner-table {
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            background-color: white;
+            margin-bottom: 0;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+        .inner-table thead,
+        .inner-table thead tr,
+        .inner-table thead th,
+        .inner-table thead.table-light,
+        .inner-table thead.table-light tr,
+        .inner-table thead.table-light th,
+        .inner-table th {
+            background-color: #5e6b77 !important;
+            background: #5e6b77 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-bottom: 2px solid #4a545e !important;
+            border-right: 1px solid #4a545e !important;
+            padding: 10px 14px !important;
+            box-shadow: none !important;
+            --bs-table-bg: #5e6b77 !important;
+            --bs-table-accent-bg: transparent !important;
+        }
+
+        .inner-table thead:hover,
+        .inner-table thead tr:hover,
+        .inner-table thead th:hover,
+        .inner-table thead:hover th,
+        .inner-table thead tr:hover th,
+        .inner-table thead tr:hover td,
+        #teamTable tbody tr:hover .inner-table thead,
+        #teamTable tbody tr:hover .inner-table thead th,
+        #teamTable tbody tr.child:hover .inner-table thead,
+        #teamTable tbody tr.child:hover .inner-table thead th,
+        #teamTable tbody tr:not(.child):hover .inner-table thead th {
+            background-color: #5e6b77 !important;
+            background: #5e6b77 !important;
+            color: #ffffff !important;
+            box-shadow: none !important;
+            --bs-table-bg: #5e6b77 !important;
+            --bs-table-accent-bg: transparent !important;
+            cursor: default !important;
+        }
+        .inner-table thead th:last-child,
+        .inner-table thead.table-light th:last-child,
+        .inner-table th:last-child {
+            border-right: none !important;
+        }
+        .inner-table thead tr th:first-child,
+        .inner-table thead.table-light tr th:first-child {
+            border-top-left-radius: 6px;
+        }
+        .inner-table thead tr th:last-child,
+        .inner-table thead.table-light tr th:last-child {
+            border-top-right-radius: 6px;
+        }
+        .inner-table td,
+        .inner-table tbody tr td {
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f3f5;
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #212529 !important;
+            transition: background-color 0.15s ease !important;
+        }
+        .inner-table tbody tr {
+            transition: background-color 0.15s ease !important;
+        }
+        .inner-table tbody tr:hover td,
+        .inner-table tbody tr:hover > td,
+        table.inner-table tbody tr:hover td,
+        table.inner-table tbody tr:hover > td,
+        #teamTable .inner-table tbody tr:hover td,
+        #teamTable .inner-table tbody tr:hover > td {
+            background-color: #c4cbd3 !important;
+            background: #c4cbd3 !important;
+            color: #212529 !important;
+            box-shadow: none !important;
+            cursor: pointer !important;
         }
 
         /* Expand/Collapse Icon */
@@ -422,13 +521,13 @@ $mysqli->close();
                     
                     listHtml += '<div class="table-responsive shadow-sm rounded">' +
                                 '<table class="table table-hover inner-table w-100">' +
-                                '<thead class="table-light">' +
+                                '<thead style="background-color: #5e6b77 !important; color: #ffffff !important;">' +
                                     '<tr>' +
-                                        '<th class="text-center fw-bold" style="width: 60px;">S.No</th>' +
-                                        '<th style="width: 130px;">Employee ID</th>' +
-                                        '<th>Name</th>' +
-                                        '<th>Process Details</th>' +
-                                        '<th class="text-center" style="width: 100px;">Action</th>' +
+                                        '<th class="text-center fw-bold" style="width: 60px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">S.No</th>' +
+                                        '<th style="width: 130px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Employee ID</th>' +
+                                        '<th style="background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Name</th>' +
+                                        '<th style="background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Process Details</th>' +
+                                        '<th class="text-center" style="width: 100px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Action</th>' +
                                     '</tr>' +
                                 '</thead>' +
                                 '<tbody>';
@@ -646,7 +745,7 @@ $mysqli->close();
                     icon.removeClass('fa-minus-circle text-danger').addClass('fa-plus-circle text-success');
                     localStorage.removeItem('expandedTeam_TL');
                 } else {
-                    row.child(formatTeamDetails(rowData)).show();
+                    row.child(formatTeamDetails(rowData), 'child').show();
                     tr.addClass('shown');
                     icon.removeClass('fa-plus-circle text-success').addClass('fa-minus-circle text-danger');
                     if(rowData && rowData.team_leader_username) {

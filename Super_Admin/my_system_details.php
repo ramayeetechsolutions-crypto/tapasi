@@ -57,6 +57,7 @@ function h($value)
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="../custom_style.css?v=<?= file_exists(__DIR__ . '/../custom_style.css') ? filemtime(__DIR__ . '/../custom_style.css') : 1 ?>">
 
 <style>
 
@@ -70,9 +71,9 @@ body{
 }
 
 .card{
-    border:none;
-    border-radius:12px;
-    box-shadow:0 3px 12px rgba(0,0,0,.08);
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.04);
 }
 
 .card-header{
@@ -111,6 +112,79 @@ body{
     gap: 8px;
 }
 
+/* Redesigned 2-column table styling with zebra striping and mild lines (matching Verify Details page) */
+.details-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    border: 1px solid #e9ecef;
+    background-color: #ffffff;
+    font-size: 0.875rem;
+}
+.details-table td,
+.details-table .field-name,
+.details-table .field-value { 
+    padding: 12px 18px; 
+    border: 1px solid #e9ecef; 
+    vertical-align: middle;
+    line-height: 1.5;
+}
+.details-table .field-name { 
+    font-weight: 700 !important; 
+    width: 35%; 
+    color: #1e293b !important;
+    letter-spacing: 0.01em;
+}
+.details-table .field-value { 
+    width: 65%;
+    color: #1e293b;
+    font-weight: 500;
+}
+/* Zebra Striping: Odd rows */
+.details-table tbody tr:nth-child(odd),
+.details-table tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+.details-table tbody tr:nth-child(odd) .field-name,
+.details-table tr:nth-child(odd) .field-name {
+    background-color: #f8fafc;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+}
+.details-table tbody tr:nth-child(odd) .field-value,
+.details-table tr:nth-child(odd) .field-value {
+    background-color: #ffffff;
+}
+/* Zebra Striping: Even rows */
+.details-table tbody tr:nth-child(even),
+.details-table tr:nth-child(even) {
+    background-color: #f4f6f9;
+}
+.details-table tbody tr:nth-child(even) .field-name,
+.details-table tr:nth-child(even) .field-name {
+    background-color: #eef2f6;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+}
+.details-table tbody tr:nth-child(even) .field-value,
+.details-table tr:nth-child(even) .field-value {
+    background-color: #f8fafc;
+}
+/* Smooth Interactive Hover */
+.details-table tbody tr:hover,
+.details-table tr:hover {
+    background-color: #eef6fc;
+}
+.details-table tbody tr:hover .field-name,
+.details-table tr:hover .field-name {
+    background-color: #e2eaf2;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+}
+.details-table tbody tr:hover .field-value,
+.details-table tr:hover .field-value {
+    background-color: #f0f7ff;
+}
+
 </style>
 
 </head>
@@ -135,35 +209,34 @@ body{
 
 <div class="col-lg-4">
 
-<div class="card mb-4">
+<div class="card mb-4" style="border: 1px solid #e9ecef !important; border-radius: 12px !important; overflow: hidden !important;">
 
-<div class="card-header">
-<i class="fas fa-user"></i>
-Employee Information
+<div class="card-header" style="background: var(--ash, #6c757d) !important; color: #fff !important; font-weight: 600; padding: 12px 18px;">
+<i class="fas fa-user me-2"></i> Employee Information
 </div>
 
-<div class="card-body">
+<div class="card-body p-0">
 
-<table class="table table-bordered">
+<table class="details-table">
 
 <tr>
-<th>Employee ID</th>
-<td><?=h($system['id_no'])?></td>
+<td class="field-name">Employee ID</td>
+<td class="field-value"><?=h($system['id_no'])?></td>
 </tr>
 
 <tr>
-<th>Employee Name</th>
-<td><?=h($system['member_name'])?></td>
+<td class="field-name">Employee Name</td>
+<td class="field-value"><?=h($system['member_name'])?></td>
 </tr>
 
 <tr>
-<th>Cabin No</th>
-<td><?=h($system['cabin_no'])?></td>
+<td class="field-name">Cabin No</td>
+<td class="field-value"><?=h($system['cabin_no'])?></td>
 </tr>
 
 <tr>
-<th>System No</th>
-<td>
+<td class="field-name">System No</td>
+<td class="field-value">
 <span class="badge bg-primary fs-6">
 <?=h($system['system_no'])?>
 </span>
@@ -181,75 +254,74 @@ Employee Information
 
 <div class="col-lg-8">
 
-<div class="card mb-4">
+<div class="card mb-4" style="border: 1px solid #e9ecef !important; border-radius: 12px !important; overflow: hidden !important;">
 
-<div class="card-header">
-<i class="fas fa-microchip"></i>
-Hardware Configuration
+<div class="card-header" style="background: var(--ash, #6c757d) !important; color: #fff !important; font-weight: 600; padding: 12px 18px;">
+<i class="fas fa-microchip me-2"></i> Hardware Configuration
 </div>
 
-<div class="card-body">
+<div class="card-body p-0">
 
-<table class="table table-striped table-bordered">
+<table class="details-table">
 
 <tr>
-<th width="35%">Operating System</th>
-<td><?=h($system['os'])?></td>
+<td class="field-name" style="width: 35%;">Operating System</td>
+<td class="field-value"><?=h($system['os'])?></td>
 </tr>
 
 <tr>
-<th>Processor</th>
-<td><?=h($system['processor'])?></td>
+<td class="field-name">Processor</td>
+<td class="field-value"><?=h($system['processor'])?></td>
 </tr>
 
 <tr>
-<th>RAM</th>
-<td><?=h($system['ram'])?></td>
+<td class="field-name">RAM</td>
+<td class="field-value"><?=h($system['ram'])?></td>
 </tr>
 
 <tr>
-<th>CPU</th>
-<td><?=h($system['cpu'])?></td>
+<td class="field-name">CPU</td>
+<td class="field-value"><?=h($system['cpu'])?></td>
 </tr>
 
 <tr>
-<th>CPU Number</th>
-<td><?=h($system['cpu_no'])?></td>
+<td class="field-name">CPU Number</td>
+<td class="field-value"><?=h($system['cpu_no'])?></td>
 </tr>
 
 <tr>
-<th>Monitor</th>
-<td><?=h($system['monitor'])?></td>
+<td class="field-name">Monitor</td>
+<td class="field-value"><?=h($system['monitor'])?></td>
 </tr>
 
 <tr>
-<th>Monitor Number</th>
-<td><?=h($system['monitor_no'])?></td>
+<td class="field-name">Monitor Number</td>
+<td class="field-value"><?=h($system['monitor_no'])?></td>
 </tr>
 
 <tr>
-<th>Keyboard</th>
-<td><?=h($system['keyboard'])?></td>
+<td class="field-name">Keyboard</td>
+<td class="field-value"><?=h($system['keyboard'])?></td>
 </tr>
 
 <tr>
-<th>Keyboard Number</th>
-<td><?=h($system['keyboard_no'])?></td>
+<td class="field-name">Keyboard Number</td>
+<td class="field-value"><?=h($system['keyboard_no'])?></td>
 </tr>
 
 <tr>
-<th>Mouse</th>
-<td><?=h($system['mouse'])?></td>
+<td class="field-name">Mouse</td>
+<td class="field-value"><?=h($system['mouse'])?></td>
 </tr>
 
 <tr>
-<th>Mouse Number</th>
-<td><?=h($system['mouse_no'])?></td>
+<td class="field-name">Mouse Number</td>
+<td class="field-value"><?=h($system['mouse_no'])?></td>
 </tr>
 
 <tr>
-<th>Remarks</th>
-<td>
+<td class="field-name">Remarks</td>
+<td class="field-value">
 
 <?php
 if(trim($system['remarks'])=="")
@@ -266,8 +338,8 @@ else
 </tr>
 
 <tr>
-<th>Last Updated</th>
-<td>
+<td class="field-name">Last Updated</td>
+<td class="field-value">
 
 <?php
 
