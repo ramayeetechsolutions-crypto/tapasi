@@ -569,7 +569,7 @@ if ($row = $result->fetch_assoc()) {
                 $employeePages = ['employee_master.php', 'target_assignment.php', 'target_executive.php', 'teamleader_ot_approval.php'];
                 $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
                 $reportPages = ['client_report.php', 'team_count_report.php', 'xml_weekly_report.php', 'error_entry_wk.php', 'error_entry_uq.php'];
-                $xmlPages = ['xml_clients.php', 'xml_unique_start.php', 'upload_xml.php', 'pubcode.php'];
+                $xmlPages = ['uq_summary.php', 'xml_clients.php', 'xml_unique_start.php', 'upload_xml.php', 'pubcode.php'];
                 ?>
                 <ul class="nav-menu">
                     <li><a href="dashboard_tl.php" class="<?php echo in_array($currentPage, ['dashboard', 'dashboard.php', 'dashboard_tl.php']) ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
@@ -691,6 +691,11 @@ if ($row = $result->fetch_assoc()) {
                                     <i class="fas fa-chevron-right" style="margin-left: auto; font-size: 10px;"></i>
                                 </a>
                                 <ul class="nav-sub-dropdown">
+                                    <li>
+                                        <a href="uq_summary.php" class="<?= $currentPage === 'uq_summary.php' ? 'active' : '' ?>">
+                                            <i class="fas fa-chart-line"></i> UQ Summary
+                                        </a>
+                                    </li>
                                     <li>
                                         <a href="xml_clients.php" class="<?= $currentPage === 'xml_clients.php' ? 'active' : '' ?>">
                                             <i class="fas fa-users"></i> UQ Clients
