@@ -418,18 +418,7 @@ $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
         .table-striped:not(.details-table) tbody tr:nth-of-type(even) > *:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.field-name):not(.field-value) {
             background-color: #ffffff !important;
         }
-        /* Ensure Verify Details details-table has no row background color */
-        .details-table,
-        .details-table tbody,
-        .details-table tr,
-        .details-table tbody tr,
-        .details-table td,
-        .details-table tbody tr td,
-        .details-table .field-name,
-        .details-table .field-value {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-        }
+
         .table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
         table tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),
         .table-hover tbody tr:hover td:not(.bg-primary):not(.bg-success):not(.bg-danger):not(.bg-warning):not(.bg-info):not(.table-success):not(.table-danger):not(.table-warning):not(.table-info):not(.table-secondary):not(.details-table *),

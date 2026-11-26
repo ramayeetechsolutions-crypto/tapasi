@@ -387,15 +387,41 @@ if (!$rows || $rows->num_rows === 0) {
         .btn-brown{background:#795548;color:#fff;border:none}.btn-brown:hover{background:#5d4037;color:#fff}
         .btn-verify{background:#28a745;color:#fff;border:none}.btn-verify:hover{background:#218838;color:#fff}
         .readonly-field { background-color: #f8f9fa; cursor: not-allowed; }
-        .verified-badge { background-color: #28a745; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; }
+        .verified-badge { 
+            background-color: #198754; 
+            color: white; 
+            padding: 5px 12px; 
+            border-radius: 50rem; 
+            font-size: 12px; 
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 1px 3px rgba(25, 135, 84, 0.2);
+        }
         
         /* Additional fields styling */
         .additional-fields-section { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; }
         .section-title { font-weight: 600; color: #495057; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #dee2e6; }
 
         /* Image preview styling */
-        .image-preview { max-width: 100px; max-height: 100px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; }
-        .image-preview:hover { border-color: #007bff; }
+        .image-preview { 
+            max-width: 100px; 
+            max-height: 70px; 
+            object-fit: cover;
+            cursor: pointer; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 6px; 
+            padding: 2px;
+            background: #ffffff;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease-in-out;
+        }
+        .image-preview:hover { 
+            border-color: #0d6efd; 
+            transform: scale(1.04);
+            box-shadow: 0 3px 8px rgba(13, 110, 253, 0.18);
+        }
 
         /* Modal for image viewing */
         .image-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
@@ -403,41 +429,79 @@ if (!$rows || $rows->num_rows === 0) {
         .close-modal { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
         .close-modal:hover { color: #bbb; }
         
-        /* 2-column table styling - Clean white background (no row colors) */
-        .details-table { width: 100%; border-collapse: collapse; }
-        .details-table,
-        .details-table tbody,
-        .details-table tr,
-        .details-table tbody tr,
+        /* Redesigned 2-column table styling with zebra striping and mild lines */
+        .details-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            border: 1px solid #e9ecef;
+            background-color: #ffffff;
+            font-size: 0.875rem;
+        }
         .details-table td,
-        .details-table tbody tr td {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
+        .details-table .field-name,
+        .details-table .field-value { 
+            padding: 12px 18px; 
+            border: 1px solid #e9ecef; 
+            vertical-align: middle;
+            line-height: 1.5;
         }
         .details-table .field-name { 
-            font-weight: 600 !important; 
-            width: 35% !important; 
-            background-color: #ffffff !important; 
-            background: #ffffff !important;
-            padding: 12px 15px !important; 
-            border: 1px solid #dee2e6 !important; 
-            color: #495057 !important;
+            font-weight: 600; 
+            width: 32%; 
+            color: #475569;
+            letter-spacing: 0.01em;
         }
         .details-table .field-value { 
-            padding: 12px 15px !important; 
-            border: 1px solid #dee2e6 !important; 
-            background-color: #ffffff !important;
-            background: #ffffff !important;
+            width: 68%;
+            color: #1e293b;
+            font-weight: 500;
         }
-        .details-table tr:hover,
-        .details-table tr:hover td,
-        .details-table tr:hover .field-value,
-        .details-table tr:hover .field-name { 
-            background-color: #f8f9fa !important; 
-            background: #f8f9fa !important;
+        /* Zebra Striping: Odd rows */
+        .details-table tbody tr:nth-child(odd),
+        .details-table tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        .details-table tbody tr:nth-child(odd) .field-name,
+        .details-table tr:nth-child(odd) .field-name {
+            background-color: #f8fafc;
+        }
+        .details-table tbody tr:nth-child(odd) .field-value,
+        .details-table tr:nth-child(odd) .field-value {
+            background-color: #ffffff;
+        }
+        /* Zebra Striping: Even rows */
+        .details-table tbody tr:nth-child(even),
+        .details-table tr:nth-child(even) {
+            background-color: #f4f6f9;
+        }
+        .details-table tbody tr:nth-child(even) .field-name,
+        .details-table tr:nth-child(even) .field-name {
+            background-color: #eef2f6;
+        }
+        .details-table tbody tr:nth-child(even) .field-value,
+        .details-table tr:nth-child(even) .field-value {
+            background-color: #f8fafc;
+        }
+        /* Smooth Interactive Hover */
+        .details-table tbody tr:hover,
+        .details-table tr:hover {
+            background-color: #eef6fc;
+        }
+        .details-table tbody tr:hover .field-name,
+        .details-table tr:hover .field-name {
+            background-color: #e2eaf2;
+        }
+        .details-table tbody tr:hover .field-value,
+        .details-table tr:hover .field-value {
+            background-color: #f0f7ff;
         }
         
-        .status-badge { font-size: 12px; padding: 4px 8px; }
+        .status-badge { 
+            font-size: 12px; 
+            padding: 4px 10px; 
+            border-radius: 50rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -690,30 +754,31 @@ if (!$rows || $rows->num_rows === 0) {
         }
         ?>
         
+        <div class="mx-auto" style="max-width: 900px;">
         <div class="page-title-container">
             <h5 class="mb-0 text-white"><i class="fas fa-user me-2"></i>My Employee Details</h5>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2" style="margin-left: auto !important;">
                 <?php if ($employee_data && $employee_data['emp_confirm'] == 0): ?>
                     <form method="post" style="display:inline" onsubmit="return confirm('Are you sure you want to verify your details? Once verified, you cannot edit them again.')">
                         <input type="hidden" name="action" value="verify">
                         <input type="hidden" name="employee_id" value="<?= $employee_data['employee_id'] ?>">
-                        <button type="submit" class="btn btn-verify btn-sm">
-                            <i class="fas fa-check-circle me-1"></i> Verify Details
+                        <button type="submit" class="btn btn-success btn-verify btn-sm fw-semibold shadow-sm px-3 py-2" style="background-color: #198754 !important; border-color: #198754 !important; color: #ffffff !important;">
+                            <i class="fas fa-check-circle me-1" style="color: #ffffff !important;"></i> Verify Details
                         </button>
                     </form>
-                    <a href="employee.php?mode=edit&id=<?= $employee_data['employee_id'] ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-edit me-1"></i> Edit My Details
+                    <a href="employee.php?mode=edit&id=<?= $employee_data['employee_id'] ?>" class="btn btn-primary btn-edit-details btn-sm fw-semibold shadow-sm px-3 py-2" style="background-color: #0d6efd !important; border-color: #0d6efd !important; color: #ffffff !important;">
+                        <i class="fas fa-edit me-1" style="color: #ffffff !important;"></i> Edit My Details
                     </a>
                 <?php elseif ($employee_data && $employee_data['emp_confirm'] == 1): ?>
-                    <span class="verified-badge">
-                        <i class="fas fa-check-circle me-1"></i> Verified
+                    <span class="badge bg-success verified-badge fs-6 px-3 py-2 shadow-sm" style="background-color: #198754 !important; color: #ffffff !important; font-weight: 600 !important; border-radius: 50rem !important;">
+                        <i class="fas fa-check-circle me-1" style="color: #ffffff !important;"></i> Verified
                     </span>
                 <?php endif; ?>
             </div>
         </div>
 
         <!-- 2-Column Table Layout -->
-        <div class="card">
+        <div class="card border-0 shadow-sm" style="border: 1px solid #e9ecef !important; border-radius: 12px !important; overflow: hidden !important;">
             <div class="card-body p-0">
                 <?php if ($employee_data): 
                     $process_name = "";
@@ -872,6 +937,7 @@ if (!$rows || $rows->num_rows === 0) {
                     </div>
                 <?php endif; ?>
             </div>
+        </div>
         </div>
 
         <!-- Image Modal -->
