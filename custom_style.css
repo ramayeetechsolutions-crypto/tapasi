@@ -1507,7 +1507,7 @@ table td select,
 
 /* Ensure body content starts closely below the fixed top navbar (70px) */
 body {
-    padding-top: 76px !important;
+    padding-top: 74px !important;
 }
 
 /* Eliminate large double-offsets from main containers and wrappers */
@@ -1526,7 +1526,21 @@ body>.wrapper,
 body>.content-wrapper,
 body>main,
 .container,
-.container-fluid,
+.container-fluid {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.container:has(> .form-section),
+.container:has(> .page-title-container) {
+    margin-top: 6px !important;
+    padding-top: 8px !important;
+}
+
+.form-section:first-child {
+    margin-top: 0 !important;
+    padding-top: 5px !important;
+}
 .container.mt-1,
 .container-fluid.mt-1,
 .container.mt-2,
@@ -3878,6 +3892,25 @@ html body [style*="rgb(21, 115, 71)"] span {
     color: #ffffff !important;
 }
 
+
+/* Ensure table action cells never wrap Edit and Delete action icons onto multiple lines */
+table td:has(> a[href*="mode=edit"]),
+table td:has(> a[title*="Edit" i]),
+table td:has(> .action-btn),
+table td:has(> * > .action-btn),
+table td:has(form button[title*="Delete" i]),
+table td.actions-cell,
+table th.actions-cell {
+    white-space: nowrap !important;
+}
+
+table td form.d-inline,
+table td form[onsubmit*="delete" i] {
+    display: inline-flex !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
 
 /* --- 2. EDIT BUTTONS: ICON-FOCUSED (Transparent by default, Blue #0d6efd background on hover) --- */
 /* Reference: Language page Search button in Master Module (#0d6efd) */

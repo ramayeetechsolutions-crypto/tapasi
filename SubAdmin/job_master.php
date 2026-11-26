@@ -132,7 +132,7 @@ $jobs = $mysqli->query($sql);
             color: #1e293b;
         }
 
-        .main-container { padding-top: 50px; padding-bottom: 50px; }
+        .main-container { padding-top: 10px !important; padding-bottom: 30px; }
 
         /* Card Styling */
         .card {
@@ -312,7 +312,7 @@ $jobs = $mysqli->query($sql);
                         <th>Created By</th>
                         <th>Created Date</th>
                         <th class="text-center">Status</th>
-                        <th class="text-end pe-4">Actions</th>
+                        <th class="text-end pe-4 text-nowrap" style="white-space: nowrap !important; min-width: 90px; width: 100px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -341,17 +341,19 @@ $jobs = $mysqli->query($sql);
                                 </button>
                             </form>
                         </td>
-                        <td class="text-end pe-4">
-                            <a href="job_master.php?mode=edit&id=<?= (int)$row['job_id'] ?>" class="btn btn-light action-btn text-warning me-1" title="Edit">
-                                <i class="fa fa-edit"></i>
-                            </a>
-                            <form method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this job?')">
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="job_id" value="<?= (int)$row['job_id'] ?>">
-                                <button class="btn btn-light action-btn text-danger" title="Delete">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            </form>
+                        <td class="text-end pe-4 text-nowrap" style="white-space: nowrap !important;">
+                            <div class="d-inline-flex align-items-center justify-content-end gap-1 text-nowrap" style="white-space: nowrap !important;">
+                                <a href="job_master.php?mode=edit&id=<?= (int)$row['job_id'] ?>" class="btn btn-light action-btn text-warning me-1" title="Edit">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                                <form method="post" class="d-inline m-0 p-0" onsubmit="return confirm('Are you sure you want to delete this job?')">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="job_id" value="<?= (int)$row['job_id'] ?>">
+                                    <button class="btn btn-light action-btn text-danger" title="Delete">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     <?php endwhile; else: ?>
