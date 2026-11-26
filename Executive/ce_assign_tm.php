@@ -44,6 +44,14 @@ if ($check_moved_col && $check_moved_col->num_rows == 0) {
     $mysqli->query("UPDATE ce SET is_moved = 1, remarks = 'Moved' WHERE TRIM(COALESCE(remarks, '')) = 'Moved'");
 }
 
+// Auto-add completion date columns for independent stage points
+foreach (['ce_comp_date', 'ref_comp_date', 'fqa_comp_date'] as $col) {
+    $chk = $mysqli->query("SHOW COLUMNS FROM ce LIKE '$col'");
+    if ($chk && $chk->num_rows == 0) {
+        $mysqli->query("ALTER TABLE ce ADD COLUMN $col DATE NULL DEFAULT NULL");
+    }
+}
+
 // Auto-add independent stage status columns to ce table if not exists
 $check_stage_cols = [
     'ce_status' => "VARCHAR(50) DEFAULT 'Need to Assign'",
@@ -198,6 +206,22 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         $curr_fqa_status = $new_status;
     }
 
+    // Set individual completion dates immediately when completed
+    $date_updates = "";
+    if ($target_type === 'ce') {
+        $date_updates = ($new_status === 'Completed') 
+            ? "ce_comp_date = CURDATE(), ce_date = COALESCE(ce_date, CURDATE()), " 
+            : "ce_comp_date = NULL, ";
+    } elseif ($target_type === 'ref') {
+        $date_updates = ($new_status === 'Completed') 
+            ? "ref_comp_date = CURDATE(), " 
+            : "ref_comp_date = NULL, ";
+    } elseif ($target_type === 'fqa') {
+        $date_updates = ($new_status === 'Completed') 
+            ? "fqa_comp_date = CURDATE(), ce_date = COALESCE(ce_date, CURDATE()), " 
+            : "fqa_comp_date = NULL, ";
+    }
+
     // Compute composite ce.status for backwards compatibility with downstream modules
     if ($curr_fqa_status === 'Completed') {
         $db_status = 'Completed';
@@ -213,9 +237,9 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         $db_status = 'Need to Assign';
     }
 
-    $update_query = "UPDATE ce SET status = ?, ce_status = ?, ref_status = ?, fqa_status = ?, ce_date = CASE WHEN ? = 'Completed' THEN CURDATE() ELSE ce_date END, last_updated = NOW() WHERE id = ?";
+    $update_query = "UPDATE ce SET status = ?, ce_status = ?, ref_status = ?, fqa_status = ?, {$date_updates} last_updated = NOW() WHERE id = ?";
     $stmt = $mysqli->prepare($update_query);
-    $stmt->bind_param("sssssi", $db_status, $curr_ce_status, $curr_ref_status, $curr_fqa_status, $curr_fqa_status, $ce_id);
+    $stmt->bind_param("ssssi", $db_status, $curr_ce_status, $curr_ref_status, $curr_fqa_status, $ce_id);
     if ($stmt->execute()) {
         echo json_encode([
             'success' => true, 
@@ -291,6 +315,24 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
             $stmt->bind_param("si", $val, $ce_id);
         }
         if ($stmt->execute()) {
+            // Also sync counts to jobs table so report page & downstream modules see the update
+            $job_field_map = [
+                'word_count'   => 'word_count',
+                'ref'          => 'ref',
+                'eq'           => 'equations',
+                'images'       => 'images',
+                'tables_count' => 'tables'
+            ];
+            if (isset($job_field_map[$field])) {
+                $j_col = $job_field_map[$field];
+                $upd_job = $mysqli->prepare("UPDATE jobs SET $j_col = ? WHERE job_id = (SELECT job_id FROM ce WHERE id = ?)");
+                if ($upd_job) {
+                    $j_val = ($val === '') ? NULL : $val;
+                    $upd_job->bind_param("si", $j_val, $ce_id);
+                    $upd_job->execute();
+                    $upd_job->close();
+                }
+            }
             echo json_encode(['success' => true, 'stats' => getCeStats($mysqli)]);
         } else {
             echo json_encode(['success' => false, 'message' => $mysqli->error]);
@@ -515,6 +557,20 @@ $res_tms = $mysqli->query($tm_query);
 if ($res_tms) {
     while ($tm = $res_tms->fetch_assoc()) {
         $tms[] = $tm;
+    }
+}
+
+// Only CE team members for filter section dropdowns
+$ce_filter_tms = [];
+$res_ce_filter = $mysqli->query("SELECT em.employee_id, em.employee_username, em.employee_name 
+                                FROM employee_master em 
+                                WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                  AND em.status = 'Active' 
+                                  AND (FIND_IN_SET('1', em.process) OR em.process = 'CE' OR em.team_id = 6) 
+                                ORDER BY em.employee_name ASC");
+if ($res_ce_filter) {
+    while ($tm = $res_ce_filter->fetch_assoc()) {
+        $ce_filter_tms[] = $tm;
     }
 }
 
@@ -1423,7 +1479,7 @@ require 'header.php';
                     <label class="form-label small">Content TM</label>
                     <select name="content_tm" class="form-select form-select-sm">
                         <option value="">All</option>
-                        <?php foreach ($tms as $tm): ?>
+                        <?php foreach ($ce_filter_tms as $tm): ?>
                             <option value="<?= h($tm['employee_username']) ?>" 
                                 <?= $content_tm_filter == $tm['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($tm['employee_name']) ?>
@@ -1435,7 +1491,7 @@ require 'header.php';
                     <label class="form-label small">Images TM</label>
                     <select name="images_tm" class="form-select form-select-sm">
                         <option value="">All</option>
-                        <?php foreach ($tms as $tm): ?>
+                        <?php foreach ($ce_filter_tms as $tm): ?>
                             <option value="<?= h($tm['employee_username']) ?>" 
                                 <?= $images_tm_filter == $tm['employee_username'] ? 'selected' : '' ?>>
                                 <?= h($tm['employee_name']) ?>
@@ -1648,7 +1704,7 @@ require 'header.php';
                                                 data-previous="<?= h($assigned_content) ?>" 
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'content', this)">
                                             <option value=""><?= !empty($assigned_content) ? 'Change Content TM' : 'Assign Content' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ce_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($assigned_content == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
                                                 </option>
@@ -1718,7 +1774,7 @@ require 'header.php';
                                                 data-previous="<?= h($assigned_img) ?>" 
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'images', this)">
                                             <option value=""><?= !empty($assigned_img) ? 'Change REF TM' : 'Assign REF' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ce_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($assigned_img == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
                                                 </option>
@@ -1784,7 +1840,7 @@ require 'header.php';
                                                 data-previous="<?= h($assigned_fqa) ?>" 
                                                 onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'fqa', this)">
                                             <option value=""><?= !empty($fqa_user) ? 'Change FQA TM' : 'Assign FQA' ?></option>
-                                            <?php foreach ($tms as $tm): ?>
+                                            <?php foreach ($ce_filter_tms as $tm): ?>
                                                 <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= ($fqa_user == $tm['employee_username']) ? 'selected' : '' ?>>
                                                     <?= h($tm['employee_name']) ?> (<?= h($tm['employee_username']) ?>)
                                                 </option>

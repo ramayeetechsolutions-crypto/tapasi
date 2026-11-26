@@ -173,6 +173,29 @@ if (!empty($current_user) && !isset($unique_team_members[$current_user])) {
     $unique_team_members[$current_user] = $logged_in_name;
 }
 
+// Only TS/QC team members for Employee filter dropdown
+$ts_filter_members = [];
+$res_ts_emps = $mysqli->query("SELECT em.employee_username, em.employee_name 
+                               FROM employee_master em 
+                               WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                 AND em.status = 'Active' 
+                                 AND (
+                                     FIND_IN_SET('3', em.process) 
+                                     OR FIND_IN_SET('20', em.process) 
+                                     OR FIND_IN_SET('68', em.process) 
+                                     OR FIND_IN_SET('67', em.process) 
+                                     OR FIND_IN_SET('9', em.process) 
+                                     OR em.process = 'TS' 
+                                     OR em.team_id = 5
+                                 ) 
+                                 AND em.employee_username != 'TPS026' 
+                               ORDER BY em.employee_name ASC");
+if ($res_ts_emps) {
+    while ($row_ts = $res_ts_emps->fetch_assoc()) {
+        $ts_filter_members[$row_ts['employee_username']] = $row_ts['employee_name'];
+    }
+}
+
 $team_condition = "j.assigned_to = ?";
 if (!empty($team_users)) {
     $team_list = implode(',', $team_users);
@@ -778,7 +801,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     <label class="form-label small mb-1">Employee</label>
                     <select name="filter_emp" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
-                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                        <?php foreach ($ts_filter_members as $uname => $ename): ?>
                             <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
                                 <?= h($ename) ?> (<?= h($uname) ?>)
                             </option>

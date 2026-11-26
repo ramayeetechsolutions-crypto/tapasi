@@ -141,6 +141,20 @@ while ($row_team = $res_team->fetch_assoc()) {
 }
 $stmt_team->close();
 
+// Only LE team members for Employee filter dropdown
+$le_filter_members = [];
+$res_le_emps = $mysqli->query("SELECT em.employee_username, em.employee_name 
+                               FROM employee_master em 
+                               WHERE (em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.reporting_manager = 'T.G. Bragadeeshwaran') 
+                                 AND em.status = 'Active' 
+                                 AND (FIND_IN_SET('2', em.process) OR em.process = 'LE' OR em.team_id = 10) 
+                               ORDER BY em.employee_name ASC");
+if ($res_le_emps) {
+    while ($row_le = $res_le_emps->fetch_assoc()) {
+        $le_filter_members[$row_le['employee_username']] = $row_le['employee_name'];
+    }
+}
+
 $team_condition = "j.assigned_to = ?";
 if (!empty($team_users)) {
     $team_list = implode(',', $team_users);
@@ -763,7 +777,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                     <label class="form-label small mb-1">Employee</label>
                     <select name="filter_emp" class="form-select form-select-sm">
                         <option value="">All Team Members</option>
-                        <?php foreach ($unique_team_members as $uname => $ename): ?>
+                        <?php foreach ($le_filter_members as $uname => $ename): ?>
                             <option value="<?= h($uname) ?>" <?= $filter_emp === $uname ? 'selected' : '' ?>>
                                 <?= h($ename) ?> (<?= h($uname) ?>)
                             </option>
