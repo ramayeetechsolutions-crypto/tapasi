@@ -84,6 +84,110 @@ function renderUserVal($val) {
     return h($v);
 }
 
+// Helper to determine the actual rendered status for all 15 task columns of a job
+function getJobTaskStatusList($row) {
+    $safe_trim = function($val) { return trim((string)$val); };
+    
+    $img_na = ($safe_trim($row['instruction_to_image'] ?? '') === '' || $safe_trim($row['instruction_to_image'] ?? '') === '-' || strtolower($safe_trim($row['instruction_to_image'] ?? '')) === 'no images');
+    $nlm_na = ($safe_trim($row['nlm'] ?? '') === '' || $safe_trim($row['nlm'] ?? '') === '-');
+    $jats_na = ($safe_trim($row['jats'] ?? '') === '' || $safe_trim($row['jats'] ?? '') === '-');
+    $clockss_na = ($safe_trim($row['clockss'] ?? '') === '' || $safe_trim($row['clockss'] ?? '') === '-');
+
+    $html_na = ($safe_trim($row['html'] ?? '') === '' || $safe_trim($row['html'] ?? '') === '-');
+    $nhtml_na = ($safe_trim($row['new_html'] ?? '') === '' || $safe_trim($row['new_html'] ?? '') === '-');
+    $dhtml_na = ($safe_trim($row['direct_html'] ?? '') === '' || $safe_trim($row['direct_html'] ?? '') === '-');
+
+    $scielo_na = ($safe_trim($row['scielo'] ?? '') === '' || $safe_trim($row['scielo'] ?? '') === '-');
+    $ebsco_na = ($safe_trim($row['ebsco'] ?? '') === '' || $safe_trim($row['ebsco'] ?? '') === '-');
+
+    $pubmed_na = ($safe_trim($row['pubmed'] ?? '') === '' || $safe_trim($row['pubmed'] ?? '') === '-');
+    $biblat_na = ($safe_trim($row['biblat'] ?? '') === '' || $safe_trim($row['biblat'] ?? '') === '-');
+    $doaj_na = ($safe_trim($row['doaj'] ?? '') === '' || $safe_trim($row['doaj'] ?? '') === '-');
+
+    $is_empty = function($val) use ($safe_trim) { 
+        $v = $safe_trim($val); 
+        return ($v === '' || $v === 'N/A' || $v === 'NA'); 
+    };
+
+    return [
+        'valImg'     => $img_na ? 'N/A' : ($is_empty($row['Image_user'] ?? '') ? '-' : $row['Image_user']),
+        'valTbl'     => $is_empty($row['Table_user'] ?? '') ? '-' : $row['Table_user'],
+        'valWp'      => $is_empty($row['WPContent_user'] ?? '') ? '-' : $row['WPContent_user'],
+        'valNlm'     => $nlm_na ? 'N/A' : ($is_empty($row['nlm_user'] ?? '') ? '-' : $row['nlm_user']),
+        'valJats'    => $jats_na ? 'N/A' : ($is_empty($row['jats_user'] ?? '') ? '-' : ($row['jats_user'] ?? '')),
+        'valClockss' => $clockss_na ? 'N/A' : ($is_empty($row['clockss_user'] ?? '') ? '-' : ($row['clockss_user'] ?? '')),
+        'valHtml'    => $html_na ? 'N/A' : ($is_empty($row['HTML_user'] ?? '') ? '-' : $row['HTML_user']),
+        'valNhtml'   => $nhtml_na ? 'N/A' : ($is_empty($row['new_html_user'] ?? '') ? '-' : $row['new_html_user']),
+        'valDhtml'   => $dhtml_na ? 'N/A' : ($is_empty($row['direct_html_user'] ?? '') ? '-' : ($row['direct_html_user'] ?? '')),
+        'valScielo'  => $scielo_na ? 'N/A' : ($is_empty($row['Scielo_user'] ?? '') ? '-' : ($row['Scielo_user'] ?? '')),
+        'valEbsco'   => $ebsco_na ? 'N/A' : ($is_empty($row['ebsco_user'] ?? '') ? '-' : ($row['ebsco_user'] ?? '')),
+        'valPubmed'  => $pubmed_na ? 'N/A' : ($is_empty($row['pubmed_user'] ?? '') ? '-' : ($row['pubmed_user'] ?? '')),
+        'valBiblat'  => $biblat_na ? 'N/A' : ($is_empty($row['biblat_user'] ?? '') ? '-' : ($row['biblat_user'] ?? '')),
+        'valDoaj'    => $doaj_na ? 'N/A' : ($is_empty($row['doaj_user'] ?? '') ? '-' : ($row['doaj_user'] ?? '')),
+        'valQc'      => $is_empty($row['QC_user'] ?? '') ? '-' : $row['QC_user']
+    ];
+}
+
+// Strict check: Returns true ONLY if ALL assigned & required tasks are 100% completed (has ✓, done, completed)
+// If even ONE assigned task is unassigned ('-' / Assign) or in-progress (no checkmark), returns FALSE
+function isJobFullyCompleted($taskValues) {
+    if (empty($taskValues) || !is_array($taskValues)) {
+        return false;
+    }
+    
+    // 1. Core Production Tasks
+    $core_tasks = [
+        'valNlm', 'valJats', 'valClockss', 
+        'valHtml', 'valNhtml', 'valDhtml', 
+        'valScielo', 'valEbsco', 'valPubmed', 
+        'valBiblat', 'valDoaj'
+    ];
+    
+    $has_valid_task = false;
+    foreach ($core_tasks as $k) {
+        $v = trim((string)($taskValues[$k] ?? ''));
+        // Not Applicable to this job -> skip
+        if ($v === 'N/A' || $v === 'NA') {
+            continue;
+        }
+        $has_valid_task = true;
+        // If applicable but unassigned ('-' or empty), job is NOT completed
+        if ($v === '' || $v === '-') {
+            return false;
+        }
+        // If in progress without checkmark, job is NOT completed
+        if (strpos($v, '✓') === false && strpos(strtolower($v), 'done') === false && strpos(strtolower($v), 'completed') === false) {
+            return false;
+        }
+    }
+    
+    if (!$has_valid_task) {
+        return false;
+    }
+    
+    // 2. Optional Tasks (Image, Table, WPContent): If assigned to someone, they must be completed with ✓
+    foreach (['valImg', 'valTbl', 'valWp'] as $k) {
+        $v = trim((string)($taskValues[$k] ?? ''));
+        if ($v === 'N/A' || $v === 'NA' || $v === '-' || $v === '') {
+            continue; // Not assigned for this job
+        }
+        if (strpos($v, '✓') === false && strpos(strtolower($v), 'done') === false && strpos(strtolower($v), 'completed') === false) {
+            return false;
+        }
+    }
+    
+    // 3. QC Check: QC must be completed with ✓
+    $qc = trim((string)($taskValues['valQc'] ?? ''));
+    if ($qc === '' || $qc === '-' || $qc === 'N/A') {
+        return false;
+    }
+    if (strpos($qc, '✓') === false && strpos(strtolower($qc), 'done') === false && strpos(strtolower($qc), 'completed') === false) {
+        return false;
+    }
+    
+    return true;
+}
+
 // Detect current page for menu highlighting
 $currentPage  = basename($_SERVER['PHP_SELF']);
 $username     = htmlspecialchars($_SESSION['username'] ?? 'User');
@@ -493,22 +597,7 @@ elseif ($filter_tat === 'asc' || $filter_tat === 'desc') {
 
 $where_sql = $where ? "WHERE " . implode(" AND ", $where) : "";
 
-// 1. First: Automatically mark jobs as Despatched when QC or processes are completed (✓ / Done) (Excluding Rework/Correction)
-$mysqli->query("UPDATE unique_xml_jobs u 
-                JOIN jobs j ON u.job_id = j.job_id
-                SET u.job_status = 'Despatched', 
-                    u.despatched_date = IF(u.despatched_date IS NULL OR u.despatched_date < '2000-01-01', NOW(), u.despatched_date),
-                    j.dispatch_date = IF(j.dispatch_date IS NULL OR j.dispatch_date < '2000-01-01', NOW(), j.dispatch_date)
-                WHERE (u.QC_user LIKE '%✓%' OR u.QC_user LIKE '%Done%' OR u.QC_user LIKE '%Completed%')
-                  AND (u.job_status != 'Rework/Correction' OR u.job_status IS NULL)
-                  AND (u.job_status != 'Despatched' OR u.despatched_date IS NULL OR u.despatched_date < '2000-01-01')");
-
-// For Rework/Correction jobs: automatically set dispatched date when completed, preserving Rework/Correction status
-$mysqli->query("UPDATE unique_xml_jobs u 
-                SET u.despatched_date = IF(u.despatched_date IS NULL OR u.despatched_date < '2000-01-01', NOW(), u.despatched_date)
-                WHERE (u.QC_user LIKE '%✓%' OR u.QC_user LIKE '%Done%' OR u.QC_user LIKE '%Completed%')
-                  AND u.job_status = 'Rework/Correction'
-                  AND (u.despatched_date IS NULL OR u.despatched_date < '2000-01-01')");
+// Auto-dispatch is now strictly verified across all 15 task columns during row evaluation below.
 
 // 2. Second: Fetch fresh, updated data for the table display
 $sql = "SELECT 
@@ -528,7 +617,7 @@ JOIN client_master c ON j.client_id = c.client_id
 JOIN job_master jm ON j.process_id = jm.job_id
 LEFT JOIN unique_xml_jobs cjt ON cjt.job_id = j.job_id
 $where_sql
-ORDER BY $order_by $dir";
+ORDER BY (CASE WHEN cjt.job_status = 'Despatched' THEN 1 ELSE 0 END) ASC, $order_by $dir";
 
 $stmt = $mysqli->prepare($sql);
 if ($params) $stmt->bind_param($types, ...$params);
@@ -1194,42 +1283,53 @@ if ($results && $results->num_rows > 0) {
                                         if($tTime) $tatModalVal = date('Y-m-d', $tTime);
                                     }
 
-                                    // --- NEW LOGIC: AUTO-DISPATCH CHECK FOR ALL TASKS ---
+                                    // --- STRICT AUTO-DISPATCH CHECK FOR ALL 15 TASKS ---
+                                    $taskVals = $is_tracked ? getJobTaskStatusList($row) : [];
+                                    $has_orange_assigned = false;
+                                    $has_any_completed   = false;
                                     if ($is_tracked) {
-                                        $user_columns_check = [
-                                            $row['Image_user'], $row['Table_user'], $row['WPContent_user'], 
-                                            $row['nlm_user'], $row['jats_user'], $row['clockss_user'],
-                                            $row['Scielo_user'], $row['ebsco_user'], $row['pubmed_user'], 
-                                            $row['biblat_user'], $row['doaj_user'],
-                                            $row['HTML_user'], $row['new_html_user'], $row['direct_html_user'], $row['QC_user']
-                                        ];
-
-                                        $all_tasks_completed = true;
-                                        $has_valid_task = false;
-
-                                        foreach ($user_columns_check as $col_val) {
-                                            $v = trim((string)$col_val);
-                                            if ($v === 'N/A' || $v === 'NA' || $v === '-' || $v === '') {
-                                                continue; 
+                                        foreach ($taskVals as $col_val) {
+                                            $color = getUserColorClass($col_val);
+                                            if ($color === 'bg-cell-assigned') {
+                                                $has_orange_assigned = true;
                                             }
-                                            
-                                            $has_valid_task = true;
-                                            if (strpos($v, '✓') === false && strpos(strtolower($v), 'done') === false && strpos(strtolower($v), 'completed') === false) {
-                                                $all_tasks_completed = false;
-                                                break;
+                                            if ($color === 'bg-cell-completed') {
+                                                $has_any_completed = true;
                                             }
                                         }
-                                        if ($has_valid_task && $all_tasks_completed && $row['job_status'] !== 'Despatched') {
-                                            $row['job_status'] = 'Despatched'; 
-                                            
-                                            if (empty($row['despatched_date']) || $row['despatched_date'] == '0000-00-00') {
-                                                $row['despatched_date'] = date('Y-m-d H:i:s'); 
+                                        $is_completed = isJobFullyCompleted($taskVals);
+                                        if ($is_completed) {
+                                            // All applicable tasks are 100% completed (has ✓ / Done)
+                                            if ($row['job_status'] !== 'Despatched' || empty($row['despatched_date']) || $row['despatched_date'] == '0000-00-00' || $row['despatched_date'] == '0000-00-00 00:00:00') {
+                                                $row['job_status'] = 'Despatched'; 
+                                                
+                                                if (empty($row['despatched_date']) || $row['despatched_date'] == '0000-00-00' || $row['despatched_date'] == '0000-00-00 00:00:00') {
+                                                    $row['despatched_date'] = date('Y-m-d H:i:s'); 
+                                                }
+                                                
+                                                $upd_id = (int)$row['job_id'];
+                                                $upd_date = $row['despatched_date'];
+                                                $mysqli->query("UPDATE unique_xml_jobs SET job_status = 'Despatched', despatched_date = '$upd_date' WHERE job_id = $upd_id");
+                                                $mysqli->query("UPDATE jobs SET dispatch_date = '$upd_date' WHERE job_id = $upd_id");
                                             }
-                                            
-                                            $upd_id = (int)$row['job_id'];
-                                            $upd_date = $row['despatched_date'];
-                                            $mysqli->query("UPDATE unique_xml_jobs SET job_status = 'Despatched', despatched_date = '$upd_date' WHERE job_id = $upd_id");
-                                            $mysqli->query("UPDATE jobs SET dispatch_date = '$upd_date' WHERE job_id = $upd_id");
+                                        } else {
+                                            // Job has unassigned (Assign / Blue) or in-progress (Orange) tasks!
+                                            // If it was prematurely marked as Despatched, revert it to prevent false dispatch date
+                                            if ($row['job_status'] === 'Despatched') {
+                                                $upd_id = (int)$row['job_id'];
+                                                $has_any_assigned = false;
+                                                foreach ($taskVals as $tv) {
+                                                    if ($tv !== 'N/A' && $tv !== 'NA' && $tv !== '-' && $tv !== '') {
+                                                        $has_any_assigned = true;
+                                                        break;
+                                                    }
+                                                }
+                                                $revert_status = $has_any_assigned ? 'Inprocess' : 'Need to Assign';
+                                                $row['job_status'] = $revert_status;
+                                                $row['despatched_date'] = null;
+                                                $mysqli->query("UPDATE unique_xml_jobs SET job_status = '$revert_status', despatched_date = NULL WHERE job_id = $upd_id");
+                                                $mysqli->query("UPDATE jobs SET dispatch_date = NULL WHERE job_id = $upd_id");
+                                            }
                                         }
                                     }
                             ?>
@@ -1368,52 +1468,21 @@ if ($results && $results->num_rows > 0) {
                               
                                 <!-- Exact Columns Assigned Users -->
                                 <?php if($is_tracked): 
-                                    // Helper function to safely trim null values from DB
-                                    $safe_trim = function($val) { return trim((string)$val); };
-
-                                    // 1. Dependency Checks (Safe handling for NULL)
-                                    $img_na = ($safe_trim($row['instruction_to_image'])==='' || $safe_trim($row['instruction_to_image'])==='-' || strtolower($safe_trim($row['instruction_to_image']))==='no images');
-                                    $nlm_na = ($safe_trim($row['nlm'] ?? '')==='' || $safe_trim($row['nlm'] ?? '')==='-');
-                                    $jats_na = ($safe_trim($row['jats'] ?? '')==='' || $safe_trim($row['jats'] ?? '')==='-');
-                                    $clockss_na = ($safe_trim($row['clockss'] ?? '')==='' || $safe_trim($row['clockss'] ?? '')==='-');
-
-                                    $html_na = ($safe_trim($row['html'])==='' || $safe_trim($row['html'])==='-');
-                                    $nhtml_na = ($safe_trim($row['new_html'])==='' || $safe_trim($row['new_html'])==='-');
-                                    $dhtml_na = ($safe_trim($row['direct_html'])==='' || $safe_trim($row['direct_html'])==='-');
-
-                                    $scielo_na = ($safe_trim($row['scielo'] ?? '')==='' || $safe_trim($row['scielo'] ?? '')==='-');
-                                    $ebsco_na = ($safe_trim($row['ebsco'] ?? '')==='' || $safe_trim($row['ebsco'] ?? '')==='-');
-
-                                    $pubmed_na = ($safe_trim($row['pubmed'] ?? '')==='' || $safe_trim($row['pubmed'] ?? '')==='-');
-                                    $biblat_na = ($safe_trim($row['biblat'] ?? '')==='' || $safe_trim($row['biblat'] ?? '')==='-');
-                                    $doaj_na = ($safe_trim($row['doaj'] ?? '')==='' || $safe_trim($row['doaj'] ?? '')==='-');
-
-                                    // 2. Format final value Helper
-                                    $is_empty = function($val) use ($safe_trim) { 
-                                        $v = $safe_trim($val); 
-                                        return ($v === '' || $v === 'N/A' || $v === 'NA'); 
-                                    };
-
-                                    $valImg = $img_na ? 'N/A' : ($is_empty($row['Image_user']) ? '-' : $row['Image_user']);
-                                    $valTbl = $is_empty($row['Table_user']) ? '-' : $row['Table_user'];
-                                    $valWp = $is_empty($row['WPContent_user']) ? '-' : $row['WPContent_user'];
-
-                                    $valNlm = $nlm_na ? 'N/A' : ($is_empty($row['nlm_user'] ?? '') ? '-' : $row['nlm_user']);
-                                    $valJats = $jats_na ? 'N/A' : ($is_empty($row['jats_user'] ?? '') ? '-' : ($row['jats_user'] ?? ''));
-                                    $valClockss = $clockss_na ? 'N/A' : ($is_empty($row['clockss_user'] ?? '') ? '-' : ($row['clockss_user'] ?? ''));
-
-                                    $valHtml = $html_na ? 'N/A' : ($is_empty($row['HTML_user']) ? '-' : $row['HTML_user']);
-                                    $valNhtml = $nhtml_na ? 'N/A' : ($is_empty($row['new_html_user']) ? '-' : $row['new_html_user']);
-                                    $valDhtml = $dhtml_na ? 'N/A' : ($is_empty($row['direct_html_user'] ?? '') ? '-' : ($row['direct_html_user'] ?? ''));
-
-                                    $valScielo = $scielo_na ? 'N/A' : ($is_empty($row['Scielo_user'] ?? '') ? '-' : ($row['Scielo_user'] ?? ''));
-                                    $valEbsco = $ebsco_na ? 'N/A' : ($is_empty($row['ebsco_user'] ?? '') ? '-' : ($row['ebsco_user'] ?? ''));
-
-                                    $valPubmed = $pubmed_na ? 'N/A' : ($is_empty($row['pubmed_user'] ?? '') ? '-' : ($row['pubmed_user'] ?? ''));
-                                    $valBiblat = $biblat_na ? 'N/A' : ($is_empty($row['biblat_user'] ?? '') ? '-' : ($row['biblat_user'] ?? ''));
-                                    $valDoaj = $doaj_na ? 'N/A' : ($is_empty($row['doaj_user'] ?? '') ? '-' : ($row['doaj_user'] ?? ''));
-
-                                    $valQc = $is_empty($row['QC_user']) ? '-' : $row['QC_user'];
+                                    $valImg     = $taskVals['valImg'];
+                                    $valTbl     = $taskVals['valTbl'];
+                                    $valWp      = $taskVals['valWp'];
+                                    $valNlm     = $taskVals['valNlm'];
+                                    $valJats    = $taskVals['valJats'];
+                                    $valClockss = $taskVals['valClockss'];
+                                    $valHtml    = $taskVals['valHtml'];
+                                    $valNhtml   = $taskVals['valNhtml'];
+                                    $valDhtml   = $taskVals['valDhtml'];
+                                    $valScielo  = $taskVals['valScielo'];
+                                    $valEbsco   = $taskVals['valEbsco'];
+                                    $valPubmed  = $taskVals['valPubmed'];
+                                    $valBiblat  = $taskVals['valBiblat'];
+                                    $valDoaj    = $taskVals['valDoaj'];
+                                    $valQc      = $taskVals['valQc'];
                                 ?>
                                     <td class="<?= getUserColorClass($valImg) ?>"><?= renderUserVal($valImg) ?></td>
                                     <td class="<?= getUserColorClass($valTbl) ?>"><?= renderUserVal($valTbl) ?></td>
@@ -1440,45 +1509,15 @@ if ($results && $results->num_rows > 0) {
                                 <?php endif; ?>
                                 
                                 <td>
-                                        <?php 
-                                        // Check all assigned columns in this row
-                                        $user_columns = [
-                                            $row['Image_user'], 
-                                            $row['Table_user'], 
-                                            $row['WPContent_user'], 
-                                            $row['nlm_user'], 
-                                            $row['HTML_user'], 
-                                            $row['new_html_user'], 
-                                            $row['Scielo_user'], 
-                                            $row['pubmed_user'], 
-                                            $row['QC_user']
-                                        ];
-
-                                        $has_orange_assigned = false;
-                                        $has_any_completed   = false;
-
-                                        foreach ($user_columns as $col_val) {
-                                            $color = getUserColorClass($col_val);
-                                            
-                                            // If any task is still in Orange (In-Progress)
-                                            if ($color === 'bg-cell-assigned') {
-                                                $has_orange_assigned = true;
-                                                break;
-                                            }
-                                            
-                                            if ($color === 'bg-cell-completed') {
-                                                $has_any_completed = true;
-                                            }
-                                        }
-
-                                        // Only show date if NO task is orange AND at least assigned tasks are green (completed)
-                                        if ($is_tracked && !$has_orange_assigned && $has_any_completed && !empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00') {
-                                            echo formatDateTime($row['despatched_date'], 'd-M-Y H:i');
-                                        } else {
-                                            echo '-';
-                                        }
-                                        ?>
-                                    </td>
+                                    <?php 
+                                    // Strictly show Despatched Date ONLY when ALL tasks are 100% completed (Zero Blue and Zero Orange)
+                                    if ($is_tracked && isJobFullyCompleted($taskVals) && !empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00' && $row['despatched_date'] !== '0000-00-00 00:00:00') {
+                                        echo formatDateTime($row['despatched_date'], 'd-M-Y H:i');
+                                    } else {
+                                        echo '-';
+                                    }
+                                    ?>
+                                </td>
                                 <!-- <td><?= $is_tracked && !empty($row['Billed']) ? h($row['Billed']) : '-' ?></td> -->
 
                                 <td>
@@ -1650,38 +1689,35 @@ if ($results && $results->num_rows > 0) {
                                         if($tTime) $tatModalVal = date('Y-m-d', $tTime);
                                     }
 
-                                    // --- AUTO-DISPATCH CHECK FOR REMARKS AND CORRECTIONS ---
+                                    // --- STRICT AUTO-DISPATCH CHECK FOR REMARKS AND CORRECTIONS ---
+                                    $taskVals = $is_tracked ? getJobTaskStatusList($row) : [];
+                                    $has_orange_assigned = false;
+                                    $has_any_completed   = false;
                                     if ($is_tracked) {
-                                        $user_columns_check = [
-                                            $row['Image_user'], $row['Table_user'], $row['WPContent_user'], 
-                                            $row['nlm_user'], $row['jats_user'], $row['clockss_user'],
-                                            $row['Scielo_user'], $row['ebsco_user'], $row['pubmed_user'], 
-                                            $row['biblat_user'], $row['doaj_user'],
-                                            $row['HTML_user'], $row['new_html_user'], $row['direct_html_user'], $row['QC_user']
-                                        ];
-
-                                        $all_tasks_completed = true;
-                                        $has_valid_task = false;
-
-                                        foreach ($user_columns_check as $col_val) {
-                                            $v = trim((string)$col_val);
-                                            if ($v === 'N/A' || $v === 'NA' || $v === '-' || $v === '') {
-                                                continue; 
+                                        foreach ($taskVals as $col_val) {
+                                            $color = getUserColorClass($col_val);
+                                            if ($color === 'bg-cell-assigned') {
+                                                $has_orange_assigned = true;
                                             }
-                                            
-                                            $has_valid_task = true;
-                                            if (strpos($v, '✓') === false && strpos(strtolower($v), 'done') === false && strpos(strtolower($v), 'completed') === false) {
-                                                $all_tasks_completed = false;
-                                                break;
+                                            if ($color === 'bg-cell-completed') {
+                                                $has_any_completed = true;
                                             }
                                         }
-                                        // For Rework/Correction jobs: preserve job_status = 'Rework/Correction' so it stays in this table, but record dispatched date
-                                        if ($has_valid_task && $all_tasks_completed) {
+                                        $is_completed = isJobFullyCompleted($taskVals);
+                                        // For Rework/Correction jobs: preserve job_status = 'Rework/Correction' so it strictly stays in this table, but record dispatched date
+                                        if ($is_completed) {
                                             if (empty($row['despatched_date']) || $row['despatched_date'] == '0000-00-00' || $row['despatched_date'] == '0000-00-00 00:00:00') {
                                                 $row['despatched_date'] = date('Y-m-d H:i:s'); 
                                                 $upd_id = (int)$row['job_id'];
                                                 $upd_date = $row['despatched_date'];
                                                 $mysqli->query("UPDATE unique_xml_jobs SET despatched_date = '$upd_date' WHERE job_id = $upd_id");
+                                            }
+                                        } else {
+                                            // If tasks are still in Assign or In-Progress, clear any premature dispatched date
+                                            if (!empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00') {
+                                                $upd_id = (int)$row['job_id'];
+                                                $row['despatched_date'] = null;
+                                                $mysqli->query("UPDATE unique_xml_jobs SET despatched_date = NULL WHERE job_id = $upd_id");
                                             }
                                         }
                                     }
@@ -1777,49 +1813,21 @@ if ($results && $results->num_rows > 0) {
                               
                                 <!-- Exact Columns Assigned Users -->
                                 <?php if($is_tracked): 
-                                    $safe_trim = function($val) { return trim((string)$val); };
-
-                                    $img_na = ($safe_trim($row['instruction_to_image'])==='' || $safe_trim($row['instruction_to_image'])==='-' || strtolower($safe_trim($row['instruction_to_image']))==='no images');
-                                    $nlm_na = ($safe_trim($row['nlm'] ?? '')==='' || $safe_trim($row['nlm'] ?? '')==='-');
-                                    $jats_na = ($safe_trim($row['jats'] ?? '')==='' || $safe_trim($row['jats'] ?? '')==='-');
-                                    $clockss_na = ($safe_trim($row['clockss'] ?? '')==='' || $safe_trim($row['clockss'] ?? '')==='-');
-
-                                    $html_na = ($safe_trim($row['html'])==='' || $safe_trim($row['html'])==='-');
-                                    $nhtml_na = ($safe_trim($row['new_html'])==='' || $safe_trim($row['new_html'])==='-');
-                                    $dhtml_na = ($safe_trim($row['direct_html'])==='' || $safe_trim($row['direct_html'])==='-');
-
-                                    $scielo_na = ($safe_trim($row['scielo'] ?? '')==='' || $safe_trim($row['scielo'] ?? '')==='-');
-                                    $ebsco_na = ($safe_trim($row['ebsco'] ?? '')==='' || $safe_trim($row['ebsco'] ?? '')==='-');
-
-                                    $pubmed_na = ($safe_trim($row['pubmed'] ?? '')==='' || $safe_trim($row['pubmed'] ?? '')==='-');
-                                    $biblat_na = ($safe_trim($row['biblat'] ?? '')==='' || $safe_trim($row['biblat'] ?? '')==='-');
-                                    $doaj_na = ($safe_trim($row['doaj'] ?? '')==='' || $safe_trim($row['doaj'] ?? '')==='-');
-
-                                    $is_empty = function($val) use ($safe_trim) { 
-                                        $v = $safe_trim($val); 
-                                        return ($v === '' || $v === 'N/A' || $v === 'NA'); 
-                                    };
-
-                                    $valImg = $img_na ? 'N/A' : ($is_empty($row['Image_user']) ? '-' : $row['Image_user']);
-                                    $valTbl = $is_empty($row['Table_user']) ? '-' : $row['Table_user'];
-                                    $valWp = $is_empty($row['WPContent_user']) ? '-' : $row['WPContent_user'];
-
-                                    $valNlm = $nlm_na ? 'N/A' : ($is_empty($row['nlm_user'] ?? '') ? '-' : $row['nlm_user']);
-                                    $valJats = $jats_na ? 'N/A' : ($is_empty($row['jats_user'] ?? '') ? '-' : ($row['jats_user'] ?? ''));
-                                    $valClockss = $clockss_na ? 'N/A' : ($is_empty($row['clockss_user'] ?? '') ? '-' : ($row['clockss_user'] ?? ''));
-
-                                    $valHtml = $html_na ? 'N/A' : ($is_empty($row['HTML_user']) ? '-' : $row['HTML_user']);
-                                    $valNhtml = $nhtml_na ? 'N/A' : ($is_empty($row['new_html_user']) ? '-' : $row['new_html_user']);
-                                    $valDhtml = $dhtml_na ? 'N/A' : ($is_empty($row['direct_html_user'] ?? '') ? '-' : ($row['direct_html_user'] ?? ''));
-
-                                    $valScielo = $scielo_na ? 'N/A' : ($is_empty($row['Scielo_user'] ?? '') ? '-' : ($row['Scielo_user'] ?? ''));
-                                    $valEbsco = $ebsco_na ? 'N/A' : ($is_empty($row['ebsco_user'] ?? '') ? '-' : ($row['ebsco_user'] ?? ''));
-
-                                    $valPubmed = $pubmed_na ? 'N/A' : ($is_empty($row['pubmed_user'] ?? '') ? '-' : ($row['pubmed_user'] ?? ''));
-                                    $valBiblat = $biblat_na ? 'N/A' : ($is_empty($row['biblat_user'] ?? '') ? '-' : ($row['biblat_user'] ?? ''));
-                                    $valDoaj = $doaj_na ? 'N/A' : ($is_empty($row['doaj_user'] ?? '') ? '-' : ($row['doaj_user'] ?? ''));
-
-                                    $valQc = $is_empty($row['QC_user']) ? '-' : $row['QC_user'];
+                                    $valImg     = $taskVals['valImg'];
+                                    $valTbl     = $taskVals['valTbl'];
+                                    $valWp      = $taskVals['valWp'];
+                                    $valNlm     = $taskVals['valNlm'];
+                                    $valJats    = $taskVals['valJats'];
+                                    $valClockss = $taskVals['valClockss'];
+                                    $valHtml    = $taskVals['valHtml'];
+                                    $valNhtml   = $taskVals['valNhtml'];
+                                    $valDhtml   = $taskVals['valDhtml'];
+                                    $valScielo  = $taskVals['valScielo'];
+                                    $valEbsco   = $taskVals['valEbsco'];
+                                    $valPubmed  = $taskVals['valPubmed'];
+                                    $valBiblat  = $taskVals['valBiblat'];
+                                    $valDoaj    = $taskVals['valDoaj'];
+                                    $valQc      = $taskVals['valQc'];
                                 ?>
                                     <td class="<?= getUserColorClass($valImg) ?>"><?= renderUserVal($valImg) ?></td>
                                     <td class="<?= getUserColorClass($valTbl) ?>"><?= renderUserVal($valTbl) ?></td>
@@ -1847,35 +1855,8 @@ if ($results && $results->num_rows > 0) {
                                 
                                 <td>
                                     <?php 
-                                    $user_columns = [
-                                        $row['Image_user'], 
-                                        $row['Table_user'], 
-                                        $row['WPContent_user'], 
-                                        $row['nlm_user'], 
-                                        $row['HTML_user'], 
-                                        $row['new_html_user'], 
-                                        $row['Scielo_user'], 
-                                        $row['pubmed_user'], 
-                                        $row['QC_user']
-                                    ];
-
-                                    $has_orange_assigned = false;
-                                    $has_any_completed   = false;
-
-                                    foreach ($user_columns as $col_val) {
-                                        $color = getUserColorClass($col_val);
-                                        
-                                        if ($color === 'bg-cell-assigned') {
-                                            $has_orange_assigned = true;
-                                            break;
-                                        }
-                                        
-                                        if ($color === 'bg-cell-completed') {
-                                            $has_any_completed = true;
-                                        }
-                                    }
-
-                                    if ($is_tracked && !$has_orange_assigned && $has_any_completed && !empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00') {
+                                    // Strictly show Despatched Date ONLY when ALL tasks are 100% completed (Zero Blue and Zero Orange)
+                                    if ($is_tracked && isJobFullyCompleted($taskVals) && !empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00' && $row['despatched_date'] !== '0000-00-00 00:00:00') {
                                         echo formatDateTime($row['despatched_date'], 'd-M-Y H:i');
                                     } else {
                                         echo '-';
