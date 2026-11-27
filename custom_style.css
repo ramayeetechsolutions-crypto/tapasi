@@ -4294,28 +4294,8 @@ html body .dataTables_paginate .paginate_button.current * {
     color: #ffffff !important;
 }
 
-/* Ensure Assign buttons inside blue status cells (such as xmlJobsTable in XML Unassigned Jobs) have crisp, clearly visible text at all times */
-#xmlJobsTable .btn-light,
-#xmlJobsTable button.btn-light,
-#xmlJobsTable .btn-assign-task,
-table [style*="#0d6efd"] .btn-light,
-table [style*="#0d6efd"] .btn-light *,
-table [style*="background-color: #0d6efd"] .btn-light,
-table [style*="background-color: #0d6efd"] .btn-light * {
+/* Unassigned jobs assign button on blue cell */
+html body [style*="#0d6efd"] .btn-assign-task,
+html body [style*="#0d6efd"] .btn-assign-task * {
     color: #0d6efd !important;
-    background-color: #ffffff !important;
-    font-weight: 700 !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-}
-
-#xmlJobsTable .btn-light:hover,
-#xmlJobsTable button.btn-light:hover,
-#xmlJobsTable .btn-assign-task:hover,
-table [style*="#0d6efd"] .btn-light:hover,
-table [style*="#0d6efd"] .btn-light:hover *,
-table [style*="background-color: #0d6efd"] .btn-light:hover,
-table [style*="background-color: #0d6efd"] .btn-light:hover * {
-    color: #0a58ca !important;
-    background-color: #f0f7ff !important;
 }

@@ -385,14 +385,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_jobs') {
                 END) as has_scielo,
                 a.id as article_id, 
                 COALESCE(NULLIF(a.article_name, ''), NULLIF(j.articles, ''), '-') as article_name, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.nlm, ''), '-') ELSE COALESCE(NULLIF(j.xml_status, ''), '-') END as nlm, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.jats, ''), '-') ELSE '-' END as jats, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.clockss, ''), '-') ELSE '-' END as clockss, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.scielo, ''), '-') ELSE COALESCE(NULLIF(j.scielo_ebsco_status, ''), '-') END as scielo, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.ebsco, ''), '-') ELSE '-' END as ebsco, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.pubmed, ''), '-') ELSE COALESCE(NULLIF(j.pubmed_biblat_status, ''), '-') END as pubmed, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.biblat, ''), '-') ELSE '-' END as biblat, 
-                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.doaj, ''), '-') ELSE '-' END as doaj, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.nlm, ''), '-') ELSE COALESCE(NULLIF(j.nlm, ''), NULLIF(j.xml_status, ''), '-') END as nlm, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.jats, ''), '-') ELSE COALESCE(NULLIF(j.jats, ''), '-') END as jats, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.clockss, ''), '-') ELSE COALESCE(NULLIF(j.clockss, ''), '-') END as clockss, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.scielo, ''), '-') ELSE COALESCE(NULLIF(j.scielo, ''), NULLIF(j.scielo_ebsco_status, ''), '-') END as scielo, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.ebsco, ''), '-') ELSE COALESCE(NULLIF(j.ebsco, ''), '-') END as ebsco, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.pubmed, ''), '-') ELSE COALESCE(NULLIF(j.pubmed, ''), NULLIF(j.pubmed_biblat_status, ''), '-') END as pubmed, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.biblat, ''), '-') ELSE COALESCE(NULLIF(j.biblat, ''), '-') END as biblat, 
+                CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.doaj, ''), '-') ELSE COALESCE(NULLIF(j.doaj, ''), '-') END as doaj, 
                 CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.html_1, ''), '-') ELSE COALESCE(NULLIF(j.html, ''), '-') END as html_1, 
                 CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.new_html, ''), '-') ELSE COALESCE(NULLIF(j.new_html, ''), '-') END as new_html, 
                 CASE WHEN a.id IS NOT NULL THEN COALESCE(NULLIF(a.direct_html, ''), '-') ELSE COALESCE(NULLIF(j.direct_html, ''), '-') END as direct_html, 
@@ -440,10 +440,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'fetch_jobs') {
                 $row['is_first'] = false;
             }
 
-            // Force pubmed/biblat/doaj value to display as 1 if present
-            if (!empty($row['pubmed']) && $row['pubmed'] !== '-') $row['pubmed'] = '1';
-            if (!empty($row['biblat']) && $row['biblat'] !== '-') $row['biblat'] = '1';
-            if (!empty($row['doaj']) && $row['doaj'] !== '-') $row['doaj'] = '1';
+            // Force pubmed/biblat/doaj value to display as 1 if present for article-level rows
+            if (!empty($row['article_id'])) {
+                if (!empty($row['pubmed']) && $row['pubmed'] !== '-') $row['pubmed'] = '1';
+                if (!empty($row['biblat']) && $row['biblat'] !== '-') $row['biblat'] = '1';
+                if (!empty($row['doaj']) && $row['doaj'] !== '-') $row['doaj'] = '1';
+            }
 
             $data[] = $row;
         }
@@ -461,7 +463,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_job_details') {
     try {
         $job_id = (int)$_GET['job_id'];
         
-        $stmt = $mysqli->prepare("SELECT id, job_id, Billed, despatched_date FROM unique_xml_jobs WHERE id = ?");
+        $stmt = $mysqli->prepare("SELECT id, job_id, Billed, despatched_date, nlm, jats, clockss, scielo, ebsco, pubmed, biblat, doaj, html, new_html, direct_html FROM unique_xml_jobs WHERE id = ?");
         $stmt->bind_param("i", $job_id);
         $stmt->execute();
         $job = $stmt->get_result()->fetch_assoc();
@@ -514,6 +516,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_job_details') {
         if ($procs) {
             foreach ($map as $db_key => $form_val) {
                 if (!empty($procs[$db_key])) {
+                    $job['checked_processes'][] = $form_val;
+                }
+            }
+        }
+
+        // Also auto-check processes from unique_xml_jobs (entered in UQ Process)
+        $parent_proc_map = [
+            'nlm'         => 'nlm',
+            'jats'        => 'jats',
+            'clockss'     => 'clockss',
+            'scielo'      => 'scielo',
+            'ebsco'       => 'ebsco',
+            'pubmed'      => 'pubmed',
+            'biblat'      => 'biblat',
+            'doaj'        => 'doaj',
+            'html'        => 'html_1',
+            'new_html'    => 'new_html',
+            'direct_html' => 'direct_html'
+        ];
+        foreach ($parent_proc_map as $p_col => $form_val) {
+            $val = trim((string)($job[$p_col] ?? ''));
+            if ($val !== '' && $val !== '-' && $val !== '0' && strtolower($val) !== 'n/a' && strtolower($val) !== 'na') {
+                if (!in_array($form_val, $job['checked_processes'], true)) {
                     $job['checked_processes'][] = $form_val;
                 }
             }
