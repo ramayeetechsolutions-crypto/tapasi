@@ -312,6 +312,22 @@ h6.text-white,
     align-items: center !important;
 }
 
+/* Defensive reset when dashboard-header wraps page-title-container */
+.dashboard-header:has(> .page-title-container),
+.dashboard-header:has(.page-title-container) {
+    background: transparent !important;
+    background-color: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-left: none !important;
+}
+
+.dashboard-header > .page-title-container {
+    margin-bottom: 20px !important;
+}
+
 /* =========================================================================
    Adaptive Header Widths matching Centered Form Cards & Layouts across All Logins
    ========================================================================= */
