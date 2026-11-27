@@ -720,6 +720,13 @@ function fetchData() {
             background-color: #f8f9fa !important;
         }
 
+        /* Darker table line divider after Missed TAT column (using table's slate gray, not black) */
+        .border-missed-tat,
+        table.dataTable thead th.border-missed-tat,
+        table.dataTable tbody td.border-missed-tat {
+            border-right: 2px solid #6c757d !important;
+        }
+
         .form-control, .form-select, .input-group-text, .btn-sm {
             font-size: 12.5px !important;
         }
@@ -879,7 +886,7 @@ function fetchData() {
                             <th>Direct HTML</th>
                             <th>Job Status</th>
                             <th>TAT</th>
-                            <th>Missed TAT</th>
+                            <th class="border-missed-tat">Missed TAT</th>
                             <th>Img Inst.</th>
                             <!-- Task Columns -->
                             <th>Image</th>
@@ -1039,6 +1046,7 @@ function fetchData() {
                 },
                 { 
                     data: null, 
+                    className: 'border-missed-tat',
                     render: function(data, type, row) {
                         if (!row.tat_to_client) return '<span class="text-muted">-</span>';
                         

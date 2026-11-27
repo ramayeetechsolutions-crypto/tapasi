@@ -713,6 +713,49 @@ if ($results && $results->num_rows > 0) {
             border-left: 1px solid #dee2e6 !important;
         }
 
+        /* Darker table line divider after Missed TAT column (using table's slate gray, not black) */
+        .border-missed-tat,
+        #trackingTable thead th.border-missed-tat,
+        #trackingTable tbody td.border-missed-tat,
+        #reworkTable thead th.border-missed-tat,
+        #reworkTable tbody td.border-missed-tat {
+            border-right: 2px solid #6c757d !important;
+        }
+
+        /* 7. Frozen Bottom TOTAL Row */
+        #trackingTable tfoot tr {
+            position: sticky !important;
+            bottom: 0 !important;
+            z-index: 25 !important;
+        }
+        #trackingTable tfoot td {
+            position: sticky !important;
+            bottom: 0 !important;
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+            font-weight: 700 !important;
+            font-size: 12.5px !important;
+            border-top: 1px solid #dee2e6 !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            border-right: 1px solid #dee2e6 !important;
+            z-index: 25 !important;
+            box-shadow: none !important;
+        }
+        #trackingTable tfoot td:first-child {
+            border-left: 1px solid #dee2e6 !important;
+        }
+        #trackingTable tfoot td.sticky-col-1,
+        #trackingTable tfoot td.sticky-col-2,
+        #trackingTable tfoot td.sticky-col-3,
+        #trackingTable tfoot td.sticky-col-4 {
+            background-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            z-index: 30 !important;
+        }
+        #trackingTable tfoot tr:hover td {
+            transform: none !important;
+        }
+
         /* 3. Sticky Columns Setup (Exact Widths matching xml/xml.php) */
         .table th.sticky-col-1, .table td.sticky-col-1,
         #trackingTable thead th.sticky-col-1, #trackingTable tbody td.sticky-col-1,
@@ -908,6 +951,36 @@ if ($results && $results->num_rows > 0) {
         #reworkTable tbody tr:nth-child(odd) td.sticky-act-col { background-color: #ffffff !important; }
         #trackingTable tbody tr:hover td.sticky-act-col,
         #reworkTable tbody tr:hover td.sticky-act-col { background-color: #c4cbd3 !important; }
+
+        /* 8. Reworks & Corrections completed row highlight (Darker Purple Highlight) */
+        #reworkTable tbody tr.row-rework-completed td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr.row-rework-completed:nth-child(odd) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr.row-rework-completed:nth-child(even) td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr.row-rework-completed td.sticky-col-1,
+        #reworkTable tbody tr.row-rework-completed td.sticky-col-2,
+        #reworkTable tbody tr.row-rework-completed td.sticky-col-3,
+        #reworkTable tbody tr.row-rework-completed td.sticky-col-4,
+        #reworkTable tbody tr.row-rework-completed:nth-child(odd) td.sticky-col-1,
+        #reworkTable tbody tr.row-rework-completed:nth-child(odd) td.sticky-col-2,
+        #reworkTable tbody tr.row-rework-completed:nth-child(odd) td.sticky-col-3,
+        #reworkTable tbody tr.row-rework-completed:nth-child(odd) td.sticky-col-4,
+        #reworkTable tbody tr.row-rework-completed:nth-child(even) td.sticky-col-1,
+        #reworkTable tbody tr.row-rework-completed:nth-child(even) td.sticky-col-2,
+        #reworkTable tbody tr.row-rework-completed:nth-child(even) td.sticky-col-3,
+        #reworkTable tbody tr.row-rework-completed:nth-child(even) td.sticky-col-4,
+        #reworkTable tbody tr.row-rework-completed td.sticky-act-col,
+        #reworkTable tbody tr.row-rework-completed:nth-child(odd) td.sticky-act-col,
+        #reworkTable tbody tr.row-rework-completed:nth-child(even) td.sticky-act-col {
+            background-color: #d8b4fe !important;
+        }
+        #reworkTable tbody tr.row-rework-completed:hover td:not(.bg-primary):not(.bg-cell-completed):not(.bg-cell-assigned):not(.bg-cell-unassigned),
+        #reworkTable tbody tr.row-rework-completed:hover td.sticky-col-1,
+        #reworkTable tbody tr.row-rework-completed:hover td.sticky-col-2,
+        #reworkTable tbody tr.row-rework-completed:hover td.sticky-col-3,
+        #reworkTable tbody tr.row-rework-completed:hover td.sticky-col-4,
+        #reworkTable tbody tr.row-rework-completed:hover td.sticky-act-col {
+            background-color: #c49bfb !important;
+        }
 
         body { background-color: #f5f7fa; font-size: 12.5px; }
         .card { border: none; border-radius: 8px; box-shadow: 0 1px 10px rgba(0,0,0,0.05); }
@@ -1242,7 +1315,7 @@ if ($results && $results->num_rows > 0) {
                                 <th>Direct HTML</th>
                                 <th>Job Status</th>
                                 <th>TAT</th>
-                                <th>Missed TAT</th>
+                                <th class="border-missed-tat">Missed TAT</th>
                                 
                                 <th>Img Inst.</th>
 
@@ -1268,8 +1341,46 @@ if ($results && $results->num_rows > 0) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (count($main_jobs) > 0): $i=0;
+                            <?php 
+                            $tot_articles    = 0;
+                            $tot_nlm         = 0;
+                            $tot_jats        = 0;
+                            $tot_clockss     = 0;
+                            $tot_scielo      = 0;
+                            $tot_ebsco       = 0;
+                            $tot_pubmed      = 0;
+                            $tot_biblat      = 0;
+                            $tot_doaj        = 0;
+                            $tot_html        = 0;
+                            $tot_new_html    = 0;
+                            $tot_direct_html = 0;
+
+                            $parse_num = function($val) {
+                                if (empty($val) || $val === '-' || strtolower(trim((string)$val)) === 'n/a' || strtolower(trim((string)$val)) === 'na') {
+                                    return 0;
+                                }
+                                if (is_numeric($val)) return (float)$val;
+                                if (preg_match('/(\d+(\.\d+)?)/', (string)$val, $m)) {
+                                    return (float)$m[1];
+                                }
+                                return 0;
+                            };
+
+                            if (count($main_jobs) > 0): $i=0;
                                 foreach($main_jobs as $row): $i=$i+1; 
+                                    $tot_articles    += $parse_num($row['article'] ?? 0);
+                                    $tot_nlm         += $parse_num($row['nlm'] ?? 0);
+                                    $tot_jats        += $parse_num($row['jats'] ?? 0);
+                                    $tot_clockss     += $parse_num($row['clockss'] ?? 0);
+                                    $tot_scielo      += $parse_num($row['scielo'] ?? 0);
+                                    $tot_ebsco       += $parse_num($row['ebsco'] ?? 0);
+                                    $tot_pubmed      += $parse_num($row['pubmed'] ?? 0);
+                                    $tot_biblat      += $parse_num($row['biblat'] ?? 0);
+                                    $tot_doaj        += $parse_num($row['doaj'] ?? 0);
+                                    $tot_html        += $parse_num($row['html'] ?? 0);
+                                    $tot_new_html    += $parse_num($row['new_html'] ?? 0);
+                                    $tot_direct_html += $parse_num($row['direct_html'] ?? 0);
+
                                     $is_tracked = !empty($row['rec_date']);
                                     
                                     // Raw value formatted for Datetime-Local Picker
@@ -1443,7 +1554,7 @@ if ($results && $results->num_rows > 0) {
     ?>
 </td> -->
 
-<td>
+<td class="border-missed-tat">
     <?php 
     if ($is_tracked && !empty($row['tat_to_client'])) {
         $today_ts = strtotime(date('Y-m-d'));
@@ -1612,6 +1723,52 @@ if ($results && $results->num_rows > 0) {
                             </tr>
                             <?php endif; ?>
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="sticky-col-1 fw-bold text-center"></td>
+                                <td class="sticky-col-2 fw-bold text-center"></td>
+                                <td class="sticky-col-3 fw-bold text-center"></td>
+                                <td class="sticky-col-4 fw-bold text-center text-uppercase">TOTAL</td>
+                                <td class="fw-bold text-center text-dark" style="font-size: 12px;"><?= $tot_articles > 0 ? $tot_articles : '-' ?></td>
+                                
+                                <td><span class="badge-cyan fw-bold"><?= $tot_nlm > 0 ? $tot_nlm : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_jats > 0 ? $tot_jats : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_clockss > 0 ? $tot_clockss : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_scielo > 0 ? $tot_scielo : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_ebsco > 0 ? $tot_ebsco : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_pubmed > 0 ? $tot_pubmed : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_biblat > 0 ? $tot_biblat : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_doaj > 0 ? $tot_doaj : '-' ?></span></td>
+                                
+                                <td><span class="badge-cyan fw-bold"><?= $tot_html > 0 ? $tot_html : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_new_html > 0 ? $tot_new_html : '-' ?></span></td>
+                                <td><span class="badge-cyan fw-bold"><?= $tot_direct_html > 0 ? $tot_direct_html : '-' ?></span></td>
+                                
+                                <td>-</td>
+                                <td>-</td>
+                                <td class="border-missed-tat">-</td>
+                                
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td class="sticky-act-col"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -1648,7 +1805,7 @@ if ($results && $results->num_rows > 0) {
                                 <th>Direct HTML</th>
                                 <th>Job Status</th>
                                 <th>TAT</th>
-                                <th>Missed TAT</th>
+                                <th class="border-missed-tat">Missed TAT</th>
                                 
                                 <th>Img Inst.</th>
 
@@ -1721,8 +1878,9 @@ if ($results && $results->num_rows > 0) {
                                             }
                                         }
                                     }
+                                    $is_rework_done = $is_tracked && ($is_completed || (!empty($row['despatched_date']) && $row['despatched_date'] !== '0000-00-00' && $row['despatched_date'] !== '0000-00-00 00:00:00'));
                             ?>
-                            <tr>
+                            <tr class="<?= $is_rework_done ? 'row-rework-completed' : '' ?>">
                                 <td class="fw-bold sticky-col-1"><?= $k ?></td>
                                 <td class="sticky-col-2"><?= $is_tracked ? formatDateTime($row['rec_date'], 'd-M-Y H:i') : '-' ?></td>
                                 <td class="text-primary fw-bold text-start sticky-col-3" title="<?= h($row['team_client_name'] ?: $row['client_name']) ?>"><?= h($row['team_client_name'] ?: $row['client_name']) ?></td>
@@ -1789,7 +1947,7 @@ if ($results && $results->num_rows > 0) {
                                     <span class="badge" style="background-color: #6f42c1; color: #fff; font-weight: 700; padding: 3px 10px; border-radius: 12px; font-size: 10px;">Rework/Correction</span>
                                 </td>
                                 <td class="fw-bold"><?= $is_tracked && !empty($row['tat_to_client']) ? formatDateTime($row['tat_to_client'], 'd-M-Y') : '-' ?></td>
-                                <td>
+                                <td class="border-missed-tat">
                                     <?php 
                                     if ($is_tracked && !empty($row['tat_to_client'])) {
                                         $today_ts = strtotime(date('Y-m-d'));
