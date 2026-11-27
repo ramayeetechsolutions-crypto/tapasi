@@ -375,6 +375,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             if ($stmt->execute()) {
+                // Replicate status to publisher_master
+                $sync = $mysqli->prepare("UPDATE publisher_master SET status=? WHERE publisher_name=? COLLATE utf8mb4_general_ci");
+                $sync->bind_param("ss", $status, $client_name);
+                $sync->execute();
+                $sync->close();
+
                 redirect_with(['msg'=>"Client '$client_name' updated successfully",'type'=>'success']);
             } else {
                 redirect_with(['msg'=>'Error updating client: ' . $stmt->error,'type'=>'danger']);
@@ -427,6 +433,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $upd->bind_param("si", $newStatus, $id);
                 $upd->execute();
                 $upd->close();
+
+                // Replicate status to publisher_master
+                $sync = $mysqli->prepare("UPDATE publisher_master SET status=? WHERE publisher_name=? COLLATE utf8mb4_general_ci");
+                $sync->bind_param("ss", $newStatus, $row['client_name']);
+                $sync->execute();
+                $sync->close();
+
                 redirect_with(['msg'=>"Client '{$row['client_name']}' status changed to $newStatus",'type'=>'info']);
             }
         }
