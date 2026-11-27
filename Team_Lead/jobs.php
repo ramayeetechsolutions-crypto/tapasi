@@ -1498,7 +1498,7 @@ require 'header.php';
                             <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         <a href="jobs.php" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

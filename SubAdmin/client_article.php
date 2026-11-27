@@ -377,10 +377,10 @@ if ($export_type === 'excel') {
                     <label class="form-label mb-1">&nbsp;</label>
                     <div class="d-flex">
                         <button type="submit" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-filter me-1"></i> Filter
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         <a href="client_article.php" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </div>

@@ -2501,6 +2501,60 @@ td.sticky-assign-col-last {
    TEAM PAGE TABLE HOVER & HIERARCHY STYLING (Master -> Team)
    Across all logins: Executive, SubTL, Team_Lead, xml, SubAdmin, Super_Admin
    ========================================================================= */
+/* Enhanced Sort Headers & Sort Icons for Team Master Table (#teamTable) Across All Logins */
+#teamTable thead th.sorting,
+#teamTable thead th.sorting_asc,
+#teamTable thead th.sorting_desc {
+    cursor: pointer !important;
+    user-select: none !important;
+    position: relative !important;
+    transition: background-color 0.2s ease, color 0.2s ease !important;
+}
+
+#teamTable thead th.sorting:hover,
+#teamTable thead th.sorting_asc:hover,
+#teamTable thead th.sorting_desc:hover {
+    background-color: #586169 !important;
+}
+
+#teamTable thead th:not(.sorting):not(.sorting_asc):not(.sorting_desc) {
+    cursor: default !important;
+}
+
+#teamTable thead th:not(.sorting):not(.sorting_asc):not(.sorting_desc):before,
+#teamTable thead th:not(.sorting):not(.sorting_asc):not(.sorting_desc):after {
+    display: none !important;
+}
+
+/* Crisp, high-contrast DataTables Bootstrap 5 sort arrows */
+#teamTable thead th.sorting:before,
+#teamTable thead th.sorting:after {
+    opacity: 0.45 !important;
+    color: #ffffff !important;
+}
+
+#teamTable thead th.sorting_asc:before {
+    opacity: 1 !important;
+    color: #00d2ff !important;
+    text-shadow: 0 0 5px rgba(0, 210, 255, 0.6) !important;
+}
+
+#teamTable thead th.sorting_asc:after {
+    opacity: 0.15 !important;
+    color: #ffffff !important;
+}
+
+#teamTable thead th.sorting_desc:after {
+    opacity: 1 !important;
+    color: #00d2ff !important;
+    text-shadow: 0 0 5px rgba(0, 210, 255, 0.6) !important;
+}
+
+#teamTable thead th.sorting_desc:before {
+    opacity: 0.15 !important;
+    color: #ffffff !important;
+}
+
 /* Main Team Table Hover - strictly apply to direct td of team-leader-row only */
 #teamTable > tbody > tr.team-leader-row:hover > td,
 #teamTable tbody tr.team-leader-row:hover > td,
@@ -4233,16 +4287,70 @@ table .btn-danger:has(.bi-trash),
 table .btn-danger[title*="Delete" i],
 table .btn-edit,
 table .btn-delete,
+table .btn-outline-warning:has(.fa-edit),
+table .btn-outline-primary:has(.fa-edit),
+table .btn-outline-danger:has(.fa-trash),
+table .btn-outline-danger:has(.fa-trash-alt),
+table .btn:has(.fa-edit),
+table .btn:has(.fa-trash),
+table .btn:has(.fa-trash-alt),
+table .btn[title*="Edit" i],
+table .btn[title*="Delete" i],
 .btn-group .btn-warning:has(.fa-edit),
 .btn-group .btn-danger:has(.fa-trash),
 .btn-group .btn-edit,
-.btn-group .btn-delete {
+.btn-group .btn-delete,
+.btn-group .btn-outline-warning:has(.fa-edit),
+.btn-group .btn-outline-primary:has(.fa-edit),
+.btn-group .btn-outline-danger:has(.fa-trash),
+.btn-group .btn-outline-danger:has(.fa-trash-alt),
+.btn-group .btn:has(.fa-edit),
+.btn-group .btn:has(.fa-trash),
+.btn-group .btn:has(.fa-trash-alt) {
     border: none !important;
     border-color: transparent !important;
     box-shadow: none !important;
     outline: none !important;
     background-color: transparent !important;
     background: transparent !important;
+}
+
+/* Ensure Edit and Delete action icons always stay in the exact same row without breaking or wrapping */
+table td:has(.btn-group),
+table td:has(.btn-edit),
+table td:has(.btn-delete),
+table td:has(a[href*="edit"]),
+table td:has(button[title*="Edit" i]),
+table td:has(button[title*="Delete" i]),
+table th.sticky-actions-col,
+table td.sticky-actions-col,
+table th[class*="action" i],
+table td[class*="action" i] {
+    white-space: nowrap !important;
+}
+
+table .btn-group,
+.btn-group:has(.fa-edit),
+.btn-group:has(.fa-trash),
+.btn-group:has(.btn-edit),
+.btn-group:has(.btn-delete),
+.btn-group:has(a[href*="edit"]),
+.btn-group:has(button[title*="Edit" i]),
+.btn-group:has(button[title*="Delete" i]) {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    gap: 4px !important;
+}
+
+table .btn-group form,
+.btn-group form {
+    display: inline-flex !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* =========================================================================
@@ -4318,4 +4426,27 @@ table [style*="background-color: #0d6efd"] .btn-light:hover,
 table [style*="background-color: #0d6efd"] .btn-light:hover * {
     color: #0a58ca !important;
     background-color: #f0f7ff !important;
+}
+
+/* Reset / Outline Secondary Button Styling:
+   Transparent background with clean border normally; solid gray background ONLY on hover */
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *) {
+    background-color: transparent !important;
+    border: 1px solid #6c757d !important;
+    color: #6c757d !important;
+    transition: all 0.2s ease-in-out;
+}
+
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *):hover,
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *):active,
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *):focus {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *):hover *,
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *):active *,
+body .btn-outline-secondary:not(.page-title-container *):not(.page-header *):not(.user-header *):not(.header-card *):focus * {
+    color: #ffffff !important;
 }

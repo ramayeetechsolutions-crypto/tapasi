@@ -453,9 +453,9 @@ $mysqli->close();
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 50px;"></th> 
-                            <th>Team Leader</th>
-                            <th>Team Size</th>
-                            <th>Team Details</th>
+                            <th title="Click to sort by Team Leader">Team Leader</th>
+                            <th title="Click to sort by Team Size">Team Size</th>
+                            <th title="Team Details (Non-sortable)">Team Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -601,6 +601,9 @@ $mysqli->close();
                     { 
                         data: 'team_leader',
                         render: function(data, type, row) {
+                            if (type === 'sort' || type === 'type') {
+                                return data ? data.toLowerCase() : '';
+                            }
                             if (!data) return '<span class="text-muted">Unknown</span>';
                             
                             return '<div class="d-flex align-items-center">' +
@@ -618,21 +621,31 @@ $mysqli->close();
                     },
                     { 
                         data: 'executives',
+                        type: 'num',
                         render: function(data, type, row) {
-                            if (!data || data.trim() === '') {
-                                return '<span class="badge bg-secondary team-size-badge">0 members</span>';
+                            var teamSize = 0;
+                            if (row.team_size !== undefined && row.team_size !== null) {
+                                teamSize = parseInt(row.team_size, 10) || 0;
+                            } else if (data && data.trim() !== '') {
+                                var executivesArray = data.split('|||').filter(function(item) {
+                                    return item.trim() !== '';
+                                });
+                                teamSize = executivesArray.length;
                             }
                             
-                            var executivesArray = data.split('|||').filter(function(item) {
-                                return item.trim() !== '';
-                            });
-                            
-                            var teamSize = executivesArray.length;
-                            var badgeClass = '';
-                            
+                            if (type === 'sort' || type === 'type') {
+                                return teamSize;
+                            }
+
                             if (teamSize === 0) {
-                                badgeClass = 'bg-secondary';
-                            } else if (teamSize <= 3) {
+                                return '<div class="d-flex align-items-center">' +
+                                    '<span class="badge bg-secondary team-size-badge me-2">0 members</span>' +
+                                    '<div class="small text-muted"><i class="fas fa-times-circle text-secondary"></i> Empty</div>' +
+                                '</div>';
+                            }
+                            
+                            var badgeClass = '';
+                            if (teamSize <= 3) {
                                 badgeClass = 'bg-warning';
                             } else if (teamSize <= 7) {
                                 badgeClass = 'bg-info';
@@ -650,6 +663,7 @@ $mysqli->close();
                     },
                     { 
                         data: 'executives',
+                        orderable: false,
                         render: function(data, type, row) {
                             if (!data || data.trim() === '') {
                                 return '<div class="text-muted">' +

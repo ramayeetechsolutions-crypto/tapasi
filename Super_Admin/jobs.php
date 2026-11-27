@@ -268,8 +268,8 @@ require 'header.php';
                 </select>
             </div> -->
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                <a href="jobs.php" class="btn btn-secondary btn-sm">Clear</a>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                <a href="jobs.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
             </div>
         </form>
 

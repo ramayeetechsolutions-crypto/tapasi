@@ -446,10 +446,10 @@ require 'header.php';
                     <div class="col-md-3 d-flex align-items-end">
                         <div class="btn-group w-100">
                             <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-search"></i> Filter
+                                <i class="fas fa-filter me-1"></i> Apply Filters
                             </button>
-                            <a href="time_tracking_report.php" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-times"></i> Clear
+                            <a href="time_tracking_report.php" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-undo me-1"></i> Reset
                             </a>
                             <?php if ($role_name === 'TM'): ?>
                                 <a href="time_tracking_report.php?employee=<?= urlencode($logged_user) ?>" 

@@ -320,7 +320,7 @@ $total_hours = round($total_hours / 3600, 2); // Convert seconds to hours
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-search"></i> Filter
+                                <i class="fas fa-filter me-1"></i> Apply Filters
                             </button>
                         </div>
                     </div>

@@ -239,9 +239,9 @@ $mysqli->close();
             <thead>
                 <tr>
                     <th class="text-center" style="width: 5%;"></th> 
-                    <th style="width: 35%;">Team Leader</th>
-                    <th style="width: 25%;">Team Size</th>
-                    <th style="width: 35%;">Team Details</th>
+                    <th style="width: 35%;" title="Click to sort by Team Leader">Team Leader</th>
+                    <th style="width: 25%;" title="Click to sort by Team Size">Team Size</th>
+                    <th style="width: 35%;" title="Team Details (Non-sortable)">Team Details</th>
                 </tr>
             </thead>
             <tbody>
@@ -315,15 +315,22 @@ $mysqli->close();
                     data: 'team_leader',
                     width: '35%',
                     render: function(data, type, row) {
+                        if (type === 'sort' || type === 'type') {
+                            return data ? data.toLowerCase() : '';
+                        }
                         return '<div class="team-leader-name"><i class="fas fa-crown text-warning me-2"></i>' + data + '</div>';
                     }
                 },
                 { 
                     data: 'executives',
                     width: '25%',
+                    type: 'num',
                     render: function(data, type, row) {
                         var executivesArray = data ? data.split('|||').filter(Boolean) : [];
-                        var teamSize = executivesArray.length;
+                        var teamSize = row.team_size !== undefined ? parseInt(row.team_size, 10) : executivesArray.length;
+                        if (type === 'sort' || type === 'type') {
+                            return teamSize;
+                        }
                         var badgeClass = teamSize > 0 ? 'bg-success' : 'bg-secondary';
                         return '<span class="badge ' + badgeClass + '">' + teamSize + ' member(s)</span>';
                     }
@@ -331,6 +338,7 @@ $mysqli->close();
                 { 
                     data: 'executives',
                     width: '35%',
+                    orderable: false,
                     render: function(data, type, row) {
                         var executivesArray = data ? data.split('|||').filter(Boolean) : [];
                         if (executivesArray.length > 0) {

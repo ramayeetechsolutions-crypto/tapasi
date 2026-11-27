@@ -922,11 +922,11 @@ $designations=$mysqli->query("SELECT designation_id, designation_name FROM desig
       <!-- ✅ Buttons Row -->
       <div class="col-12 d-flex align-items-center mt-2">
         <button type="submit" class="btn btn-primary btn-sm me-2">
-          <i class="fas fa-search me-1"></i> Search
+          <i class="fas fa-filter me-1"></i> Apply Filters
         </button>
 
-        <a href="employee_master.php" class="btn btn-secondary btn-sm me-2">
-          <i class="fas fa-times me-1"></i> Clear
+        <a href="employee_master.php" class="btn btn-outline-secondary btn-sm me-2">
+          <i class="fas fa-undo me-1"></i> Reset
         </a>
 
         <!-- ✅ Import Excel Button (Green) -->

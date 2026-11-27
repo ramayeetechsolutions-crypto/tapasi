@@ -365,19 +365,19 @@ $total_count = $count_result->fetch_assoc()['total'] ?? 0;
         <!-- Filter Card -->
         <div class="card filter-card mb-4">
             <div class="card-body">
-                <form method="get" class="row g-3 align-items-center">
-                    <div class="col-md-2">
-                        <label class="form-label mb-1"><i class="fas fa-calendar me-1"></i> From Date</label>
-                        <input type="date" name="from_date" class="form-control form-control-sm" value="<?= h($from_date) ?>">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label mb-1 text-nowrap"><i class="fas fa-calendar me-1"></i> From Date</label>
+                        <input type="date" name="from_date" class="form-control form-control-sm" style="width: 140px;" value="<?= h($from_date) ?>">
                     </div>
                     
-                    <div class="col-md-2">
-                        <label class="form-label mb-1"><i class="fas fa-calendar me-1"></i> To Date</label>
-                        <input type="date" name="to_date" class="form-control form-control-sm" value="<?= h($to_date) ?>">
+                    <div class="col-auto">
+                        <label class="form-label mb-1 text-nowrap"><i class="fas fa-calendar me-1"></i> To Date</label>
+                        <input type="date" name="to_date" class="form-control form-control-sm" style="width: 140px;" value="<?= h($to_date) ?>">
                     </div>
                     
-                    <div class="col-md-3">
-                        <label class="form-label mb-1"><i class="fas fa-cogs me-1"></i> Process</label>
+                    <div class="col-md-2 col-auto" style="min-width: 160px;">
+                        <label class="form-label mb-1 text-nowrap"><i class="fas fa-cogs me-1"></i> Process</label>
                         <select name="process_id" class="form-select form-select-sm">
                             <option value="0">All Processes</option>
                             <?php foreach ($processes as $process): ?>
@@ -388,22 +388,19 @@ $total_count = $count_result->fetch_assoc()['total'] ?? 0;
                         </select>
                     </div>
                     
-                    <div class="col-md-3">
-                        <label class="form-label mb-1"><i class="fas fa-search me-1"></i> Search</label>
+                    <div class="col-md col-12">
+                        <label class="form-label mb-1 text-nowrap"><i class="fas fa-search me-1"></i> Search</label>
                         <input type="text" name="q" class="form-control form-control-sm" 
                                placeholder="Search issue or article..." value="<?= h($q) ?>">
                     </div>
                     
-                    <div class="col-md-2">
-                        <label class="form-label mb-1">&nbsp;</label>
-                        <div class="d-flex">
-                            <button type="submit" class="btn btn-primary btn-sm me-2">
-                                <i class="fas fa-filter me-1"></i> Filter
-                            </button>
-                            <a href="my_jobs.php" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-times me-1"></i> Clear
-                            </a>
-                        </div>
+                    <div class="col-auto d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        <a href="client_report.php" class="btn btn-outline-secondary btn-sm text-nowrap">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
                     </div>
                     
                     <div class="col-md-12 mt-3">

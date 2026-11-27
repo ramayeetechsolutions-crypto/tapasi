@@ -341,9 +341,9 @@ $mysqli->close();
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 50px;"></th> 
-                            <th>Team Leader</th>
-                            <th>Team Size</th>
-                            <th>XML Processes</th> <!-- Team's XML Processes -->
+                            <th title="Click to sort by Team Leader">Team Leader</th>
+                            <th title="Click to sort by Team Size">Team Size</th>
+                            <th title="Team XML Processes (Non-sortable)">XML Processes</th> <!-- Team's XML Processes -->
                         </tr>
                     </thead>
                     <tbody>
@@ -515,6 +515,9 @@ $mysqli->close();
                     { 
                         data: 'team_leader',
                         render: function(data, type, row) {
+                            if (type === 'sort' || type === 'type') {
+                                return data ? data.toLowerCase() : '';
+                            }
                             if (!data) return '<span class="text-muted">Unknown</span>';
                             return '<div class="d-flex align-items-center">' +
                                 '<div class="me-2"><i class="fas fa-user-tie text-primary"></i></div>' +
@@ -527,8 +530,12 @@ $mysqli->close();
                     },
                     { 
                         data: 'team_size',
+                        type: 'num',
                         render: function(data, type, row) {
-                            var teamSize = parseInt(data) || 0;
+                            var teamSize = parseInt(data, 10) || 0;
+                            if (type === 'sort' || type === 'type') {
+                                return teamSize;
+                            }
                             var badgeClass = teamSize === 0 ? 'bg-secondary' : (teamSize <= 3 ? 'bg-warning' : (teamSize <= 7 ? 'bg-info' : 'bg-success'));
                             return '<div class="d-flex align-items-center">' +
                                 '<span class="badge ' + badgeClass + ' team-size-badge me-2">' + teamSize + ' member' + (teamSize !== 1 ? 's' : '') + '</span>' +

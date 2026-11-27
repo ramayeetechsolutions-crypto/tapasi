@@ -250,8 +250,8 @@ table td,th{vertical-align:middle;padding:7px 10px;white-space:nowrap;font-size:
 </select>
 </div>
 <div class="col-auto">
-<button class="btn btn-primary btn-sm" type="submit">Go</button>
-<a href="qc.php" class="btn btn-outline-secondary btn-sm">Clear</a>
+<button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+<a href="qc.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
 <button type="button" onclick="exportTableToExcel('qcTable','qc_jobs')" class="btn btn-success btn-sm">Export</button>
 </div>
 </form>

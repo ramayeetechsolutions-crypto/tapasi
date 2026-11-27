@@ -383,26 +383,24 @@ if (!$queries) {
                         
                         <!-- Date Filter -->
                         <div class="filter-card">
-                            <form method="get" class="row g-3 align-items-center">
-                                <div class="col-md-5">
-                                    <label for="date_from" class="form-label"><i class="fas fa-calendar-minus me-1"></i> From Date</label>
-                                    <input type="date" name="date_from" class="form-control form-control-sm" 
+                            <form method="get" class="row g-3 align-items-end">
+                                <div class="col-auto">
+                                    <label for="date_from" class="form-label mb-1 text-nowrap"><i class="fas fa-calendar-minus me-1"></i> From Date</label>
+                                    <input type="date" name="date_from" class="form-control form-control-sm" style="width: 140px;" 
                                            value="<?= h($date_from) ?>" max="<?= date('Y-m-d') ?>">
                                 </div>
-                                <div class="col-md-5">
-                                    <label for="date_to" class="form-label"><i class="fas fa-calendar-plus me-1"></i> To Date</label>
-                                    <input type="date" name="date_to" class="form-control form-control-sm" 
+                                <div class="col-auto">
+                                    <label for="date_to" class="form-label mb-1 text-nowrap"><i class="fas fa-calendar-plus me-1"></i> To Date</label>
+                                    <input type="date" name="date_to" class="form-control form-control-sm" style="width: 140px;" 
                                            value="<?= h($date_to) ?>" max="<?= date('Y-m-d') ?>">
                                 </div>
-                                <div class="col-md-2 d-flex align-items-end">
-                                    <div class="d-flex gap-2 w-100">
-                                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                                            <i class="fas fa-filter me-1"></i> Filter
-                                        </button>
-                                        <a href="tm_queries.php" class="btn btn-outline-secondary btn-sm" title="Clear Filter">
-                                            <i class="fas fa-times"></i>
-                                        </a>
-                                    </div>
+                                <div class="col-auto d-flex align-items-center gap-2">
+                                    <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                                        <i class="fas fa-filter me-1"></i> Apply Filters
+                                    </button>
+                                    <a href="tm_queries.php" class="btn btn-outline-secondary btn-sm text-nowrap" title="Reset">
+                                        <i class="fas fa-undo me-1"></i> Reset
+                                    </a>
                                 </div>
                             </form>
                         </div>

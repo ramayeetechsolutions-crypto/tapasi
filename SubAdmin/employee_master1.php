@@ -573,8 +573,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </select>
 <select id="sortSelect" class="form-select form-select-sm" style="width:160px;"><?php foreach($sortable as $col){$sel=$col==$sort?'selected':'';echo"<option value='$col' $sel>".ucwords(str_replace('_',' ',$col))."</option>";}?></select>
 <select id="dirSelect" class="form-select form-select-sm" style="width:100px;"><option value="asc" <?=$dir=='asc'?'selected':''?>>Asc</option><option value="desc" <?=$dir=='desc'?'selected':''?>>Desc</option></select>
-<button class="btn btn-primary btn-sm" onclick="filterTable()">Go</button>
-<a href="employee_master.php" class="btn btn-secondary btn-sm">Clear</a>
+<button class="btn btn-primary btn-sm" onclick="filterTable()"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+<a href="employee_master.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
 </div>
 <div class="table-responsive">
 <table class="table table-bordered align-middle">

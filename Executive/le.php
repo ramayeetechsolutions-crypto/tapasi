@@ -542,7 +542,7 @@ require 'header.php';
                 <?php else: ?>
                     <div class="input-group" style="width: 300px;">
                         <input type="number" id="jobIdFilter" class="form-control" placeholder="Enter Job ID" value="<?php echo $job_id > 0 ? $job_id : ''; ?>">
-                        <button class="btn btn-light" onclick="filterByJobId()">Filter</button>
+                        <button class="btn btn-light" onclick="filterByJobId()"><i class="fas fa-filter me-1"></i> Apply Filters</button>
                     </div>
                 <?php endif; ?>
             </div>

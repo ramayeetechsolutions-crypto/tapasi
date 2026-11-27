@@ -203,10 +203,10 @@ table td,th { vertical-align: middle; padding: 6px 8px; white-space: nowrap; fon
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary btn-sm me-1">
-                        <i class="bi bi-search"></i> Search
+                        <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
-                    <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-secondary btn-sm">
-                        <i class="bi bi-arrow-clockwise"></i> Clear
+                    <a href="<?= $_SERVER['PHP_SELF'] ?>" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-undo me-1"></i> Reset
                     </a>
                 </div>
             </form>

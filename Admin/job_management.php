@@ -294,7 +294,7 @@ require 'header.php';
         <option value="desc" <?= ($dir==='desc')?'selected':'' ?>>Desc</option>
     </select>
     <button id="applyFilter" class="btn btn-sm btn-primary"><i class="fa fa-search"></i> Apply</button>
-    <button id="clearFilter" class="btn btn-sm btn-outline-dark"><i class="fa fa-times"></i> Clear</button>
+    <button id="clearFilter" class="btn btn-sm btn-outline-secondary"><i class="fas fa-undo me-1"></i> Reset</button>
 </div>
 
 <div class="card">

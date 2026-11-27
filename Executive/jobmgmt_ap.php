@@ -265,8 +265,8 @@ function getStatusBadge($status) {
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small mb-1 d-block">&nbsp;</label>
-                    <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-search"></i></button>
-                    <a href="jobmgmt_ap.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i></a>
+                    <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="jobmgmt_ap.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>
