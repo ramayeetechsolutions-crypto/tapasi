@@ -242,6 +242,13 @@ if (!empty($allowed_process_ids)) {
 }
 // FIX: Show everything EXCEPT standalone 'CE'
 $where[] = "jm.job_name != 'CE'";
+// Only show in QC Report once TS/PAG is completed (for TS/PAG processes) or LE is completed (for LE processes), or already in QC
+$where[] = "(
+    (qc.status IS NOT NULL AND qc.status NOT IN ('Need to Assign', 'Pending', '')) 
+    OR (qc.assigned_to_qc IS NOT NULL AND qc.assigned_to_qc != '')
+    OR ((jm.job_name LIKE '%PAG%' OR jm.job_name LIKE '%TS%') AND (pag.status IN ('Completed', 'Done') OR pag.pag_status_col = 'Completed' OR pag.word_status = 'Completed'))
+    OR (jm.job_name NOT LIKE '%PAG%' AND jm.job_name NOT LIKE '%TS%' AND (le.status IN ('Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done')))
+)";
 // Search query filter
 if ($q) {
     $where[] = "(c.client_name LIKE ? OR c.team_client_name LIKE ? OR j.journal_issue LIKE ? OR j.article LIKE ?)";
@@ -298,14 +305,15 @@ $sql = "SELECT
     j.assigned_ce, j.assigned_le, j.assigned_pag,
     
     qc.status AS qc_status, qc.assigned_to_qc, qc.qc_start_time, qc.qc_end_time,
-    qc.rtat, qc.atat, qc.path, qc.priority, qc.dispatch_date, qc.upload_by as qc_upload_by,
+    qc.rtat, qc.atat, qc.path, qc.priority, qc.dispatch_date as qc_dispatch_date, qc.upload_by as qc_upload_by,
     
     ce.status as ce_status, ce.ce_date as ce_moved_date, ce.done_by as ce_done_by, ce.assigned_to_content as ce_assigned_to,
     le.status as le_status, le.last_updated as le_moved_date, le.done_by as le_done_by, le.assigned_to_le as le_assigned_to, le.assigned_to_le_qc as le_qc_assigned_to,
     pag.status as pag_status, pag.created_at as pag_received_date, pag.done_by as pag_done_by, pag.assigned_to_pag as pag_assigned_to,
     pag.eq, pag.pages, pag.images, pag.tables_count,
     
-    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.is_moved, qc_crx.assigned_to_qc as crx_assigned_to_qc,
+    qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.is_moved, qc_crx.assigned_to_qc as crx_assigned_to_qc, qc_crx.dispatch_date as crx_dispatch_date,
+    j.dispatch_date as j_dispatch_date,
     
     ju.upload_date, ju.file_path 
 FROM jobs j
@@ -522,6 +530,12 @@ if ($results->num_rows > 0) {
             background-color: #e9ecef !important;
         }
 
+        .table tbody tr:hover td small,
+        .table-sticky-assign tbody tr:hover td small,
+        #jobTable tbody tr:hover td small {
+            color: #198754 !important;
+        }
+
         .table .badge,
         .table-sticky-assign .badge,
         #jobTable .badge {
@@ -614,9 +628,9 @@ table td {
 <?php
 function getStatusBadge($status, $username = '', $emp_map = []) {
     $st = trim((string)$status);
-    if (empty($st) || $st === 'Need to Assign') $st = 'Need to Assign';
+    if (empty($st)) $st = 'Pending';
     
-    if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) {
+    if (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0 || strcasecmp($st, 'LE Done') === 0 || strcasecmp($st, 'LE-QC Done') === 0 || strcasecmp($st, 'LE & LE-QC Done') === 0 || strcasecmp($st, 'PAG_CRX_Compelete') === 0) {
         $badge = '<span class="badge" style="background-color: #28a745 !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Completed</span>';
     } elseif (strcasecmp($st, 'Need to Assign') === 0) {
         $badge = '<span class="badge" style="background-color: #0d6efd !important; color: white !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;">Need to Assign</span>';
@@ -630,8 +644,7 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
     if (!empty($username)) {
         $name = $emp_map[$username] ?? '';
         $display = $name ? h($name) . " (" . h($username) . ")" : h($username);
-        $user_color = (strcasecmp($st, 'Completed') === 0 || strcasecmp($st, 'Done') === 0) ? '#15803d' : '#6c757d';
-        return $badge . '<br><small style="color: ' . $user_color . '; font-size: 9px !important; font-weight: 600; display: block; margin-top: 2px !important; white-space: nowrap;"><i class="fas fa-user"></i> ' . $display . '</small>';
+        return $badge . '<br><small style="color: #198754 !important; font-size: 9px !important; font-weight: 600; display: block; margin-top: 2px !important; white-space: nowrap;">' . $display . '</small>';
     }
     return $badge;
 }
@@ -808,38 +821,18 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <!-- CE Status (Green when Completed + Completed By Who) -->
                             <?php 
                                 $ce_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']);
-                                $ce_cls = $ce_done ? 'bg-success' : 'bg-secondary';
+                                $ce_disp = $ce_done ? 'Completed' : ($row['ce_status'] ?? 'Pending');
                                 $ce_emp = !empty($row['ce_assigned_to']) ? $row['ce_assigned_to'] : (!empty($row['assigned_ce']) ? $row['assigned_ce'] : ($row['ce_done_by'] ?? ''));
                             ?>
-                            <td>
-                                <span class="badge <?= $ce_cls ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($row['ce_status'] ?? 'Pending') ?></span>
-                                <?php if (!empty($ce_emp)): 
-                                    $ce_name = $emp_map[$ce_emp] ?? '';
-                                    $ce_display = $ce_name ? h($ce_name) . " (" . h($ce_emp) . ")" : h($ce_emp);
-                                ?>
-                                    <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
-                                        <i class="fas fa-user"></i> <?= $ce_display ?>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
+                            <td><?= getStatusBadge($ce_disp, $ce_emp, $emp_map) ?></td>
 
                             <!-- LE Status (Green when Completed + Completed By Who) -->
                             <?php 
                                 $le_done = in_array($row['le_status'] ?? '', ['Completed', 'Done', 'LE Done', 'LE-QC Done', 'LE & LE-QC Done']);
-                                $le_cls = $le_done ? 'bg-success' : 'bg-secondary';
+                                $le_disp = $le_done ? 'Completed' : ($row['le_status'] ?? 'Pending');
                                 $le_emp = !empty($row['le_qc_assigned_to']) ? $row['le_qc_assigned_to'] : (!empty($row['le_assigned_to']) ? $row['le_assigned_to'] : (!empty($row['assigned_le']) ? $row['assigned_le'] : ($row['le_done_by'] ?? '')));
                             ?>
-                            <td>
-                                <span class="badge <?= $le_cls ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($row['le_status'] ?? 'Pending') ?></span>
-                                <?php if (!empty($le_emp)): 
-                                    $le_name = $emp_map[$le_emp] ?? '';
-                                    $le_display = $le_name ? h($le_name) . " (" . h($le_emp) . ")" : h($le_emp);
-                                ?>
-                                    <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
-                                        <i class="fas fa-user"></i> <?= $le_display ?>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
+                            <td><?= getStatusBadge($le_disp, $le_emp, $emp_map) ?></td>
 
                             <!-- PAG Status (Green when Completed + Completed By Who) -->
                             <?php 
@@ -850,21 +843,9 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                 if ($pag_display_status === 'Pending' || empty($pag_display_status)) {
                                     $pag_display_status = 'Need to Assign';
                                 }
-                                $pag_cls = $pag_done ? 'bg-success' : 'bg-info';
-                                
                                 $pag_emp = !empty($row['pag_assigned_to']) ? $row['pag_assigned_to'] : (!empty($row['pag_crx_assigned_to']) ? $row['pag_crx_assigned_to'] : (!empty($row['assigned_pag']) ? $row['assigned_pag'] : ($row['pag_done_by'] ?? '')));
                             ?>
-                            <td>
-                                <span class="badge <?= $pag_cls ?>" style="padding: 2px 6px !important; font-size: 10px !important; border-radius: 4px !important;"><?= h($pag_display_status) ?></span>
-                                <?php if (!empty($pag_emp)): 
-                                    $pag_name = $emp_map[$pag_emp] ?? '';
-                                    $pag_display = $pag_name ? h($pag_name) . " (" . h($pag_emp) . ")" : h($pag_emp);
-                                ?>
-                                    <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
-                                        <i class="fas fa-user"></i> <?= $pag_display ?>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
+                            <td><?= getStatusBadge($pag_display_status, $pag_emp, $emp_map) ?></td>
                             <!-- QC Process & Times -->
                             <td><?= getStatusBadge($row['qc_status'] ?? 'Need to Assign', $row['assigned_to_qc'] ?? '', $emp_map) ?></td>
                             <td><?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '—' ?></td>
@@ -875,7 +856,14 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td class="fw-bold"><?= intval($row['atat'] ?? 0) ?></td>
                             
                             <!-- Dispatch & Upload -->
-                            <td><?= !empty($row['dispatch_date']) && $row['dispatch_date'] != '0000-00-00 00:00:00' ? formatDateOnly(substr($row['dispatch_date'], 0, 10), 'd-m-Y') : '—' ?></td>
+                            <?php 
+                                $final_dispatch = (!empty($row['crx_dispatch_date']) && $row['crx_dispatch_date'] != '0000-00-00' && $row['crx_dispatch_date'] != '0000-00-00 00:00:00')
+                                    ? $row['crx_dispatch_date']
+                                    : ((!empty($row['qc_dispatch_date']) && $row['qc_dispatch_date'] != '0000-00-00' && $row['qc_dispatch_date'] != '0000-00-00 00:00:00')
+                                        ? $row['qc_dispatch_date']
+                                        : ($row['dispatch_date'] ?? ''));
+                            ?>
+                            <td><?= !empty($final_dispatch) && $final_dispatch != '0000-00-00' && $final_dispatch != '0000-00-00 00:00:00' ? formatDateOnly(substr($final_dispatch, 0, 10), 'd-m-Y') : '—' ?></td>
                             <?php 
                                 // QC Completed = QC row. CRX columns must show dash.
                                 // Only show CRX data when QC is NOT Completed AND QC_CRX stage IS Moved.
@@ -906,8 +894,8 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                                         $tm_name = $emp_map[$row['pag_crx_assigned_to']] ?? '';
                                         $tm_display = $tm_name ? h($tm_name) . " (" . h($row['pag_crx_assigned_to']) . ")" : h($row['pag_crx_assigned_to']);
                                     ?>
-                                        <div class="mt-1" style="font-size: 9px !important; color: #15803d; font-weight: 600; white-space: nowrap;">
-                                            <i class="fas fa-user"></i> <?= $tm_display ?>
+                                        <div class="mt-1" style="font-size: 9px !important; color: #198754 !important; font-weight: 600; white-space: nowrap;">
+                                            <?= $tm_display ?>
                                         </div>
                                     <?php endif; ?>
                                 <?php else: ?>

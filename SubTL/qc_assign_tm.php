@@ -14,7 +14,11 @@ require 'db.php';
 $check_columns = [
     'qc_start_time' => "TIME NULL DEFAULT NULL",
     'qc_end_time' => "TIME NULL DEFAULT NULL",
-    'priority' => "VARCHAR(50) NULL DEFAULT NULL"
+    'priority' => "VARCHAR(50) NULL DEFAULT NULL",
+    'qc_fqa_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
+    'assigned_to_qc_fqa' => "VARCHAR(100) NULL DEFAULT NULL",
+    'qc_fqa_start_time' => "TIME NULL DEFAULT NULL",
+    'qc_fqa_end_time' => "TIME NULL DEFAULT NULL"
 ];
 foreach ($check_columns as $col => $definition) {
     $check = $mysqli->query("SHOW COLUMNS FROM qc LIKE '$col'");
@@ -59,7 +63,19 @@ if ($res_ts_filter) {
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
     $qc_id = (int)$_POST['qc_id'];
+    $type = $_POST['type'] ?? 'qc';
     $new_status = trim($_POST['status']);
+
+    if ($type === 'qc_fqa') {
+        $stmt = $mysqli->prepare("UPDATE qc SET qc_fqa_status = ?, last_updated = NOW() WHERE id = ?");
+        $stmt->bind_param("si", $new_status, $qc_id);
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'status' => $new_status]);
+        } else {
+            echo json_encode(['success' => false, 'message' => $mysqli->error]);
+        }
+        exit;
+    }
 
     // Fetch current times
     $get_stat = $mysqli->prepare("SELECT job_id, assigned_to_qc, qc_start_time, qc_end_time FROM qc WHERE id = ?");
@@ -114,8 +130,25 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['qc_start_time', 'qc_end_time', 'dispatch_date', 'upload_by', 'path', 'priority'];
+    $allowed_fields = ['qc_start_time', 'qc_end_time', 'dispatch_date', 'upload_by', 'path', 'priority', 'qc_fqa_status', 'assigned_to_qc_fqa', 'qc_fqa_start_time', 'qc_fqa_end_time'];
     if (in_array($field, $allowed_fields)) {
+        if ($field === 'assigned_to_qc_fqa' && !$is_tl_or_subtl && $val !== '') {
+            $chk_stmt = $mysqli->prepare("SELECT assigned_to_qc_fqa FROM qc WHERE id = ?");
+            $chk_stmt->bind_param("i", $qc_id);
+            $chk_stmt->execute();
+            $chk_res = $chk_stmt->get_result()->fetch_assoc();
+            $chk_stmt->close();
+            
+            $existing_val = $chk_res['assigned_to_qc_fqa'] ?? '';
+            if (!empty($existing_val)) {
+                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to reassign members.']);
+                exit;
+            }
+            if ($val !== $current_username) {
+                echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to assign to other members.']);
+                exit;
+            }
+        }
         if ($val === '') {
             $stmt = $mysqli->prepare("UPDATE qc SET $field = NULL, last_updated = NOW() WHERE id = ?");
             $stmt->bind_param("i", $qc_id);
@@ -208,27 +241,28 @@ if ($emp_res) {
     }
 }
 
-// Get ONLY UQ Team Members (TL: T.G. Bragadeeshwaran, SubTLs, and TMs)
+// Determine effective reporting manager (if user is TL/Admin without RM, use their own name)
+$effective_manager = !empty($reporting_manager) ? $reporting_manager : $current_user_name;
+
+// Get all employees under the same reporting manager with TM role
 $tms = [];
-$tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
-             FROM employee_master em 
-             LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-             WHERE em.status = 'Active' 
-             AND (
-                 em.reporting_manager LIKE '%Bragadeeshwaran%' 
-                 OR em.employee_name LIKE '%Bragadeeshwaran%'
-                 OR em.employee_username = 'TPS002'
-                 OR em.employee_name LIKE '%Jayachandran%'
-                 OR em.reporting_manager LIKE '%Jayachandran%'
-                 OR em.employee_username IN ('TPS005', 'TPS032')
-                 OR em.employee_name LIKE '%Dhanalakshmi%'
-                 OR em.employee_name LIKE '%Manjuparkavi%'
-             )
-             ORDER BY em.employee_name ASC";
-$res_tms = $mysqli->query($tm_query);
-if ($res_tms) {
-    while ($tm = $res_tms->fetch_assoc()) {
-        $tms[] = $tm;
+if ($effective_manager) {
+    $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
+                 FROM employee_master em 
+                 LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
+                 WHERE ((em.reporting_manager = ? OR em.reporting_manager = ?) AND em.status = 'Active' AND ur.role_name IN ('TM', 'TL', 'Admin'))
+                 OR (em.employee_name LIKE '%Manjuparkavi%' AND em.status = 'Active')
+                 ORDER BY em.employee_name";
+    
+    $stmt = $mysqli->prepare($tm_query);
+    if ($stmt) {
+        $stmt->bind_param("ss", $effective_manager, $current_user_name);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($tm = $result->fetch_assoc()) {
+            $tms[] = $tm;
+        }
+        $stmt->close();
     }
 }
 
@@ -238,6 +272,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     
     $qc_id = (int)$_POST['qc_id'];
     $job_id = (int)$_POST['job_id'];
+    $type = $_POST['type'] ?? 'qc'; // 'qc' or 'qc_fqa'
     $assigned_to = trim($_POST['assigned_to']);
     
     $response = ['success' => false, 'message' => ''];
@@ -247,15 +282,19 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
             throw new Exception('Please select a TM');
         }
         
+        $field = ($type === 'qc_fqa') ? 'assigned_to_qc_fqa' : 'assigned_to_qc';
+        $status_col = ($type === 'qc_fqa') ? 'qc_fqa_status' : 'status';
+        $new_substatus = ($type === 'qc_fqa') ? 'FQA in progress' : 'In Progress';
+
         // Permission check: Executives can only self-assign to unassigned jobs. Only SubTL/TL can assign others or reassign.
         if (!$is_tl_or_subtl) {
-            $chk_stmt = $mysqli->prepare("SELECT assigned_to_qc FROM qc WHERE id = ?");
+            $chk_stmt = $mysqli->prepare("SELECT $field FROM qc WHERE id = ?");
             $chk_stmt->bind_param("i", $qc_id);
             $chk_stmt->execute();
             $chk_res = $chk_stmt->get_result()->fetch_assoc();
             $chk_stmt->close();
             
-            $existing_assigned = $chk_res['assigned_to_qc'] ?? '';
+            $existing_assigned = $chk_res[$field] ?? '';
             
             if (!empty($existing_assigned)) {
                 throw new Exception('Only SubTL and Team Lead have access to reassign members.');
@@ -278,14 +317,12 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         if ($check_result->num_rows == 0) {
             throw new Exception('QC record not found');
         }
-        
-        $qc_data = $check_result->fetch_assoc();
         $check_stmt->close();
         
         // Update qc table
         $update_qc = "UPDATE qc SET 
-                      assigned_to_qc = ?,
-                      status = 'In Progress',
+                      $field = ?,
+                      $status_col = '$new_substatus',
                       last_updated = NOW()
                       WHERE id = ?";
         
@@ -297,11 +334,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         $stmt->bind_param("si", $assigned_to, $qc_id);
         
         if (!$stmt->execute()) {
-            throw new Exception('Error updating QC: ' . $stmt->error);
-        }
-        
-        if ($stmt->affected_rows === 0) {
-            throw new Exception('No changes made to QC record');
+            throw new Exception('Error updating Assignment: ' . $stmt->error);
         }
         
         $stmt->close();
@@ -617,6 +650,13 @@ require 'header.php';
         .table-sticky-assign tbody tr:hover td.sticky-assign-cell {
             background-color: #e9ecef !important;
         }
+
+        .table tbody tr:hover td small,
+        .table tbody tr:hover td small i,
+        .table-sticky-assign tbody tr:hover td small,
+        .table-sticky-assign tbody tr:hover td small i {
+            color: #198754 !important;
+        }
         .status-badge { display: inline-block; padding: 0.2rem 0.4rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 500; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-progress { background: #dbeafe; color: #1e40af; }
@@ -845,6 +885,7 @@ require 'header.php';
                             <th>LE Status</th>
                             <th>PAG</th>
                             <th style="width: 140px; min-width: 140px;">QC</th>
+                            <th style="width: 140px; min-width: 140px;">QC_FQA</th>
                             <th>Due Date</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
@@ -970,7 +1011,8 @@ require 'header.php';
                                             <div class="tm-badge <?= $qc_badge_cls ?> mb-1" title="Assigned for QC">
                                                 <i class="fas fa-search"></i> <?= h($row['assigned_to_qc']) ?>
                                             </div>
-                                            <small class="text-dark d-block mb-1" style="font-weight: 600;">
+                                            <small class="d-block mb-1" style="color: #198754 !important; font-weight: 600;">
+                                                <i class="fas fa-user" style="color: #198754 !important;"></i>
                                                 <?php 
                                                 $found_name = '';
                                                 foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_qc']) { $found_name = $tm['employee_name']; break; } }
@@ -994,6 +1036,60 @@ require 'header.php';
                                         <div class="d-flex gap-1 mt-2">
                                             <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_start_time']) ? date('H:i', strtotime($row['qc_start_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_start_time', t, this);">
                                             <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_end_time']) ? date('H:i', strtotime($row['qc_end_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_end_time', t, this);">
+                                        </div>
+                                    </td>
+
+                                    <!-- QC_FQA Assignment Column -->
+                                    <?php 
+                                        $qc_fqa_stat = $row['qc_fqa_status'] ?? 'Need to Assign';
+                                        $qc_fqa_done = in_array($qc_fqa_stat, ['FQA completed', 'FQA Completed', 'Completed']);
+                                        $qc_fqa_inprogress = (!$qc_fqa_done && !empty($row['assigned_to_qc_fqa']));
+                                        $qc_fqa_badge_cls = 'pending';
+                                        
+                                        if ($qc_fqa_done) { 
+                                            $qc_fqa_badge_cls = 'completed'; 
+                                        } elseif ($qc_fqa_inprogress) { 
+                                            $qc_fqa_badge_cls = 'in-progress'; 
+                                        }
+                                    ?>
+                                    <td class="assignment-cell" style="width: 140px; min-width: 140px; padding: 4px 6px; vertical-align: top;">
+                                        <div class="mb-1">
+                                            <select class="form-select form-select-sm p-0 px-1" style="font-size: 11px; width: 100%; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateStatus(<?= $row['id'] ?>, this.value, 'qc_fqa')">
+                                                <option value="Need to Assign" <?= ($qc_fqa_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
+                                                <option value="FQA in progress" <?= ($qc_fqa_stat == 'FQA in progress' || $qc_fqa_stat == 'FQA In Progress' || $qc_fqa_stat == 'In Progress') ? 'selected' : '' ?>>FQA in progress</option>
+                                                <option value="FQA completed" <?= ($qc_fqa_stat == 'FQA completed' || $qc_fqa_stat == 'FQA Completed' || $qc_fqa_stat == 'Completed') ? 'selected' : '' ?>>FQA completed</option>
+                                            </select>
+                                        </div>
+
+                                        <?php if (!empty($row['assigned_to_qc_fqa'])): ?>
+                                            <div class="tm-badge <?= $qc_fqa_badge_cls ?> mb-1" title="Assigned for QC_FQA">
+                                                <i class="fas fa-search"></i> <?= h($row['assigned_to_qc_fqa']) ?>
+                                            </div>
+                                            <small class="d-block mb-1" style="color: #198754 !important; font-weight: 600;">
+                                                <i class="fas fa-user" style="color: #198754 !important;"></i>
+                                                <?php 
+                                                $found_name = '';
+                                                foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_qc_fqa']) { $found_name = $tm['employee_name']; break; } }
+                                                echo h($found_name ?: $row['assigned_to_qc_fqa']);
+                                                ?>
+                                            </small>
+                                        <?php endif; ?>
+
+                                        <select class="assign-select mt-1" 
+                                                data-assigned="<?= h($row['assigned_to_qc_fqa'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_qc_fqa'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, this, 'qc_fqa')">
+                                            <option value=""><?= !empty($row['assigned_to_qc_fqa']) ? 'Change TM' : 'Assign TM' ?></option>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
+                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= (($row['assigned_to_qc_fqa'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
+                                                    <?= h($tm['employee_name']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        
+                                        <div class="d-flex gap-1 mt-2">
+                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_fqa_start_time']) ? date('H:i', strtotime($row['qc_fqa_start_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_fqa_start_time', t, this);">
+                                            <input type="text" readonly placeholder="--:--" class="form-control form-control-sm p-1 text-center" style="font-size:10px; width:50%; cursor:pointer; font-weight:600;" title="Click to fill current time" value="<?= !empty($row['qc_fqa_end_time']) ? date('H:i', strtotime($row['qc_fqa_end_time'])) : '' ?>" onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'qc_fqa_end_time', t, this);">
                                         </div>
                                     </td>
                                     
@@ -1122,18 +1218,18 @@ require 'header.php';
         function saveScrollPositions() {
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp) {
-                sessionStorage.setItem('subtl_qc_assign_table_x', tableResp.scrollLeft);
-                sessionStorage.setItem('subtl_qc_assign_table_y', tableResp.scrollTop);
+                sessionStorage.setItem('tl_qc_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('tl_qc_assign_table_y', tableResp.scrollTop);
             }
-            sessionStorage.setItem('subtl_qc_assign_win_x', window.scrollX || 0);
-            sessionStorage.setItem('subtl_qc_assign_win_y', window.scrollY || 0);
+            sessionStorage.setItem('tl_qc_assign_win_x', window.scrollX || 0);
+            sessionStorage.setItem('tl_qc_assign_win_y', window.scrollY || 0);
         }
 
         function restoreScrollPositions() {
-            const tableX = sessionStorage.getItem('subtl_qc_assign_table_x');
-            const tableY = sessionStorage.getItem('subtl_qc_assign_table_y');
-            const winX = sessionStorage.getItem('subtl_qc_assign_win_x');
-            const winY = sessionStorage.getItem('subtl_qc_assign_win_y');
+            const tableX = sessionStorage.getItem('tl_qc_assign_table_x');
+            const tableY = sessionStorage.getItem('tl_qc_assign_table_y');
+            const winX = sessionStorage.getItem('tl_qc_assign_win_x');
+            const winY = sessionStorage.getItem('tl_qc_assign_win_y');
             
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp && tableX !== null) {
@@ -1150,19 +1246,19 @@ require 'header.php';
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp) {
                 tableResp.addEventListener('scroll', () => {
-                    sessionStorage.setItem('subtl_qc_assign_table_x', tableResp.scrollLeft);
+                    sessionStorage.setItem('tl_qc_assign_table_x', tableResp.scrollLeft);
                 }, { passive: true });
             }
         });
         window.addEventListener('beforeunload', saveScrollPositions);
 
         // Status Update Function
-        function updateStatus(qcId, newStatus) {
+        function updateStatus(qcId, newStatus, type = 'qc') {
             if (newStatus === 'Completed') {
                 let row = document.getElementById('row-' + qcId);
                 if (row) {
-                    let startInput = row.querySelector('input[title="QC Start"]');
-                    let endInput = row.querySelector('input[title="QC End"]');
+                    let startInput = (type === 'qc_fqa') ? row.querySelector('input[onclick*="qc_fqa_start_time"]') : row.querySelector('input[title="QC Start"]');
+                    let endInput = (type === 'qc_fqa') ? row.querySelector('input[onclick*="qc_fqa_end_time"]') : row.querySelector('input[title="QC End"]');
                     if (startInput && endInput) {
                         if (!startInput.value || !endInput.value) {
                             showNotification('danger', 'Please enter both Start Time and End Time before marking as Completed!');
@@ -1176,7 +1272,7 @@ require 'header.php';
             fetch('qc_assign_tm.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=update_status&qc_id=' + qcId + '&status=' + encodeURIComponent(newStatus)
+                body: 'ajax=update_status&qc_id=' + qcId + '&type=' + encodeURIComponent(type) + '&status=' + encodeURIComponent(newStatus)
             })
             .then(response => response.json())
             .then(data => {
@@ -1221,7 +1317,7 @@ require 'header.php';
         }
         
         // Quick assign function
-        function quickAssign(qcId, jobId, selectElement) {
+        function quickAssign(qcId, jobId, selectElement, type = 'qc') {
             const selectedValue = (selectElement.value || '').trim();
             const isTlOrSubtl = <?= $is_tl_or_subtl ? 'true' : 'false' ?>;
             const currentUsername = <?= json_encode($current_username) ?>;
@@ -1252,6 +1348,7 @@ require 'header.php';
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const tmName = selectedOption.getAttribute('data-name') || selectedValue;
+            const typeLabel = (type === 'qc_fqa') ? 'QC_FQA' : 'QC';
             
             showLoading();
             selectElement.disabled = true;
@@ -1260,7 +1357,7 @@ require 'header.php';
             fetch('?', { // Self-posting
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ajax=quick_assign&qc_id=' + encodeURIComponent(qcId) + '&job_id=' + encodeURIComponent(jobId) + '&assigned_to=' + encodeURIComponent(selectedValue)
+                body: 'ajax=quick_assign&type=' + encodeURIComponent(type) + '&qc_id=' + encodeURIComponent(qcId) + '&job_id=' + encodeURIComponent(jobId) + '&assigned_to=' + encodeURIComponent(selectedValue)
             })
             .then(response => response.json())
             .then(data => {
@@ -1268,7 +1365,7 @@ require 'header.php';
                 selectElement.disabled = false;
                 
                 if (data.success) {
-                    showNotification('success', `QC assigned to ${tmName} successfully!`);
+                    showNotification('success', `${typeLabel} assigned to ${tmName} successfully!`);
                     selectElement.setAttribute('data-assigned', selectedValue);
                     selectElement.setAttribute('data-previous', selectedValue);
                     document.getElementById('row-' + qcId).classList.add('assigned');

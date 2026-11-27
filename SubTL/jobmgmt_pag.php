@@ -211,6 +211,14 @@ $types  = 'ss';
 
 // Always restrict TS Report to only TS / PAG processes
 $where[] = "jm.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'TS', 'TS+XML', 'CE+TS', 'CE+TS+XML')";
+// If job has CE or LE stages, only show in TS Report once LE is completed and moved to TS, or TS has already been assigned/started
+$where[] = "(
+    (jm.job_name NOT LIKE '%CE%' AND jm.job_name NOT LIKE '%LE%') 
+    OR le.status_button = 'Moved' 
+    OR (pag.status IS NOT NULL AND pag.status NOT IN ('Need to Assign', 'Pending', '')) 
+    OR (pag.assigned_to_pag IS NOT NULL AND pag.assigned_to_pag != '')
+    OR (pag.assigned_to_img IS NOT NULL AND pag.assigned_to_img != '')
+)";
 
 // Search query filter
 if ($q) {

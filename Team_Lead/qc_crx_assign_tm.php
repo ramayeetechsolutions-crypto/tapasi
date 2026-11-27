@@ -68,6 +68,7 @@ $check_columns = [
     'pag_crx_assigned_to' => "VARCHAR(100) NULL DEFAULT NULL",
     'pag_crx_start_time' => "TIME NULL DEFAULT NULL",
     'pag_crx_end_time' => "TIME NULL DEFAULT NULL",
+    'pag_crx_count' => "VARCHAR(50) NULL DEFAULT '0'",
     'img_tab_stage' => "VARCHAR(100) NULL DEFAULT NULL",
     'is_moved' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
@@ -127,7 +128,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['qc_start_time', 'qc_end_time', 'dispatch_date', 'upload_by', 'path', 'priority', 'qc_crx_stage', 'pag_crx_stage', 'pag_crx_assigned_to', 'pag_crx_start_time', 'pag_crx_end_time', 'img_tab_stage'];
+    $allowed_fields = ['qc_start_time', 'qc_end_time', 'dispatch_date', 'upload_by', 'path', 'priority', 'qc_crx_stage', 'pag_crx_stage', 'pag_crx_assigned_to', 'pag_crx_start_time', 'pag_crx_end_time', 'img_tab_stage', 'pag_crx_count'];
     if (in_array($field, $allowed_fields)) {
         if ($field === 'pag_crx_assigned_to' && !$is_tl_or_subtl && $val !== '') {
             $chk_stmt = $mysqli->prepare("SELECT pag_crx_assigned_to FROM qc_crx WHERE id = ?");
@@ -1182,6 +1183,11 @@ require 'header.php';
                                     <!-- PAG_CRX_Stage Column -->
                                     <td style="min-width: 180px; vertical-align: top; padding: 6px;">
                                         <div class="space-y-1">
+                                            <!-- Count Input -->
+                                            <div class="mb-1">
+                                                <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Count" value="<?= h($row['pag_crx_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'pag_crx_count', this.value)">
+                                            </div>
+
                                             <!-- Stage Dropdown -->
                                             <select class="form-select form-select-sm p-0 px-1 mb-1" style="font-size: 11px; width: 100%; height: 22px; <?= getStageSelectStyle($row['pag_crx_stage'] ?? '') ?>" 
                                                     onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'pag_crx_stage', this.value)">

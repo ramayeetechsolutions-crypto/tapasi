@@ -7,8 +7,31 @@ if (session_status() === PHP_SESSION_NONE) {
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+date_default_timezone_set('Asia/Kolkata');
 
 require 'db.php';
+
+function getWorkingDaysWithoutSunday($startDate, $endDate = null) {
+    if (empty($startDate) || $startDate == '0000-00-00' || $startDate == '0000-00-00 00:00:00' || $startDate == '30-11--0001') {
+        return 0;
+    }
+    $start = new DateTime(date('Y-m-d', strtotime($startDate)));
+    $end = !empty($endDate) && $endDate != '0000-00-00' && $endDate != '0000-00-00 00:00:00' 
+            ? new DateTime(date('Y-m-d', strtotime($endDate))) 
+            : new DateTime(date('Y-m-d'));
+            
+    if ($start > $end) return 0;
+    
+    $days = 0;
+    $curr = clone $start;
+    while ($curr < $end) {
+        $curr->modify('+1 day');
+        if ($curr->format('w') != 0) { // 0 = Sunday skip
+            $days++;
+        }
+    }
+    return $days;
+}
 
 function h($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES);
@@ -36,6 +59,19 @@ $check_columns = [
     'table_start_time' => "TIME NULL DEFAULT NULL",
     'table_end_time' => "TIME NULL DEFAULT NULL",
     'assigned_to_table' => "VARCHAR(100) NULL DEFAULT NULL",
+    'table_fqa_count' => "VARCHAR(50) NULL DEFAULT '0'",
+    'table_fqa_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
+    'assigned_to_table_fqa' => "VARCHAR(100) NULL DEFAULT NULL",
+    'table_fqa_start_time' => "TIME NULL DEFAULT NULL",
+    'table_fqa_end_time' => "TIME NULL DEFAULT NULL",
+    'wp_count' => "VARCHAR(50) NULL DEFAULT '0'",
+    'ts_fqa_status' => "VARCHAR(100) DEFAULT 'Need to Assign'",
+    'assigned_to_ts_fqa' => "VARCHAR(100) NULL DEFAULT NULL",
+    'ts_fqa_start_time' => "TIME NULL DEFAULT NULL",
+    'ts_fqa_end_time' => "TIME NULL DEFAULT NULL",
+    'ts_fqa_count' => "VARCHAR(50) NULL DEFAULT '0'",
+    'remarks' => "VARCHAR(255) NULL DEFAULT NULL",
+    'note' => "VARCHAR(255) NULL DEFAULT NULL",
     'path' => "VARCHAR(255) NULL DEFAULT NULL",
     'priority' => "VARCHAR(50) NULL DEFAULT NULL"
 ];
@@ -85,7 +121,7 @@ if ($effective_manager) {
     $tm_query = "SELECT em.employee_id, em.employee_username, em.employee_name, em.user_role_id
                  FROM employee_master em 
                  LEFT JOIN user_role_master ur ON em.user_role_id = ur.role_id
-                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ?) 
+                 WHERE (em.reporting_manager = ? OR em.reporting_manager = ? OR em.reporting_manager LIKE '%Bragadeeshwaran%' OR em.employee_name LIKE '%Bragadeeshwaran%' OR em.team_id = 2) 
                  AND em.status = 'Active' 
                  AND (ur.role_name IN ('TM', 'TL', 'Admin', 'SubTL', 'Sub TL') OR em.employee_username = 'TPS032')
                  ORDER BY em.employee_name";
@@ -102,7 +138,6 @@ if ($effective_manager) {
     }
 }
 
-// --- START: Status Update AJAX ---
 // Fetch all active employees for Employee filter
 $all_employees = [];
 $emp_filter_res = $mysqli->query("SELECT employee_username, employee_name FROM employee_master WHERE status = 'Active' ORDER BY employee_name ASC");
@@ -135,26 +170,30 @@ if ($res_ts_filter) {
     }
 }
 
+// --- START: Status Update AJAX ---
 if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
     header('Content-Type: application/json');
     $pag_id = (int)$_POST['pag_id'];
-    $target_type = $_POST['type'] ?? 'pag'; // 'pag' or 'word'
+    $target_type = $_POST['type'] ?? 'pag'; // 'pag', 'word', or 'ts_fqa'
     $new_status = trim($_POST['status']);
 
     // Fetch current times AND statuses
-    $get_stat = $mysqli->prepare("SELECT pag_start_time, pag_end_time, img_start_time, img_end_time, word_status, pag_status_col, table_status FROM pag WHERE id = ?");
+    $get_stat = $mysqli->prepare("SELECT pag_start_time, pag_end_time, img_start_time, img_end_time, ts_fqa_start_time, ts_fqa_end_time, word_status, pag_status_col, table_status, ts_fqa_status FROM pag WHERE id = ?");
     $get_stat->bind_param("i", $pag_id);
     $get_stat->execute();
     $curr_data = $get_stat->get_result()->fetch_assoc();
     $get_stat->close();
 
     // Mandatory Time Validation
-    if (in_array($new_status, ['Completed', 'W-Complete', 'ID_Complete'])) {
+    if (in_array($new_status, ['Completed', 'W-Complete', 'ID_Complete', 'FQA Completed'])) {
         if ($target_type === 'pag' && (empty($curr_data['pag_start_time']) || empty($curr_data['pag_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both PAG Start and End Time before marking as Completed.']);
             exit;
         } elseif ($target_type === 'word' && (empty($curr_data['img_start_time']) || empty($curr_data['img_end_time']))) {
             echo json_encode(['success' => false, 'message' => 'Please fill both Word Process Start and End Time before marking as Completed.']);
+            exit;
+        } elseif ($target_type === 'ts_fqa' && (empty($curr_data['ts_fqa_start_time']) || empty($curr_data['ts_fqa_end_time']))) {
+            echo json_encode(['success' => false, 'message' => 'Please fill both TS_FQA Start and End Time before marking as Completed.']);
             exit;
         }
     }
@@ -169,7 +208,13 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         }
     }
 
-    $col = ($target_type === 'word') ? 'word_status' : 'pag_status_col';
+    if ($target_type === 'word') {
+        $col = 'word_status';
+    } elseif ($target_type === 'ts_fqa') {
+        $col = 'ts_fqa_status';
+    } else {
+        $col = 'pag_status_col';
+    }
     
     // Check both statuses to decide main job status
     $current_word = ($target_type === 'word') ? $new_status : ($curr_data['word_status'] ?? 'Need to Assign');
@@ -203,17 +248,17 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'path', 'priority'];
+    $allowed_fields = ['eq', 'images', 'tables_count', 'pages', 'pag_start_time', 'pag_end_time', 'img_start_time', 'img_end_time', 'table_status', 'table_start_time', 'table_end_time', 'assigned_to_table', 'remarks', 'note', 'path', 'priority', 'wp_count', 'ts_fqa_status', 'assigned_to_ts_fqa', 'ts_fqa_start_time', 'ts_fqa_end_time', 'ts_fqa_count', 'table_fqa_count', 'table_fqa_status', 'assigned_to_table_fqa', 'table_fqa_start_time', 'table_fqa_end_time'];
     if (in_array($field, $allowed_fields)) {
-        if ($field === 'assigned_to_table' && !$is_tl_or_subtl && $val !== '') {
-            $chk_stmt = $mysqli->prepare("SELECT assigned_to_table FROM pag WHERE id = ?");
+        if (($field === 'assigned_to_table' || $field === 'assigned_to_ts_fqa' || $field === 'assigned_to_table_fqa') && !$is_tl_or_subtl && $val !== '') {
+            $chk_stmt = $mysqli->prepare("SELECT $field FROM pag WHERE id = ?");
             $chk_stmt->bind_param("i", $pag_id);
             $chk_stmt->execute();
             $chk_res = $chk_stmt->get_result()->fetch_assoc();
             $chk_stmt->close();
             
-            $existing_table = $chk_res['assigned_to_table'] ?? '';
-            if (!empty($existing_table)) {
+            $existing_val = $chk_res[$field] ?? '';
+            if (!empty($existing_val)) {
                 echo json_encode(['success' => false, 'message' => 'Only SubTL and Team Lead have access to reassign members.']);
                 exit;
             }
@@ -245,7 +290,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
     header('Content-Type: application/json');
     $pag_id = (int)$_POST['pag_id'];
     $job_id = (int)$_POST['job_id'];
-    $type = $_POST['type']; // 'pag' or 'word' (images)
+    $type = $_POST['type']; // 'pag', 'word' (images), or 'ts_fqa'
     $assigned_to = trim($_POST['assigned_to']);
     
     $response = ['success' => false, 'message' => ''];
@@ -254,13 +299,16 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         
         // Permission check: Executives can only self-assign to unassigned jobs. Only SubTL/TL can assign others or reassign.
         if (!$is_tl_or_subtl) {
-            $chk_stmt = $mysqli->prepare("SELECT assigned_to_pag, assigned_to_img FROM pag WHERE id = ?");
+            $chk_stmt = $mysqli->prepare("SELECT assigned_to_pag, assigned_to_img, assigned_to_ts_fqa FROM pag WHERE id = ?");
             $chk_stmt->bind_param("i", $pag_id);
             $chk_stmt->execute();
             $chk_res = $chk_stmt->get_result()->fetch_assoc();
             $chk_stmt->close();
             
-            $existing_assigned = ($type === 'pag') ? ($chk_res['assigned_to_pag'] ?? '') : ($chk_res['assigned_to_img'] ?? '');
+            $existing_assigned = '';
+            if ($type === 'pag') $existing_assigned = $chk_res['assigned_to_pag'] ?? '';
+            elseif ($type === 'ts_fqa') $existing_assigned = $chk_res['assigned_to_ts_fqa'] ?? '';
+            else $existing_assigned = $chk_res['assigned_to_img'] ?? '';
             
             if (!empty($existing_assigned)) {
                 throw new Exception('Only SubTL and Team Lead have access to reassign members.');
@@ -272,11 +320,22 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'quick_assign') {
         
         $mysqli->begin_transaction();
         
-        $field = ($type == 'pag') ? 'assigned_to_pag' : 'assigned_to_img';
-        $status_col = ($type == 'pag') ? 'pag_status_col' : 'word_status'; // Target specific column
+        if ($type == 'pag') {
+            $field = 'assigned_to_pag';
+            $status_col = 'pag_status_col';
+            $default_substatus = 'In Progress';
+        } elseif ($type == 'ts_fqa') {
+            $field = 'assigned_to_ts_fqa';
+            $status_col = 'ts_fqa_status';
+            $default_substatus = 'FQA In Progress';
+        } else {
+            $field = 'assigned_to_img';
+            $status_col = 'word_status';
+            $default_substatus = 'In Progress';
+        }
 
         // Updates assigned TM, sets sub-status to In Progress, and main status to In Progress
-        $update_pag = "UPDATE pag SET $field = ?, $status_col = 'In Progress', status = 'In Progress', last_updated = NOW() WHERE id = ?";
+        $update_pag = "UPDATE pag SET $field = ?, $status_col = '$default_substatus', status = 'In Progress', last_updated = NOW() WHERE id = ?";
         
         $stmt = $mysqli->prepare($update_pag);
         $stmt->bind_param("si", $assigned_to, $pag_id);
@@ -591,6 +650,19 @@ require 'header.php';
         .table-sticky-assign tbody tr:hover td.sticky-assign-cell {
             background-color: #e9ecef !important;
         }
+
+        .table tbody tr:hover td small,
+        .table tbody tr:hover td small i,
+        .table-sticky-assign tbody tr:hover td small,
+        .table-sticky-assign tbody tr:hover td small i {
+            color: #198754 !important;
+        }
+        
+        /* Overdue Indicator: Clean subtle accent line on S.No */
+        .table tbody tr.row-purple td:first-child {
+            border-left: 3px solid #8b5cf6 !important;
+        }
+
         .status-badge { display: inline-block; padding: 0.2rem 0.4rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 500; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-progress { background: #dbeafe; color: #1e40af; }
@@ -742,7 +814,7 @@ require 'header.php';
         <!-- Filter Section -->
         <div class="filter-section">
             <form method="get" class="row g-2 align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small">Search</label>
                     <input type="text" name="search" class="form-control form-control-sm" 
                            placeholder="Client, Journal, Article..." 
@@ -833,17 +905,23 @@ require 'header.php';
                             <th>EQN</th>
                             <th>Pages</th>
                             <th>Images</th>
+                            <th>Remarks</th>
                             <th>Tables</th>
+                            <th>Table_FQA</th>
                             <th>Process</th>
                             <th>Due Date</th>
                             <th>FQA Status</th>
                             <th>LE Status</th>
                             <th style="width: 140px; min-width: 140px;">Word process</th>
                             <th style="width: 140px; min-width: 140px;">TS</th>
+                            <th style="width: 140px; min-width: 140px;">TS_FQA</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
+                            <th>NOTE</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th>TAT</th>
+                            
                         </tr>
                     </thead>
                     <tbody>
@@ -856,6 +934,32 @@ require 'header.php';
                                 $word_stat = $row['word_status'] ?? 'Need to Assign';
                                 $pag_stat = $row['pag_status_col'] ?? 'Need to Assign';
 
+                                // Check if file reached 2 PM for TS or 4 PM for CE+TS
+                                $proc_clean = strtoupper(str_replace(' ', '', $row['process_name'] ?? ''));
+                                $is_ce_ts = (strpos($proc_clean, 'CE+TS') !== false || strpos($proc_clean, 'CE+PAG') !== false);
+                                $is_ts = (!$is_ce_ts && (strpos($proc_clean, 'TS') !== false || strpos($proc_clean, 'PAG') !== false));
+
+                                $job_entry_date = !empty($row['created_at']) ? substr($row['created_at'], 0, 10) : ($row['job_date_received'] ?? date('Y-m-d'));
+                                $current_date = date('Y-m-d');
+                                $current_time = date('H:i:s');
+
+                                $is_purple = false;
+                                if ($is_ce_ts) {
+                                    // CE+TS file: after 4 PM (16:00)
+                                    if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '16:00:00')) {
+                                        $is_purple = true;
+                                    }
+                                } elseif ($is_ts) {
+                                    // TS file: after 2 PM (14:00)
+                                    if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '14:00:00')) {
+                                        $is_purple = true;
+                                    }
+                                }
+
+                                if ($is_purple) {
+                                    $row_class .= ' row-purple';
+                                }
+
                                 // Due date color coding
                                 $days_remaining = $row['days_remaining'] ?? 0;
                                 $due_class = '';
@@ -867,7 +971,7 @@ require 'header.php';
                                     $due_class = 'normal';
                                 }
                             ?>
-                                <tr class="<?= $row_class ?>" id="row-<?= $row['id'] ?>">
+                                <tr class="<?= trim($row_class) ?>" id="row-<?= $row['id'] ?>" data-process="<?= h($proc_clean) ?>" data-date="<?= h($job_entry_date) ?>">
                                     <!-- LE Moved Date -->
                                     <td><?= (in_array($row['le_status'], ['Completed', 'Done', 'LE & LE-QC Done', 'LE-QC Done', 'LE Done'])) ? formatDate(substr($row['le_moved_date'], 0, 10)) : '—' ?></td>
                                     <!-- CE Moved Date -->
@@ -885,6 +989,20 @@ require 'header.php';
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['eq'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'eq', this.value)"></td>
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['pages'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'pages', this.value)"></td>
                                     <td><input type="number" class="form-control form-control-sm p-1 text-center" style="width: 50px;" value="<?= h($row['images'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'images', this.value)"></td>
+                                    
+                                    <!-- Remarks Dropdown -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="font-size: 11px; width: 110px;" onchange="updateInlineField(<?= $row['id'] ?>, 'remarks', this.value)">
+                                            <option value="">Select</option>
+                                            <?php 
+                                            $remarks_options = ['Hold', 'Chk Highlights', 'Doubt', 'Query', 'Not in server', 'Not in drive', 'Take drive', 'Chk', 'Query Sent', 'Chk mail', 'Urgent', 'Send Today', 'Client priority', 'AP team inform', 'PAG team inform', 'Update AOP', 'Invoice', 'Before 11 AM', 'Before 1 PM', 'Before 4 PM', 'Before 5 PM', 'Reference pending/Doubt', 'Reference reorder/Duplicate', 'Image take from source file'];
+                                            foreach($remarks_options as $opt) {
+                                                $selected = (isset($row['remarks']) && $row['remarks'] === $opt) ? 'selected' : '';
+                                                echo "<option value=\"".h($opt)."\" $selected>".h($opt)."</option>";
+                                            }
+                                            ?>
+                                        </select>
+                                    </td>
                                     <!-- Tables (Count, Status Dropdown, Assign TM & Times) -->
                                 <td class="assignment-cell" style="padding: 8px; vertical-align: top; min-width: 130px;">
                                     <!-- Count Input -->
@@ -923,6 +1041,67 @@ require 'header.php';
                                             </div>
                                     </td>
                                     
+                                    <!-- Table_FQA Column -->
+                                    <?php 
+                                        $table_fqa_stat = $row['table_fqa_status'] ?? 'Need to Assign';
+                                        $table_fqa_done = in_array($table_fqa_stat, ['FQA completed', 'FQA Completed', 'Completed']);
+                                        $table_fqa_inprogress = (!$table_fqa_done && !empty($row['assigned_to_table_fqa']));
+                                        $table_fqa_badge_cls = 'pending';
+                                        if ($table_fqa_done) { $table_fqa_badge_cls = 'completed'; }
+                                        elseif ($table_fqa_inprogress) { $table_fqa_badge_cls = 'in-progress'; }
+                                    ?>
+                                    <td class="assignment-cell" style="padding: 8px; vertical-align: top; min-width: 130px;">
+                                        <!-- Count Input -->
+                                        <div class="mb-1">
+                                            <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Count" value="<?= h($row['table_fqa_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'table_fqa_count', this.value)">
+                                        </div>
+                                        
+                                        <!-- Status Dropdown -->
+                                        <div class="mb-1">
+                                            <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" onchange="updateInlineField(<?= $row['id'] ?>, 'table_fqa_status', this.value)">
+                                                <option value="Need to Assign" <?= ($table_fqa_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
+                                                <option value="FQA in progress" <?= ($table_fqa_stat == 'FQA in progress' || $table_fqa_stat == 'FQA In Progress' || $table_fqa_stat == 'In Progress') ? 'selected' : '' ?>>FQA in progress</option>
+                                                <option value="FQA completed" <?= ($table_fqa_stat == 'FQA completed' || $table_fqa_stat == 'FQA Completed' || $table_fqa_stat == 'Completed') ? 'selected' : '' ?>>FQA completed</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Assigned TM Display if present -->
+                                        <?php if (!empty($row['assigned_to_table_fqa'])): ?>
+                                            <div class="tm-badge <?= $table_fqa_badge_cls ?> mb-1" title="Table_FQA TM">
+                                                <i class="fas fa-table"></i> <?= h($row['assigned_to_table_fqa']) ?>
+                                            </div>
+                                            <small class="d-block mb-1" style="color: #198754 !important; font-weight: 600;">
+                                                <i class="fas fa-user" style="color: #198754 !important;"></i>
+                                                <?php 
+                                                $found_name = '';
+                                                foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_table_fqa']) { $found_name = $tm['employee_name']; break; } }
+                                                echo h($found_name ?: $row['assigned_to_table_fqa']);
+                                                ?>
+                                            </small>
+                                        <?php endif; ?>
+
+                                        <!-- ASSIGN TM DROPDOWN -->
+                                        <div class="mb-1">
+                                            <select class="assign-select mt-1 w-100" 
+                                                    data-assigned="<?= h($row['assigned_to_table_fqa'] ?? '') ?>"
+                                                    data-previous="<?= h($row['assigned_to_table_fqa'] ?? '') ?>"
+                                                    onchange="updateInlineField(<?= $row['id'] ?>, 'assigned_to_table_fqa', this.value, this)">
+                                                <option value=""><?= !empty($row['assigned_to_table_fqa']) ? 'Change TM' : 'Assign TM' ?></option>
+                                                <?php foreach ($ts_filter_tms as $tm): ?>
+                                                    <option value="<?= h($tm['employee_username']) ?>" <?= (($row['assigned_to_table_fqa'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
+                                                        <?= h($tm['employee_name']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+
+                                        <!-- Start & End Time Inputs -->
+                                        <div class="d-flex gap-1 mt-1">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table FQA Start" value="<?= !empty($row['table_fqa_start_time']) ? date('H:i', strtotime($row['table_fqa_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_fqa_start_time', t, this);">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="Table FQA End" value="<?= !empty($row['table_fqa_end_time']) ? date('H:i', strtotime($row['table_fqa_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'table_fqa_end_time', t, this);">
+                                        </div>
+                                    </td>
+                                    
                                     <!-- Process -->
                                     <td><span class="badge bg-secondary"><?= h($row['process_name'] ?? 'N/A') ?></span></td>
                                     <!-- Due Date -->
@@ -950,7 +1129,7 @@ require 'header.php';
                                         
                                         $fqa_user_html = '';
                                         if (!empty($ce_user)) {
-                                            $fqa_user_html = "<br><small style='color: #198754; font-weight: 600;'><i class='fas fa-user'></i> ".h($ce_name)." (".h($ce_user).")</small>";
+                                            $fqa_user_html = "<br><small style='color: #198754 !important; font-weight: 600;'><i class='fas fa-user' style='color: #198754 !important;'></i> ".h($ce_name)." (".h($ce_user).")</small>";
                                         }
 
                                         if (!$has_ce || $ce_is_done) {
@@ -959,7 +1138,7 @@ require 'header.php';
                                         } elseif (!empty($row['assigned_to'])) {
                                             $fqa_badge_cls = 'badge bg-primary';
                                             $fqa_stat_label = 'In Progress';
-                                            $fqa_user_html = "<br><small style='color: #0d6efd; font-weight: 600;'><i class='fas fa-user'></i> ".h($ce_name)." (".h($ce_user).")</small>";
+                                            $fqa_user_html = "<br><small style='color: #0d6efd !important; font-weight: 600;'><i class='fas fa-user' style='color: #0d6efd !important;'></i> ".h($ce_name)." (".h($ce_user).")</small>";
                                         } else {
                                             $fqa_badge_cls = 'badge bg-info';
                                             $fqa_stat_label = 'Need to Assign';
@@ -984,7 +1163,7 @@ require 'header.php';
                                         $le_user_html = '';
                                         if (!empty($le_user)) {
                                             $le_color = $le_is_done ? '#198754' : '#0d6efd';
-                                            $le_user_html = "<br><small style='color: {$le_color}; font-weight: 600;'><i class='fas fa-user'></i> ".h($le_name)." (".h($le_user).")</small>";
+                                            $le_user_html = "<br><small style='color: {$le_color} !important; font-weight: 600;'><i class='fas fa-user' style='color: {$le_color} !important;'></i> ".h($le_name)." (".h($le_user).")</small>";
                                         }
                                     ?>
                                     <td class="text-center">
@@ -1001,6 +1180,11 @@ require 'header.php';
                                         elseif ($word_inprogress) { $word_badge_cls = 'in-progress'; }
                                     ?>
                                     <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
+                                        <!-- Count Input -->
+                                        <div class="mb-1">
+                                            <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Count" value="<?= h($row['wp_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'wp_count', this.value)">
+                                        </div>
+
                                         <div class="mb-1">
                                             <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($word_stat) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'word', this.value, this)">
                                                 <option value="Need to Assign" <?= ($word_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
@@ -1014,7 +1198,8 @@ require 'header.php';
                                             <div class="tm-badge <?= $word_badge_cls ?> mb-1" title="Word Process TM">
                                                 <i class="fas fa-file-word"></i> <?= h($row['assigned_to_img']) ?>
                                             </div>
-                                            <small class="text-muted d-block mb-1" style="font-weight: 600;">
+                                            <small class="d-block mb-1" style="color: #198754 !important; font-weight: 600;">
+                                                <i class="fas fa-user" style="color: #198754 !important;"></i>
                                                 <?php 
                                                 $found_name = '';
                                                 foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_img']) { $found_name = $tm['employee_name']; break; } }
@@ -1063,7 +1248,8 @@ require 'header.php';
                                             <div class="tm-badge <?= $pag_badge_cls ?> mb-1" title="PAG TM">
                                                 <i class="fas fa-file-pdf"></i> <?= h($row['assigned_to_pag']) ?>
                                             </div>
-                                            <small class="text-muted d-block mb-1" style="font-weight: 600;">
+                                            <small class="d-block mb-1" style="color: #198754 !important; font-weight: 600;">
+                                                <i class="fas fa-user" style="color: #198754 !important;"></i>
                                                 <?php 
                                                 $found_name = '';
                                                 foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_pag']) { $found_name = $tm['employee_name']; break; } }
@@ -1089,11 +1275,71 @@ require 'header.php';
                                             <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="PAG End" value="<?= !empty($row['pag_end_time']) ? date('H:i', strtotime($row['pag_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'pag_end_time', t, this);">
                                         </div>
                                     </td>
+
+                                    <!-- TS_FQA Column -->
+                                    <?php 
+                                        $ts_fqa_stat = $row['ts_fqa_status'] ?? 'Need to Assign';
+                                        $ts_fqa_done = in_array($ts_fqa_stat, ['FQA Completed', 'Completed']);
+                                        $ts_fqa_inprogress = (!$ts_fqa_done && !empty($row['assigned_to_ts_fqa']));
+                                        $ts_fqa_badge_cls = 'pending';
+                                        if ($ts_fqa_done) { $ts_fqa_badge_cls = 'completed'; }
+                                        elseif ($ts_fqa_inprogress) { $ts_fqa_badge_cls = 'in-progress'; }
+                                    ?>
+                                    <td class="assignment-cell" style="padding: 8px; vertical-align: top;">
+                                        <!-- Count Input -->
+                                        <div class="mb-1">
+                                            <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Count" value="<?= h($row['ts_fqa_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'ts_fqa_count', this.value)">
+                                        </div>
+
+                                        <div class="mb-1">
+                                            <select class="form-select form-select-sm p-0 px-1 w-100" style="font-size: 11px; height: 22px; border-color: #ccc; background-color: #f9f9f9;" data-prev="<?= h($ts_fqa_stat) ?>" onfocus="this.setAttribute('data-prev', this.value)" onchange="updateStatus(<?= $row['id'] ?>, 'ts_fqa', this.value, this)">
+                                                <option value="Need to Assign" <?= ($ts_fqa_stat == 'Need to Assign') ? 'selected' : '' ?>>Need to Assign</option>
+                                                <option value="FQA in progress" <?= ($ts_fqa_stat == 'FQA in progress' || $ts_fqa_stat == 'FQA In Progress' || $ts_fqa_stat == 'In Progress' || $ts_fqa_stat == 'FQA In Process') ? 'selected' : '' ?>>FQA in progress</option>
+                                                <option value="FQA completed" <?= ($ts_fqa_stat == 'FQA completed' || $ts_fqa_stat == 'FQA Completed' || $ts_fqa_stat == 'Completed') ? 'selected' : '' ?>>FQA completed</option>
+                                            </select>
+                                        </div>
+
+                                        <?php if (!empty($row['assigned_to_ts_fqa'])): ?>
+                                            <div class="tm-badge <?= $ts_fqa_badge_cls ?> mb-1" title="TS_FQA TM">
+                                                <i class="fas fa-user-check"></i> <?= h($row['assigned_to_ts_fqa']) ?>
+                                            </div>
+                                            <small class="d-block mb-1" style="color: #198754 !important; font-weight: 600;">
+                                                <i class="fas fa-user" style="color: #198754 !important;"></i>
+                                                <?php 
+                                                $found_name = '';
+                                                foreach ($tms as $tm) { if ($tm['employee_username'] == $row['assigned_to_ts_fqa']) { $found_name = $tm['employee_name']; break; } }
+                                                echo h($found_name ?: $row['assigned_to_ts_fqa']);
+                                                ?>
+                                            </small>
+                                        <?php endif; ?>
+
+                                        <select class="assign-select mt-1" 
+                                                data-assigned="<?= h($row['assigned_to_ts_fqa'] ?? '') ?>"
+                                                data-previous="<?= h($row['assigned_to_ts_fqa'] ?? '') ?>"
+                                                onchange="quickAssign(<?= $row['id'] ?>, <?= $row['job_id'] ?>, 'ts_fqa', this)">
+                                            <option value=""><?= !empty($row['assigned_to_ts_fqa']) ? 'Change TM' : 'Assign TM' ?></option>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
+                                                <option value="<?= h($tm['employee_username']) ?>" data-name="<?= h($tm['employee_name']) ?>" <?= (($row['assigned_to_ts_fqa'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
+                                                    <?= h($tm['employee_name']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        
+                                        <div class="d-flex gap-1 mt-2">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="FQA Start" value="<?= !empty($row['ts_fqa_start_time']) ? date('H:i', strtotime($row['ts_fqa_start_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'ts_fqa_start_time', t, this);">
+                                            <input type="time" class="form-control form-control-sm p-1" style="font-size:10px; width:50%; cursor:pointer;" title="FQA End" value="<?= !empty($row['ts_fqa_end_time']) ? date('H:i', strtotime($row['ts_fqa_end_time'])) : '' ?>" readonly onclick="const t = new Date().toTimeString().slice(0,5); this.value=t; updateInlineField(<?= $row['id'] ?>, 'ts_fqa_end_time', t, this);">
+                                        </div>
+                                    </td>
                                     
                                     <!-- TAT -->
                                     <td class="fw-bold"><?= intval($row['rtat'] ?? 0) ?></td>
                                     <td class="fw-bold"><?= intval($row['atat'] ?? 0) ?></td>
                                     
+                                    <!-- NOTE (Editable Text Field) -->
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm p-1" style="min-width: 150px; font-size: 11px;" placeholder="Enter Note" value="<?= h($row['note'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'note', this.value)">
+                                    </td>
+
                                     <!-- Path (Text Field) -->
                                     <td>
                                         <input type="text" class="form-control form-control-sm p-1" style="min-width: 150px; font-size: 11px;" placeholder="Enter Path" value="<?= h($row['path'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'path', this.value)">
@@ -1106,6 +1352,16 @@ require 'header.php';
                                             <option value="Client Priority" <?= (($row['priority'] ?? '') == 'Client Priority') ? 'selected' : '' ?>>Client Priority</option>
                                             <option value="Urgent" <?= (($row['priority'] ?? '') == 'Urgent') ? 'selected' : '' ?>>Urgent</option>
                                         </select>
+                                    </td>
+                                    <!-- TAT Column -->
+                                    <?php
+                                        $pag_done = in_array($row['status'] ?? '', ['Completed', 'Done']);
+                                        $end_d = $pag_done ? ($row['pag_date'] ?: $row['last_updated']) : null;
+                                        $tat = getWorkingDaysWithoutSunday($row['created_at'] ?? $row['job_date_received'], $end_d);
+                                        $bg = $pag_done ? 'bg-success' : ($tat > 5 ? 'bg-danger' : 'bg-warning text-dark');
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $bg ?>"><?= $tat ?> <?= ($tat == 1) ? 'Day' : 'Days' ?></span>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
@@ -1167,18 +1423,18 @@ require 'header.php';
         function saveScrollPositions() {
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp) {
-                sessionStorage.setItem('exec_pag_assign_table_x', tableResp.scrollLeft);
-                sessionStorage.setItem('exec_pag_assign_table_y', tableResp.scrollTop);
+                sessionStorage.setItem('tl_pag_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('tl_pag_assign_table_y', tableResp.scrollTop);
             }
-            sessionStorage.setItem('exec_pag_assign_win_x', window.scrollX || 0);
-            sessionStorage.setItem('exec_pag_assign_win_y', window.scrollY || 0);
+            sessionStorage.setItem('tl_pag_assign_win_x', window.scrollX || 0);
+            sessionStorage.setItem('tl_pag_assign_win_y', window.scrollY || 0);
         }
 
         function restoreScrollPositions() {
-            const tableX = sessionStorage.getItem('exec_pag_assign_table_x');
-            const tableY = sessionStorage.getItem('exec_pag_assign_table_y');
-            const winX = sessionStorage.getItem('exec_pag_assign_win_x');
-            const winY = sessionStorage.getItem('exec_pag_assign_win_y');
+            const tableX = sessionStorage.getItem('tl_pag_assign_table_x');
+            const tableY = sessionStorage.getItem('tl_pag_assign_table_y');
+            const winX = sessionStorage.getItem('tl_pag_assign_win_x');
+            const winY = sessionStorage.getItem('tl_pag_assign_win_y');
             
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp && tableX !== null) {
@@ -1195,7 +1451,7 @@ require 'header.php';
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp) {
                 tableResp.addEventListener('scroll', () => {
-                    sessionStorage.setItem('exec_pag_assign_table_x', tableResp.scrollLeft);
+                    sessionStorage.setItem('tl_pag_assign_table_x', tableResp.scrollLeft);
                 }, { passive: true });
             }
         });
@@ -1206,7 +1462,7 @@ require 'header.php';
             const select = selectElement || (typeof event !== 'undefined' ? event.target : null);
             const prevValue = select ? (select.getAttribute('data-prev') || select.value) : '';
 
-            if (newStatus === 'Completed' || newStatus === 'W-Complete' || newStatus === 'ID_Complete') {
+            if (newStatus === 'Completed' || newStatus === 'W-Complete' || newStatus === 'ID_Complete' || newStatus === 'FQA Completed') {
                 let row = document.getElementById('row-' + pagId);
                 if (row) {
                     // Check if Tables and Word Process are Completed before allowing TS (pag) Completed
@@ -1224,8 +1480,8 @@ require 'header.php';
                         }
                     }
 
-                    let startTitle = (type === 'pag') ? 'PAG Start' : 'Word Start';
-                    let endTitle = (type === 'pag') ? 'PAG End' : 'Word End';
+                    let startTitle = (type === 'pag') ? 'PAG Start' : ((type === 'ts_fqa') ? 'FQA Start' : 'Word Start');
+                    let endTitle = (type === 'pag') ? 'PAG End' : ((type === 'ts_fqa') ? 'FQA End' : 'Word End');
                     let startInput = row.querySelector('input[title="' + startTitle + '"]');
                     let endInput = row.querySelector('input[title="' + endTitle + '"]');
                     if (startInput && endInput) {
@@ -1351,7 +1607,7 @@ require 'header.php';
             
             const selectedOption = selectElement.options[selectElement.selectedIndex];
             const tmName = selectedOption.getAttribute('data-name') || selectedValue;
-            const typeLabel = type === 'pag' ? 'TS' : 'Images';
+            const typeLabel = type === 'pag' ? 'TS' : (type === 'ts_fqa' ? 'TS_FQA' : 'Word Process');
             
             showLoading();
             selectElement.disabled = true;
@@ -1390,6 +1646,40 @@ require 'header.php';
         }
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
+    // Check and highlight purple rows based on local system time (2 PM for TS, 4 PM for CE+TS)
+    function updatePurpleRows() {
+        const now = new Date();
+        const curHours = now.getHours();
+        const curMinutes = now.getMinutes();
+        const curTime = (curHours < 10 ? '0' : '') + curHours + ':' + (curMinutes < 10 ? '0' : '') + curMinutes;
+        const curDate = now.toISOString().slice(0, 10);
+        
+        document.querySelectorAll('tbody tr[data-process]').forEach(function(row) {
+            const proc = (row.getAttribute('data-process') || '').toUpperCase();
+            const jobDate = row.getAttribute('data-date') || curDate;
+            const isCeTs = proc.indexOf('CE+TS') !== -1 || proc.indexOf('CE+PAG') !== -1;
+            const isTs = !isCeTs && (proc.indexOf('TS') !== -1 || proc.indexOf('PAG') !== -1);
+            
+            let shouldPurple = false;
+            if (isCeTs) {
+                if (jobDate < curDate || (jobDate === curDate && curTime >= '16:00')) {
+                    shouldPurple = true;
+                }
+            } else if (isTs) {
+                if (jobDate < curDate || (jobDate === curDate && curTime >= '14:00')) {
+                    shouldPurple = true;
+                }
+            }
+            
+            if (shouldPurple) {
+                row.classList.add('row-purple');
+            }
+        });
+    }
+    updatePurpleRows();
+    setInterval(updatePurpleRows, 30000);
+
+</script>
 </body>
 </html>
