@@ -189,13 +189,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// ---------------------------------------------------------
+// 5. HANDLE MOVE TO CLIENT MASTER
+// ---------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'move_to_client') {
+    $id = (int)($_POST['id'] ?? 0);
+    if ($id > 0) {
+        $stmt = $mysqli->prepare("SELECT * FROM publisher_master WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $pub = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        if ($pub) {
+            $client_name = !empty($pub['publisher_name']) ? trim($pub['publisher_name']) : (!empty($pub['name']) ? trim($pub['name']) : 'Client ' . $pub['id']);
+            $company_name = !empty($pub['publisher_name']) ? trim($pub['publisher_name']) : $client_name;
+            
+            // Check if client already exists in client_master
+            $check = $mysqli->prepare("SELECT client_id FROM client_master WHERE client_name = ? COLLATE utf8mb4_general_ci OR company_name = ? COLLATE utf8mb4_general_ci");
+            $check->bind_param("ss", $client_name, $company_name);
+            $check->execute();
+            if ($check->get_result()->num_rows > 0) {
+                $check->close();
+                header("Location: client_master.php?msg=" . urlencode("Client '{$client_name}' already exists in Client Master.") . "&type=warning");
+                exit;
+            }
+            $check->close();
+            
+            $remarks_text = !empty($pub['designation']) ? "Designation: " . $pub['designation'] : '';
+            $country = trim($pub['country'] ?? '');
+            $currency = (strcasecmp($country, 'India') === 0 || strcasecmp($country, 'ind') === 0 || empty($country)) ? 'INR' : 'USD';
+            
+            $insert = $mysqli->prepare("INSERT INTO client_master 
+                (client_name, company_name, contact_person, email, phone, country, currency, link, remarks, template, tds_percentage, igst, status, created_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', 0, 0, 'Active', NOW())");
+            
+            $contact_person = $pub['contact_person'] ?? '';
+            $email = $pub['email'] ?? '';
+            $phone = $pub['contact_no'] ?? '';
+            $link = $pub['link'] ?? '';
+            
+            $insert->bind_param("sssssssss", 
+                $client_name,
+                $company_name,
+                $contact_person,
+                $email,
+                $phone,
+                $country,
+                $currency,
+                $link,
+                $remarks_text
+            );
+            
+            if ($insert->execute()) {
+                // Also update publisher_master status to Active
+                $upd_pub = $mysqli->prepare("UPDATE publisher_master SET status = 'Active' WHERE id = ?");
+                $upd_pub->bind_param("i", $id);
+                $upd_pub->execute();
+                $upd_pub->close();
+                
+                header("Location: client_master.php?msg=" . urlencode("Publisher '{$client_name}' successfully copied to Client Master.") . "&type=success");
+                exit;
+            } else {
+                redirect_with(['msg' => 'Error moving to Client Master: ' . $insert->error, 'type' => 'danger']);
+            }
+            $insert->close();
+        } else {
+            redirect_with(['msg' => 'Publisher not found.', 'type' => 'danger']);
+        }
+    }
+}
+
 require 'header.php'; 
 ?>
 <style>
+    /* Table layout optimization for instant rendering & smooth scrolling */
+    .table {
+        font-size: 0.82rem;
+    }
     .table thead th {
         background-color: #6c757d !important;
         color: white !important;
         border-bottom: none !important;
+        font-size: 0.78rem;
+        padding: 8px 6px !important;
+        white-space: nowrap;
+    }
+    .table tbody td {
+        padding: 6px 6px !important;
+        vertical-align: middle;
+    }
+    /* Hardware-accelerated fast rendering for 800+ rows (zero lag/hang) */
+    .table tbody tr {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 42px;
     }
     /* Sticky Action Column */
     .table thead th.sticky-actions-col {
@@ -204,6 +291,8 @@ require 'header.php';
         z-index: 10 !important;
         background-color: #6c757d !important;
         box-shadow: -2px 0 6px rgba(0, 0, 0, 0.15) !important;
+        width: 100px !important;
+        min-width: 100px !important;
     }
     .table tbody td.sticky-actions-col {
         position: sticky !important;
@@ -211,10 +300,18 @@ require 'header.php';
         z-index: 5 !important;
         background-color: #ffffff !important;
         box-shadow: -2px 0 6px rgba(0, 0, 0, 0.08) !important;
+        width: 100px !important;
+        min-width: 100px !important;
     }
     .table-hover tbody tr:hover td.sticky-actions-col {
         background-color: #f8fafc !important;
     }
+    /* Proper column sizing to eliminate huge blank gaps */
+    .col-pub-name { max-width: 180px; min-width: 130px; word-break: break-word; }
+    .col-contact { max-width: 130px; min-width: 100px; word-break: break-word; }
+    .col-person { max-width: 130px; min-width: 90px; word-break: break-word; }
+    .col-email { max-width: 140px; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-link { max-width: 120px; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 <?php
 
@@ -239,6 +336,7 @@ $sort = $_GET['sort'] ?? 'last_followup';
 $current_date = date('Y-m-d');
 
 $sql = "SELECT pm.*, 
+        pm.status as client_status,
         (SELECT MAX(followup_date) FROM client_followup_history WHERE client_id = pm.id) as last_followup,
         (SELECT next_followup_date FROM client_followup_history WHERE client_id = pm.id ORDER BY followup_date DESC, created_at DESC LIMIT 1) as next_followup_date,
         (SELECT followup_status FROM client_followup_history WHERE client_id = pm.id ORDER BY followup_date DESC, created_at DESC LIMIT 1) as last_status
@@ -285,12 +383,16 @@ if (!empty($where_conds)) {
 }
 
 // Sorting logic
-if ($sort === 'last_status') {
+$highlight = (int)($_GET['highlight'] ?? 0);
+
+if ($highlight > 0) {
+    $sql .= " ORDER BY (pm.id = $highlight) DESC, pm.updated_at DESC, last_followup DESC, pm.id DESC";
+} elseif ($sort === 'last_status') {
     $sql .= " ORDER BY last_status";
 } elseif ($sort === 'publisher_name') {
-    $sql .= " ORDER BY publisher_name";
+    $sql .= " ORDER BY pm.publisher_name";
 } else {
-    $sql .= " ORDER BY last_followup DESC";
+    $sql .= " ORDER BY pm.updated_at DESC, last_followup DESC, pm.id DESC";
 }
 
 $publishers = $mysqli->query($sql);
@@ -341,7 +443,7 @@ $publishers = $mysqli->query($sql);
 
                 <div class="col-md-2">
                     <select name="status" class="form-select">
-                        <option value="">Sort by Status</option>
+                        <option value="">Sort by Remarks</option>
                         <option value="Interested" <?= $filter_status === 'Interested' ? 'selected' : '' ?>>Interested</option>
                         <option value="Call Back Later" <?= $filter_status === 'Call Back Later' ? 'selected' : '' ?>>Call Back Later</option>
                         <option value="Not Pickup" <?= $filter_status === 'Not Pickup' ? 'selected' : '' ?>>Not Pickup</option>
@@ -369,7 +471,7 @@ $publishers = $mysqli->query($sql);
     <!-- TABLE -->
     <div class="card shadow border-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap">
+            <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
                         <th>S.No</th>
@@ -382,6 +484,7 @@ $publishers = $mysqli->query($sql);
                         <th>Link</th>
                         <th>Next Follow-up</th>
                         <th>Last Action</th>
+                        <th>Remarks</th>
                         <th>Status</th>
                         <th class="text-end sticky-actions-col">Action</th>
                     </tr>
@@ -392,26 +495,26 @@ $publishers = $mysqli->query($sql);
                         $i=0; 
                         while ($row = $publishers->fetch_assoc()): $i=$i+1;
                     ?>
-                    <tr onclick="openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" style="cursor:pointer">
+                    <tr <?= ($highlight > 0 && $row['id'] == $highlight) ? 'class="table-warning"' : '' ?> onclick="openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" style="cursor:pointer">
                         <td><?= $i;?></td>
                         <td><?= h($row['country']) ?></td>
-                        <td>
+                        <td class="col-pub-name">
                             <strong><?= h($row['publisher_name']) ?></strong>
                             <?php if(!empty($row['code'])): ?>
                                 <br><span class="badge bg-light text-dark"><?= h($row['code']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td><i class="fas fa-phone text-success me-1"></i><?= h($row['contact_no']) ?></td>
-                        <td>
-                            <a href="mailto:<?= h($row['email']) ?>" onclick="event.stopPropagation();" class="text-decoration-none">
+                        <td class="col-contact"><i class="fas fa-phone text-success me-1"></i><?= h($row['contact_no']) ?></td>
+                        <td class="col-email">
+                            <a href="mailto:<?= h($row['email']) ?>" onclick="event.stopPropagation();" class="text-decoration-none" title="<?= h($row['email']) ?>">
                                 <i class="fas fa-envelope text-primary me-1"></i><?= h($row['email']) ?>
                             </a>
                         </td>
-                        <td><?= h($row['contact_person']) ?></td>
+                        <td class="col-person"><?= h($row['contact_person']) ?></td>
                         <td><?= h($row['designation']) ?></td>
-                        <td>
+                        <td class="col-link">
                             <?php if(!empty($row['link'])): ?>
-                                <a href="<?= h($row['link']) ?>" target="_blank" onclick="event.stopPropagation();" class="text-decoration-none">
+                                <a href="<?= h($row['link']) ?>" target="_blank" onclick="event.stopPropagation();" class="text-decoration-none" title="<?= h($row['link']) ?>">
                                     <i class="fas fa-external-link-alt"></i> <?= h($row['link']) ?>
                                 </a>
                             <?php else: ?>
@@ -427,7 +530,7 @@ $publishers = $mysqli->query($sql);
                         </td>
                         <td><?= formatDate($row['last_followup']) ?></td>
                         <td>
-                            <?php if($row['last_status']): ?>
+                            <?php if(!empty($row['last_status'])): ?>
                                 <?php
                                 $statusClass = 'bg-secondary';
                                 if($row['last_status'] == 'Interested') $statusClass = 'bg-success';
@@ -437,10 +540,41 @@ $publishers = $mysqli->query($sql);
                                 if($row['last_status'] == 'Voice Message') $statusClass = 'bg-secondary';
                                 ?>
                                 <span class="badge <?= $statusClass ?>"><?= h($row['last_status']) ?></span>
+                            <?php else: ?>
+                                -
                             <?php endif; ?>
                         </td>
+                        <td>
+                            <?php 
+                            $cStatus = !empty($row['client_status']) ? trim($row['client_status']) : (!empty($row['status']) ? trim($row['status']) : '');
+                            if (!empty($cStatus)) {
+                                $st = ucfirst(strtolower($cStatus));
+                                if ($st === 'Active') {
+                                    echo '<span class="badge bg-success">Active</span>';
+                                } elseif ($st === 'Passive') {
+                                    echo '<span class="badge" style="background-color: #fd7e14 !important; color: #ffffff !important;">Passive</span>';
+                                } elseif ($st === 'Inactive') {
+                                    echo '<span class="badge bg-danger">Inactive</span>';
+                                } else {
+                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($st) . '</span>';
+                                }
+                            } else {
+                                echo '-';
+                            }
+                            ?>
+                        </td>
                         <td class="text-end sticky-actions-col">
-                            <button onclick="event.stopPropagation(); openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" class="btn btn-sm btn-outline-primary">Log</button>
+                            <div class="d-inline-flex align-items-center gap-1">
+                                <button type="button" onclick="event.stopPropagation(); openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" class="btn btn-sm btn-outline-primary">Log</button>
+                                <form method="post" style="display:inline;" onclick="event.stopPropagation();" 
+                                      onsubmit="return confirm('Are you sure you want to move publisher <?= h(addslashes($row['publisher_name'])) ?> to the Client Master?')">
+                                    <input type="hidden" name="action" value="move_to_client">
+                                    <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-info text-white" title="Move to Client Master">
+                                        <i class="fas fa-user-tie"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     <?php 
@@ -514,12 +648,12 @@ $publishers = $mysqli->query($sql);
                                 </select>
                             </div>
                             <div class="mb-2">
-                                <label class="small fw-bold">Status</label>
+                                <label class="small fw-bold">Remarks</label>
                                 <select name="followup_status" class="form-select form-select-sm">
                                     <option>Interested</option><option>Call Back Later</option><option>Not Pickup</option><option>Voice Message</option><option>Not Interested</option>
                                 </select>
                             </div>
-                            <div class="mb-3"><label class="small fw-bold">Remarks</label><textarea name="remarks" class="form-control form-control-sm" rows="3" required></textarea></div>
+                            <div class="mb-3"><label class="small fw-bold">Note</label><textarea name="remarks" class="form-control form-control-sm" rows="3" required></textarea></div>
                             <button type="submit" class="btn btn-primary btn-sm w-100">Save Log</button>
                         </form>
                     </div>
