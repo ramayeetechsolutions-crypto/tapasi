@@ -789,10 +789,13 @@ if (!$entries) $entries = false;
                         </select>
                     </div>
                     
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
-                            <i class="fas fa-search me-1"></i> Filter
+                    <div class="col-md-auto d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                            <i class="fas fa-filter me-1"></i> Apply Filter
                         </button>
+                        <a href="error_entry_wk.php" class="btn btn-secondary btn-sm text-nowrap">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </a>
                     </div>
                 </form>
             </div>
