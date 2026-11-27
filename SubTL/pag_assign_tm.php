@@ -1119,7 +1119,9 @@ require 'header.php';
                                     </td>
                                     <!-- FQA Status -->
                                     <?php
-                                        $proc_name = strtoupper(str_replace(' ', '', $row['process_name'] ?? ''));
+                                        $proc_name = strtoupper(trim(str_replace(' ', '', $row['process_name'] ?? '')));
+                                        $is_only_ts = in_array($proc_name, ['TS', 'PAG', 'ONLYTS']) || ($proc_name !== '' && strpos($proc_name, 'TS') !== false && strpos($proc_name, 'CE') === false && strpos($proc_name, 'LE') === false && strpos($proc_name, 'XML') === false);
+                                        
                                         $has_ce = (strpos($proc_name, 'CE') !== false);
                                         $ce_is_done = in_array($row['ce_status'] ?? '', ['Completed', 'Done']) || trim($row['ce_remarks'] ?? '') === 'Moved' || !empty($row['ce_moved_date']);
                                         
@@ -1132,7 +1134,11 @@ require 'header.php';
                                             $fqa_user_html = "<br><small style='color: #198754 !important; font-weight: 600;'><i class='fas fa-user' style='color: #198754 !important;'></i> ".h($ce_name)." (".h($ce_user).")</small>";
                                         }
 
-                                        if (!$has_ce || $ce_is_done) {
+                                        if ($is_only_ts) {
+                                            $fqa_badge_cls = 'badge bg-secondary';
+                                            $fqa_stat_label = 'N/A';
+                                            $fqa_user_html = '';
+                                        } elseif (!$has_ce || $ce_is_done) {
                                             $fqa_badge_cls = 'badge bg-success';
                                             $fqa_stat_label = 'Completed';
                                         } elseif (!empty($row['assigned_to'])) {
@@ -1152,22 +1158,29 @@ require 'header.php';
                                     
                                     <!-- LE Status -->
                                     <?php
-                                        $le_status = $row['le_status'] ?? 'Need to Assign';
-                                        $le_is_done = in_array($le_status, ['Completed', 'Done', 'LE & LE-QC Done', 'LE-QC Done', 'LE Done']);
-                                        $le_badge_cls = $le_is_done ? 'badge bg-success' : ($le_status == 'In Progress' ? 'badge bg-primary' : 'badge bg-info');
-                                        
-                                        $le_user = $row['le_assigned'] ?? ''; 
-                                        $le_name = $le_user;
-                                        foreach ($tms as $tm) { if ($tm['employee_username'] == $le_user) { $le_name = $tm['employee_name']; break; } }
-                                        
-                                        $le_user_html = '';
-                                        if (!empty($le_user)) {
-                                            $le_color = $le_is_done ? '#198754' : '#0d6efd';
-                                            $le_user_html = "<br><small style='color: {$le_color} !important; font-weight: 600;'><i class='fas fa-user' style='color: {$le_color} !important;'></i> ".h($le_name)." (".h($le_user).")</small>";
+                                        if ($is_only_ts) {
+                                            $le_badge_cls = 'badge bg-secondary';
+                                            $le_stat_label = 'N/A';
+                                            $le_user_html = '';
+                                        } else {
+                                            $le_status = $row['le_status'] ?? 'Need to Assign';
+                                            $le_is_done = in_array($le_status, ['Completed', 'Done', 'LE & LE-QC Done', 'LE-QC Done', 'LE Done']);
+                                            $le_badge_cls = $le_is_done ? 'badge bg-success' : ($le_status == 'In Progress' ? 'badge bg-primary' : 'badge bg-info');
+                                            
+                                            $le_user = $row['le_assigned'] ?? ''; 
+                                            $le_name = $le_user;
+                                            foreach ($tms as $tm) { if ($tm['employee_username'] == $le_user) { $le_name = $tm['employee_name']; break; } }
+                                            
+                                            $le_user_html = '';
+                                            if (!empty($le_user)) {
+                                                $le_color = $le_is_done ? '#198754' : '#0d6efd';
+                                                $le_user_html = "<br><small style='color: {$le_color} !important; font-weight: 600;'><i class='fas fa-user' style='color: {$le_color} !important;'></i> ".h($le_name)." (".h($le_user).")</small>";
+                                            }
+                                            $le_stat_label = $le_status;
                                         }
                                     ?>
                                     <td class="text-center">
-                                        <span class="<?= $le_badge_cls ?>"><?= h($le_status) ?></span>
+                                        <span class="<?= $le_badge_cls ?>"><?= h($le_stat_label) ?></span>
                                         <?= $le_user_html ?>
                                     </td>
                                     
