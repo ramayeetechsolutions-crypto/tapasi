@@ -136,12 +136,7 @@ ob_end_flush();
 
         /* Compact Header */
         .dashboard-header {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 15px 20px;
-            margin-bottom: 15px;
-            box-shadow: var(--box-shadow);
-            border-left: 4px solid var(--primary-color);
+            margin-bottom: 20px;
         }
 
         .dashboard-title {
@@ -313,18 +308,16 @@ ob_end_flush();
     <!-- Dashboard -->
     <div class="container-fluid px-0">
         <!-- Header -->
-        <div class="dashboard-header">
-            <div class="page-title-container">
-                <div>
-                    <h1 class="dashboard-title mb-0 text-white"><i class="fas fa-chart-line me-2"></i>Client Dashboard</h1>
-                    <p class="dashboard-subtitle mb-0 text-white-50 small">
-                        Welcome, <strong><?= htmlspecialchars($current_user) ?></strong> • 
-                        <?= date('M j, Y') ?>
-                    </p>
-                </div>
-                <div class="user-badge">
-                    <i class="fas fa-user-circle me-1"></i><?= htmlspecialchars($current_user) ?>
-                </div>
+        <div class="page-title-container">
+            <div>
+                <h1 class="dashboard-title mb-0 text-white"><i class="fas fa-chart-line me-2"></i>Client Dashboard</h1>
+                <p class="dashboard-subtitle mb-0 text-white-50 small">
+                    Welcome, <strong><?= htmlspecialchars($current_user) ?></strong> • 
+                    <?= date('M j, Y') ?>
+                </p>
+            </div>
+            <div class="user-badge">
+                <i class="fas fa-user-circle me-1"></i><?= htmlspecialchars($current_user) ?>
             </div>
         </div>
 
