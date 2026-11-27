@@ -890,7 +890,7 @@ if (!function_exists('h')) {
 
                 <div class="col-12 mt-3">
                     <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                    <a href="le_meeting.php" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> Clear Filters</a>
+                    <a href="le_meeting.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>

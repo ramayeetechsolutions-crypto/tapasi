@@ -625,10 +625,10 @@ $clients = getClients($mysqli);
                     </div>
                     <div class="col-md-12 mt-2">
                         <button type="submit" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="xml_clients.php" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="xml_clients.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

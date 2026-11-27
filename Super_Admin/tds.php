@@ -473,8 +473,8 @@ $years = range($current_year - 2, $current_year + 1);
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="fas fa-search me-1"></i> Generate Report
                         </button>
-                        <a href="tds.php" class="btn btn-secondary">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="tds.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

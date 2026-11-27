@@ -442,8 +442,8 @@ $processes_result = $mysqli->query($processes_sql);
                     <button type="submit" class="btn btn-primary text-nowrap">
                         <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
-                    <a href="wordcount_report_tl.php" class="btn btn-secondary text-nowrap">
-                        <i class="fas fa-times me-1"></i> Clear Filters
+                    <a href="wordcount_report_tl.php" class="btn btn-outline-secondary text-nowrap">
+                        <i class="fas fa-undo me-1"></i> Reset
                     </a>
                 </div>
             </form>

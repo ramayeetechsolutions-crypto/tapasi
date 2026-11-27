@@ -493,8 +493,8 @@ require 'header.php'; // Now, require header.php *after* all logic
     </select>
   </div>
   <div class="col-auto">
-    <button type="submit" class="btn btn-primary btn-sm">Go</button>
-    <a href="client_master.php" class="btn btn-secondary btn-sm">Clear</a>
+    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+    <a href="client_master.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
   </div>
 </form>
 

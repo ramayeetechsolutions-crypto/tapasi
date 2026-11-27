@@ -573,7 +573,7 @@ include 'header.php';
 
                     <?php if ($status_filter != 'all' || ($type_filter != 'all' && !empty($type_filter)) || ($employee_filter != 'all' && !empty($employee_filter))): ?>
                         <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Reset Filters">
-                            <i class="fas fa-undo me-1"></i>Reset
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     <?php endif; ?>
                 </form>

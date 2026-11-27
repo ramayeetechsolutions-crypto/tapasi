@@ -1004,8 +1004,8 @@ require 'header.php';
                     </select>
                 </div> -->
                 <div class="col-md-2 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm">Go</button>
-                    <a href="client_master.php" class="btn btn-light border btn-sm flex-grow-1 shadow-sm">Clear</a>
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 shadow-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="client_master.php" class="btn btn-outline-secondary btn-sm flex-grow-1 shadow-sm"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>

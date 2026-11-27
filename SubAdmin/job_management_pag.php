@@ -484,10 +484,10 @@ table td:nth-child(17) {
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-primary btn-sm" type="submit">
-                        <i class="fas fa-search"></i> Search
+                        <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
                     <a href="job_management.php" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-times"></i> Clear
+                        <i class="fas fa-undo me-1"></i> Reset
                     </a>
                     <button type="button" class="btn btn-success btn-sm" onclick="exportTableToExcel('jobTable', 'PAG_CE_PAG_Jobs_<?= date('Y-m-d') ?>')">
                         <i class="fas fa-file-excel"></i> Export

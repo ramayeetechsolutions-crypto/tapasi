@@ -471,10 +471,10 @@ if ($invoice_id > 0) {
                     
                     <div class="col-md-12 mt-2">
                         <button type="submit" class="btn btn-primary me-2">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="payment_history.php" class="btn btn-secondary">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="payment_history.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>
@@ -749,7 +749,7 @@ if ($invoice_id > 0) {
                                                 </a>
                                             <?php else: ?>
                                                 <a href="payment_history.php" class="btn btn-primary mt-2">
-                                                    <i class="fas fa-times me-1"></i> Clear Filters
+                                                    <i class="fas fa-undo me-1"></i> Reset
                                                 </a>
                                             <?php endif; ?>
                                         </div>

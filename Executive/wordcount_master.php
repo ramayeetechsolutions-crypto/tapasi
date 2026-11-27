@@ -922,10 +922,10 @@ if (!$wordcounts) {
                     
                     <div class="col-md-12 mt-2">
                         <button type="submit" class="btn btn-primary btn-sm me-2">
-                            <i class="fas fa-search me-1"></i> Filter
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="wordcount_master.php" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="wordcount_master.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

@@ -346,10 +346,10 @@ require 'header.php';
                     <!-- Action Buttons: Go & Clear -->
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary px-4 fw-semibold d-flex align-items-center justify-content-center go-bar-input">
-                            Go
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="job_master.php" class="btn btn-secondary px-3 d-flex align-items-center justify-content-center go-bar-input">
-                            Clear
+                        <a href="job_master.php" class="btn btn-outline-secondary px-3 d-flex align-items-center justify-content-center go-bar-input">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
 

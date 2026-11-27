@@ -435,7 +435,7 @@ foreach ($performance_data as &$emp) {
                     </div>
                     <div class="col-auto">
                         <button type="submit" class="btn btn-light btn-sm fw-semibold">
-                            <i class="fas fa-filter me-1 text-primary"></i> Filter
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                     </div>
                 </form>

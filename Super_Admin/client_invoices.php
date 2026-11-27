@@ -136,7 +136,8 @@ if (isset($mysqli) && $mysqli) {
         .search-form { display: flex; gap: 10px; align-items: center; }
         .search-input { flex: 1; padding: 10px 15px; border: 2px solid #007bff; border-radius: 25px; font-size: 16px; outline: none; }
         .search-button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-size: 16px; }
-        .clear-button { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block; }
+        .clear-button { background: transparent; color: #6c757d; border: 1px solid #6c757d; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block; transition: all 0.2s ease; }
+        .clear-button:hover { background: #6c757d; color: #ffffff; text-decoration: none; }
         .folder-section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
         .folder-header { background: #707981; color: white; padding: 10px 15px; margin: -15px -15px 15px -15px; border-radius: 5px 5px 0 0; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .file-list { list-style: none; padding: 0; margin: 0; }
@@ -218,9 +219,9 @@ if (isset($mysqli) && $mysqli) {
                     placeholder="Search by client name, folder name, or filename..."
                     value="<?php echo htmlspecialchars($search_term); ?>"
                 >
-                <button type="submit" class="search-button">🔍 Search</button>
+                <button type="submit" class="search-button"><i class="fas fa-filter me-1"></i> Apply Filters</button>
                 <?php if (!empty($search_term)): ?>
-                    <a href="?" class="clear-button">❌ Clear Search</a>
+                    <a href="?" class="clear-button"><i class="fas fa-undo me-1"></i> Reset</a>
                 <?php endif; ?>
             </form>
         </div>

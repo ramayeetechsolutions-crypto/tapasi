@@ -323,6 +323,9 @@ if (!in_array($sort,$sortable,true)) $sort='employee_username';
 $dir = ($dir=='asc')?'asc':'desc';
 
 // TL can only see their team members
+$sess_user = $mysqli->real_escape_string($_SESSION["username"] ?? '');
+$sess_name = $mysqli->real_escape_string($_SESSION["ename"] ?? $sess_user);
+
 $sql = "SELECT 
     e.*,
     r.role_name,
@@ -337,7 +340,12 @@ LEFT JOIN
 LEFT JOIN 
     designation_master d ON e.designation_id = d.designation_id 
 WHERE 
-    e.reporting_manager = '$emp_username' OR e.employee_username = '$emp_username'";
+    (
+        e.reporting_manager = '$sess_name' 
+        OR e.reporting_manager = '$sess_user' 
+        OR e.employee_username = '$sess_user' 
+        OR e.employee_name = '$sess_name'
+    )";
         
 $cond=[];$params=[];$types='';
 
@@ -713,10 +721,10 @@ require 'header.php';
                     </div> -->
                     <div class="col-md-auto d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm text-nowrap">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="employee_master.php" class="btn btn-secondary btn-sm text-nowrap">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="employee_master.php" class="btn btn-outline-secondary btn-sm text-nowrap">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>
