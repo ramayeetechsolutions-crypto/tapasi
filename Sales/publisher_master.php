@@ -304,6 +304,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'move_to_followup') {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $stmt = $mysqli->prepare("SELECT publisher_name FROM publisher_master WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($pub = $result->fetch_assoc()) {
+                $stmt->close();
+                $pname = $pub['publisher_name'];
+                
+                // Update updated_at so this record appears at the top of Follow-up
+                $upd = $mysqli->prepare("UPDATE publisher_master SET updated_at = NOW() WHERE id = ?");
+                $upd->bind_param("i", $id);
+                $upd->execute();
+                $upd->close();
+                
+                header("Location: client_followup.php?highlight=" . $id . "&msg=" . urlencode("Publisher '{$pname}' moved to Follow-up successfully.") . "&type=success");
+                exit;
+            }
+            $stmt->close();
+        }
+        redirect_with(['msg' => 'Publisher not found.', 'type' => 'danger']);
+    }
+
     if ($action === 'move_to_client') {
         $id = (int)($_POST['id'] ?? 0);
         
@@ -467,8 +492,8 @@ if (!empty($types)) {
 
 // Get statistics
 $totalPublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_master")->fetch_assoc()['cnt'];
-$activePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_master WHERE status = 'active'")->fetch_assoc()['cnt'];
-$inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_master WHERE status = 'inactive'")->fetch_assoc()['cnt'];
+$activePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_master WHERE status = 'Active' OR status = 'active'")->fetch_assoc()['cnt'];
+$inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_master WHERE status = 'Inactive' OR status = 'inactive'")->fetch_assoc()['cnt'];
 ?>
 
 <!DOCTYPE html>
@@ -499,6 +524,11 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
         .table td {
             vertical-align: middle;
             font-size: 13px;
+        }
+        /* Hardware-accelerated fast rendering for 800+ rows */
+        .table tbody tr {
+            content-visibility: auto;
+            contain-intrinsic-size: 0 42px;
         }
         /* Sticky Actions Column */
         .table th.sticky-actions-col {
@@ -669,8 +699,10 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                             <div class="mb-3">
                                 <label for="status" class="form-label">Status</label>
                                 <select class="form-select" id="status" name="status">
-                                    <option value="active" <?= ($editPublisher && $editPublisher['status'] == 'active') ? 'selected' : '' ?>>Active</option>
-                                    <option value="inactive" <?= ($editPublisher && $editPublisher['status'] == 'inactive') ? 'selected' : '' ?>>Inactive</option>
+                                    <option value="" <?= (empty($editPublisher['status'])) ? 'selected' : '' ?>>-</option>
+                                    <option value="Active" <?= ($editPublisher && strcasecmp($editPublisher['status'], 'Active') === 0) ? 'selected' : '' ?>>Active</option>
+                                    <option value="Passive" <?= ($editPublisher && strcasecmp($editPublisher['status'], 'Passive') === 0) ? 'selected' : '' ?>>Passive</option>
+                                    <option value="Inactive" <?= ($editPublisher && strcasecmp($editPublisher['status'], 'Inactive') === 0) ? 'selected' : '' ?>>Inactive</option>
                                 </select>
                             </div>
                         </div>
@@ -742,8 +774,9 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                     <div class="col-md-4">
                         <select name="status" class="form-select form-select-sm">
                             <option value="">Sort by Status</option>
-                            <option value="active" <?= $fstatus === 'active' ? 'selected' : '' ?>>Active</option>
-                            <option value="inactive" <?= $fstatus === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+                            <option value="Active" <?= strcasecmp($fstatus, 'Active') === 0 ? 'selected' : '' ?>>Active</option>
+                            <option value="Passive" <?= strcasecmp($fstatus, 'Passive') === 0 ? 'selected' : '' ?>>Passive</option>
+                            <option value="Inactive" <?= strcasecmp($fstatus, 'Inactive') === 0 ? 'selected' : '' ?>>Inactive</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -819,10 +852,22 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                     </td>
                                     <td>
                                         <?php 
-                                        $statusClass = ($row['status'] == 'active') ? 'bg-success' : 'bg-secondary';
-                                        $statusText = ($row['status'] == 'active') ? 'Active' : 'Inactive';
+                                        $dispStatus = !empty($row['status']) ? trim($row['status']) : '';
+                                        if (!empty($dispStatus)) {
+                                            $st = ucfirst(strtolower($dispStatus));
+                                            if ($st === 'Active') {
+                                                echo '<span class="badge bg-success">Active</span>';
+                                            } elseif ($st === 'Passive') {
+                                                echo '<span class="badge" style="background-color: #fd7e14 !important; color: #ffffff !important;">Passive</span>';
+                                            } elseif ($st === 'Inactive') {
+                                                echo '<span class="badge bg-danger">Inactive</span>';
+                                            } else {
+                                                echo '<span class="badge bg-secondary">' . htmlspecialchars($st) . '</span>';
+                                            }
+                                        } else {
+                                            echo '-';
+                                        }
                                         ?>
-                                        <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
                                     </td>
                                     <td class="text-center sticky-actions-col">
                                         <div class="btn-group btn-group-sm" role="group">
@@ -832,13 +877,13 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             
-                                            <!-- Move to Client Button -->
+                                            <!-- Move to Follow-up Button -->
                                             <form method="post" style="display:inline;" 
-                                                  onsubmit="return confirm('Are you sure you want to move publisher <?= h($row['publisher_name']) ?> to the Client Master?')">
-                                                <input type="hidden" name="action" value="move_to_client">
+                                                  onsubmit="return confirm('Are you sure you want to move publisher <?= h(addslashes($row['publisher_name'])) ?> to Follow-up?')">
+                                                <input type="hidden" name="action" value="move_to_followup">
                                                 <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                                                <button type="submit" class="btn btn-info text-white" title="Move to Client">
-                                                    <i class="fas fa-user-tie"></i>
+                                                <button type="submit" class="btn btn-info text-white" title="Move to Follow-up">
+                                                    <i class="fas fa-bullhorn"></i>
                                                 </button>
                                             </form>
 
