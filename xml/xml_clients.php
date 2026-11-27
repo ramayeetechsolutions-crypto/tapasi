@@ -620,7 +620,7 @@ $clients = getClients($mysqli);
         <!-- Filters -->
         <div class="card mb-3">
             <div class="card-body p-2">
-                <form method="get" class="row g-2 align-items-end">
+                <form method="get" class="row g-2 align-items-center">
                     <div class="col-md-4">
                         <!--label class="form-label mb-0 fw-bold text-muted" style="font-size:11px;">Search</label-->
                         <input type="text" name="q" class="form-control form-control-sm" placeholder="Sort by Client, Journal, etc..." value="<?= h($q) ?>">
@@ -633,9 +633,9 @@ $clients = getClients($mysqli);
                             <option value="Inactive" <?= $fstatus === 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-4 text-end ms-auto">
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Filter</button>
-                        <a href="xml_clients.php" class="btn btn-secondary btn-sm"><i class="fas fa-times"></i> Clear</a>
+                    <div class="col-auto d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="fas fa-filter me-1"></i> Filter</button>
+                        <a href="xml_clients.php" class="btn btn-secondary btn-sm text-nowrap"><i class="fas fa-times me-1"></i> Clear</a>
                     </div>
                 </form>
             </div>

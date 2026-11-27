@@ -742,9 +742,9 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-12 mt-3">
-                    <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                    <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-secondary"><i class="fas fa-times me-1"></i> Clear Filters</a>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-secondary text-nowrap"><i class="fas fa-times me-1"></i> Clear Filters</a>
                 </div>
             </form>
         </div>

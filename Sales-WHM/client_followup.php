@@ -264,7 +264,7 @@ try {
             </div>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.8rem;">
                 <thead class="table-light">
                     <tr>
                         <th>Client / Website</th>

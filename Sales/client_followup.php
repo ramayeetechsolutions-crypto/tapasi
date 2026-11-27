@@ -196,6 +196,17 @@ require 'header.php';
         background-color: #6c757d !important;
         color: white !important;
         border-bottom: none !important;
+        font-size: 0.8rem !important;
+        padding: 8px 10px !important;
+        vertical-align: middle !important;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap !important;
+    }
+    .table tbody td {
+        font-size: 0.8rem !important;
+        padding: 7px 10px !important;
+        vertical-align: middle !important;
     }
     /* Sticky Action Column */
     .table thead th.sticky-actions-col {
@@ -215,6 +226,20 @@ require 'header.php';
     .table-hover tbody tr:hover td.sticky-actions-col {
         background-color: #f8fafc !important;
     }
+
+    /* Column Width Optimization - Ensure all data and headers are completely shown */
+    .col-sno { width: 50px !important; min-width: 50px !important; text-align: center; }
+    .col-country { min-width: 95px !important; white-space: nowrap; }
+    .col-publisher { min-width: 220px !important; white-space: normal !important; line-height: 1.3 !important; }
+    .col-contact-no { min-width: 150px !important; white-space: nowrap; }
+    .col-email { min-width: 220px !important; white-space: nowrap; }
+    .col-person { min-width: 170px !important; white-space: nowrap; }
+    .col-designation { min-width: 140px !important; white-space: nowrap; }
+    .col-link { min-width: 220px !important; white-space: nowrap; }
+    .col-next-date { min-width: 110px !important; white-space: nowrap; }
+    .col-last-action { min-width: 100px !important; white-space: nowrap; }
+    .col-status { min-width: 100px !important; text-align: center; white-space: nowrap; }
+    .col-action { width: 70px !important; min-width: 70px !important; }
 </style>
 <?php
 
@@ -369,21 +394,21 @@ $publishers = $mysqli->query($sql);
     <!-- TABLE -->
     <div class="card shadow border-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap">
+            <table class="table table-hover table-sm align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>S.No</th>
-                        <th>Country</th>
-                        <th>Publisher Name</th>
-                        <th>Contact No.</th>
-                        <th>E-mail</th>
-                        <th>Contact Person</th>
-                        <th>Designation</th>
-                        <th>Link</th>
-                        <th>Next Follow-up</th>
-                        <th>Last Action</th>
-                        <th>Status</th>
-                        <th class="text-end sticky-actions-col">Action</th>
+                        <th class="col-sno text-center">S.No</th>
+                        <th class="col-country">Country</th>
+                        <th class="col-publisher">Publisher Name</th>
+                        <th class="col-contact-no">Contact No.</th>
+                        <th class="col-email">E-mail</th>
+                        <th class="col-person">Contact Person</th>
+                        <th class="col-designation">Designation</th>
+                        <th class="col-link">Link</th>
+                        <th class="col-next-date">Next Follow-up</th>
+                        <th class="col-last-action">Last Action</th>
+                        <th class="col-status text-center">Status</th>
+                        <th class="text-end sticky-actions-col col-action">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -393,40 +418,40 @@ $publishers = $mysqli->query($sql);
                         while ($row = $publishers->fetch_assoc()): $i=$i+1;
                     ?>
                     <tr onclick="openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" style="cursor:pointer">
-                        <td><?= $i;?></td>
-                        <td><?= h($row['country']) ?></td>
-                        <td>
+                        <td class="text-center col-sno"><?= $i;?></td>
+                        <td class="col-country"><?= h($row['country']) ?></td>
+                        <td class="col-publisher">
                             <strong><?= h($row['publisher_name']) ?></strong>
                             <?php if(!empty($row['code'])): ?>
-                                <br><span class="badge bg-light text-dark"><?= h($row['code']) ?></span>
+                                <br><span class="badge bg-light text-dark border"><?= h($row['code']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td><i class="fas fa-phone text-success me-1"></i><?= h($row['contact_no']) ?></td>
-                        <td>
+                        <td class="col-contact-no"><i class="fas fa-phone text-success me-1"></i><?= h($row['contact_no']) ?></td>
+                        <td class="col-email">
                             <a href="mailto:<?= h($row['email']) ?>" onclick="event.stopPropagation();" class="text-decoration-none">
                                 <i class="fas fa-envelope text-primary me-1"></i><?= h($row['email']) ?>
                             </a>
                         </td>
-                        <td><?= h($row['contact_person']) ?></td>
-                        <td><?= h($row['designation']) ?></td>
-                        <td>
+                        <td class="col-person"><?= h($row['contact_person']) ?: '-' ?></td>
+                        <td class="col-designation"><?= h($row['designation']) ?: '-' ?></td>
+                        <td class="col-link">
                             <?php if(!empty($row['link'])): ?>
                                 <a href="<?= h($row['link']) ?>" target="_blank" onclick="event.stopPropagation();" class="text-decoration-none">
-                                    <i class="fas fa-external-link-alt"></i> <?= h($row['link']) ?>
+                                    <i class="fas fa-external-link-alt me-1"></i><?= h($row['link']) ?>
                                 </a>
                             <?php else: ?>
                                 -
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td class="col-next-date text-nowrap">
                             <?php if($row['next_followup_date']): ?>
                                 <span class="<?= $row['next_followup_date'] < $current_date ? 'text-danger fw-bold' : 'text-primary' ?>">
                                     <?= formatDate($row['next_followup_date']) ?>
                                 </span>
                             <?php else: ?> - <?php endif; ?>
                         </td>
-                        <td><?= formatDate($row['last_followup']) ?></td>
-                        <td>
+                        <td class="col-last-action text-nowrap"><?= formatDate($row['last_followup']) ?></td>
+                        <td class="col-status text-center text-nowrap">
                             <?php if($row['last_status']): ?>
                                 <?php
                                 $statusClass = 'bg-secondary';
@@ -436,11 +461,11 @@ $publishers = $mysqli->query($sql);
                                 if($row['last_status'] == 'Not Pickup') $statusClass = 'bg-info';
                                 if($row['last_status'] == 'Voice Message') $statusClass = 'bg-secondary';
                                 ?>
-                                <span class="badge <?= $statusClass ?>"><?= h($row['last_status']) ?></span>
+                                <span class="badge <?= $statusClass ?>" style="font-size: 0.75rem; padding: 0.35em 0.65em;"><?= h($row['last_status']) ?></span>
                             <?php endif; ?>
                         </td>
-                        <td class="text-end sticky-actions-col">
-                            <button onclick="event.stopPropagation(); openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" class="btn btn-sm btn-outline-primary">Log</button>
+                        <td class="text-end sticky-actions-col col-action">
+                            <button onclick="event.stopPropagation(); openFollowup(<?= $row['id'] ?>, '<?= h(addslashes($row['publisher_name'])) ?>')" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size: 0.75rem;">Log</button>
                         </td>
                     </tr>
                     <?php 

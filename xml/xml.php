@@ -706,6 +706,20 @@ function fetchData() {
         .status-inprocess { background-color: #fd7e14 !important; color: white !important; border-radius: 12px; padding: 3px 10px; font-weight: 700; font-size: 10px; }
         .status-despatched { background-color: #198754 !important; color: white !important; border-radius: 12px; padding: 3px 10px; font-weight: 700; font-size: 10px; }
         
+        #xmlJobsTable .btn-light,
+        #xmlJobsTable button.btn-light,
+        #xmlJobsTable .btn-assign-task {
+            color: #0d6efd !important;
+            background-color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        #xmlJobsTable .btn-light:hover,
+        #xmlJobsTable button.btn-light:hover,
+        #xmlJobsTable .btn-assign-task:hover {
+            color: #0a58ca !important;
+            background-color: #f0f7ff !important;
+        }
+        
 
         .form-control, .form-select, .input-group-text, .btn-sm {
             font-size: 12.5px !important;
@@ -1088,8 +1102,8 @@ function fetchData() {
 
                             // 2. Step 1: Initial Unassigned State -> Show [ Assign ] Button (White Button on Blue Cell)
                             if (!val || val === '-' || val === '') {
-                                return `<button type="button" class="btn btn-light btn-sm rounded-pill px-3 py-0 shadow-sm" 
-                                            style="font-size:11px; height:24px; line-height:22px; color: #0d6efd; font-weight: 700; border: none;" 
+                                return `<button type="button" class="btn btn-light btn-sm rounded-pill px-3 py-0 shadow-sm btn-assign-task" 
+                                            style="font-size:11px; height:24px; line-height:22px; color: #0d6efd !important; font-weight: 700; border: none; background-color: #ffffff !important;" 
                                             onclick="assignTask(${row.id}, '${f}')">Assign</button>`;
                             }
 

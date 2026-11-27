@@ -901,9 +901,9 @@ if (!empty($employee_id)) {
                 </div>
                 <input type="hidden" name="week" id="hidden_week" value="<?= h($week) ?>">
                 <input type="hidden" name="year" id="hidden_year" value="<?= h($year) ?>">
-                <div class="col-12 mt-3">
-                    <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                    <a href="xml_weekly_report.php" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> Clear Filters</a>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                    <a href="xml_weekly_report.php" class="btn btn-secondary btn-sm text-nowrap"><i class="fas fa-times me-1"></i> Clear Filters</a>
                 </div>
             </form>
         </div>

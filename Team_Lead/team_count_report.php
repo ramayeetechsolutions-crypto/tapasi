@@ -438,11 +438,11 @@ $processes_result = $mysqli->query($processes_sql);
                         <?php endwhile; ?>
                     </select>
                 </div>
-                <div class="col-12 mt-3">
-                    <button type="submit" class="btn btn-primary me-2">
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary text-nowrap">
                         <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
-                    <a href="wordcount_report_tl.php" class="btn btn-secondary">
+                    <a href="wordcount_report_tl.php" class="btn btn-secondary text-nowrap">
                         <i class="fas fa-times me-1"></i> Clear Filters
                     </a>
                 </div>

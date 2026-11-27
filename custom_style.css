@@ -4263,22 +4263,22 @@ html body .badge.bg-primary,
 html body .badge.bg-primary *,
 html body .badge-primary,
 html body .badge-primary *,
-html body [style*="#0d6efd"],
-html body [style*="#0d6efd"] *,
-html body [style*="#0d6efd"] i,
-html body [style*="#0d6efd"] span,
-html body [style*="#0b5ed7"],
-html body [style*="#0b5ed7"] *,
-html body [style*="#0b5ed7"] i,
-html body [style*="#0b5ed7"] span,
-html body [style*="rgb(13, 110, 253)"],
-html body [style*="rgb(13, 110, 253)"] *,
-html body [style*="rgb(13, 110, 253)"] i,
-html body [style*="rgb(13, 110, 253)"] span,
-html body [style*="rgb(11, 94, 215)"],
-html body [style*="rgb(11, 94, 215)"] *,
-html body [style*="rgb(11, 94, 215)"] i,
-html body [style*="rgb(11, 94, 215)"] span,
+html body [style*="#0d6efd"]:not(.btn-light),
+html body [style*="#0d6efd"] *:not(.btn):not(.btn *):not(input):not(select),
+html body [style*="#0d6efd"] i:not(.btn *),
+html body [style*="#0d6efd"] span:not(.btn *),
+html body [style*="#0b5ed7"]:not(.btn-light),
+html body [style*="#0b5ed7"] *:not(.btn):not(.btn *):not(input):not(select),
+html body [style*="#0b5ed7"] i:not(.btn *),
+html body [style*="#0b5ed7"] span:not(.btn *),
+html body [style*="rgb(13, 110, 253)"]:not(.btn-light),
+html body [style*="rgb(13, 110, 253)"] *:not(.btn):not(.btn *):not(input):not(select),
+html body [style*="rgb(13, 110, 253)"] i:not(.btn *),
+html body [style*="rgb(13, 110, 253)"] span:not(.btn *),
+html body [style*="rgb(11, 94, 215)"]:not(.btn-light),
+html body [style*="rgb(11, 94, 215)"] *:not(.btn):not(.btn *):not(input):not(select),
+html body [style*="rgb(11, 94, 215)"] i:not(.btn *),
+html body [style*="rgb(11, 94, 215)"] span:not(.btn *),
 html body .page-item.active .page-link,
 html body .page-item.active .page-link *,
 html body .page-item.active .page-link:hover,
@@ -4292,4 +4292,30 @@ html body .paginate_button.current *,
 html body .dataTables_paginate .paginate_button.current,
 html body .dataTables_paginate .paginate_button.current * {
     color: #ffffff !important;
+}
+
+/* Ensure Assign buttons inside blue status cells (such as xmlJobsTable in XML Unassigned Jobs) have crisp, clearly visible text at all times */
+#xmlJobsTable .btn-light,
+#xmlJobsTable button.btn-light,
+#xmlJobsTable .btn-assign-task,
+table [style*="#0d6efd"] .btn-light,
+table [style*="#0d6efd"] .btn-light *,
+table [style*="background-color: #0d6efd"] .btn-light,
+table [style*="background-color: #0d6efd"] .btn-light * {
+    color: #0d6efd !important;
+    background-color: #ffffff !important;
+    font-weight: 700 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+#xmlJobsTable .btn-light:hover,
+#xmlJobsTable button.btn-light:hover,
+#xmlJobsTable .btn-assign-task:hover,
+table [style*="#0d6efd"] .btn-light:hover,
+table [style*="#0d6efd"] .btn-light:hover *,
+table [style*="background-color: #0d6efd"] .btn-light:hover,
+table [style*="background-color: #0d6efd"] .btn-light:hover * {
+    color: #0a58ca !important;
+    background-color: #f0f7ff !important;
 }
