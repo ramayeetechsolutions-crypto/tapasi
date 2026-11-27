@@ -1183,10 +1183,13 @@ if (!function_exists('h')) {
     const teamData = <?= json_encode($team_data) ?>;
     
     const chartLabels = teamData.map(emp => emp.name.split(' ')); 
-    const netProdValues = teamData.map(emp => emp.net_prod_decimal);
-    const accuracyValues = teamData.map(emp => emp.accuracy / 100);
+    const netProdValues = teamData.map(emp => parseFloat(emp.net_prod_pct) || 0);
+    const accuracyValues = teamData.map(emp => parseFloat(emp.accuracy) || 0);
 
     const ctx = document.getElementById('productionChart').getContext('2d');
+
+    const maxVal = Math.max(100, ...netProdValues, ...accuracyValues);
+    const yMax = Math.ceil((maxVal + 15) / 50) * 50;
 
     const data = {
         labels: chartLabels,
@@ -1219,10 +1222,13 @@ if (!function_exists('h')) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: Math.max(1.5, ...netProdValues) + 0.2, 
+                    max: yMax,
                     grid: { color: '#f1f5f9' },
                     ticks: {
-                        stepSize: 0.5,
+                        stepSize: 50,
+                        callback: function(value) {
+                            return value + '%';
+                        },
                         font: { family: 'Inter', weight: '600', color: '#64748b' }
                     }
                 },
@@ -1247,15 +1253,19 @@ if (!function_exists('h')) {
                 tooltip: {
                     backgroundColor: '#1e293b',
                     titleFont: { family: 'Inter' },
-                    bodyFont: { family: 'Inter' }
+                    bodyFont: { family: 'Inter' },
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + parseFloat(Number(context.parsed.y).toFixed(2)) + '%';
+                        }
+                    }
                 },
                 datalabels: {
                     anchor: 'end',
                     align: 'top',
                     formatter: function(value, context) {
-                        if (value === 0) return ''; 
-                        let formattedValue = (value * 100);
-                        return parseFloat(formattedValue.toFixed(2)) + '%';
+                        if (!value || value === 0) return ''; 
+                        return parseFloat(Number(value).toFixed(2)) + '%';
                     },
                     color: function(context) { return context.dataset.backgroundColor; },
                     font: { family: 'Inter', weight: '700', size: 11 }
