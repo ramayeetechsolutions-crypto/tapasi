@@ -279,15 +279,57 @@ $user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager 
 $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
 $stmt_target = $mysqli->prepare($target_sql);
 
-// TS Production calculation using p.pages directly from pag table
-$prod_sql = "
-    SELECT COALESCE(SUM(p.pages), 0) as total_prod 
+// TS Production calculation: sum of all completed sections for this employee
+// 1. TS Pages
+$ts_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.pages AS UNSIGNED)), 0) as total_prod 
     FROM jobs j 
     LEFT JOIN pag p ON j.job_id = p.job_id 
     WHERE (p.assigned_to_pag = ? OR p.done_by = ? OR j.assigned_to = ?)
-    AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
+      AND (p.pag_status_col = 'Completed' OR p.status IN ('Completed', 'Done'))
+      AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
 ";
-$stmt_prod = $mysqli->prepare($prod_sql);
+$stmt_ts_prod = $mysqli->prepare($ts_prod_sql);
+
+// 2. Tables Count
+$tables_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.tables_count AS UNSIGNED)), 0) as total_prod 
+    FROM pag p 
+    WHERE p.assigned_to_table = ?
+      AND p.table_status = 'Completed'
+      AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
+";
+$stmt_tables_prod = $mysqli->prepare($tables_prod_sql);
+
+// 3. Table_FQA Count
+$table_fqa_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.table_fqa_count AS UNSIGNED)), 0) as total_prod 
+    FROM pag p 
+    WHERE p.assigned_to_table_fqa = ?
+      AND p.table_fqa_status IN ('FQA completed', 'FQA Completed', 'Completed')
+      AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
+";
+$stmt_table_fqa_prod = $mysqli->prepare($table_fqa_prod_sql);
+
+// 4. Word Process Count
+$wp_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.wp_count AS UNSIGNED)), 0) as total_prod 
+    FROM pag p 
+    WHERE p.assigned_to_img = ?
+      AND p.word_status IN ('Completed', 'W-Complete', 'ID_Complete')
+      AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
+";
+$stmt_wp_prod = $mysqli->prepare($wp_prod_sql);
+
+// 5. TS_FQA Count
+$ts_fqa_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.ts_fqa_count AS UNSIGNED)), 0) as total_prod 
+    FROM pag p 
+    WHERE p.assigned_to_ts_fqa = ?
+      AND p.ts_fqa_status IN ('FQA completed', 'FQA Completed', 'Completed')
+      AND DATE(COALESCE(p.last_updated, p.created_at)) BETWEEN ? AND ?
+";
+$stmt_ts_fqa_prod = $mysqli->prepare($ts_fqa_prod_sql);
 
 $internal_error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND (LOWER(internal_external) = 'internal' OR internal_external IS NULL OR internal_external = '') AND DATE(date) BETWEEN ? AND ?";
 $stmt_internal_error = $mysqli->prepare($internal_error_sql);
@@ -394,13 +436,37 @@ if (!empty($user_employee_name)) {
                 }
             }
             
-            // Get Production (TS Pages Count)
+            // Get Production (Sum of only the sections completed by this employee)
             $production = 0;
-            if ($stmt_prod) {
-                $stmt_prod->bind_param("sssss", $emp_username, $emp_username, $emp_username, $w1_from, $w1_to);
-                $stmt_prod->execute();
-                $res_prod = $stmt_prod->get_result()->fetch_assoc();
-                $production = (int)($res_prod['total_prod'] ?? 0);
+            if ($stmt_ts_prod) {
+                $stmt_ts_prod->bind_param("sssss", $emp_username, $emp_username, $emp_username, $w1_from, $w1_to);
+                $stmt_ts_prod->execute();
+                $res_ts = $stmt_ts_prod->get_result()->fetch_assoc();
+                $production += (int)($res_ts['total_prod'] ?? 0);
+            }
+            if ($stmt_tables_prod) {
+                $stmt_tables_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                $stmt_tables_prod->execute();
+                $res_tbl = $stmt_tables_prod->get_result()->fetch_assoc();
+                $production += (int)($res_tbl['total_prod'] ?? 0);
+            }
+            if ($stmt_table_fqa_prod) {
+                $stmt_table_fqa_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                $stmt_table_fqa_prod->execute();
+                $res_tbl_fqa = $stmt_table_fqa_prod->get_result()->fetch_assoc();
+                $production += (int)($res_tbl_fqa['total_prod'] ?? 0);
+            }
+            if ($stmt_wp_prod) {
+                $stmt_wp_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                $stmt_wp_prod->execute();
+                $res_wp = $stmt_wp_prod->get_result()->fetch_assoc();
+                $production += (int)($res_wp['total_prod'] ?? 0);
+            }
+            if ($stmt_ts_fqa_prod) {
+                $stmt_ts_fqa_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                $stmt_ts_fqa_prod->execute();
+                $res_ts_fqa = $stmt_ts_fqa_prod->get_result()->fetch_assoc();
+                $production += (int)($res_ts_fqa['total_prod'] ?? 0);
             }
             
             // Get Internal & External Errors
@@ -476,7 +542,11 @@ if (!empty($user_employee_name)) {
     }
 }
 if($stmt_target) $stmt_target->close();
-if($stmt_prod) $stmt_prod->close();
+if($stmt_ts_prod) $stmt_ts_prod->close();
+if($stmt_tables_prod) $stmt_tables_prod->close();
+if($stmt_table_fqa_prod) $stmt_table_fqa_prod->close();
+if($stmt_wp_prod) $stmt_wp_prod->close();
+if($stmt_ts_fqa_prod) $stmt_ts_fqa_prod->close();
 if($stmt_internal_error) $stmt_internal_error->close();
 if($stmt_external_error) $stmt_external_error->close();
 
