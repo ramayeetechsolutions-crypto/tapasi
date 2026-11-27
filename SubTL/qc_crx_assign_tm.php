@@ -68,8 +68,9 @@ $check_columns = [
     'pag_crx_assigned_to' => "VARCHAR(100) NULL DEFAULT NULL",
     'pag_crx_start_time' => "TIME NULL DEFAULT NULL",
     'pag_crx_end_time' => "TIME NULL DEFAULT NULL",
+    'pag_crx_count' => "VARCHAR(50) NULL DEFAULT '0'",
     'img_tab_stage' => "VARCHAR(100) NULL DEFAULT NULL",
-    'is_moved' => "TINYINT(1) DEFAULT 0"
+    'is_moved' => "TINYINT(1) NOT NULL DEFAULT 0"
 ];
 foreach ($check_columns as $col => $definition) {
     $check = $mysqli->query("SHOW COLUMNS FROM qc_crx LIKE '$col'");
@@ -77,8 +78,6 @@ foreach ($check_columns as $col => $definition) {
         $mysqli->query("ALTER TABLE qc_crx ADD COLUMN $col $definition");
     }
 }
-// Auto-migrate old 'Moved' data to the new is_moved column
-$mysqli->query("UPDATE qc_crx SET is_moved = 1, qc_crx_stage = NULL WHERE qc_crx_stage = 'Moved'");
 
 // --- AUTO SYNC JOBS FROM JOBS TABLE INTO QC_CRX ---
 $mysqli->query("INSERT IGNORE INTO qc_crx (job_id, date, client, journal_issue, article, process, status, created_at, last_updated)
@@ -129,7 +128,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'inline_edit') {
     $field = $_POST['field'];
     $val = trim($_POST['value']);
     
-    $allowed_fields = ['qc_start_time', 'qc_end_time', 'dispatch_date', 'upload_by', 'path', 'priority', 'qc_crx_stage', 'pag_crx_stage', 'pag_crx_assigned_to', 'pag_crx_start_time', 'pag_crx_end_time', 'img_tab_stage'];
+    $allowed_fields = ['qc_start_time', 'qc_end_time', 'dispatch_date', 'upload_by', 'path', 'priority', 'qc_crx_stage', 'pag_crx_stage', 'pag_crx_assigned_to', 'pag_crx_start_time', 'pag_crx_end_time', 'img_tab_stage', 'pag_crx_count'];
     if (in_array($field, $allowed_fields)) {
         if ($field === 'pag_crx_assigned_to' && !$is_tl_or_subtl && $val !== '') {
             $chk_stmt = $mysqli->prepare("SELECT pag_crx_assigned_to FROM qc_crx WHERE id = ?");
@@ -504,7 +503,7 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 // 3. THE CRITICAL CONDITION: PAG phase OR LE phase must be 'Completed'
 $where_conditions = [
     "(qc.status IN ('Completed', 'Done') OR EXISTS (SELECT 1 FROM qc q_chk WHERE q_chk.job_id = qc.job_id AND q_chk.status IN ('Completed', 'Done')))",
-    "(qc.is_moved = 0 OR qc.is_moved IS NULL)",
+    "(COALESCE(qc.is_moved, 0) = 0 AND (qc.qc_crx_stage IS NULL OR qc.qc_crx_stage != 'Moved'))",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'CE+TS', 'CE+TS+XML', 'TS', 'TS+XML', 'LE', 'CE+LE', 'CE+LE+XML', 'CE+PAG+LE')",
     "(
         EXISTS (SELECT 1 FROM pag WHERE pag.job_id = qc.job_id AND (pag.status = 'Completed' OR pag.status = 'Done'))
@@ -1171,18 +1170,24 @@ require 'header.php';
                                     <!-- QC_CRX_Stage Column -->
                                     <td>
                                         <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px; <?= getStageSelectStyle($row['qc_crx_stage'] ?? '') ?>" 
-                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value);">
+                                                onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'qc_crx_stage', this.value); if(this.value === 'Moved') { setTimeout(() => window.location.reload(), 500); }">
                                             <option value="">Select</option>
                                             <option value="QC_CRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_CRX') ? 'selected' : '' ?>>QC_CRX</option>
                                             <option value="QC_Complete" <?= (($row['qc_crx_stage'] ?? '') == 'QC_Complete') ? 'selected' : '' ?>>QC_Complete</option>
                                             <option value="QC_RECRX" <?= (($row['qc_crx_stage'] ?? '') == 'QC_RECRX') ? 'selected' : '' ?>>QC_RECRX</option>
                                             <option value="QC_RECRX_COMPLETE" <?= (($row['qc_crx_stage'] ?? '') == 'QC_RECRX_COMPLETE') ? 'selected' : '' ?>>QC_RECRX_COMPLETE</option>
+                                            <option value="Moved" <?= (($row['qc_crx_stage'] ?? '') == 'Moved') ? 'selected' : '' ?>>Moved</option>
                                         </select>
                                     </td>
 
                                     <!-- PAG_CRX_Stage Column -->
                                     <td style="min-width: 180px; vertical-align: top; padding: 6px;">
                                         <div class="space-y-1">
+                                            <!-- Count Input -->
+                                            <div class="mb-1">
+                                                <input type="number" class="form-control form-control-sm p-1 text-center w-100" style="height: 22px; font-size: 11px;" placeholder="Count" value="<?= h($row['pag_crx_count'] ?? '0') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'pag_crx_count', this.value)">
+                                            </div>
+
                                             <!-- Stage Dropdown -->
                                             <select class="form-select form-select-sm p-0 px-1 mb-1" style="font-size: 11px; width: 100%; height: 22px; <?= getStageSelectStyle($row['pag_crx_stage'] ?? '') ?>" 
                                                     onchange="applyStageColor(this); updateInlineField(<?= $row['id'] ?>, 'pag_crx_stage', this.value)">
@@ -1388,18 +1393,18 @@ require 'header.php';
         function saveScrollPositions() {
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp) {
-                sessionStorage.setItem('subtl_qccrx_assign_table_x', tableResp.scrollLeft);
-                sessionStorage.setItem('subtl_qccrx_assign_table_y', tableResp.scrollTop);
+                sessionStorage.setItem('tl_qc_crx_assign_table_x', tableResp.scrollLeft);
+                sessionStorage.setItem('tl_qc_crx_assign_table_y', tableResp.scrollTop);
             }
-            sessionStorage.setItem('subtl_qccrx_win_x', window.scrollX || 0);
-            sessionStorage.setItem('subtl_qccrx_win_y', window.scrollY || 0);
+            sessionStorage.setItem('tl_qc_crx_assign_win_x', window.scrollX || 0);
+            sessionStorage.setItem('tl_qc_crx_assign_win_y', window.scrollY || 0);
         }
 
         function restoreScrollPositions() {
-            const tableX = sessionStorage.getItem('subtl_qccrx_assign_table_x');
-            const tableY = sessionStorage.getItem('subtl_qccrx_assign_table_y');
-            const winX = sessionStorage.getItem('subtl_qccrx_win_x');
-            const winY = sessionStorage.getItem('subtl_qccrx_win_y');
+            const tableX = sessionStorage.getItem('tl_qc_crx_assign_table_x');
+            const tableY = sessionStorage.getItem('tl_qc_crx_assign_table_y');
+            const winX = sessionStorage.getItem('tl_qc_crx_assign_win_x');
+            const winY = sessionStorage.getItem('tl_qc_crx_assign_win_y');
             
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp && tableX !== null) {
@@ -1416,7 +1421,7 @@ require 'header.php';
             const tableResp = document.querySelector('.table-responsive');
             if (tableResp) {
                 tableResp.addEventListener('scroll', () => {
-                    sessionStorage.setItem('subtl_qccrx_assign_table_x', tableResp.scrollLeft);
+                    sessionStorage.setItem('tl_qc_crx_assign_table_x', tableResp.scrollLeft);
                 }, { passive: true });
             }
         });

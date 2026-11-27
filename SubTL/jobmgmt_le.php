@@ -170,6 +170,8 @@ $types  = 's';
 // Show LE jobs as soon as any column is updated in LE Assign (row exists in le table)
 $where[] = "le.job_id IS NOT NULL";
 $where[] = "(REPLACE(jm.job_name, ' ', '') IN ('CE+PAG', 'CE+TS', 'LE', 'CE'))";
+// Only show in LE Report if job has no CE stage, OR CE is completed and moved, OR LE has already been assigned/started
+$where[] = "(jm.job_name NOT LIKE '%CE%' OR ce.is_moved = 1 OR TRIM(COALESCE(ce.remarks, '')) = 'Moved' OR (le.status IS NOT NULL AND le.status NOT IN ('Need to Assign', 'Pending', '')) OR (le.assigned_to_le IS NOT NULL AND le.assigned_to_le != ''))";
 
 // Search query filter
 if ($q) {
