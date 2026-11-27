@@ -339,7 +339,7 @@ LEFT JOIN
 LEFT JOIN 
     designation_master d ON e.designation_id = d.designation_id 
 WHERE 
-    e.reporting_manager = '$emp_username' OR e.employee_username = '$emp_username'";
+    (e.reporting_manager = '$emp_username' OR e.employee_username = '$emp_username')";
     
 $cond=[];$params=[];$types='';
 
@@ -715,7 +715,7 @@ require 'header.php';
                     </div> -->
                     <div class="col-md-auto d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm text-nowrap">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filter
                         </button>
                         <a href="employee_master.php" class="btn btn-secondary btn-sm text-nowrap">
                             <i class="fas fa-times me-1"></i> Clear
