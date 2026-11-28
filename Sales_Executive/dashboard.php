@@ -15,52 +15,30 @@ $currentPage = "dashboard";
 // Get current user
 $current_user = $_SESSION['username'] ?? '';
 
-// TOTAL CLIENTS
+// TOTAL CLIENTS & STATUS COUNTS (Dynamic and accurate directly from client_master)
 $total_clients = 0;
-$total_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master");
-if ($total_stmt) {
-    $total_stmt->execute();
-    $total_result = $total_stmt->get_result();
-    $total_data = $total_result->fetch_assoc();
-    $total_clients = $total_data['total'] ?? 0;
-    $total_stmt->close();
-}
-
-// ACTIVE CLIENTS (clients with jobs)
 $active_clients = 0;
-$active_stmt = $mysqli->prepare("SELECT COUNT(DISTINCT `client_id`) as total FROM `jobs`");
-if ($active_stmt) {
-    $active_stmt->execute();
-    $active_result = $active_stmt->get_result();
-    $active_data = $active_result->fetch_assoc();
-    $active_clients = $active_data['total'] ?? 0;
-    $active_stmt->close();
-}
-
-// PASSIVE CLIENTS (active in client_master but no jobs)
 $passive_clients = 0;
-$passive_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master WHERE status = 'Active'");
-if ($passive_stmt) {
-    $passive_stmt->execute();
-    $passive_result = $passive_stmt->get_result();
-    $passive_data = $passive_result->fetch_assoc();
-    $passive_clients = $passive_data['total'] ?? 0;
-    $passive_stmt->close();
-}
-$passive_clients = $passive_clients - $active_clients; // Active in master but no jobs
-
-// INACTIVE CLIENTS (status = 'Inactive' in client_master)
 $inactive_clients = 0;
-$inactive_stmt = $mysqli->prepare("SELECT COUNT(*) as total FROM client_master WHERE status = 'Inactive'");
-if ($inactive_stmt) {
-    $inactive_stmt->execute();
-    $inactive_result = $inactive_stmt->get_result();
-    $inactive_data = $inactive_result->fetch_assoc();
-    $inactive_clients = $inactive_data['total'] ?? 0;
-    $inactive_stmt->close();
+
+$status_res = $mysqli->query("SELECT status, COUNT(*) as total FROM client_master GROUP BY status");
+if ($status_res) {
+    while ($row = $status_res->fetch_assoc()) {
+        $st = ucfirst(strtolower(trim((string)($row['status'] ?? ''))));
+        $cnt = (int)($row['total'] ?? 0);
+        $total_clients += $cnt;
+        if ($st === 'Passive') {
+            $passive_clients += $cnt;
+        } elseif ($st === 'Inactive') {
+            $inactive_clients += $cnt;
+        } else {
+            // Default Active or empty to Active
+            $active_clients += $cnt;
+        }
+    }
 }
 
-// Calculate percentages
+// Calculate percentages accurately
 $active_percentage = $total_clients > 0 ? round(($active_clients / $total_clients) * 100, 1) : 0;
 $passive_percentage = $total_clients > 0 ? round(($passive_clients / $total_clients) * 100, 1) : 0;
 $inactive_percentage = $total_clients > 0 ? round(($inactive_clients / $total_clients) * 100, 1) : 0;

@@ -538,30 +538,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
     }
 }
 
-// ---------- Get NDA Summary Statistics ----------
-$summary =['total_clients' => 0, 'total_nda_records' => 0, 'nda_signed' => 0, 'nda_not_signed' => 0, 'revision_applicable' => 0, 'signed_this_year' => 0];
-$total_result = $mysqli->query("SELECT COUNT(*) as total FROM client_master");
-if ($total_result) $summary['total_clients'] = $total_result->fetch_assoc()['total'];
-
-$total_nda_result = $mysqli->query("SELECT COUNT(*) as total FROM nda_details");
-if ($total_nda_result) $summary['total_nda_records'] = $total_nda_result->fetch_assoc()['total'];
-
-$stats_sql = "SELECT 
-                COUNT(CASE WHEN IFNULL(nda_status, 'No') = 'Yes' THEN 1 END) as signed_count,
-                COUNT(CASE WHEN IFNULL(nda_status, 'No') = 'No' THEN 1 END) as not_signed_count,
-                COUNT(CASE WHEN IFNULL(revision_amount_status, 'No') = 'Yes' THEN 1 END) as revision_count,
-                COUNT(CASE WHEN YEAR(signed_date) = YEAR(CURDATE()) THEN 1 END) as signed_this_year
-              FROM nda_details";
-
-$stats_result = $mysqli->query($stats_sql);
-if ($stats_result) {
-    $stats = $stats_result->fetch_assoc();
-    $summary['nda_signed'] = $stats['signed_count'] ?? 0;
-    $summary['nda_not_signed'] = $stats['not_signed_count'] ?? 0;
-    $summary['revision_applicable'] = $stats['revision_count'] ?? 0;
-    $summary['signed_this_year'] = $stats['signed_this_year'] ?? 0;
-}
-$summary['signed_percentage'] = $summary['total_nda_records'] > 0 ? round(($summary['nda_signed'] / $summary['total_nda_records']) * 100, 1) : 0;
+// ---------- NDA Summary Statistics Initial State ----------
+$summary = ['total_clients' => 0, 'total_nda_records' => 0, 'nda_signed' => 0, 'nda_not_signed' => 0, 'revision_applicable' => 0, 'signed_this_year' => 0, 'signed_percentage' => 0];
 
 // ---------- View / Edit / Add Mode Configuration ----------
 $mode = $_GET['mode'] ?? 'view';
@@ -728,6 +706,55 @@ if ($filter_status === 'Active' || $filter_status === 'Inactive') {
 
 if ($cond) $sql .= " WHERE " . implode(" AND ", $cond);
 $sql .= " ORDER BY $orderBy $dir";
+
+// ---------- Get Dynamic NDA Summary Statistics (reflecting active filters) ----------
+$stats_sql = "SELECT 
+                COUNT(DISTINCT cm.client_id) as total_clients,
+                COUNT(nd.id) as total_nda_records,
+                COUNT(CASE WHEN nd.id IS NOT NULL AND IFNULL(nd.nda_status, 'No') = 'Yes' THEN 1 END) as signed_count,
+                COUNT(CASE WHEN nd.id IS NOT NULL AND IFNULL(nd.nda_status, 'No') = 'No' THEN 1 END) as not_signed_count,
+                COUNT(CASE WHEN nd.id IS NOT NULL AND IFNULL(nd.revision_amount_status, 'No') = 'Yes' THEN 1 END) as revision_count,
+                COUNT(CASE WHEN nd.id IS NOT NULL AND (YEAR(nd.signed_date) = YEAR(CURDATE()) OR nd.signed_year = YEAR(CURDATE())) THEN 1 END) as signed_this_year
+              FROM client_master cm
+              LEFT JOIN nda_details nd ON cm.client_id = nd.client_id";
+
+if (!empty($cond)) {
+    $stats_sql .= " WHERE " . implode(" AND ", $cond);
+}
+
+try {
+    if (!empty($types)) {
+        $stmt_stats = $mysqli->prepare($stats_sql);
+        if ($stmt_stats) {
+            $stmt_stats->bind_param($types, ...$params);
+            $stmt_stats->execute();
+            $stats_res = $stmt_stats->get_result();
+            if ($stats_res && $stats = $stats_res->fetch_assoc()) {
+                $summary['total_clients'] = (int)($stats['total_clients'] ?? 0);
+                $summary['total_nda_records'] = (int)($stats['total_nda_records'] ?? 0);
+                $summary['nda_signed'] = (int)($stats['signed_count'] ?? 0);
+                $summary['nda_not_signed'] = (int)($stats['not_signed_count'] ?? 0);
+                $summary['revision_applicable'] = (int)($stats['revision_count'] ?? 0);
+                $summary['signed_this_year'] = (int)($stats['signed_this_year'] ?? 0);
+            }
+            $stmt_stats->close();
+        }
+    } else {
+        $stats_res = $mysqli->query($stats_sql);
+        if ($stats_res && $stats = $stats_res->fetch_assoc()) {
+            $summary['total_clients'] = (int)($stats['total_clients'] ?? 0);
+            $summary['total_nda_records'] = (int)($stats['total_nda_records'] ?? 0);
+            $summary['nda_signed'] = (int)($stats['signed_count'] ?? 0);
+            $summary['nda_not_signed'] = (int)($stats['not_signed_count'] ?? 0);
+            $summary['revision_applicable'] = (int)($stats['revision_count'] ?? 0);
+            $summary['signed_this_year'] = (int)($stats['signed_this_year'] ?? 0);
+        }
+    }
+} catch (Exception $e) {
+    error_log("NDA summary error: " . $e->getMessage());
+}
+
+$summary['signed_percentage'] = $summary['total_nda_records'] > 0 ? round(($summary['nda_signed'] / $summary['total_nda_records']) * 100, 1) : 0;
 
 $clients = false;
 $error = '';

@@ -5,6 +5,16 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
+// Auto-migrate publisher_master status column from ENUM to VARCHAR(50) so status sync never fails
+try {
+    $checkPubStatus = $mysqli->query("SHOW COLUMNS FROM `publisher_master` LIKE 'status'");
+    if ($checkPubStatus && ($sRow = $checkPubStatus->fetch_assoc())) {
+        if (stripos($sRow['Type'], 'enum') !== false) {
+            $mysqli->query("ALTER TABLE `publisher_master` MODIFY COLUMN `status` VARCHAR(50) DEFAULT 'Active'");
+        }
+    }
+} catch (Throwable $e) {}
+
 // Include SimpleXLSX library for Excel import
 $libPath = dirname(__DIR__) . '/simplexlsx-master/src/SimpleXLSX.php';
 if (!file_exists($libPath)) $libPath = dirname(__DIR__) . '/simplexlsx-master/SimpleXLSX.php';
@@ -376,10 +386,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($stmt->execute()) {
                 // Replicate status to publisher_master
-                $sync = $mysqli->prepare("UPDATE publisher_master SET status=? WHERE publisher_name=? COLLATE utf8mb4_general_ci");
-                $sync->bind_param("ss", $status, $client_name);
-                $sync->execute();
-                $sync->close();
+                try {
+                    $sync = $mysqli->prepare("UPDATE publisher_master SET status=? WHERE publisher_name=? COLLATE utf8mb4_general_ci");
+                    if ($sync) {
+                        $sync->bind_param("ss", $status, $client_name);
+                        $sync->execute();
+                        $sync->close();
+                    }
+                } catch (Throwable $e) {
+                    error_log("Failed to sync status to publisher_master: " . $e->getMessage());
+                }
 
                 redirect_with(['msg'=>"Client '$client_name' updated successfully",'type'=>'success']);
             } else {
@@ -435,10 +451,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $upd->close();
 
                 // Replicate status to publisher_master
-                $sync = $mysqli->prepare("UPDATE publisher_master SET status=? WHERE publisher_name=? COLLATE utf8mb4_general_ci");
-                $sync->bind_param("ss", $newStatus, $row['client_name']);
-                $sync->execute();
-                $sync->close();
+                try {
+                    $sync = $mysqli->prepare("UPDATE publisher_master SET status=? WHERE publisher_name=? COLLATE utf8mb4_general_ci");
+                    if ($sync) {
+                        $sync->bind_param("ss", $newStatus, $row['client_name']);
+                        $sync->execute();
+                        $sync->close();
+                    }
+                } catch (Throwable $e) {
+                    error_log("Failed to sync status to publisher_master: " . $e->getMessage());
+                }
 
                 redirect_with(['msg'=>"Client '{$row['client_name']}' status changed to $newStatus",'type'=>'info']);
             }
@@ -501,35 +523,23 @@ $dir = strtolower($_GET['dir'] ?? 'desc');
 $dir = ($dir === 'asc') ? 'asc' : 'desc';
 
 $sql = "SELECT cm.client_id, cm.client_name, cm.team_client_name, cm.company_name, cm.contact_person, cm.initial, cm.email_files, cm.email, cm.general_email, cm.invoice_email, cm.production_email, cm.phone, cm.additional_mobile, cm.address, cm.gst_no, cm.additional_address, cm.country, cm.preferred_communication, cm.preferred_language, cm.status, cm.created_date, cm.word_rate, cm.page_rate, cm.math_rate, cm.ref_rate, cm.remarks, cm.currency, cm.paypal_email, cm.nda, cm.date, cm.payment, cm.frequency, cm.link, cm.payment_mode
-     FROM client_master cm";
+     FROM client_master cm WHERE 1=1";
 
-$isPassive = ($fstatus === 'Passive');
-if ($isPassive) {
-    $sql .= " LEFT JOIN jobs j ON cm.client_id = j.client_id 
-              WHERE (j.client_id IS NULL OR cm.status = 'Passive')";
-} else {
-    $sql .= " WHERE 1=1";
-}
-
-$cond =[]; $params =[]; $types = '';
-if ($q !== '' && !$isPassive) {
+$cond = []; $params = []; $types = '';
+if ($q !== '') {
     $cond[] = "(cm.client_name LIKE ? OR cm.company_name LIKE ? OR cm.contact_person LIKE ? OR cm.email LIKE ? OR cm.phone LIKE ? OR cm.remarks LIKE ? OR cm.nda LIKE ? OR cm.initial LIKE ? OR cm.country LIKE ? OR cm.currency LIKE ? OR cm.payment_mode LIKE ? OR cm.gst_no LIKE ?)";
     $like = "%$q%";
     $params = array_fill(0, 12, $like);
     $types = str_repeat('s', count($params));
 }
-if (($fstatus === 'Active' || $fstatus === 'Inactive') && !$isPassive) {
+if (in_array($fstatus, ['Active', 'Passive', 'Inactive'])) {
     $cond[] = "cm.status=?";
     $params[] = $fstatus;
     $types .= 's';
 }
 
-if ($cond && !$isPassive) {
+if ($cond) {
     $sql .= " AND " . implode(" AND ", $cond);
-}
-
-if ($isPassive) {
-    $sql .= " GROUP BY cm.client_id";
 }
 
 $sql .= " ORDER BY $sort $dir";
@@ -930,7 +940,7 @@ require 'header.php';
     <!-- LIST VIEW -->
     <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 12px 20px !important; border-radius: 12px !important; margin-top: 0 !important; margin-bottom: 20px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;">
         <div>
-            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Client Master <?= $isPassive ? '<span class="badge bg-warning text-dark shadow-sm ms-2">Passive Clients</span>' : '' ?></h4>
+            <h4 class="fw-bold mb-0 text-white" style="color: #ffffff !important; font-size: 1.25rem !important;"><i class="fas fa-building me-2" style="color: #ffffff !important;"></i>Client Master <?= ($fstatus === 'Passive') ? '<span class="badge bg-warning text-dark shadow-sm ms-2">Passive Clients</span>' : ($fstatus ? '<span class="badge bg-info text-white shadow-sm ms-2">' . h($fstatus) . ' Clients</span>' : '') ?></h4>
             <p class="mb-0 text-white opacity-75" style="color: rgba(255,255,255,0.85) !important;">Manage client directory and billing configurations</p>
         </div>
         <div>
@@ -943,14 +953,6 @@ require 'header.php';
         </div>
     </div>
 
-    <?php if ($isPassive): ?>
-    <div class="alert alert-info alert-dismissible fade show mb-3 shadow-sm border-0 border-start border-4 border-info" role="alert">
-        <i class="fas fa-info-circle me-2"></i>
-        Showing clients who have no jobs assigned yet.
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    <?php endif; ?>
-
     <!-- Search and Filter Form -->
     <div class="card mb-4">
         <div class="card-body py-3">
@@ -959,7 +961,7 @@ require 'header.php';
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white text-muted border-end-0"><i class="fas fa-search"></i></span>
                         <input type="text" name="q" class="form-control border-start-0 ps-0" 
-                               placeholder="Sort by client / company / contact / email / country / remarks..." value="<?= h($q) ?>" <?= $isPassive ? 'disabled' : '' ?>>
+                               placeholder="Sort by client / company / contact / email / country / remarks..." value="<?= h($q) ?>">
                     </div>
                 </div>
                 <div class="col-md-2">
@@ -1143,9 +1145,6 @@ require 'header.php';
             <div class="card-footer bg-white border-top text-muted text-center small py-3">
                 <?php if($clients && $clients->num_rows): ?>
                     Showing <strong><?= $clients->num_rows ?></strong> clients.
-                    <?php if ($isPassive): ?>
-                        (Clients with no jobs)
-                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>

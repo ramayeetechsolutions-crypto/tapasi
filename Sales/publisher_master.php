@@ -22,7 +22,7 @@ function ensure_publisher_master_schema($mysqli) {
         `designation` varchar(255) DEFAULT NULL,
         `link` varchar(500) DEFAULT NULL,
         `code` varchar(50) DEFAULT NULL,
-        `status` enum('active','inactive') DEFAULT 'active',
+        `status` varchar(50) DEFAULT 'Active',
         `created_at` datetime DEFAULT NULL,
         `created_ip` varchar(45) DEFAULT NULL,
         `updated_at` datetime DEFAULT NULL,
@@ -44,6 +44,14 @@ function ensure_publisher_master_schema($mysqli) {
             if ($col === 'year') {
                 $mysqli->query("ALTER TABLE `publisher_master` MODIFY COLUMN `year` VARCHAR(100) DEFAULT NULL");
             }
+        }
+    }
+
+    // Ensure status column is VARCHAR(50) to support Active, Passive, Inactive and '-'
+    $checkStatus = $mysqli->query("SHOW COLUMNS FROM `publisher_master` LIKE 'status'");
+    if ($checkStatus && ($sRow = $checkStatus->fetch_assoc())) {
+        if (stripos($sRow['Type'], 'enum') !== false) {
+            $mysqli->query("ALTER TABLE `publisher_master` MODIFY COLUMN `status` VARCHAR(50) DEFAULT 'Active'");
         }
     }
 }
@@ -111,7 +119,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $status_raw = strtolower(trim((string)($r[10] ?? 'active'))); 
                 
                 // Validate status
-                $status = ($status_raw === 'inactive') ? 'inactive' : 'active';
+                if ($status_raw === 'inactive') {
+                    $status = 'Inactive';
+                } elseif ($status_raw === 'passive') {
+                    $status = 'Passive';
+                } else {
+                    $status = 'Active';
+                }
 
                 if (empty($publisher_name)) {
                     $errors[] = "Row " . ($k + 1) . ": Publisher Name is required";
@@ -220,7 +234,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $contact_person = trim($_POST['contact_person'] ?? '');
         $designation = trim($_POST['designation'] ?? '');
         $link = trim($_POST['link'] ?? '');
-        $status = $_POST['status'] ?? 'active';
+        $status = trim($_POST['status'] ?? '');
+        if ($status === '-') {
+            $status = '';
+        }
         
         // Basic validation
         if ($publisher_name === '') {
