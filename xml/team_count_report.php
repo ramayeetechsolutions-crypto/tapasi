@@ -85,6 +85,24 @@ if (!function_exists('getFiscalWeeks')) {
     }
 }
 
+if (!function_exists('calculateFiscalWeekNumber')) {
+    function calculateFiscalWeekNumber($dateStr) {
+        if (!$dateStr) return 1;
+        $d = new DateTime($dateStr);
+        $year = (int)$d->format('Y');
+        $month = (int)$d->format('m');
+        $fiscalStart = ($month < 4) ? new DateTime(($year - 1) . '-04-01') : new DateTime($year . '-04-01');
+        if ($d < $fiscalStart) return 1;
+        $cur = clone $fiscalStart;
+        $sundays = 0;
+        while ($cur < $d) {
+            if ($cur->format('w') == 0) $sundays++;
+            $cur->modify('+1 day');
+        }
+        return (1 + $sundays);
+    }
+}
+
 $current_user = $_SESSION['username'] ?? '';
 
 // Get employee name from employee_master table
@@ -103,13 +121,40 @@ if ($result->num_rows > 0) {
     $current_user_name = $row['employee_name'];
 }
 
+// Calculate Default Financial Week (Starts April 1st) - matching xml_weekly_report.php
+$today = new DateTime();
+$curr_y = (int)$today->format('Y');
+if ((int)$today->format('n') < 4) { $curr_y--; } // If Jan-Mar, use previous year's April
+$default_week = calculateFiscalWeekNumber($today->format('Y-m-d'));
+
 // Get filter parameters
-$start_date = $_GET['start_date'] ?? date('Y-m-01'); // First day of current month
-$end_date = $_GET['end_date'] ?? date('Y-m-t'); // Last day of current month
+$start_date_param = trim($_GET['start_date'] ?? '');
+$end_date_param = trim($_GET['end_date'] ?? '');
 $filter_employee_id = $_GET['employee_id'] ?? '';
 $employee_id = $filter_employee_id;
 $process = $_GET['process'] ?? '';
 $team_id = isset($_GET['team_id']) ? (int)$_GET['team_id'] : '';
+
+if (!empty($start_date_param) && !empty($end_date_param)) {
+    $start_date = $start_date_param;
+    $end_date = $end_date_param;
+    $s_dt = new DateTime($start_date);
+    $fy_calc_y = (int)$s_dt->format('Y');
+    if ((int)$s_dt->format('n') < 4) { $fy_calc_y--; }
+    $week = calculateFiscalWeekNumber($start_date);
+    $year = $fy_calc_y;
+} else {
+    $year = (int)($_GET['year'] ?? $curr_y);
+    $week = (int)($_GET['week'] ?? $default_week);
+    $fy_weeks = getFiscalWeeks($year);
+    if (isset($fy_weeks[$week])) {
+        $start_date = $fy_weeks[$week]['start'];
+        $end_date = $fy_weeks[$week]['end'];
+    } else {
+        $start_date = date('Y-m-d');
+        $end_date = date('Y-m-d');
+    }
+}
 
 // Get current team leader's team
 $team_leader_id = $_SESSION['uid'] ?? 0;
@@ -650,9 +695,11 @@ foreach($emp_proc_datasets_raw as $p_name => $ds) {
                             $w_num = $fw['week'];
                             $w_start = $fw['start'];
                             $w_end = $fw['end'];
+                            $w_start_fmt = date('d-M-y', strtotime($w_start));
+                            $w_end_fmt = date('d-M-y', strtotime($w_end));
                             $val = "{$w_start}|{$w_end}";
-                            $selected = ($val === "$start_date|$end_date") ? 'selected' : '';
-                            echo "<option value='{$val}' {$selected}>Week {$w_num} ({$w_start})</option>";
+                            $selected = ($val === "$start_date|$end_date" || ((int)$week === $w_num && empty($start_date_param))) ? 'selected' : '';
+                            echo "<option value='{$val}' {$selected}>Week {$w_num} ({$w_start_fmt} to {$w_end_fmt})</option>";
                         }
                         ?>
                     </select>

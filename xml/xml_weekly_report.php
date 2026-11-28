@@ -414,8 +414,8 @@ while ($row = $achieved_res->fetch_assoc()) {
 // 4. Fetch Errors (Fixed Week Match & mapping by Name)
 $formatted_week = sprintf("%02d", $week); // converts 7 to '07'
 $error_sql = "SELECT error_made_by,
-                     SUM(CASE WHEN internal_external = 'Internal' THEN 1 ELSE 0 END) as internal_errors,
-                     SUM(CASE WHEN internal_external = 'External' THEN 1 ELSE 0 END) as external_errors
+                     SUM(CASE WHEN LOWER(internal_external) = 'internal' THEN 1 ELSE 0 END) as internal_errors,
+                     SUM(CASE WHEN LOWER(internal_external) = 'external' THEN 1 ELSE 0 END) as external_errors
               FROM error_log
               WHERE ((week = '$week_str' OR week LIKE '%$week%' OR week LIKE '%$formatted_week%') OR (error_date BETWEEN '$start_date' AND '$end_date')) AND status = 'Active'
               GROUP BY error_made_by";
@@ -725,11 +725,11 @@ if (!empty($employee_id)) {
             font-weight: bold;
         }
         .table tbody tr td.bg-warning {
-            background-color: #ffc107 !important;
-            color: #212529 !important;
+            background-color: #ffc000 !important;
+            color: #000000 !important;
         }
         .table tbody tr td.bg-danger {
-            background-color: #dc3545 !important;
+            background-color: #ff0000 !important;
             color: #ffffff !important;
         }
         .team-badge { font-size: 1.2em; padding: 10px 20px; }
@@ -806,10 +806,11 @@ if (!empty($employee_id)) {
                             $w = $fw['week'];
                             $w_start = $fw['start'];
                             $w_end = $fw['end'];
-                            $w_start_dmy = date('d-m-Y', strtotime($w_start));
+                            $w_start_fmt = date('d-M-y', strtotime($w_start));
+                            $w_end_fmt = date('d-M-y', strtotime($w_end));
                             $val = "{$w_start}|{$w_end}";
                             $selected = ($val === "$start_date|$end_date" || ((int)$week === $w && empty($start_date_param))) ? 'selected' : '';
-                            echo "<option value='{$val}' {$selected} data-week='{$w}' data-year='{$fy_yr}'>Week {$w} ({$w_start_dmy})</option>";
+                            echo "<option value='{$val}' {$selected} data-week='{$w}' data-year='{$fy_yr}'>Week {$w} ({$w_start_fmt} to {$w_end_fmt})</option>";
                         }
                         ?>
                     </select>
@@ -945,20 +946,20 @@ if (!empty($employee_id)) {
                                     <td><?= h($emp['employee_username']) ?></td>
                                     <td class="text-start text-nowrap"><?= h($emp['employee_name']) ?></td>
                                     <td><?= h($emp['experience']) ?></td>
-                                    <td class="fw-bold"><?= h($emp['process_display_name'] ?? 'Unassigned') ?></td>
+                                    <td><?= h($emp['process_display_name'] ?? 'Unassigned') ?></td>
                                     <td><?= number_format($emp['target_pages']) ?></td>
                                     <td><?= number_format($emp['achieved_pages']) ?></td>
                                     <td><?= number_format($emp['production_percentage'], 1) ?>%</td>
                                     
-                                    <!-- Colors based on excel logic: yellow for int error, red for ext error -->
-                                    <td class="<?= $emp['internal_errors'] > 0 ? 'bg-warning text-dark fw-bold' : '' ?>"><?= $emp['internal_errors'] ?></td>
-                                    <td class="<?= $emp['internal_error_points'] > 0 ? 'bg-warning text-dark' : '' ?>"><?= $emp['internal_error_points'] ?></td>
+                                    <!-- Colors matching ce_meeting: yellow (#ffc000) for int error, red (#ff0000) for ext error -->
+                                    <td class="fw-bold" style="<?= $emp['internal_errors'] > 0 ? 'background-color: #ffc000 !important; color: #000000 !important;' : '' ?>"><?= $emp['internal_errors'] ?></td>
+                                    <td class="fw-bold text-danger"><?= $emp['internal_error_points'] ?></td>
                                     
-                                    <td class="<?= $emp['external_errors'] > 0 ? 'bg-danger text-white fw-bold' : '' ?>"><?= $emp['external_errors'] ?></td>
-                                    <td class="<?= $emp['external_error_points'] > 0 ? 'bg-danger text-white' : '' ?>"><?= $emp['external_error_points'] ?></td>
+                                    <td class="fw-bold" style="<?= $emp['external_errors'] > 0 ? 'background-color: #ff0000 !important; color: #ffffff !important;' : '' ?>"><?= $emp['external_errors'] ?></td>
+                                    <td class="fw-bold text-danger"><?= $emp['external_error_points'] ?></td>
                                     
                                     <td class="fw-bold"><?= number_format($emp['net_prod_percentage'], 1) ?></td>
-                                    <td><?= number_format($emp['accuracy_percentage'], 2) ?>%</td>
+                                    <td class="fw-bold"><?= number_format($emp['accuracy_percentage'], 2) ?>%</td>
                                     <td class="p-1">
                                         <input type="text" class="form-control form-control-sm text-center" name="leave[<?= h($emp['employee_username']) ?>]" value="0" style="min-width: 60px;">
                                     </td>
