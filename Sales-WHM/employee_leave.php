@@ -115,6 +115,63 @@ include 'header.php';
         </div>
     <?php endif; ?>
 
+    <?php
+    // Filter Handling (Type & Status) matching OT Approvals
+    $type_filter = $_GET['type'] ?? 'all';
+    $type_condition = "";
+    if ($type_filter == 'OT_Claim' || $type_filter == 'ot') {
+        $type_condition = " AND request_type = 'OT_Claim'";
+    } elseif ($type_filter == 'Permission' || $type_filter == 'permission') {
+        $type_condition = " AND request_type = 'Permission'";
+    }
+
+    $status_filter = $_GET['status'] ?? 'all';
+    $status_condition = "";
+    if ($status_filter == 'pending') {
+        $status_condition = " AND status = 'Pending'";
+    } elseif ($status_filter == 'approved') {
+        $status_condition = " AND status = 'Approved'";
+    } elseif ($status_filter == 'rejected') {
+        $status_condition = " AND status = 'Rejected'";
+    }
+    ?>
+
+    <!-- Filter Controls Form -->
+    <div class="card mb-3 border-0 shadow-sm rounded-3">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap justify-content-end align-items-center gap-3">
+                <form method="GET" action="" class="d-flex flex-wrap align-items-center gap-2 m-0" id="filterForm">
+                    <!-- Type Filter -->
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="small text-muted fw-bold mb-0 text-nowrap"><i class="fas fa-filter text-secondary me-1"></i>Type:</label>
+                        <select name="type" class="form-select form-select-sm" style="width: auto; min-width: 125px;" onchange="this.form.submit()">
+                            <option value="all" <?= $type_filter == 'all' ? 'selected' : '' ?>>All Types</option>
+                            <option value="OT_Claim" <?= ($type_filter == 'OT_Claim' || $type_filter == 'ot') ? 'selected' : '' ?>>OT Claim</option>
+                            <option value="Permission" <?= ($type_filter == 'Permission' || $type_filter == 'permission') ? 'selected' : '' ?>>Permission</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="small text-muted fw-bold mb-0 text-nowrap">Status:</label>
+                        <select name="status" class="form-select form-select-sm" style="width: auto; min-width: 120px;" onchange="this.form.submit()">
+                            <option value="all" <?= $status_filter == 'all' ? 'selected' : '' ?>>All Status</option>
+                            <option value="pending" <?= $status_filter == 'pending' ? 'selected' : '' ?>>Pending</option>
+                            <option value="approved" <?= $status_filter == 'approved' ? 'selected' : '' ?>>Approved</option>
+                            <option value="rejected" <?= $status_filter == 'rejected' ? 'selected' : '' ?>>Rejected</option>
+                        </select>
+                    </div>
+
+                    <?php if ($status_filter != 'all' || ($type_filter != 'all' && !empty($type_filter))): ?>
+                        <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Reset Filters">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </a>
+                    <?php endif; ?>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- LEAVE HISTORY TABLE -->
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header card-header-custom py-3">
@@ -135,7 +192,7 @@ include 'header.php';
                     </thead>
                     <tbody>
                         <?php
-                        $query = "SELECT * FROM leave_applications WHERE employee_id = '$employee_id' ORDER BY id DESC";
+                        $query = "SELECT * FROM leave_applications WHERE employee_id = '$employee_id' $status_condition $type_condition ORDER BY id DESC";
                         $result = $mysqli->query($query);
 
                         if ($result && $result->num_rows > 0) {
