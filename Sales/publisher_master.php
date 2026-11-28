@@ -871,7 +871,7 @@ $inactivePublishers = $mysqli->query("SELECT COUNT(*) as cnt FROM publisher_mast
                                     <td>
                                         <?php 
                                         $dispStatus = !empty($row['status']) ? trim($row['status']) : '';
-                                        if (!empty($dispStatus)) {
+                                        if (!empty($dispStatus) && $dispStatus !== '-') {
                                             $st = ucfirst(strtolower($dispStatus));
                                             if ($st === 'Active') {
                                                 echo '<span class="badge bg-success">Active</span>';
