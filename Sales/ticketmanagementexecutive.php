@@ -719,7 +719,7 @@ if ($current_user_name) {
                     </div>
                     <div class="col-md-2 d-flex align-items-center">
                         <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                        <a href="ticketmanagementexecutive.php" class="btn btn-secondary btn-sm"><i class="fas fa-times me-1"></i> Clear</a>
+                        <a href="ticketmanagementexecutive.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

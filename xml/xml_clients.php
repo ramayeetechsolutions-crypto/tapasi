@@ -634,8 +634,8 @@ $clients = getClients($mysqli);
                         </select>
                     </div>
                     <div class="col-auto d-flex align-items-center gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="fas fa-filter me-1"></i> Filter</button>
-                        <a href="xml_clients.php" class="btn btn-secondary btn-sm text-nowrap"><i class="fas fa-times me-1"></i> Clear</a>
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="xml_clients.php" class="btn btn-outline-secondary btn-sm text-nowrap"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

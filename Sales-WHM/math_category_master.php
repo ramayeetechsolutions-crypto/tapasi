@@ -74,13 +74,13 @@ require 'header.php';
                         
                         <!-- Removed px-4 to reduce button size -->
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         
                         <?php if(!empty($search)): ?>
-                            <a href="math_category_master.php" class="btn btn-secondary">
-                                <i class="fas fa-times"></i>
-                            </a>
+                            <a href="math_category_master.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
                         <?php endif; ?>
                     </form>
                 </div>

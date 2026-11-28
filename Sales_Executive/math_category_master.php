@@ -88,7 +88,7 @@ require 'header.php';
                         </button>
                         
                         <a href="math_category_master.php" class="btn btn-outline-secondary text-nowrap">
-                            <i class="fas fa-times me-1"></i> Clear
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </form>
                 </div>

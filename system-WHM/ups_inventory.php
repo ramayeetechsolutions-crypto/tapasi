@@ -262,7 +262,7 @@ $teams = $mysqli->query("SELECT team_name FROM team_master ORDER BY team_name");
             <div class="col-md-4"><div class="card stat-card bg-info-custom p-3"><h2><?= $stats['info'] ?></h2><small>Info (24-29 months)</small></div></div>
         </div>
 
-        <div class="card mb-4"><div class="card-body"><form method="get" class="row g-2"><div class="col-md-8"><input type="text" name="q" class="form-control" placeholder="Search UPS No, Model, Serial..." value="<?= h($q) ?>"></div><div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Search</button></div><div class="col-md-2"><a href="ups_inventory.php?mode=add" class="btn btn-success w-100">Add</a></div></form></div></div>
+        <div class="card mb-4"><div class="card-body"><form method="get" class="row g-2"><div class="col-md-8"><input type="text" name="q" class="form-control" placeholder="Search UPS No, Model, Serial..." value="<?= h($q) ?>"></div><div class="col-md-2"><button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Apply Filters</button></div><div class="col-md-2"><a href="ups_inventory.php?mode=add" class="btn btn-success w-100">Add</a></div></form></div></div>
         
         <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>UPS Info</th><th>Vendor/Purchase</th><th>Batteries</th><th>Ageing</th><th>Warranty</th><th>Actions</th></tr></thead><tbody>
         <?php if($result && $result->num_rows > 0): while($row = $result->fetch_assoc()): 

@@ -361,7 +361,7 @@ $all_emp_result = $mysqli->query($all_emp_sql);
                 </div>
                 <div class="col-12 mt-3">
                     <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                    <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-secondary"><i class="fas fa-times me-1"></i> Clear Filters</a>
+                    <a href="<?= basename($_SERVER['PHP_SELF']) ?>" class="btn btn-outline-secondary"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>

@@ -478,9 +478,9 @@ $result = $mysqli->query($sql);
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">Search</button>
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Apply Filters</button>
                         <?php if($q !== ''): ?>
-                        <a href="laptop.php" class="btn btn-secondary w-100 mt-1">Clear</a>
+                        <a href="laptop.php" class="btn btn-outline-secondary w-100 mt-1"><i class="fas fa-undo me-1"></i> Reset</a>
                         <?php endif; ?>
                     </div>
                 </form>

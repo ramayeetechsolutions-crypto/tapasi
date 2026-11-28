@@ -322,7 +322,7 @@ require 'header.php';
 
             <div class="col-12 mt-3 d-flex justify-content-end gap-2">
                 <button type="submit" class="btn btn-brown">Save Employee</button>
-                <button type="reset" class="btn btn-secondary">Reset</button>
+                <button type="reset" class="btn btn-outline-secondary"><i class="fas fa-undo me-1"></i> Reset</button>
             </div>
         </form>
     </div>

@@ -416,9 +416,9 @@ require 'header.php';
                                 <i class="fas fa-times me-2"></i> Cancel
                             </a>
                         <?php else: ?>
-                            <button type="reset" class="btn btn-secondary">
-                                <i class="fas fa-redo me-2"></i> Reset
-                            </button>
+                            <button type="reset" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </button>
                         <?php endif; ?>
                     </div>
                 </div>

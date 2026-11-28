@@ -1159,12 +1159,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
                 <!-- Filter & Clear Buttons -->
                 <div class="col-md-12 d-flex justify-content-end gap-2 mt-3 border-top pt-3">
-                    <button type="button" id="clearFilterBtn" class="btn btn-secondary btn-sm px-4 fw-bold shadow-sm">
-                        <i class="bi bi-x-circle me-1"></i> Clear
-                    </button>
+                    <button type="button" id="clearFilterBtn" class="btn btn-outline-secondary btn-sm px-4 fw-bold shadow-sm">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </button>
                     <button type="button" id="applyFilterBtn" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm">
-                        <i class="bi bi-funnel-fill me-1"></i> Filter
-                    </button>
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
                     <button type="button" id="downloadMonthlyExcelBtn" class="btn btn-success btn-sm px-4 fw-bold shadow-sm text-white">
                         <i class="bi bi-file-earmark-excel me-1"></i> Download Client Excel
                     </button>

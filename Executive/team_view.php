@@ -517,13 +517,13 @@ $sql = "
                     </a>
                 </div>
             <?php else: ?>
-                <table id="teamTable" class="table table-striped table-hover">
+                <table id="teamTable" class="table table-striped table-hover align-middle w-100">
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 50px;"></th> 
-                            <th title="Click to sort by Team Leader">Team Leader</th>
-                            <th title="Click to sort by Team Size">Team Size</th>
-                            <th title="Team Details (Non-sortable)">Team Details</th>
+                            <th style="width: 25%;" title="Click to sort by Team Leader">Team Leader</th>
+                            <th style="width: 18%;" title="Click to sort by Team Size">Team Size</th>
+                            <th style="width: 57%;" title="Team Details (Non-sortable)">Team Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -582,13 +582,13 @@ $sql = "
                     
                     listHtml += '<h6 class="fw-bold mb-3 text-secondary">Team Members & Assigned Processes:</h6>';
                     
-                    listHtml += '<div class="table-responsive shadow-sm rounded">' +
-                                '<table class="table table-hover inner-table w-100">' +
+                    listHtml += '<div class="table-responsive shadow-sm rounded w-100" style="overflow-x: auto;">' +
+                                '<table class="table table-hover inner-table w-100" style="table-layout: fixed; width: 100%;">' +
                                 '<thead style="background-color: #5e6b77 !important; color: #ffffff !important;">' +
                                     '<tr>' +
-                                        '<th class="text-center fw-bold" style="width: 60px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">S.No</th>' +
-                                        '<th style="width: 130px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Employee ID</th>' +
-                                        '<th style="background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Name</th>' +
+                                        '<th class="text-center fw-bold" style="width: 50px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">S.No</th>' +
+                                        '<th style="width: 120px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Employee ID</th>' +
+                                        '<th style="width: 170px; background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Name</th>' +
                                         '<th style="background-color: #5e6b77 !important; color: #ffffff !important; border-bottom: 2px solid #4a545e !important; box-shadow: none !important;">Process Details</th>' +
                                     '</tr>' +
                                 '</thead>' +
@@ -604,7 +604,7 @@ $sql = "
                         var processBadges = '<span class="text-muted small fw-bold">Unassigned</span>';
                         if (mappedProcesses.length > 0) {
                             processBadges = mappedProcesses.map(function(p) {
-                                return '<span class="process-badge me-2 mb-1 d-inline-block"><i class="fas fa-cogs me-1"></i> ' + p + '</span>';
+                                return '<span class="process-badge"><i class="fas fa-cogs me-1"></i> ' + p + '</span>';
                             }).join('');
                         }
                         
@@ -612,7 +612,7 @@ $sql = "
                             '<td class="text-center fw-bold">' + (index + 1) + '</td>' +
                             '<td><span class="team-badge">' + execUsername + '</span></td>' +
                             '<td><div class="d-flex align-items-center"><i class="fas fa-user text-success me-2"></i> <strong>' + execName + '</strong></div></td>' +
-                            '<td>' + processBadges + '</td>' +
+                            '<td class="process-details-cell"><div class="process-badges-container d-flex flex-wrap align-items-center gap-1">' + processBadges + '</div></td>' +
                         '</tr>';
                     });
                     

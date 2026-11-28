@@ -1181,8 +1181,8 @@ require 'header.php';
                         <i class="fas fa-filter me-1"></i> Apply Filters
                     </button>
                     <a href="nda_details.php" class="btn btn-outline-secondary btn-sm shadow-sm flex-grow-1" title="Clear Filters">
-                        <i class="fas fa-times me-1"></i> Clear
-                    </a>
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
                 </div>
 
             </form>

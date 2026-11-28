@@ -617,10 +617,10 @@ if (!$keyboards) {
                     </div>
                     <div class="col-md-3 d-flex align-items-center gap-2">
                         <button type="submit" class="btn btn-primary btn-sm text-nowrap">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="keyboard.php" class="btn btn-secondary btn-sm text-nowrap">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="keyboard.php" class="btn btn-outline-secondary btn-sm text-nowrap">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

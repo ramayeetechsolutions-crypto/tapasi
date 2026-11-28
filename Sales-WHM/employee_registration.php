@@ -379,7 +379,7 @@ require 'header.php';
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 border-top pt-3">
-                        <button type="reset" class="btn btn-light border px-4">Reset</button>
+                        <button type="reset" class="btn btn-outline-secondary px-4"><i class="fas fa-undo me-1"></i> Reset</button>
                         <button type="submit" name="add_employee" class="btn btn-success px-4 fw-bold">
                             <i class="fas fa-save me-2"></i> Save Employee
                         </button>

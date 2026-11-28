@@ -338,10 +338,10 @@ $expiredBatteries = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_battery WHER
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="battery.php" class="btn btn-secondary ms-2">
-                            <i class="fas fa-times"></i>
+                        <a href="battery.php" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

@@ -406,10 +406,10 @@ $inactiveProducts = $mysqli->query("SELECT COUNT(*) as cnt FROM product_master W
                     </div>
                     <div class="col-md-auto d-flex align-items-center gap-2">
                         <button type="submit" class="btn btn-primary btn-sm text-nowrap">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="product_master.php" class="btn btn-secondary btn-sm text-nowrap">
-                            <i class="fas fa-times me-1"></i> Clear
+                        <a href="product_master.php" class="btn btn-outline-secondary btn-sm text-nowrap">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

@@ -550,7 +550,7 @@ require 'header.php';
                     <!-- Actions -->
                     <div class="col-lg-2 col-md-4 d-flex gap-2">
                         <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                        <a href="publisher_payment.php" class="btn btn-light border shadow-sm text-nowrap" title="Clear all filters"><i class="fas fa-times me-1"></i> Clear</a>
+                        <a href="publisher_payment.php" class="btn btn-outline-secondary shadow-sm text-nowrap" title="Clear all filters"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

@@ -743,7 +743,7 @@ $monthly_achievement = $total_output_month;
 
                         <!-- Button Renamed to Apply Filter as requested with Blue background -->
                         <button type="submit" class="btn btn-sm btn-primary fw-bold text-white shadow-sm" style="background-color: #0d6efd; border-color: #0d6efd;">
-                            <i class="fas fa-filter me-1"></i> Apply Filter
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                     </form>
                 </div>

@@ -416,9 +416,9 @@ require 'header.php';
                 
                 <div class="col-md-auto d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
-                        <i class="fas fa-search me-1"></i> Load Grid
-                    </button>
-                    <a href="target_assignment.php" class="btn btn-secondary btn-sm px-4">Reset</a>
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                    <a href="target_assignment.php" class="btn btn-outline-secondary btn-sm px-4"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>
