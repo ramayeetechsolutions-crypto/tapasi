@@ -431,12 +431,12 @@ $categories = ['XML Types', 'HTML', 'Extra Services'];
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary btn-sm w-100">
-                            <i class="fas fa-search me-1"></i> Search
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                     </div>
                     <div class="col-md-3">
-                        <a href="services_master.php" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-times me-1"></i> Clear Filters
+                        <a href="services_master.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

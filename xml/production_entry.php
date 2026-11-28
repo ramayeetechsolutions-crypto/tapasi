@@ -153,7 +153,7 @@ $active_week_dates = getWeekDates($active_week, $year_filter);
                         <option value="2024" <?= $year_filter == 2024 ? 'selected' : '' ?>>2024</option>
                         <option value="2025" <?= $year_filter == 2025 ? 'selected' : '' ?>>2025</option>
                     </select>
-                    <button type="submit" class="btn btn-dark">Go</button>
+                    <button type="submit" class="btn btn-dark"><i class="fas fa-filter me-1"></i> Apply Filters</button>
                 </form>
             </div>
         </div>

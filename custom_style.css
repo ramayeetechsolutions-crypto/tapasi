@@ -2502,6 +2502,15 @@ td.sticky-assign-col-last {
    Across all logins: Executive, SubTL, Team_Lead, xml, SubAdmin, Super_Admin
    ========================================================================= */
 /* Enhanced Sort Headers & Sort Icons for Team Master Table (#teamTable) Across All Logins */
+#teamTable {
+    width: 100% !important;
+    table-layout: fixed !important;
+}
+
+#teamTable thead th {
+    vertical-align: middle !important;
+}
+
 #teamTable thead th.sorting,
 #teamTable thead th.sorting_asc,
 #teamTable thead th.sorting_desc {
@@ -2604,6 +2613,39 @@ table.inner-table {
     margin-bottom: 0 !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+}
+
+.inner-table td:nth-child(4),
+.inner-table td.process-details-cell {
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+
+.process-badges-container {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.process-badge {
+    background-color: #f1c40f !important;
+    color: #2c3e50 !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    border: 1px solid #d4ac0d !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    line-height: 1.25 !important;
+    margin: 2px !important;
 }
 
 .inner-table thead,

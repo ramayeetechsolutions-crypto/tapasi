@@ -857,8 +857,8 @@ function fetchData() {
                         </select>
                     </div>
                     <div class="col-md-3 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-funnel me-1"></i> Apply Filters</button>
-                        <a href="xml.php<?= $show_completed ? '?show_completed=1' : '' ?>" class="btn btn-outline-secondary btn-sm" title="Reset Filters"><i class="bi bi-arrow-counterclockwise"></i></a>
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="xml.php<?= $show_completed ? '?show_completed=1' : '' ?>" class="btn btn-outline-secondary btn-sm" title="Reset Filters"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

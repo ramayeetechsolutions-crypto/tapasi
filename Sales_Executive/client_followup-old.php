@@ -246,10 +246,10 @@ try {
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100 fw-bold">Filter</button>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="fas fa-filter me-1"></i> Apply Filters</button>
                 </div>
                 <div class="col-md-2">
-                    <a href="client_followup.php" class="btn btn-outline-secondary w-100">Reset</a>
+                    <a href="client_followup.php" class="btn btn-outline-secondary w-100"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>

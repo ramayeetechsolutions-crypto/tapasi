@@ -555,7 +555,7 @@ if ($awards) {
                     
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search me-1"></i> Filter
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                     </div>
                     
@@ -579,8 +579,8 @@ if ($awards) {
                                 </span>
                             <?php endif; ?>
                             <a href="awards.php" class="btn btn-outline-secondary btn-sm ms-2">
-                                <i class="fas fa-times me-1"></i> Clear All
-                            </a>
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
                         </div>
                     </div>
                     <?php endif; ?>

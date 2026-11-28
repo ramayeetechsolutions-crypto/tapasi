@@ -674,9 +674,9 @@ if (empty($currentUserSystemData['team'])) {
                             <option value="ASC" <?= $sortOrder === 'ASC' ? 'selected' : '' ?>>Oldest First</option>
                         </select>
                     </div>
-                    <div class="col-md-2 d-flex">
-                        <button type="submit" class="btn btn-primary me-2"><i class="fas fa-search me-1"></i> Search</button>
-                        <a href="ticketmanagementexecutive.php" class="btn btn-secondary"><i class="fas fa-times"></i></a>
+                    <div class="col-md-3 d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="ticketmanagementexecutive.php" class="btn btn-outline-secondary btn-sm text-nowrap"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

@@ -522,11 +522,11 @@ if (!$services_list) {
           <div class="col-md-4">
             <form method="get" id="searchForm" class="d-inline">
               <button type="submit" class="btn btn-primary btn-sm me-2">
-                <i class="fas fa-search me-1"></i> Search
-              </button>
-              <a href="client_services.php" class="btn btn-secondary btn-sm">
-                <i class="fas fa-times me-1"></i> Clear
-              </a>
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+              <a href="client_services.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
             </form>
           </div>
         </div>

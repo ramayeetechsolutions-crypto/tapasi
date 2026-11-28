@@ -511,10 +511,10 @@ if ($systemsQuery && $systemsQuery->num_rows > 0) { while($system = $systemsQuer
                     </div>
                     <div class="col-md-3">
                         <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fas fa-search me-1"></i> Apply Filters
+                            <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
-                        <a href="ticketmanagementsystem.php" class="btn btn-secondary btn-sm ms-2">
-                            <i class="fas fa-times me-1"></i> Clear All
+                        <a href="ticketmanagementsystem.php" class="btn btn-outline-secondary btn-sm ms-2">
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

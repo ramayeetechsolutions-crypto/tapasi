@@ -782,7 +782,7 @@ if (!$entries) $entries = false;
                             <i class="fas fa-filter me-1"></i> Apply Filters
                         </button>
                         <a href="error_entry.php" class="btn btn-outline-secondary btn-sm flex-grow-1 text-nowrap">
-                            <i class="fas fa-times me-1"></i> Clear
+                            <i class="fas fa-undo me-1"></i> Reset
                         </a>
                     </div>
                 </form>

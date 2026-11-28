@@ -903,7 +903,7 @@ if (!empty($employee_id)) {
                 <input type="hidden" name="year" id="hidden_year" value="<?= h($year) ?>">
                 <div class="col-md-4 d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                    <a href="xml_weekly_report.php" class="btn btn-secondary btn-sm text-nowrap"><i class="fas fa-times me-1"></i> Clear Filters</a>
+                    <a href="xml_weekly_report.php" class="btn btn-outline-secondary btn-sm text-nowrap"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>

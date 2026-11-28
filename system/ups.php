@@ -289,7 +289,7 @@ while($tr = $tRes->fetch_assoc()) $allTeams[] = $tr;
                 <form method="get" class="row g-2">
                     <div class="col-md-4"><input type="text" name="q" class="form-control form-control-sm" placeholder="Search UPS..." value="<?= h($q) ?>"></div>
                     <div class="col-md-3"><select name="team_id" class="form-select form-select-sm"><option value="">All Teams</option><?php foreach($allTeams as $t): ?><option value="<?= $t['team_id'] ?>" <?= $fteam_id == $t['team_id'] ? 'selected' : '' ?>><?= $t['team_name'] ?></option><?php endforeach; ?></select></div>
-                    <div class="col-md-3"><button type="submit" class="btn btn-primary btn-sm">Search</button> <a href="ups.php" class="btn btn-secondary btn-sm">Clear</a></div>
+                    <div class="col-md-3"><button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button> <a href="ups.php" class="btn btn-outline-secondary btn-sm"><i class="fas fa-undo me-1"></i> Reset</a></div>
                 </form>
             </div></div>
 

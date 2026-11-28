@@ -475,7 +475,7 @@ $publishers = $mysqli->query($sql);
                 
                 <div class="col-md-3 d-flex gap-2">
                     <button type="submit" class="btn btn-primary flex-grow-1"><i class="fas fa-filter me-1"></i>Apply Filters</button>
-                    <a href="client_followup.php" class="btn btn-outline-secondary flex-grow-1"><i class="fas fa-times me-1"></i>Clear</a>
+                    <a href="client_followup.php" class="btn btn-outline-secondary flex-grow-1"><i class="fas fa-undo me-1"></i> Reset</a>
                 </div>
             </form>
         </div>

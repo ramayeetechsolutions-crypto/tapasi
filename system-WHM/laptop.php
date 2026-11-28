@@ -250,8 +250,8 @@ $result = $mysqli->query($sql);
                                placeholder="Search laptops..." value="<?= h($q) ?>">
                     </div>
                     <div class="col-md-4">
-                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
-                        <a href="laptop.php" class="btn btn-secondary btn-sm ms-1">Clear</a>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i> Apply Filters</button>
+                        <a href="laptop.php" class="btn btn-outline-secondary btn-sm ms-1"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

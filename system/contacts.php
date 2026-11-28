@@ -297,7 +297,7 @@ $totalContacts = $mysqli->query("SELECT COUNT(*) as cnt FROM tbl_contacts")->fet
             <div class="card mb-3"><div class="card-body">
                 <form method="get" class="row g-3">
                     <div class="col-md-4"><input type="text" name="q" class="form-control" placeholder="Search..." value="<?= h($q) ?>"></div>
-                    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Search</button></div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Apply Filters</button></div>
                 </form>
             </div></div>
 

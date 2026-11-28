@@ -205,7 +205,7 @@ $data = $mysqli->query($sql . " ORDER BY id DESC");
                 <div class="card-body p-2">
                     <form method="get" class="row g-2 align-items-center">
                         <div class="col-md-4"><input type="text" name="q" class="form-control form-control-sm" placeholder="Search system, ID, or member..." value="<?= h($q) ?>"></div>
-                        <div class="col-md-2"><button type="submit" class="btn btn-dark btn-sm w-100">Search</button></div>
+                        <div class="col-md-2"><button type="submit" class="btn btn-dark btn-sm w-100"><i class="fas fa-filter me-1"></i> Apply Filters</button></div>
                     </form>
                 </div>
             </div>

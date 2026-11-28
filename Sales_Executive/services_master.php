@@ -245,7 +245,7 @@ while($r = $res->fetch_assoc()) $categories[] = $r['category'];
                     
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                        <a href="services_master.php" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="fas fa-times me-1"></i> Clear</a>
+                        <a href="services_master.php" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                     
                     <div class="col-md-3 text-end">

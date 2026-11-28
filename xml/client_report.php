@@ -433,11 +433,11 @@ $total_count = $count_stmt->get_result()->fetch_assoc()['total'] ?? 0;
                         <label class="form-label mb-1">&nbsp;</label>
                         <div class="d-flex">
                             <button type="submit" class="btn btn-primary btn-sm me-2">
-                                <i class="fas fa-filter me-1"></i> Filter
-                            </button>
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
                             <a href="my_jobs.php" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-times me-1"></i> Clear
-                            </a>
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </a>
                         </div>
                     </div>
                     
