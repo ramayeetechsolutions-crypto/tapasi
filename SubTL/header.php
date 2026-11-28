@@ -738,6 +738,11 @@ if ($result && $row = $result->fetch_assoc()) {
                 rows.forEach(function(row, rowIdx) {
                     var isEven = (rowIdx % 2 === 1); // Row 1 (0) = White, Row 2 (1) = Light Ash
                     var rowBg = isEven ? '#f2f4f6' : '#ffffff';
+                    if (row.classList.contains('row-dark-purple') || row.classList.contains('row-purple')) {
+                        rowBg = '#d8b4fe';
+                    } else if (row.classList.contains('row-light-purple')) {
+                        rowBg = '#f3e8ff';
+                    }
                     var cells = row.children;
                     for (var i = 0; i < cells.length; i++) {
                         var cell = cells[i];
@@ -765,12 +770,23 @@ if ($result && $row = $result->fetch_assoc()) {
                     if (!row.dataset.stickyHoverBound) {
                         row.dataset.stickyHoverBound = '1';
                         row.addEventListener('mouseenter', function() {
+                            var hoverBg = '#e9ecef';
+                            if (this.classList.contains('row-dark-purple') || this.classList.contains('row-purple')) {
+                                hoverBg = '#c49bfb';
+                            } else if (this.classList.contains('row-light-purple')) {
+                                hoverBg = '#ede9fe';
+                            }
                             var sCells = this.querySelectorAll('.sticky-assign-col, .sticky-assign-cell');
-                            sCells.forEach(function(sc) { sc.style.setProperty('background-color', '#e9ecef', 'important'); });
+                            sCells.forEach(function(sc) { sc.style.setProperty('background-color', hoverBg, 'important'); });
                         });
                         row.addEventListener('mouseleave', function() {
                             var curEven = (Array.from(this.parentNode.children).indexOf(this) % 2 === 1);
                             var bg = curEven ? '#f2f4f6' : '#ffffff';
+                            if (this.classList.contains('row-dark-purple') || this.classList.contains('row-purple')) {
+                                bg = '#d8b4fe';
+                            } else if (this.classList.contains('row-light-purple')) {
+                                bg = '#f3e8ff';
+                            }
                             var sCells = this.querySelectorAll('.sticky-assign-col, .sticky-assign-cell');
                             sCells.forEach(function(sc) { sc.style.setProperty('background-color', bg, 'important'); });
                         });

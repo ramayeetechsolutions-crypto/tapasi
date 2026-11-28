@@ -2461,7 +2461,6 @@ td.sticky-assign-col-last {
 .table-sticky-assign tbody tr:nth-child(even) td.sticky-assign-col,
 .table-sticky-assign tbody tr:nth-child(even) td.sticky-assign-cell,
 .table-sticky-assign tbody tr.assigned:nth-child(even) td,
-.table-sticky-assign tbody tr.row-purple:nth-child(even) td,
 .table-sticky-assign.table-striped tbody tr:nth-of-type(even)>*,
 .table-container .table tbody tr:nth-child(even) td,
 .table-container .table.table-striped tbody tr:nth-of-type(even)>*,
@@ -2475,7 +2474,6 @@ td.sticky-assign-col-last {
 .table-sticky-assign tbody tr:nth-child(odd) td.sticky-assign-col,
 .table-sticky-assign tbody tr:nth-child(odd) td.sticky-assign-cell,
 .table-sticky-assign tbody tr.assigned:nth-child(odd) td,
-.table-sticky-assign tbody tr.row-purple:nth-child(odd) td,
 .table-sticky-assign.table-striped tbody tr:nth-of-type(odd)>*,
 .table-container .table tbody tr:nth-child(odd) td,
 .table-container .table.table-striped tbody tr:nth-of-type(odd)>*,
@@ -2487,7 +2485,6 @@ td.sticky-assign-col-last {
 .table-sticky-assign tbody tr:hover td,
 .table-sticky-assign tbody tr:hover th,
 .table-sticky-assign tbody tr.assigned:hover td,
-.table-sticky-assign tbody tr.row-purple:hover td,
 .table-sticky-assign.table-hover tbody tr:hover>*,
 .table-container .table:not(#teamTable):not(#teamMasterTable):not(.inner-table):not(.team-master-table) tbody tr:hover td,
 .table-container .table.table-hover:not(#teamTable):not(#teamMasterTable):not(.inner-table):not(.team-master-table) tbody tr:hover>*,
@@ -2495,6 +2492,84 @@ td.sticky-assign-col-last {
     background-color: #c4cbd3 !important;
     cursor: pointer;
     transition: background-color 0.1s ease;
+}
+
+/* TS Assign 2 PM Light Purple & 4 PM Dark Purple Highlight */
+.table-sticky-assign tbody tr.row-light-purple td,
+.table-sticky-assign tbody tr.row-light-purple th,
+.table-sticky-assign tbody tr.row-light-purple td.sticky-assign-col,
+.table-sticky-assign tbody tr.row-light-purple td.sticky-assign-cell,
+.table-sticky-assign tbody tr.row-light-purple:nth-child(odd) td,
+.table-sticky-assign tbody tr.row-light-purple:nth-child(even) td,
+.table-sticky-assign.table-striped tbody tr.row-light-purple:nth-of-type(odd)>*,
+.table-sticky-assign.table-striped tbody tr.row-light-purple:nth-of-type(even)>*,
+.table-container .table tbody tr.row-light-purple:nth-child(odd) td,
+.table-container .table tbody tr.row-light-purple:nth-child(even) td,
+.table-container .table.table-striped tbody tr.row-light-purple:nth-of-type(odd)>*,
+.table-container .table.table-striped tbody tr.row-light-purple:nth-of-type(even)>*,
+.table tbody tr.row-light-purple td,
+.table tbody tr.row-light-purple:nth-child(odd) td,
+.table tbody tr.row-light-purple:nth-child(even) td {
+    background-color: #f3e8ff !important;
+}
+
+.table-sticky-assign tbody tr.row-light-purple:hover td,
+.table-sticky-assign tbody tr.row-light-purple:hover th,
+.table-sticky-assign.table-hover tbody tr.row-light-purple:hover>*,
+.table-container .table tbody tr.row-light-purple:hover td,
+.table tbody tr.row-light-purple:hover td {
+    background-color: #ede9fe !important;
+}
+
+.table-sticky-assign tbody tr.row-light-purple td:first-child,
+.table tbody tr.row-light-purple td:first-child {
+    border-left: 3px solid #c084fc !important;
+}
+
+/* 4 PM Dark Purple Highlight */
+.table-sticky-assign tbody tr.row-dark-purple td,
+.table-sticky-assign tbody tr.row-dark-purple th,
+.table-sticky-assign tbody tr.row-dark-purple td.sticky-assign-col,
+.table-sticky-assign tbody tr.row-dark-purple td.sticky-assign-cell,
+.table-sticky-assign tbody tr.row-dark-purple:nth-child(odd) td,
+.table-sticky-assign tbody tr.row-dark-purple:nth-child(even) td,
+.table-sticky-assign.table-striped tbody tr.row-dark-purple:nth-of-type(odd)>*,
+.table-sticky-assign.table-striped tbody tr.row-dark-purple:nth-of-type(even)>*,
+.table-container .table tbody tr.row-dark-purple:nth-child(odd) td,
+.table-container .table tbody tr.row-dark-purple:nth-child(even) td,
+.table-container .table.table-striped tbody tr.row-dark-purple:nth-of-type(odd)>*,
+.table-container .table.table-striped tbody tr.row-dark-purple:nth-of-type(even)>*,
+.table tbody tr.row-dark-purple td,
+.table tbody tr.row-dark-purple:nth-child(odd) td,
+.table tbody tr.row-dark-purple:nth-child(even) td,
+.table-sticky-assign tbody tr.row-purple td,
+.table-sticky-assign tbody tr.row-purple:nth-child(odd) td,
+.table-sticky-assign tbody tr.row-purple:nth-child(even) td,
+.table-sticky-assign.table-striped tbody tr.row-purple:nth-of-type(odd)>*,
+.table-sticky-assign.table-striped tbody tr.row-purple:nth-of-type(even)>*,
+.table-container .table tbody tr.row-purple:nth-child(odd) td,
+.table-container .table tbody tr.row-purple:nth-child(even) td,
+.table tbody tr.row-purple td,
+.table tbody tr.row-purple:nth-child(odd) td,
+.table tbody tr.row-purple:nth-child(even) td {
+    background-color: #d8b4fe !important;
+}
+
+.table-sticky-assign tbody tr.row-dark-purple:hover td,
+.table-sticky-assign tbody tr.row-dark-purple:hover th,
+.table-sticky-assign.table-hover tbody tr.row-dark-purple:hover>*,
+.table-container .table tbody tr.row-dark-purple:hover td,
+.table tbody tr.row-dark-purple:hover td,
+.table-sticky-assign tbody tr.row-purple:hover td,
+.table tbody tr.row-purple:hover td {
+    background-color: #c49bfb !important;
+}
+
+.table-sticky-assign tbody tr.row-dark-purple td:first-child,
+.table tbody tr.row-dark-purple td:first-child,
+.table-sticky-assign tbody tr.row-purple td:first-child,
+.table tbody tr.row-purple td:first-child {
+    border-left: 3px solid #7e22ce !important;
 }
 
 /* =========================================================================

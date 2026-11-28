@@ -658,9 +658,82 @@ require 'header.php';
             color: #198754 !important;
         }
         
-        /* Overdue Indicator: Clean subtle accent line on S.No */
+        /* Overdue Indicator: 2 PM Light Purple & 4 PM Dark Purple Highlight */
+        .table-sticky-assign tbody tr.row-light-purple td,
+        .table-sticky-assign tbody tr.row-light-purple th,
+        .table-sticky-assign tbody tr.row-light-purple td.sticky-assign-col,
+        .table-sticky-assign tbody tr.row-light-purple td.sticky-assign-cell,
+        .table-sticky-assign tbody tr.row-light-purple:nth-child(odd) td,
+        .table-sticky-assign tbody tr.row-light-purple:nth-child(even) td,
+        .table-sticky-assign.table-striped tbody tr.row-light-purple:nth-of-type(odd)>*,
+        .table-sticky-assign.table-striped tbody tr.row-light-purple:nth-of-type(even)>*,
+        .table-container .table tbody tr.row-light-purple:nth-child(odd) td,
+        .table-container .table tbody tr.row-light-purple:nth-child(even) td,
+        .table-container .table.table-striped tbody tr.row-light-purple:nth-of-type(odd)>*,
+        .table-container .table.table-striped tbody tr.row-light-purple:nth-of-type(even)>*,
+        .table tbody tr.row-light-purple td,
+        .table tbody tr.row-light-purple:nth-child(odd) td,
+        .table tbody tr.row-light-purple:nth-child(even) td {
+            background-color: #f3e8ff !important;
+        }
+
+        .table-sticky-assign tbody tr.row-light-purple:hover td,
+        .table-sticky-assign tbody tr.row-light-purple:hover th,
+        .table-sticky-assign.table-hover tbody tr.row-light-purple:hover>*,
+        .table-container .table tbody tr.row-light-purple:hover td,
+        .table tbody tr.row-light-purple:hover td {
+            background-color: #ede9fe !important;
+        }
+
+        .table-sticky-assign tbody tr.row-light-purple td:first-child,
+        .table tbody tr.row-light-purple td:first-child {
+            border-left: 3px solid #c084fc !important;
+        }
+
+        /* 4 PM Dark Purple Highlight */
+        .table-sticky-assign tbody tr.row-dark-purple td,
+        .table-sticky-assign tbody tr.row-dark-purple th,
+        .table-sticky-assign tbody tr.row-dark-purple td.sticky-assign-col,
+        .table-sticky-assign tbody tr.row-dark-purple td.sticky-assign-cell,
+        .table-sticky-assign tbody tr.row-dark-purple:nth-child(odd) td,
+        .table-sticky-assign tbody tr.row-dark-purple:nth-child(even) td,
+        .table-sticky-assign.table-striped tbody tr.row-dark-purple:nth-of-type(odd)>*,
+        .table-sticky-assign.table-striped tbody tr.row-dark-purple:nth-of-type(even)>*,
+        .table-container .table tbody tr.row-dark-purple:nth-child(odd) td,
+        .table-container .table tbody tr.row-dark-purple:nth-child(even) td,
+        .table-container .table.table-striped tbody tr.row-dark-purple:nth-of-type(odd)>*,
+        .table-container .table.table-striped tbody tr.row-dark-purple:nth-of-type(even)>*,
+        .table tbody tr.row-dark-purple td,
+        .table tbody tr.row-dark-purple:nth-child(odd) td,
+        .table tbody tr.row-dark-purple:nth-child(even) td,
+        .table-sticky-assign tbody tr.row-purple td,
+        .table-sticky-assign tbody tr.row-purple:nth-child(odd) td,
+        .table-sticky-assign tbody tr.row-purple:nth-child(even) td,
+        .table-sticky-assign.table-striped tbody tr.row-purple:nth-of-type(odd)>*,
+        .table-sticky-assign.table-striped tbody tr.row-purple:nth-of-type(even)>*,
+        .table-container .table tbody tr.row-purple:nth-child(odd) td,
+        .table-container .table tbody tr.row-purple:nth-child(even) td,
+        .table tbody tr.row-purple td,
+        .table tbody tr.row-purple:nth-child(odd) td,
+        .table tbody tr.row-purple:nth-child(even) td {
+            background-color: #d8b4fe !important;
+        }
+
+        .table-sticky-assign tbody tr.row-dark-purple:hover td,
+        .table-sticky-assign tbody tr.row-dark-purple:hover th,
+        .table-sticky-assign.table-hover tbody tr.row-dark-purple:hover>*,
+        .table-container .table tbody tr.row-dark-purple:hover td,
+        .table tbody tr.row-dark-purple:hover td,
+        .table-sticky-assign tbody tr.row-purple:hover td,
+        .table tbody tr.row-purple:hover td {
+            background-color: #c49bfb !important;
+        }
+
+        .table-sticky-assign tbody tr.row-dark-purple td:first-child,
+        .table tbody tr.row-dark-purple td:first-child,
+        .table-sticky-assign tbody tr.row-purple td:first-child,
         .table tbody tr.row-purple td:first-child {
-            border-left: 3px solid #8b5cf6 !important;
+            border-left: 3px solid #7e22ce !important;
         }
 
         .status-badge { display: inline-block; padding: 0.2rem 0.4rem; border-radius: 9999px; font-size: 0.65rem; font-weight: 500; }
@@ -943,21 +1016,11 @@ require 'header.php';
                                 $current_date = date('Y-m-d');
                                 $current_time = date('H:i:s');
 
-                                $is_purple = false;
-                                if ($is_ce_ts) {
-                                    // CE+TS file: after 4 PM (16:00)
-                                    if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '16:00:00')) {
-                                        $is_purple = true;
-                                    }
-                                } elseif ($is_ts) {
-                                    // TS file: after 2 PM (14:00)
-                                    if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '14:00:00')) {
-                                        $is_purple = true;
-                                    }
-                                }
-
-                                if ($is_purple) {
-                                    $row_class .= ' row-purple';
+                                // Process at 2 PM -> Light Purple, at 4 PM -> Dark Purple
+                                if ($job_entry_date < $current_date || ($job_entry_date == $current_date && $current_time >= '16:00:00')) {
+                                    $row_class .= ' row-dark-purple';
+                                } elseif ($job_entry_date == $current_date && $current_time >= '14:00:00') {
+                                    $row_class .= ' row-light-purple';
                                 }
 
                                 // Due date color coding
@@ -1659,8 +1722,9 @@ require 'header.php';
         }
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
-    // Check and highlight purple rows based on local system time (2 PM for TS, 4 PM for CE+TS)
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Check and highlight purple rows based on local system time (2 PM: Light Purple, 4 PM: Dark Purple)
     function updatePurpleRows() {
         const now = new Date();
         const curHours = now.getHours();
@@ -1668,31 +1732,32 @@ require 'header.php';
         const curTime = (curHours < 10 ? '0' : '') + curHours + ':' + (curMinutes < 10 ? '0' : '') + curMinutes;
         const curDate = now.toISOString().slice(0, 10);
         
-        document.querySelectorAll('tbody tr[data-process]').forEach(function(row) {
-            const proc = (row.getAttribute('data-process') || '').toUpperCase();
+        document.querySelectorAll('tbody tr[data-date]').forEach(function(row) {
             const jobDate = row.getAttribute('data-date') || curDate;
-            const isCeTs = proc.indexOf('CE+TS') !== -1 || proc.indexOf('CE+PAG') !== -1;
-            const isTs = !isCeTs && (proc.indexOf('TS') !== -1 || proc.indexOf('PAG') !== -1);
             
-            let shouldPurple = false;
-            if (isCeTs) {
-                if (jobDate < curDate || (jobDate === curDate && curTime >= '16:00')) {
-                    shouldPurple = true;
-                }
-            } else if (isTs) {
-                if (jobDate < curDate || (jobDate === curDate && curTime >= '14:00')) {
-                    shouldPurple = true;
-                }
+            row.classList.remove('row-light-purple', 'row-dark-purple', 'row-purple');
+            
+            let pClass = '';
+            let pBg = '';
+            if (jobDate < curDate || (jobDate === curDate && curTime >= '16:00')) {
+                pClass = 'row-dark-purple';
+                pBg = '#d8b4fe';
+            } else if (jobDate === curDate && curTime >= '14:00') {
+                pClass = 'row-light-purple';
+                pBg = '#f3e8ff';
             }
-            
-            if (shouldPurple) {
-                row.classList.add('row-purple');
+
+            if (pClass) {
+                row.classList.add(pClass);
+                var stickyCells = row.querySelectorAll('.sticky-assign-col, .sticky-assign-cell');
+                stickyCells.forEach(function(sc) {
+                    sc.style.setProperty('background-color', pBg, 'important');
+                });
             }
         });
     }
     updatePurpleRows();
     setInterval(updatePurpleRows, 30000);
-
-</script>
+    </script>
 </body>
 </html>
