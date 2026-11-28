@@ -651,7 +651,18 @@ if (!empty($employee_id)) {
             align-items: center;
             gap: 10px;
         }
-        .stat-card { border-radius: 10px; padding: 20px; text-align: center; color: white !important; }
+        .stat-card { 
+            border-radius: 10px; 
+            padding: 20px; 
+            text-align: center; 
+            color: white !important; 
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+        }
         .stat-card.employees { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .stat-card.target { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .stat-card.achieved { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
