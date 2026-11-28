@@ -310,7 +310,7 @@ $sql = "SELECT
     ce.status as ce_status, ce.ce_date as ce_moved_date, ce.done_by as ce_done_by, ce.assigned_to_content as ce_assigned_to,
     le.status as le_status, le.last_updated as le_moved_date, le.done_by as le_done_by, le.assigned_to_le as le_assigned_to, le.assigned_to_le_qc as le_qc_assigned_to,
     pag.status as pag_status, pag.created_at as pag_received_date, pag.done_by as pag_done_by, pag.assigned_to_pag as pag_assigned_to,
-    pag.eq, pag.pages, pag.images, pag.tables_count,
+    pag.eq, pag.pages, pag.images, pag.tables_count, pag.table_status, pag.assigned_to_table, pag.assigned_to_table_fqa,
     
     qc_crx.qc_crx_stage, qc_crx.pag_crx_stage, qc_crx.pag_crx_assigned_to, qc_crx.img_tab_stage, qc_crx.upload_by as crx_upload_by, qc_crx.is_moved, qc_crx.assigned_to_qc as crx_assigned_to_qc, qc_crx.dispatch_date as crx_dispatch_date,
     j.dispatch_date as j_dispatch_date,
@@ -816,7 +816,14 @@ function getStatusBadge($status, $username = '', $emp_map = []) {
                             <td><?= h($row['eq'] ?? '0') ?></td>
                             <td><?= h($row['pages'] ?? '0') ?></td>
                             <td><?= h($row['images'] ?? '0') ?></td>
-                            <td><?= h($row['tables_count'] ?? '0') ?></td>
+                            <?php 
+                                $tbl_cnt = !empty($row['tables_count']) ? $row['tables_count'] : '0';
+                                $tbl_stat = !empty($row['table_status']) ? $row['table_status'] : ($tbl_cnt > 0 ? 'Completed' : 'Pending');
+                                $tbl_done = in_array($tbl_stat, ['Completed', 'Done']);
+                                $tbl_disp = $tbl_done ? 'Completed' : $tbl_stat;
+                                $tbl_emp = !empty($row['assigned_to_table']) ? $row['assigned_to_table'] : (!empty($row['assigned_to_table_fqa']) ? $row['assigned_to_table_fqa'] : '');
+                            ?>
+                            <td><?= getStatusBadge($tbl_disp, $tbl_emp, $emp_map) ?></td>
                             <td><span class="badge bg-secondary" style="background-color: #6c757d !important; color: #ffffff !important; padding: 2px 6px !important; border-radius: 4px !important; font-size: 10px !important; font-weight: 600 !important;"><?= h($row['process']) ?></span></td>
                             <!-- CE Status (Green when Completed + Completed By Who) -->
                             <?php 

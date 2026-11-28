@@ -99,26 +99,47 @@ if (isset($_POST['ajax']) && $_POST['ajax'] == 'update_status') {
         $stmt->bind_param("si", $new_status, $qc_id);
     
     if ($stmt->execute()) {
-        
-        // When completed, sync to qc_crx so it appears in QC-CRX Assign page
-        if ($new_status === 'Completed' && !empty($curr_data['job_id'])) {
-            $jid = (int)$curr_data['job_id'];
-            $chk_crx = $mysqli->query("SELECT id FROM qc_crx WHERE job_id = $jid");
-            if ($chk_crx && $chk_crx->num_rows > 0) {
-                $stmt_crx = $mysqli->prepare("UPDATE qc_crx SET status = 'Completed', assigned_to_qc = ?, qc_start_time = ?, qc_end_time = ?, qc_date = NOW(), last_updated = NOW() WHERE job_id = ?");
-                $stmt_crx->bind_param("sssi", $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time'], $jid);
-                $stmt_crx->execute();
-                $stmt_crx->close();
-            } else {
-                $stmt_crx = $mysqli->prepare("INSERT INTO qc_crx (job_id, status, assigned_to_qc, qc_start_time, qc_end_time, qc_date, created_at, last_updated) VALUES (?, 'Completed', ?, ?, ?, NOW(), NOW(), NOW())");
-                $stmt_crx->bind_param("isss", $jid, $curr_data['assigned_to_qc'], $curr_data['qc_start_time'], $curr_data['qc_end_time']);
-                $stmt_crx->execute();
-                $stmt_crx->close();
-            }
-        }
+        // Do not automatically sync to qc_crx on Completed - only sync when Move button is clicked
         echo json_encode(['success' => true, 'status' => $new_status]);
     } else {
         echo json_encode(['success' => false, 'message' => $mysqli->error]);
+    }
+    exit;
+}
+
+// --- START: Move to QC CRX AJAX ---
+if (isset($_POST['ajax']) && $_POST['ajax'] == 'move_to_qc_crx') {
+    header('Content-Type: application/json');
+    $qc_id = (int)$_POST['qc_id'];
+    $job_id = isset($_POST['job_id']) ? (int)$_POST['job_id'] : 0;
+    
+    $q_res = $mysqli->query("SELECT * FROM qc WHERE id = $qc_id");
+    if ($q_row = $q_res->fetch_assoc()) {
+        $jid = (int)($job_id > 0 ? $job_id : $q_row['job_id']);
+        
+        // Sync / insert into qc_crx
+        $chk_crx = $mysqli->query("SELECT id FROM qc_crx WHERE job_id = $jid");
+        if ($chk_crx && $chk_crx->num_rows > 0) {
+            $stmt_crx = $mysqli->prepare("UPDATE qc_crx SET status = 'Completed', assigned_to_qc = ?, qc_start_time = ?, qc_end_time = ?, qc_date = NOW(), last_updated = NOW() WHERE job_id = ?");
+            $stmt_crx->bind_param("sssi", $q_row['assigned_to_qc'], $q_row['qc_start_time'], $q_row['qc_end_time'], $jid);
+            $stmt_crx->execute();
+            $stmt_crx->close();
+        } else {
+            $stmt_crx = $mysqli->prepare("INSERT INTO qc_crx (job_id, status, assigned_to_qc, qc_start_time, qc_end_time, qc_date, created_at, last_updated) VALUES (?, 'Completed', ?, ?, ?, NOW(), NOW(), NOW())");
+            $stmt_crx->bind_param("isss", $jid, $q_row['assigned_to_qc'], $q_row['qc_start_time'], $q_row['qc_end_time']);
+            $stmt_crx->execute();
+            $stmt_crx->close();
+        }
+        
+        // Mark qc as moved
+        $mysqli->query("UPDATE qc SET is_moved = 1, last_updated = NOW() WHERE id = $qc_id");
+        if ($jid > 0) {
+            $mysqli->query("UPDATE qc SET is_moved = 1, last_updated = NOW() WHERE job_id = $jid");
+        }
+        
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'QC record not found.']);
     }
     exit;
 }
@@ -374,7 +395,7 @@ $dir = isset($_GET['dir']) && strtoupper($_GET['dir']) == 'ASC' ? 'ASC' : 'DESC'
 // 2. Process must involve PAG or LE or TS
 // 3. THE CRITICAL CONDITION: PAG phase OR LE phase must be 'Completed'
 $where_conditions = [
-    "qc.status != 'Completed'", 
+    "COALESCE(qc.is_moved, 0) = 0", 
     "qc.status != 'Done'",
     "p.job_name IN ('PAG', 'PAG+XML', 'CE+PAG', 'CE+PAG+XML', 'CE+TS', 'CE+TS+XML', 'TS', 'TS+XML', 'LE', 'CE+LE', 'CE+LE+XML', 'CE+PAG+LE')",
     "(
@@ -454,7 +475,7 @@ $qc_query = "SELECT qc.*,
                     pag.created_at as pag_received_date,
                     pag.done_by as pag_table_done_by,
                     pag.assigned_to_pag as pag_assigned_to,
-                    pag.eq, pag.pages, pag.images, pag.tables_count, pag.status as pag_status,
+                    pag.eq, pag.pages, pag.images, pag.tables_count, pag.table_status, pag.assigned_to_table, pag.assigned_to_table_fqa, pag.status as pag_status,
                     qc.rtat, qc.atat,
                     (SELECT upload_by FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as job_upload_by,
                     (SELECT upload_date FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as upload_date,
@@ -481,7 +502,7 @@ $qc_result = $stmt->get_result();
 $stmt->close();
 
 // Get unique statuses for filter dropdown
-$status_query = "SELECT DISTINCT status FROM qc WHERE status != 'Completed' AND status != 'Done' ORDER BY status";
+$status_query = "SELECT DISTINCT status FROM qc WHERE COALESCE(is_moved, 0) = 0 AND status != 'Done' ORDER BY status";
 $status_result = $mysqli->query($status_query);
 
 // Get count statistics (Using same conditions for accuracy)
@@ -893,6 +914,7 @@ require 'header.php';
                             <th>Upload By</th>
                             <th>Path</th>
                             <th>Priority</th>
+                            <th style="min-width: 80px; text-align: center;">Status</th>
                             <th>TAT</th>
                         </tr>
                     </thead>
@@ -929,7 +951,25 @@ require 'header.php';
                                     <td><?= h($row['eq'] ?? '0') ?></td>
                                     <td><?= h($row['pages'] ?? '0') ?></td>
                                     <td><?= h($row['images'] ?? '0') ?></td>
-                                    <td><?= h($row['tables_count'] ?? '0') ?></td>
+                                    <!-- Tables Column with Status and Member -->
+                                    <?php 
+                                        $tbl_cnt = !empty($row['tables_count']) ? $row['tables_count'] : '0';
+                                        $tbl_stat = !empty($row['table_status']) ? $row['table_status'] : ($tbl_cnt > 0 ? 'Completed' : 'Pending');
+                                        $tbl_done = in_array($tbl_stat, ['Completed', 'Done']);
+                                        $tbl_cls = $tbl_done ? 'bg-success' : 'bg-secondary';
+                                        $tbl_emp = !empty($row['assigned_to_table']) ? $row['assigned_to_table'] : (!empty($row['assigned_to_table_fqa']) ? $row['assigned_to_table_fqa'] : '');
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $tbl_cls ?>"><?= h($tbl_stat) ?></span>
+                                        <?php if (!empty($tbl_emp)): 
+                                            $tbl_name = $emp_map[$tbl_emp] ?? '';
+                                            $tbl_display = $tbl_name ? h($tbl_name) . " (" . h($tbl_emp) . ")" : h($tbl_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $tbl_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     
                                     <!-- Other Statuses -->
                                     <?php 
@@ -1148,6 +1188,17 @@ require 'header.php';
                                             <option value="Urgent" <?= (($row['priority'] ?? '') == 'Urgent') ? 'selected' : '' ?>>Urgent</option>
                                         </select>
                                     </td>
+
+                                    <!-- Status Column with Move Button -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <button type="button" class="btn btn-sm btn-success move-btn-<?= $row['id'] ?>"
+                                                style="font-size: 11px; padding: 3px 10px; font-weight: 600; border-radius: 4px;"
+                                                onclick="moveToCrx(<?= $row['id'] ?>, <?= $row['job_id'] ?>)"
+                                                title="Move to QC CRX">
+                                            <i class="fas fa-paper-plane me-1"></i> Move
+                                        </button>
+                                    </td>
+
                                     <!-- TAT Column -->
                                     <?php
                                         $qc_done = in_array($row['status'] ?? '', ['Completed', 'Done']);
@@ -1383,6 +1434,41 @@ require 'header.php';
                 console.error('Error:', error);
                 selectElement.value = assignedVal || '';
                 selectElement.setAttribute('data-previous', assignedVal || '');
+            });
+        }
+
+        // Move to QC CRX
+        function moveToCrx(qcId, jobId) {
+            if (!confirm('Are you sure you want to move this job to QC-CRX?')) {
+                return;
+            }
+            showLoading();
+            fetch('?', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'ajax=move_to_qc_crx&qc_id=' + qcId + '&job_id=' + jobId
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    showNotification('success', 'Moved to QC-CRX successfully!');
+                    const rowElem = document.getElementById('row-' + qcId);
+                    if (rowElem) {
+                        rowElem.style.transition = 'all 0.5s';
+                        rowElem.style.opacity = '0';
+                        setTimeout(() => { rowElem.remove(); }, 500);
+                    } else {
+                        setTimeout(() => window.location.reload(), 500);
+                    }
+                } else {
+                    showNotification('danger', 'Error moving to QC-CRX: ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('danger', 'An error occurred while moving job.');
             });
         }
     </script>
