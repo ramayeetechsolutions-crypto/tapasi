@@ -279,16 +279,53 @@ $user_employee_name = !empty($user_reporting_manager) ? $user_reporting_manager 
 $target_sql = "SELECT SUM(target_limit) as total_target, SUM(leave_count) as total_leave FROM weekly_targets WHERE tm_id = ? AND week_number = ? AND year = ?";
 $stmt_target = $mysqli->prepare($target_sql);
 
-// QC Production: QC assigned to user, pages fetched from pag table (same as jobmgmt_qc.php)
-$prod_sql = "
-    SELECT COALESCE(SUM(p.pages), 0) as total_prod 
+// QC Production Calculation:
+// 1. QC Pages (when qc.status is Completed)
+$qc_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.pages AS UNSIGNED)), 0) as total_prod 
     FROM jobs j 
-    LEFT JOIN qc q ON j.job_id = q.job_id 
+    JOIN qc q ON j.job_id = q.job_id 
     LEFT JOIN pag p ON j.job_id = p.job_id 
-    WHERE (q.assigned_to_qc = ? OR q.done_by = ? OR j.assigned_to = ?)
-    AND DATE(j.job_date) BETWEEN ? AND ?
+    WHERE (q.assigned_to_qc = ? OR q.done_by = ?)
+      AND q.status IN ('Completed', 'Done')
+      AND DATE(COALESCE(q.qc_date, q.last_updated, j.job_date)) BETWEEN ? AND ?
 ";
-$stmt_prod = $mysqli->prepare($prod_sql);
+$stmt_qc_prod = $mysqli->prepare($qc_prod_sql);
+
+// 2. QC_FQA Pages (when qc.qc_fqa_status is FQA completed)
+$qc_fqa_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.pages AS UNSIGNED)), 0) as total_prod 
+    FROM jobs j 
+    JOIN qc q ON j.job_id = q.job_id 
+    LEFT JOIN pag p ON j.job_id = p.job_id 
+    WHERE q.assigned_to_qc_fqa = ?
+      AND q.qc_fqa_status IN ('FQA completed', 'FQA Completed', 'Completed', 'Done')
+      AND DATE(COALESCE(q.qc_date, q.last_updated, j.job_date)) BETWEEN ? AND ?
+";
+$stmt_qc_fqa_prod = $mysqli->prepare($qc_fqa_prod_sql);
+
+// 3. PAG_CRX Count (from qc_crx when pag_crx_stage is completed)
+$pag_crx_prod_sql = "
+    SELECT COALESCE(SUM(CAST(crx.pag_crx_count AS UNSIGNED)), 0) as total_prod 
+    FROM jobs j 
+    JOIN qc_crx crx ON j.job_id = crx.job_id 
+    WHERE crx.pag_crx_assigned_to = ?
+      AND crx.pag_crx_stage IN ('PAG_CRX_Compelete', 'PAG_CRX_Complete', 'Completed', 'Done')
+      AND DATE(COALESCE(crx.last_updated, crx.created_at, crx.qc_date, j.job_date)) BETWEEN ? AND ?
+";
+$stmt_pag_crx_prod = $mysqli->prepare($pag_crx_prod_sql);
+
+// 4. QC_CRX Pages (when qc_crx is completed)
+$qc_crx_prod_sql = "
+    SELECT COALESCE(SUM(CAST(p.pages AS UNSIGNED)), 0) as total_prod 
+    FROM jobs j 
+    JOIN qc_crx crx ON j.job_id = crx.job_id 
+    LEFT JOIN pag p ON j.job_id = p.job_id 
+    WHERE (crx.assigned_to_qc = ? OR crx.done_by = ?)
+      AND crx.qc_crx_stage IN ('QC_Complete', 'QC_RECRX_COMPLETE', 'Completed', 'Done')
+      AND DATE(COALESCE(crx.qc_date, crx.last_updated, crx.created_at, j.job_date)) BETWEEN ? AND ?
+";
+$stmt_qc_crx_prod = $mysqli->prepare($qc_crx_prod_sql);
 
 $internal_error_sql = "SELECT COUNT(*) as error_count FROM article_errors WHERE team_error_made_by = ? AND (LOWER(internal_external) = 'internal' OR internal_external IS NULL OR internal_external = '') AND DATE(date) BETWEEN ? AND ?";
 $stmt_internal_error = $mysqli->prepare($internal_error_sql);
@@ -395,14 +432,40 @@ if (!empty($user_employee_name)) {
                 }
             }
             
-            // Get Production (QC Pages Count)
-            $production = 0;
-            if ($stmt_prod) {
-                $stmt_prod->bind_param("sssss", $emp_username, $emp_username, $emp_username, $w1_from, $w1_to);
-                $stmt_prod->execute();
-                $res_prod = $stmt_prod->get_result()->fetch_assoc();
-                $production = (int)($res_prod['total_prod'] ?? 0);
+            // Get Production (QC Pages + QC_FQA Pages + PAG_CRX Count + QC_CRX Pages)
+            $qc_pages = 0;
+            if ($stmt_qc_prod) {
+                $stmt_qc_prod->bind_param("ssss", $emp_username, $emp_username, $w1_from, $w1_to);
+                $stmt_qc_prod->execute();
+                $res_qc_p = $stmt_qc_prod->get_result()->fetch_assoc();
+                $qc_pages = (int)($res_qc_p['total_prod'] ?? 0);
             }
+
+            $qc_fqa_pages = 0;
+            if ($stmt_qc_fqa_prod) {
+                $stmt_qc_fqa_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                $stmt_qc_fqa_prod->execute();
+                $res_fqa_p = $stmt_qc_fqa_prod->get_result()->fetch_assoc();
+                $qc_fqa_pages = (int)($res_fqa_p['total_prod'] ?? 0);
+            }
+
+            $pag_crx_pages = 0;
+            if ($stmt_pag_crx_prod) {
+                $stmt_pag_crx_prod->bind_param("sss", $emp_username, $w1_from, $w1_to);
+                $stmt_pag_crx_prod->execute();
+                $res_pag_crx = $stmt_pag_crx_prod->get_result()->fetch_assoc();
+                $pag_crx_pages = (int)($res_pag_crx['total_prod'] ?? 0);
+            }
+
+            $qc_crx_pages = 0;
+            if ($stmt_qc_crx_prod) {
+                $stmt_qc_crx_prod->bind_param("ssss", $emp_username, $emp_username, $w1_from, $w1_to);
+                $stmt_qc_crx_prod->execute();
+                $res_qc_crx = $stmt_qc_crx_prod->get_result()->fetch_assoc();
+                $qc_crx_pages = (int)($res_qc_crx['total_prod'] ?? 0);
+            }
+
+            $production = $qc_pages + $qc_fqa_pages + $pag_crx_pages + $qc_crx_pages;
             
             // Get Internal & External Errors
             $internal_errors = 0;
@@ -477,7 +540,10 @@ if (!empty($user_employee_name)) {
     }
 }
 if($stmt_target) $stmt_target->close();
-if($stmt_prod) $stmt_prod->close();
+if($stmt_qc_prod) $stmt_qc_prod->close();
+if($stmt_qc_fqa_prod) $stmt_qc_fqa_prod->close();
+if($stmt_pag_crx_prod) $stmt_pag_crx_prod->close();
+if($stmt_qc_crx_prod) $stmt_qc_crx_prod->close();
 if($stmt_internal_error) $stmt_internal_error->close();
 if($stmt_external_error) $stmt_external_error->close();
 

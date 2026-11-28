@@ -593,7 +593,7 @@ $qc_query = "SELECT qc.*,
                     pag.created_at as pag_received_date,
                     pag.done_by as pag_table_done_by,
                     pag.assigned_to_pag as pag_assigned_to,
-                    pag.eq, pag.pages, pag.images, pag.tables_count, pag.status as pag_status,
+                    pag.eq, pag.pages, pag.images, pag.tables_count, pag.table_status, pag.assigned_to_table, pag.assigned_to_table_fqa, pag.status as pag_status,
                     q_orig.assigned_to_qc as orig_qc_tm, q_orig.status as orig_qc_status,
                     qc.rtat, qc.atat,
                     (SELECT upload_by FROM job_uploads WHERE job_id = j.job_id ORDER BY id DESC LIMIT 1) as job_upload_by,
@@ -1018,12 +1018,12 @@ require 'header.php';
                             <th>Due Date</th>
                             <th>R-TAT</th>
                             <th>A-TAT</th>
-                            <th>Dispatch Date</th>
-                            <th>Upload By</th>
                             <th>QC_CRX_Stage</th>
                             <th>PAG_CRX_Stage</th>
                             <th>IMG_TAB_Stage</th>
                             <th>Path</th>
+                            <th>Dispatch Date</th>
+                            <th>Upload By</th>
                             <th>Priority</th>
                             <th style="min-width: 80px; text-align: center;">Status</th>
                             <th>TAT</th>
@@ -1062,7 +1062,25 @@ require 'header.php';
                                     <td><?= h($row['eq'] ?? '0') ?></td>
                                     <td><?= h($row['pages'] ?? '0') ?></td>
                                     <td><?= h($row['images'] ?? '0') ?></td>
-                                    <td><?= h($row['tables_count'] ?? '0') ?></td>
+                                    <!-- Tables Column with Status and Member -->
+                                    <?php 
+                                        $tbl_cnt = !empty($row['tables_count']) ? $row['tables_count'] : '0';
+                                        $tbl_stat = !empty($row['table_status']) ? $row['table_status'] : ($tbl_cnt > 0 ? 'Completed' : 'Pending');
+                                        $tbl_done = in_array($tbl_stat, ['Completed', 'Done']);
+                                        $tbl_cls = $tbl_done ? 'bg-success' : 'bg-secondary';
+                                        $tbl_emp = !empty($row['assigned_to_table']) ? $row['assigned_to_table'] : (!empty($row['assigned_to_table_fqa']) ? $row['assigned_to_table_fqa'] : '');
+                                    ?>
+                                    <td>
+                                        <span class="badge <?= $tbl_cls ?>"><?= h($tbl_stat) ?></span>
+                                        <?php if (!empty($tbl_emp)): 
+                                            $tbl_name = $emp_map[$tbl_emp] ?? '';
+                                            $tbl_display = $tbl_name ? h($tbl_name) . " (" . h($tbl_emp) . ")" : h($tbl_emp);
+                                        ?>
+                                            <div class="mt-1" style="font-size: 10px; color: #15803d; font-weight: 600; white-space: nowrap;">
+                                                <i class="fas fa-user"></i> <?= $tbl_display ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     
                                     <!-- Other Statuses -->
                                     <?php 
@@ -1150,23 +1168,6 @@ require 'header.php';
                                     <td class="fw-bold"><?= intval($row['rtat'] ?? 0) ?></td>
                                     <td class="fw-bold"><?= intval($row['atat'] ?? 0) ?></td>
                                     
-                                    <!-- Dispatch Date -->
-                                    <td>
-                                        <input type="date" class="form-control form-control-sm p-1" style="font-size:11px;" value="<?= h($row['dispatch_date'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'dispatch_date', this.value)">
-                                    </td>
-                                    
-                                    <!-- Upload By Dropdown -->
-                                    <td>
-                                        <select class="form-select form-select-sm p-1" style="min-width: 100px; font-size: 11px;" onchange="updateInlineField(<?= $row['id'] ?>, 'upload_by', this.value)">
-                                            <option value="">Select TM</option>
-                                            <?php foreach ($ts_filter_tms as $tm): ?>
-                                                <option value="<?= h($tm['employee_username']) ?>" <?= (($row['upload_by'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
-                                                    <?= h($tm['employee_name']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </td>
-                                    
                                     <!-- QC_CRX_Stage Column -->
                                     <td>
                                         <select class="form-select form-select-sm p-1" style="min-width: 130px; font-size: 11px; <?= getStageSelectStyle($row['qc_crx_stage'] ?? '') ?>" 
@@ -1249,6 +1250,23 @@ require 'header.php';
                                     ?>
                                     <td>
                                         <input type="text" class="form-control form-control-sm p-1 <?= $path_class ?>" style="min-width: 130px; font-size: 11px;" placeholder="Enter Path" value="<?= h($path_val) ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'path', this.value); setTimeout(() => window.location.reload(), 500);">
+                                    </td>
+                                    
+                                    <!-- Dispatch Date -->
+                                    <td>
+                                        <input type="date" class="form-control form-control-sm p-1" style="font-size:11px;" value="<?= h($row['dispatch_date'] ?? '') ?>" onchange="updateInlineField(<?= $row['id'] ?>, 'dispatch_date', this.value)">
+                                    </td>
+                                    
+                                    <!-- Upload By Dropdown -->
+                                    <td>
+                                        <select class="form-select form-select-sm p-1" style="min-width: 100px; font-size: 11px;" onchange="updateInlineField(<?= $row['id'] ?>, 'upload_by', this.value)">
+                                            <option value="">Select TM</option>
+                                            <?php foreach ($ts_filter_tms as $tm): ?>
+                                                <option value="<?= h($tm['employee_username']) ?>" <?= (($row['upload_by'] ?? '') == $tm['employee_username']) ? 'selected' : '' ?>>
+                                                    <?= h($tm['employee_name']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </td>
                                     
                                     <!-- Priority Dropdown -->
