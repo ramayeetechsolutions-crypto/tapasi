@@ -783,24 +783,16 @@ if ($current_user_name) {
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <?php if($isOwnTicket): ?>
-                                                <a href="ticketmanagementexecutive.php?mode=edit&id=<?= $row['id'] ?>" class="btn btn-outline-primary" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <?php if($row['status'] === 'Pending'): ?>
-                                                <form method="post" style="display:inline;">
-                                                    <input type="hidden" name="action" value="delete">
-                                                    <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                                                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this ticket?');" title="Delete">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <button class="btn btn-outline-secondary" title="View Only (Team Member Ticket)" disabled>
-                                                    <i class="fas fa-eye"></i>
+                                            <a href="ticketmanagementexecutive.php?mode=edit&id=<?= $row['id'] ?>" class="btn btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="post" style="display:inline;">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                                                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this ticket?');" title="Delete">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
-                                            <?php endif; ?>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>

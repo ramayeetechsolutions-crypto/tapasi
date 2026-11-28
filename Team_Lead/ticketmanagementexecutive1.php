@@ -682,7 +682,6 @@ if ($current_user_name) {
                                             <a href="ticketmanagementexecutive.php?mode=edit&id=<?= $row['id'] ?>" class="btn btn-outline-primary" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <?php if($row['status'] === 'Pending'): ?>
                                             <form method="post" style="display:inline;">
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="id" value="<?= $row['id'] ?>">
@@ -690,7 +689,6 @@ if ($current_user_name) {
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </form>
-                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
