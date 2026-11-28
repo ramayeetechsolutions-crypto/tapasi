@@ -93,11 +93,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Ensure is_followup column exists
+$checkCol = $mysqli->query("SHOW COLUMNS FROM `publisher_master` LIKE 'is_followup'");
+if ($checkCol && $checkCol->num_rows === 0) {
+    $mysqli->query("ALTER TABLE `publisher_master` ADD COLUMN `is_followup` TINYINT(1) DEFAULT 0 AFTER `status`");
+}
+
 // ---------------------------------------------------------
 // 1. DASHBOARD STATISTICS
 // ---------------------------------------------------------
-$total_publishers = $mysqli->query("SELECT COUNT(*) FROM publisher_master")->fetch_row()[0] ?? 0;
-$active_publishers = $mysqli->query("SELECT COUNT(*) FROM publisher_master WHERE status='Active'")->fetch_row()[0] ?? 0;
+$followup_pm_filter = "(pm.is_followup = 1 OR pm.id IN (SELECT DISTINCT client_id FROM client_followup_history))";
+$total_publishers = $mysqli->query("SELECT COUNT(*) FROM publisher_master pm WHERE $followup_pm_filter")->fetch_row()[0] ?? 0;
+$active_publishers = $mysqli->query("SELECT COUNT(*) FROM publisher_master pm WHERE pm.status='Active' AND $followup_pm_filter")->fetch_row()[0] ?? 0;
 $today = date('Y-m-d');
 $followup_today = $mysqli->query("SELECT COUNT(*) FROM client_followup_history WHERE followup_date = '$today'")->fetch_row()[0] ?? 0;
 $overdue_followups = $mysqli->query("SELECT COUNT(DISTINCT client_id) FROM client_followup_history WHERE next_followup_date < '$today' AND next_followup_date IS NOT NULL")->fetch_row()[0] ?? 0;
@@ -332,7 +339,7 @@ require 'header.php';
 // FETCH COUNTRIES FOR DROPDOWN
 // ---------------------------------------------------------
 $countries =[];
-$res_countries = $mysqli->query("SELECT DISTINCT country FROM publisher_master WHERE country IS NOT NULL AND country != '' ORDER BY country ASC");
+$res_countries = $mysqli->query("SELECT DISTINCT pm.country FROM publisher_master pm WHERE pm.country IS NOT NULL AND pm.country != '' AND (pm.is_followup = 1 OR pm.id IN (SELECT DISTINCT client_id FROM client_followup_history)) ORDER BY pm.country ASC");
 if ($res_countries) {
     while ($row_c = $res_countries->fetch_assoc()) {
         $countries[] = $row_c['country'];
@@ -355,7 +362,7 @@ $sql = "SELECT pm.*,
         (SELECT followup_status FROM client_followup_history WHERE client_id = pm.id ORDER BY followup_date DESC, created_at DESC LIMIT 1) as last_status
         FROM publisher_master pm";
 
-$where_conds = [];
+$where_conds = ["(pm.is_followup = 1 OR pm.id IN (SELECT DISTINCT client_id FROM client_followup_history))"];
 
 // Expanded Search Filter Logic
 if ($q !== '') {
