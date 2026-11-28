@@ -434,7 +434,7 @@ if ($result && $row = $result->fetch_assoc()) {
             <!-- Left Side Navigation -->
             <nav class="main-nav" id="mainNav">
                 <?php
-                $masterPages = ['job_master.php', 'process_master.php', 'team_view.php'];
+                $masterPages = ['job_master.php', 'process_master.php', 'team_view.php', 'add_team_member.php'];
                 $myAccountPages = ['employee_regby_emp.php', 'employee.php', 'employee_leave.php'];
                 $employeePages = ['employee_master.php', 'target_assignment.php'];
                 $systemPages = ['my_system_details.php', 'ticketmanagementexecutive.php'];
@@ -454,7 +454,7 @@ if ($result && $row = $result->fetch_assoc()) {
                         <ul class="nav-dropdown">
                             <li><a href="job_master.php" class="<?= $currentPage === 'job_master.php' ? 'active' : '' ?>"><i class="fas fa-briefcase"></i> Job</a></li>
                             <li><a href="process_master.php" class="<?= $currentPage === 'process_master.php' ? 'active' : '' ?>"><i class="fas fa-diagram-project"></i> Process</a></li>
-                            <li><a href="team_view.php" class="<?= $currentPage === 'team_view.php' ? 'active' : '' ?>"><i class="fas fa-users"></i> Team</a></li>
+                            <li><a href="team_view.php" class="<?= in_array($currentPage, ['team_view.php', 'add_team_member.php']) ? 'active' : '' ?>"><i class="fas fa-users"></i> Team</a></li>
                         </ul>
                     </li>
                     <!-- My Account Dropdown -->

@@ -45,34 +45,34 @@ $proc_query = "SELECT process_id, process_name FROM process_master ORDER BY proc
 $proc_result = $mysqli->query($proc_query);
 ?>
 
-<!-- <?php if($mode == 'edit'): ?>
-    <input type="hidden" name="employee_id" value="<?php echo $selected_emp_id; ?>">
-<?php endif; ?> -->
+<!-- Select2 CSS for Searchable Dropdown -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .main-content { padding-top: 90px !important; }
+    .form-card { max-width: 800px; margin: auto; background: white; padding: 35px 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e9ecef; }
+    .form-label { font-weight: 600; color: #5a6268; margin-bottom: 8px; }
+    .select2-container--default .select2-selection--single { height: 45px; padding-top: 8px; border: 1px solid #ced4da; }
+    .btn-grey { background-color: #5e6b77; color: white; transition: 0.3s; }
+    .btn-grey:hover { background-color: #4a545e; color: white; }
+</style>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Add Team Member</title>
-    <!-- Select2 CSS for Searchable Dropdown -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style>
-        .main-content { padding-top: 100px !important; }
-        .form-card { max-width: 800px; margin: auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .form-label { font-weight: 600; color: #5a6268; margin-bottom: 8px; }
-        .select2-container--default .select2-selection--single { height: 45px; padding-top: 8px; border: 1px solid #ced4da; }
-        .btn-grey { background-color: #5e6b77; color: white; transition: 0.3s; }
-        .btn-grey:hover { background-color: #4a545e; color: white; }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="main-content">
-        <div class="form-card">
-            <h3 class="mb-4 text-center" style="color: #5e6b77;">
-    <i class="fas <?php echo ($mode == 'edit') ? 'fa-user-edit' : 'fa-user-plus'; ?> me-2"></i>
-    <?php echo ($mode == 'edit') ? 'Edit Member Assignment' : 'Add Team Member'; ?>
-</h3>
-            <hr class="mb-4">
+<div class="main-content">
+    <div style="max-width: 800px; margin: 0 auto 20px auto;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 14px 22px !important; border-radius: 12px !important; display: flex !important; justify-content: space-between !important; align-items: center !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div class="d-flex align-items-center">
+                <i class="fas <?php echo ($mode == 'edit') ? 'fa-user-edit' : 'fa-user-plus'; ?> fa-lg me-3 text-white"></i>
+                <div>
+                    <h5 class="mb-0 text-white fw-bold"><?php echo ($mode == 'edit') ? 'Edit Member Assignment' : 'Add Team Member'; ?></h5>
+                    <small style="color: rgba(255,255,255,0.85);">Team Master - Assign team members and processes</small>
+                </div>
+            </div>
+            <a href="team_view.php" class="btn btn-secondary btn-sm" style="margin-left: auto !important;">
+                <i class="fas fa-arrow-left me-1"></i> Back to Team
+            </a>
+        </div>
+    </div>
+
+    <div class="form-card">
             
             <form action="save_team_member.php" method="POST">
                 <?php if($mode == 'edit'): ?>

@@ -1282,7 +1282,7 @@ if ($results && $results->num_rows > 0) {
                     </div>
                     <div class="col-md-3 d-flex gap-1">
                         <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="fas fa-filter me-1"></i> Apply Filters</button>
-                        <a href="xml_unique_start.php" class="btn btn-outline-secondary btn-sm" title="Reset Filters"><i class="fas fa-undo"></i></a>
+                        <a href="xml_unique_start.php" class="btn btn-outline-secondary btn-sm text-nowrap" title="Reset Filters"><i class="fas fa-undo me-1"></i> Reset</a>
                     </div>
                 </form>
             </div>

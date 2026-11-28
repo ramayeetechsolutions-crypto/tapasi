@@ -45,93 +45,91 @@ $proc_query = "SELECT process_id, process_name FROM process_master WHERE process
 $proc_result = $mysqli->query($proc_query);
 ?>
 
-<form action="save_team_member.php" method="POST">
-    
-    <?php if($mode == 'edit'): ?>
-        <input type="hidden" name="employee_id" value="<?php echo $selected_emp_id; ?>">
-    <?php endif; ?>
+<!-- Select2 CSS for Searchable Dropdown -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .main-content { padding-top: 90px !important; }
+    .form-card { max-width: 800px; margin: auto; background: white; padding: 35px 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e9ecef; }
+    .form-label { font-weight: 600; color: #5a6268; margin-bottom: 8px; }
+    .select2-container--default .select2-selection--single { height: 45px; padding-top: 8px; border: 1px solid #ced4da; }
+    .btn-grey { background-color: #5e6b77; color: white; transition: 0.3s; }
+    .btn-grey:hover { background-color: #4a545e; color: white; }
+</style>
 
-    <!-- Pre-filled Team Leader Name -->
-    <div class="mb-4">
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Add Team Member</title>
-    <!-- Select2 CSS for Searchable Dropdown -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <style>
-        .main-content { padding-top: 100px !important; }
-        .form-card { max-width: 800px; margin: auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .form-label { font-weight: 600; color: #5a6268; margin-bottom: 8px; }
-        .select2-container--default .select2-selection--single { height: 45px; padding-top: 8px; border: 1px solid #ced4da; }
-        .btn-grey { background-color: #5e6b77; color: white; transition: 0.3s; }
-        .btn-grey:hover { background-color: #4a545e; color: white; }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="main-content">
-        <div class="form-card">
-            <h3 class="mb-4 text-center" style="color: #5e6b77;">
-    <i class="fas <?php echo ($mode == 'edit') ? 'fa-user-edit' : 'fa-user-plus'; ?> me-2"></i>
-    <?php echo ($mode == 'edit') ? 'Edit Member Assignment' : 'Add Team Member'; ?>
-</h3>
-            <hr class="mb-4">
-            
-            <form action="save_team_member.php" method="POST">
-                <!-- Pre-filled Team Leader Name -->
-                <div class="mb-4">
-                    <label class="form-label">Team Leader Name</label>
-                    <input type="text" class="form-control bg-light" name="reporting_manager" value="<?php echo $tl_name; ?>" readonly>
+<div class="main-content">
+    <div style="max-width: 800px; margin: 0 auto 20px auto;">
+        <div class="page-title-container" style="background-color: #6c757d !important; background: #6c757d !important; color: #ffffff !important; padding: 14px 22px !important; border-radius: 12px !important; display: flex !important; justify-content: space-between !important; align-items: center !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div class="d-flex align-items-center">
+                <i class="fas <?php echo ($mode == 'edit') ? 'fa-user-edit' : 'fa-user-plus'; ?> fa-lg me-3 text-white"></i>
+                <div>
+                    <h5 class="mb-0 text-white fw-bold"><?php echo ($mode == 'edit') ? 'Edit Member Assignment' : 'Add Team Member'; ?></h5>
+                    <small style="color: rgba(255,255,255,0.85);">Team Master - Assign team members and XML processes</small>
                 </div>
-
-                <!-- Searchable Employee Selection -->
-                <div class="mb-4">
-                    <label class="form-label">Select Employee (Search by ID or Name)</label>
-                    <select name="employee_id" class="form-select searchable-select" required <?php echo ($mode == 'edit') ? 'disabled' : ''; ?>>
-                        <option value="">-- Start typing ID or Name --</option>
-                        <?php while($row = $emp_result->fetch_assoc()): ?>
-                            <option value="<?php echo $row['employee_id']; ?>" <?php echo ($row['employee_id'] == $selected_emp_id) ? 'selected' : ''; ?>>
-                                <?php echo $row['employee_username'] . " - " . $row['employee_name']; ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-
-                <!-- XML Process Selection -->
-                <div class="mb-4">
-                    <label class="form-label">Assign XML Process</label>
-                    <select name="process_id" class="form-select searchable-select" required>
-                        <option value="">-- Search XML Processes --</option>
-                        <?php while($row = $proc_result->fetch_assoc()): ?>
-    <option value="<?php echo $row['process_name']; ?>" <?php echo ($row['process_name'] == $selected_process) ? 'selected' : ''; ?>>
-        <?php echo $row['process_name']; ?>
-    </option>
-<?php endwhile; ?>
-                    </select>
-                </div>
-
-                <div class="d-flex justify-content-between mt-5">
-                    <a href="team_view.php" class="btn btn-secondary px-4"><i class="fas fa-arrow-left me-2"></i>Cancel</a>
-                    <button type="submit" class="btn btn-primary px-5 py-2 fw-bold">
-    <i class="fas fa-save me-2"></i>
-    <?php echo ($mode == 'edit') ? 'Update Assignment' : 'Assign Member'; ?>
-</button>
-                </div>
-            </form>
+            </div>
+            <a href="team_view.php" class="btn btn-secondary btn-sm" style="margin-left: auto !important;">
+                <i class="fas fa-arrow-left me-1"></i> Back to Team
+            </a>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('.searchable-select').select2({
-                width: '100%'
-            });
+    <div class="form-card">
+        <form action="save_team_member.php" method="POST">
+            <?php if($mode == 'edit'): ?>
+                <input type="hidden" name="employee_id" value="<?php echo $selected_emp_id; ?>">
+            <?php endif; ?>
+
+            <!-- Pre-filled Team Leader Name -->
+            <div class="mb-4">
+                <label class="form-label">Team Leader Name</label>
+                <input type="text" class="form-control bg-light" name="reporting_manager" value="<?php echo $tl_name; ?>" readonly>
+            </div>
+
+            <!-- Searchable Employee Selection -->
+            <div class="mb-4">
+                <label class="form-label">Select Employee (Search by ID or Name)</label>
+                <select name="employee_id" class="form-select searchable-select" required <?php echo ($mode == 'edit') ? 'disabled' : ''; ?>>
+                    <option value="">-- Start typing ID or Name --</option>
+                    <?php while($row = $emp_result->fetch_assoc()): ?>
+                        <option value="<?php echo $row['employee_id']; ?>" <?php echo ($row['employee_id'] == $selected_emp_id) ? 'selected' : ''; ?>>
+                            <?php echo $row['employee_username'] . " - " . $row['employee_name']; ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+
+            <!-- XML Process Selection -->
+            <div class="mb-4">
+                <label class="form-label">Assign XML Process</label>
+                <select name="process_id" class="form-select searchable-select" required>
+                    <option value="">-- Search XML Processes --</option>
+                    <?php while($row = $proc_result->fetch_assoc()): ?>
+                        <option value="<?php echo $row['process_name']; ?>" <?php echo ($row['process_name'] == $selected_process) ? 'selected' : ''; ?>>
+                            <?php echo $row['process_name']; ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+
+            <div class="d-flex justify-content-between mt-5">
+                <a href="team_view.php" class="btn btn-secondary px-4"><i class="fas fa-arrow-left me-2"></i>Cancel</a>
+                <button type="submit" class="btn btn-primary px-5 py-2 fw-bold">
+                    <i class="fas fa-save me-2"></i>
+                    <?php echo ($mode == 'edit') ? 'Update Assignment' : 'Assign Member'; ?>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.searchable-select').select2({
+            width: '100%'
         });
-    </script>
+    });
+</script>
 </body>
 </html>
