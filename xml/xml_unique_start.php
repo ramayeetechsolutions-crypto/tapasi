@@ -104,27 +104,39 @@ function getJobTaskStatusList($row) {
     $biblat_na = ($safe_trim($row['biblat'] ?? '') === '' || $safe_trim($row['biblat'] ?? '') === '-');
     $doaj_na = ($safe_trim($row['doaj'] ?? '') === '' || $safe_trim($row['doaj'] ?? '') === '-');
 
-    $is_empty = function($val) use ($safe_trim) { 
-        $v = $safe_trim($val); 
-        return ($v === '' || $v === 'N/A' || $v === 'NA'); 
+    $resolve_task = function($is_col_na, $user_val) use ($safe_trim) {
+        $u = $safe_trim($user_val);
+        // If explicitly assigned as N/A, keep it as N/A (do not convert to '-' / Assign)
+        if (strcasecmp($u, 'N/A') === 0 || strcasecmp($u, 'NA') === 0) {
+            return 'N/A';
+        }
+        // If the task metric is not applicable to this job and not assigned
+        if ($is_col_na && ($u === '' || $u === '-')) {
+            return 'N/A';
+        }
+        // If applicable but unassigned
+        if ($u === '' || $u === '-') {
+            return '-';
+        }
+        return $u;
     };
 
     return [
-        'valImg'     => $img_na ? 'N/A' : ($is_empty($row['Image_user'] ?? '') ? '-' : $row['Image_user']),
-        'valTbl'     => $is_empty($row['Table_user'] ?? '') ? '-' : $row['Table_user'],
-        'valWp'      => $is_empty($row['WPContent_user'] ?? '') ? '-' : $row['WPContent_user'],
-        'valNlm'     => $nlm_na ? 'N/A' : ($is_empty($row['nlm_user'] ?? '') ? '-' : $row['nlm_user']),
-        'valJats'    => $jats_na ? 'N/A' : ($is_empty($row['jats_user'] ?? '') ? '-' : ($row['jats_user'] ?? '')),
-        'valClockss' => $clockss_na ? 'N/A' : ($is_empty($row['clockss_user'] ?? '') ? '-' : ($row['clockss_user'] ?? '')),
-        'valHtml'    => $html_na ? 'N/A' : ($is_empty($row['HTML_user'] ?? '') ? '-' : $row['HTML_user']),
-        'valNhtml'   => $nhtml_na ? 'N/A' : ($is_empty($row['new_html_user'] ?? '') ? '-' : $row['new_html_user']),
-        'valDhtml'   => $dhtml_na ? 'N/A' : ($is_empty($row['direct_html_user'] ?? '') ? '-' : ($row['direct_html_user'] ?? '')),
-        'valScielo'  => $scielo_na ? 'N/A' : ($is_empty($row['Scielo_user'] ?? '') ? '-' : ($row['Scielo_user'] ?? '')),
-        'valEbsco'   => $ebsco_na ? 'N/A' : ($is_empty($row['ebsco_user'] ?? '') ? '-' : ($row['ebsco_user'] ?? '')),
-        'valPubmed'  => $pubmed_na ? 'N/A' : ($is_empty($row['pubmed_user'] ?? '') ? '-' : ($row['pubmed_user'] ?? '')),
-        'valBiblat'  => $biblat_na ? 'N/A' : ($is_empty($row['biblat_user'] ?? '') ? '-' : ($row['biblat_user'] ?? '')),
-        'valDoaj'    => $doaj_na ? 'N/A' : ($is_empty($row['doaj_user'] ?? '') ? '-' : ($row['doaj_user'] ?? '')),
-        'valQc'      => $is_empty($row['QC_user'] ?? '') ? '-' : $row['QC_user']
+        'valImg'     => $resolve_task($img_na, $row['Image_user'] ?? ''),
+        'valTbl'     => $resolve_task(false, $row['Table_user'] ?? ''),
+        'valWp'      => $resolve_task(false, $row['WPContent_user'] ?? ''),
+        'valNlm'     => $resolve_task($nlm_na, $row['nlm_user'] ?? ''),
+        'valJats'    => $resolve_task($jats_na, $row['jats_user'] ?? ''),
+        'valClockss' => $resolve_task($clockss_na, $row['clockss_user'] ?? ''),
+        'valHtml'    => $resolve_task($html_na, $row['HTML_user'] ?? ''),
+        'valNhtml'   => $resolve_task($nhtml_na, $row['new_html_user'] ?? ''),
+        'valDhtml'   => $resolve_task($dhtml_na, $row['direct_html_user'] ?? ''),
+        'valScielo'  => $resolve_task($scielo_na, $row['Scielo_user'] ?? ''),
+        'valEbsco'   => $resolve_task($ebsco_na, $row['ebsco_user'] ?? ''),
+        'valPubmed'  => $resolve_task($pubmed_na, $row['pubmed_user'] ?? ''),
+        'valBiblat'  => $resolve_task($biblat_na, $row['biblat_user'] ?? ''),
+        'valDoaj'    => $resolve_task($doaj_na, $row['doaj_user'] ?? ''),
+        'valQc'      => $resolve_task(false, $row['QC_user'] ?? '')
     ];
 }
 
@@ -176,13 +188,17 @@ function isJobFullyCompleted($taskValues) {
         }
     }
     
-    // 3. QC Check: QC must be completed with ✓
+    // 3. QC Check: If QC is assigned, it must be completed with ✓. If QC is explicitly marked as N/A, it is skipped.
     $qc = trim((string)($taskValues['valQc'] ?? ''));
-    if ($qc === '' || $qc === '-' || $qc === 'N/A') {
-        return false;
-    }
-    if (strpos($qc, '✓') === false && strpos(strtolower($qc), 'done') === false && strpos(strtolower($qc), 'completed') === false) {
-        return false;
+    if ($qc === 'N/A' || $qc === 'NA') {
+        // QC explicitly not needed for this job -> allowed as completed
+    } else {
+        if ($qc === '' || $qc === '-') {
+            return false;
+        }
+        if (strpos($qc, '✓') === false && strpos(strtolower($qc), 'done') === false && strpos(strtolower($qc), 'completed') === false) {
+            return false;
+        }
     }
     
     return true;
@@ -2503,8 +2519,15 @@ document.getElementById('rec_date').addEventListener('change', updateTAT);
         const setSelectVal = (id, assignedUser, taskValue) => {
             const el = document.getElementById(id);
             if (el) {
-                // Remove raw dash UI for initial selection process
-                el.value = (assignedUser === '-') ? '' : assignedUser;
+                // Remove raw dash UI for initial selection process, and handle N/A accurately
+                const u = (assignedUser || '').trim();
+                if (u.toLowerCase() === 'n/a' || u.toLowerCase() === 'na') {
+                    el.value = 'N/A';
+                } else if (u === '-') {
+                    el.value = '';
+                } else {
+                    el.value = u;
+                }
                 
                 // Toggle disabled attribute dynamically based on provided column status validation
                 if (taskValue !== undefined) {
