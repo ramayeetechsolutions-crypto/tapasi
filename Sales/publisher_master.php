@@ -33,7 +33,8 @@ function ensure_publisher_master_schema($mysqli) {
 
     $requiredColumns = [
         'name' => "VARCHAR(255) DEFAULT NULL AFTER `id`",
-        'year' => "VARCHAR(100) DEFAULT NULL AFTER `name`"
+        'year' => "VARCHAR(100) DEFAULT NULL AFTER `name`",
+        'is_followup' => "TINYINT(1) DEFAULT 0 AFTER `status`"
     ];
 
     foreach ($requiredColumns as $col => $definition) {
@@ -332,8 +333,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
                 $pname = $pub['publisher_name'];
                 
-                // Update updated_at so this record appears at the top of Follow-up
-                $upd = $mysqli->prepare("UPDATE publisher_master SET updated_at = NOW() WHERE id = ?");
+                // Mark publisher as moved to follow-up without adding dummy history logs
+                $upd = $mysqli->prepare("UPDATE publisher_master SET is_followup = 1, updated_at = NOW() WHERE id = ?");
                 $upd->bind_param("i", $id);
                 $upd->execute();
                 $upd->close();
